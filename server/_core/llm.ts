@@ -218,10 +218,36 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  if (!ENV.anthropicApiKey && !ENV.forgeApiKey) {
+    throw new Error("ANTHROPIC_API_KEY or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
+
+const contentToText = (content: Message["content"]): string =>
+  ensureArray(content).map(part => typeof part === "string" ? part : part.type === "text" ? part.text : "").join("\n");
+
+async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
+  const system = params.messages.filter(message => message.role === "system").map(message => contentToText(message.content)).join("\n\n");
+  const messages = params.messages.filter(message => message.role !== "system" && (message.role === "user" || message.role === "assistant")).map(message => ({
+    role: message.role,
+    content: contentToText(message.content),
+  }));
+  const maxTokens = params.max_tokens ?? params.maxTokens ?? 4096;
+  const body: Record<string, unknown> = { model: params.model ?? "claude-sonnet-4-6", max_tokens: maxTokens, messages };
+  if (system) body.system = system;
+  const response = await fetchWithBackoff("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": ENV.anthropicApiKey, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Anthropic invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+  }
+  const result = await response.json() as { id: string; model: string; content?: Array<{ type: string; text?: string }>; stop_reason?: string };
+  const text = (result.content ?? []).filter(part => part.type === "text").map(part => part.text ?? "").join("\n");
+  return { id: result.id, created: Math.floor(Date.now() / 1000), model: result.model, choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: result.stop_reason ?? null }] };
+}
 
 const normalizeResponseFormat = ({
   responseFormat,
@@ -341,6 +367,7 @@ const fetchWithBackoff = async (
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
+  if (ENV.anthropicApiKey) return invokeAnthropic(params);
 
   const {
     messages,
