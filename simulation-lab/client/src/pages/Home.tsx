@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { AIChatBox, type Message } from "@/components/AIChatBox";
 
 type Template = {
   id: string;
@@ -169,10 +170,16 @@ export default function Home() {
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [importedDataset, setImportedDataset] = useState<{ id: number; name: string; rowCount: number; validRowCount: number; invalidRowCount: number } | null>(null);
   const [activeRunId, setActiveRunId] = useState<number | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Message[]>([
+    { role: "system", content: "You are the Firmament Simulation Lab guide." },
+    { role: "assistant", content: "Hi — I’m your Lab guide. Ask me what to click, what the two views mean, or how to read a result." },
+  ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const simulateEvent = trpc.simulate.event.useMutation();
   const importCsv = trpc.datasets.importCsv.useMutation();
   const startRun = trpc.runs.start.useMutation();
+  const chatMutation = trpc.ai.chat.useMutation();
   const runStatus = trpc.runs.get.useQuery({ runId: activeRunId ?? 0 }, { enabled: Boolean(activeRunId), refetchInterval: activeRunId ? 1000 : false });
 
   const jumpTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -248,6 +255,15 @@ export default function Home() {
 
   const comingSoon = (feature: string) => toast.info(`${feature} is staged for a later phase.`, { description: "The core import, calculation, and batch replay workflow is active." });
 
+  const sendChatMessage = (content: string) => {
+    const nextMessages: Message[] = [...chatMessages, { role: "user", content }];
+    setChatMessages(nextMessages);
+    chatMutation.mutate({ messages: nextMessages.filter((message) => message.role !== "system") }, {
+      onSuccess: (response) => setChatMessages((current) => [...current, { role: "assistant", content: response }]),
+      onError: (error) => toast.error("The Lab guide is unavailable", { description: error.message }),
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[#07101d] text-slate-200">
       <div className="fixed inset-0 pointer-events-none overflow-hidden"><div className="ambient-orb ambient-orb-one" /><div className="ambient-orb ambient-orb-two" /><div className="grain" /></div>
@@ -289,6 +305,8 @@ export default function Home() {
           <section className="mt-6 panel"><div className="panel-header"><div><p className="eyebrow">Run ledger</p><h2 className="section-title">Recent simulation activity</h2></div><button onClick={() => comingSoon("Full run ledger")} className="button-quiet">View all <ArrowUpRight size={13} /></button></div><div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left"><thead><tr className="border-b border-white/[0.06] text-[10px] uppercase tracking-[0.17em] text-slate-600"><th className="px-5 pb-3 font-semibold">Run</th><th className="pb-3 font-semibold">State</th><th className="pb-3 font-semibold">Preview accuracy</th><th className="pb-3 font-semibold">Last activity</th><th className="pr-5 pb-3" /></tr></thead><tbody>{recentRuns.map((run) => <tr key={run.name} className="border-b border-white/[0.045] last:border-0"><td className="px-5 py-4"><p className="text-xs font-semibold text-slate-300">{run.name}</p><p className="mt-1 text-[11px] text-slate-600">{run.meta}</p></td><td className="py-4"><Pill tone={run.color === "emerald" ? "emerald" : run.color === "cyan" ? "cyan" : "gold"}>{run.status}</Pill></td><td className="py-4 font-display text-sm text-slate-300">{run.score}</td><td className="py-4 text-xs text-slate-500">{run.time}</td><td className="pr-5 py-4 text-right"><button onClick={() => comingSoon("Run details")} className="icon-button-small"><ArrowUpRight size={14} /></button></td></tr>)}</tbody></table></div></section>
 
           <footer className="flex flex-col gap-3 py-8 text-[10px] uppercase tracking-[0.16em] text-slate-700 sm:flex-row sm:items-center sm:justify-between"><span>Firmament Simulation Lab · Separate research environment</span><span>Ancient fixed-background baseline · 13° Aries / Hamal</span></footer>
+          <button onClick={() => setChatOpen((open) => !open)} className="fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full border border-cyan-200/25 bg-[#12243a]/95 px-4 py-3 text-xs font-bold text-cyan-100 shadow-[0_14px_45px_rgba(0,0,0,.35)] backdrop-blur transition hover:-translate-y-0.5 hover:border-cyan-200/50 hover:bg-[#19304a]" aria-label="Open Ask the Lab assistant"><Sparkles size={16} /> Ask the Lab</button>
+          {chatOpen && <div className="fixed bottom-20 right-6 z-30 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-cyan-200/20 bg-[#0d1829]/98 shadow-[0_24px_90px_rgba(0,0,0,.48)] backdrop-blur-xl"><div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3"><div><p className="text-xs font-bold text-white">Ask the Lab</p><p className="mt-0.5 text-[10px] text-slate-500">Your in-app guide to the simulation workflow</p></div><button onClick={() => setChatOpen(false)} className="icon-button-small" aria-label="Close chat"><X size={14} /></button></div><AIChatBox messages={chatMessages} onSendMessage={sendChatMessage} isLoading={chatMutation.isPending} height={430} placeholder="Ask what to do next…" emptyStateMessage="Ask me how to use the Lab" suggestedPrompts={["What should I click first?", "What is God View vs AgentView?", "How do I upload my games?"]} className="rounded-none border-0 bg-transparent shadow-none" /></div>}
         </main>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { runSimulationBatch, runSimulationEvent, type SimulationEventInput } fro
 import { executeSimulationRun } from "./batchRunner";
 import { createSimulationDataset, createSimulationRun, getSimulationEvents, getSimulationRun, insertSimulationEvents, listSimulationDatasets, updateSimulationRun } from "./simulationDb";
 import { parseSimulationCsv } from "./simulationData";
+import { invokeLLM } from "./_core/llm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -23,6 +24,27 @@ const eventInput = z.object({
 
 export const appRouter = router({
   system: systemRouter,
+  ai: router({
+    chat: publicProcedure.input(z.object({
+      messages: z.array(z.object({
+        role: z.enum(["system", "user", "assistant"]),
+        content: z.string().min(1).max(6000),
+      })).min(1).max(24),
+    })).mutation(async ({ input }) => {
+      const response = await invokeLLM({
+        messages: [
+          {
+            role: "system",
+            content: "You are the Firmament Simulation Lab guide. Explain the app in plain language, help users choose between the sample game and CSV upload, explain God View versus AgentView, and interpret simulation results without claiming certainty or inventing live sports data. Be concise, practical, and friendly.",
+          },
+          ...input.messages,
+        ],
+        maxTokens: 700,
+      });
+      const content = response.choices[0]?.message.content;
+      return typeof content === "string" ? content : "I couldn't produce a text response. Please try again.";
+    }),
+  }),
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
