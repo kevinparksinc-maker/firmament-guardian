@@ -131,6 +131,27 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   .quick-action-icon { display: grid; height: 38px; width: 38px; flex-shrink: 0; place-items: center; border-radius: 11px; background: rgba(119,232,255,.12); color: #9cf2ff; }
   .quick-action strong { display: block; color: #f1f7fb; font-size: 12px; font-weight: 700; }
   .quick-action small { display: block; margin-top: 4px; color: #7e8fa4; font-size: 10px; line-height: 1.45; }
+  .anatomy-panel { border-color: rgba(119,232,255,.17); }
+  .anatomy-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(255,255,255,.07); padding: 14px 20px; }
+  .frame-toggle { display: inline-flex; align-items: center; gap: 6px; border-radius: 7px; padding: 7px 10px; color: #718196; font-size: 10px; font-weight: 700; transition: color 160ms ease, background 160ms ease; }
+  .frame-toggle:hover { color: #d5e0eb; }
+  .frame-toggle-active { background: rgba(119,232,255,.12); color: #bff7ff; }
+  .anatomy-card { border: 1px solid rgba(255,255,255,.07); border-radius: 14px; background: rgba(255,255,255,.025); padding: 15px; }
+  .house-chip { display: flex; min-height: 58px; flex-direction: column; justify-content: center; border: 1px solid rgba(255,255,255,.07); border-radius: 10px; background: rgba(5,14,27,.32); padding: 8px; }
+  .house-chip strong { color: #dce8f4; font-size: 11px; }
+  .house-chip span { margin-top: 3px; color: #8ba0b5; font-size: 10px; }
+  .house-chip em { margin-top: 2px; color: #56677b; font-size: 9px; font-style: normal; }
+  .layer-audit { overflow: hidden; border: 1px solid rgba(255,255,255,.07); border-radius: 11px; background: rgba(255,255,255,.02); }
+  .layer-audit-trigger { display: flex; width: 100%; align-items: center; gap: 9px; padding: 11px 12px; color: #a7b5c6; text-align: left; transition: background 160ms ease; }
+  .layer-audit-trigger:hover { background: rgba(119,232,255,.055); }
+  .layer-audit-name { min-width: 0; flex: 1; font-size: 11px; font-weight: 600; }
+  .layer-audit-score { color: #718196; font-size: 10px; font-variant-numeric: tabular-nums; }
+  .layer-selection { min-width: 82px; border-radius: 999px; padding: 4px 7px; text-align: center; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .layer-selection-a { background: rgba(119,232,255,.1); color: #a7f3ff; }
+  .layer-selection-b { background: rgba(196,168,255,.1); color: #d3c1ff; }
+  .layer-selection-tie { background: rgba(251,191,36,.1); color: #fbd38d; }
+  .layer-audit-detail { border-top: 1px solid rgba(255,255,255,.06); background: rgba(2,9,19,.24); padding: 14px; }
+  @media (max-width: 640px) { .anatomy-toolbar { align-items: flex-start; flex-direction: column; } .layer-audit-score { display: none; } .layer-selection { min-width: 68px; } }
   .game-brief { border-color: rgba(79,226,255,.16); box-shadow: 0 20px 70px rgba(0,0,0,.16); }
   .brief-call, .brief-stat { border: 1px solid rgba(255,255,255,.07); border-radius: 14px; background: rgba(255,255,255,.025); padding: 16px; }
   .brief-result { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,.09); border-radius: 999px; padding: 6px 9px; color: #a7b5c7; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
