@@ -23,12 +23,14 @@ export type SimulationEventInput = {
 };
 
 type Winner = "A" | "B" | "TIE";
+export type ForecastRole = "ASCENDANT" | "DESCENDANT" | "TIE";
 
 type LayerResult = {
   name: string;
   scoreA: number;
   scoreB: number;
   winner: Winner;
+  role: ForecastRole;
   verdict: "hit" | "miss" | "tie" | "unverified";
   detail: string;
   source: string;
@@ -37,6 +39,14 @@ type LayerResult = {
 function winnerFor(scoreA: number, scoreB: number): Winner {
   if (scoreA === scoreB) return "TIE";
   return scoreA > scoreB ? "A" : "B";
+}
+
+export function roleForWinner(winner: Winner): ForecastRole {
+  return winner === "A" ? "ASCENDANT" : winner === "B" ? "DESCENDANT" : "TIE";
+}
+
+function houseRole(house: number): ForecastRole {
+  return [1, 2, 3, 6, 10, 11].includes(house) ? "ASCENDANT" : "DESCENDANT";
 }
 
 export function verdictFor(winner: Winner, actualWinner?: Winner): LayerResult["verdict"] {
@@ -65,6 +75,7 @@ function layerFromEvidence(
     scoreA: Number(layer.scoreA.toFixed(3)),
     scoreB: Number(layer.scoreB.toFixed(3)),
     winner,
+    role: roleForWinner(winner),
     verdict: verdictFor(winner, actualWinner),
     detail: layer.detail,
     source: layer.source ?? "firmament-engine",
@@ -115,8 +126,10 @@ function frameReport(
     coordinateFrame: frame.coordinateFrame,
     houseRule: frame.houseRule,
     ascendantLongitude: frame.ascendantLongitude,
+    houseRoles: Array.from({ length: 12 }, (_, index) => ({ house: index + 1, role: houseRole(index + 1) })),
     synthesis: {
       ...frame.synthesis,
+      role: roleForWinner(frame.synthesis.winner),
       verdict: verdictFor(frame.synthesis.winner, actualWinner),
     },
     foundation,
@@ -171,6 +184,7 @@ export function runSimulationEvent(input: SimulationEventInput) {
       kpStellar: activePrediction.kpStellar,
       combined: activePrediction.combined,
       winner: baselineWinner,
+      role: roleForWinner(baselineWinner),
       verdict: baselineVerdict,
     },
     godView: frameReport(dualFrame.god, actualWinner),
@@ -178,7 +192,9 @@ export function runSimulationEvent(input: SimulationEventInput) {
     comparison: {
       state: dualFrame.agreement.state,
       winner: dualFrame.agreement.winner,
+      role: roleForWinner(dualFrame.agreement.winner),
       actualWinner: actualWinner ?? null,
+      actualRole: actualWinner ? roleForWinner(actualWinner) : null,
       verified: Boolean(actualWinner),
     },
   };

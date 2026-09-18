@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runSimulationBatch, runSimulationEvent, verdictFor } from "./simulationAdapter";
+import { roleForWinner, runSimulationBatch, runSimulationEvent, verdictFor } from "./simulationAdapter";
 
 const fixture = {
   id: "fixture-dodgers-giants",
@@ -19,6 +19,18 @@ describe("simulation adapter", () => {
     expect(verdictFor("TIE", "B")).toBe("unverified");
     expect(verdictFor("TIE", "TIE")).toBe("tie");
     expect(verdictFor("A", "TIE")).toBe("miss");
+  });
+
+  it("reports role labels separately from team names", () => {
+    expect(roleForWinner("A")).toBe("ASCENDANT");
+    expect(roleForWinner("B")).toBe("DESCENDANT");
+    expect(roleForWinner("TIE")).toBe("TIE");
+    const result = runSimulationEvent(fixture);
+    expect(result.godView.synthesis.role).toBe(roleForWinner(result.godView.synthesis.winner));
+    expect(result.godView.allLayers[0]?.role).toBe(roleForWinner(result.godView.allLayers[0]?.winner ?? "TIE"));
+    expect(result.godView.houseRoles.filter((entry) => entry.role === "ASCENDANT").map((entry) => entry.house)).toEqual([1, 2, 3, 6, 10, 11]);
+    expect(result.godView.houseRoles.filter((entry) => entry.role === "DESCENDANT").map((entry) => entry.house)).toEqual([4, 5, 7, 8, 9, 12]);
+    expect(result.comparison.role).toBe(roleForWinner(result.comparison.winner));
   });
 
   it("returns the full chart and both frame outputs from the Firmament engine", () => {
