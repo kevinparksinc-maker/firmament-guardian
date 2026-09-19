@@ -5,7 +5,7 @@ import { calculateRestoredTerritorial, type TerritorialEvidence } from "./territ
 const require = createRequire(import.meta.url);
 const Astronomy = require("astronomy-engine") as typeof import("astronomy-engine");
 
-export const GAME_TYPES = ["MLB", "NBA", "NFL", "boxing"] as const;
+export const GAME_TYPES = ["MLB", "NBA", "NFL", "NCAA", "boxing"] as const;
 export type GameType = (typeof GAME_TYPES)[number];
 export const DOME_MODELS = ["polaris-fixed-ra", "azimuth", "fixed-ecliptic", "unified-ephemeris", "fixed-j2000-kp"] as const;
 export type DomeModel = (typeof DOME_MODELS)[number];
