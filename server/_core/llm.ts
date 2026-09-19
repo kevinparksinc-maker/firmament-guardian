@@ -218,8 +218,8 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.anthropicApiKey && !ENV.forgeApiKey) {
-    throw new Error("ANTHROPIC_API_KEY or BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
 
@@ -247,6 +247,19 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
   const result = await response.json() as { id: string; model: string; content?: Array<{ type: string; text?: string }>; stop_reason?: string };
   const text = (result.content ?? []).filter(part => part.type === "text").map(part => part.text ?? "").join("\n");
   return { id: result.id, created: Math.floor(Date.now() / 1000), model: result.model, choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: result.stop_reason ?? null }] };
+}
+
+async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
+  const response = await fetchWithBackoff(`${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ENV.openaiApiKey}` },
+    body: JSON.stringify({ model: "gpt-5.5", messages: params.messages.map(normalizeMessage), max_tokens: params.max_tokens ?? params.maxTokens ?? 4096 }),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI-compatible invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+  }
+  return await response.json() as InvokeResult;
 }
 
 const normalizeResponseFormat = ({
@@ -376,6 +389,7 @@ const fetchWithBackoff = async (
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
   if (ENV.anthropicApiKey) return invokeAnthropic(params);
+  if (ENV.openaiApiKey && ENV.openaiApiBase) return invokeOpenAI(params);
 
   const {
     messages,
