@@ -32,7 +32,7 @@ export function WelcomeHost() {
   };
 
   return (
-    <section aria-label="Firmament AI Host" className="mb-8 overflow-hidden rounded-3xl border border-cyan-200/20 bg-gradient-to-br from-cyan-300/[0.12] via-violet-300/[0.09] to-white/[0.035] shadow-2xl shadow-cyan-950/20">
+    <section aria-label="Firmament AI Host" className="firmament-host mb-8 overflow-hidden rounded-3xl border border-cyan-200/20 bg-gradient-to-br from-cyan-300/[0.12] via-violet-300/[0.09] to-white/[0.035] shadow-2xl shadow-cyan-950/20">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_330px]">
         <div className="p-5 sm:p-7">
           <div className="mb-4 flex items-center gap-3">
