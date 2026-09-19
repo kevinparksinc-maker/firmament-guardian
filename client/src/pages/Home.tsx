@@ -11,6 +11,7 @@ import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { ChartWheel } from "@/components/ChartWheel";
 import { WelcomeHost } from "@/components/WelcomeHost";
 import { ObservatoryField } from "@/components/ObservatoryField";
+import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import type { ChartResult } from "../../../server/astronomy";
 
 const dallas = { location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797, timezone: "America/Chicago", date: "1986-11-20", time: "10:06", transitLocation: "Dallas, Texas, USA", transitLatitude: 32.7767, transitLongitude: -96.797, transitTimezone: "America/Chicago", transitDate: "", transitTime: "" };
@@ -29,6 +30,7 @@ export default function Home() {
   const summary = useMemo(() => result ? `${result.movingBodies.length} moving bodies · ${result.frozenStars.length} frozen stars · 12 local houses` : "Ready for a new chart", [result]);
   return <div className="relative min-h-screen bg-[#080b14] text-slate-100 selection:bg-violet-400/30">
     <ObservatoryField />
+    <ObservatorySoundscape />
     <div className="pointer-events-none fixed inset-0 overflow-hidden"><div className="absolute -left-32 -top-32 h-[32rem] w-[32rem] rounded-full bg-violet-700/15 blur-3xl"/><div className="absolute right-[-12rem] top-1/3 h-[30rem] w-[30rem] rounded-full bg-cyan-500/10 blur-3xl"/><div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)] [background-size:64px_64px]"/></div>
     <main className="relative z-10 mx-auto max-w-[1480px] px-5 py-6 md:px-10 md:py-10">
       <header className="mb-10 flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-end md:justify-between"><div><div className="mb-4 flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-violet-300"><span className="h-px w-8 bg-violet-300"/> Firmament / Hybrid Zodiac</div><h1 className="max-w-3xl font-serif text-4xl leading-[1.02] tracking-tight text-white md:text-6xl">Two skies. One precise moment.</h1><p className="mt-5 max-w-xl text-sm leading-6 text-slate-400">A tropical moving sky meets a frozen stellar archive—measured through local houses and three locked celestial overlays.</p></div><div className="flex items-center gap-3 text-xs text-slate-400"><div className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-emerald-300"><span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-emerald-300"/>Moshier ephemeris mode</div><div className="hidden rounded-full border border-white/10 px-3 py-2 md:block">Precession split active</div></div></header>
