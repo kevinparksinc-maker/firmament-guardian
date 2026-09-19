@@ -2,40 +2,44 @@ import { useEffect, useState } from "react";
 import { Loader2, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function speakGuardian(text: string) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text.replace(/[*_#`]/g, ""));
-  utterance.rate = 0.96;
+type VoiceStatus = "idle" | "speaking" | "unavailable" | "error";
+
+export function speakGuardian(text: string, onStatus?: (status: VoiceStatus) => void) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+    onStatus?.("unavailable");
+    return false;
+  }
+  const synthesis = window.speechSynthesis;
+  synthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text.replace(/[*_#`]/g, "").replace(/\s+/g, " ").trim());
+  utterance.rate = 0.94;
   utterance.pitch = 0.88;
-  utterance.volume = 0.86;
-  const preferredVoice = window.speechSynthesis.getVoices().find(voice => /en(-US)?/i.test(voice.lang) && /Google|Samantha|Microsoft/i.test(voice.name));
-  if (preferredVoice) utterance.voice = preferredVoice;
-  window.speechSynthesis.speak(utterance);
+  utterance.volume = 1;
+  utterance.onstart = () => onStatus?.("speaking");
+  utterance.onend = () => onStatus?.("idle");
+  utterance.onerror = () => onStatus?.("error");
+  let started = false;
+  const chooseVoice = () => {
+    if (started) return;
+    started = true;
+    const voices = synthesis.getVoices();
+    const preferred = voices.find(voice => /^en(-US)?/i.test(voice.lang) && /Google|Samantha|Microsoft|Alex/i.test(voice.name)) || voices.find(voice => /^en/i.test(voice.lang));
+    if (preferred) utterance.voice = preferred;
+    synthesis.speak(utterance);
+  };
+  const voices = synthesis.getVoices();
+  if (voices.length) chooseVoice();
+  else { synthesis.addEventListener("voiceschanged", chooseVoice, { once: true }); window.setTimeout(chooseVoice, 250); }
   return true;
 }
 
-export function GuardianVoiceButton({ text, autoSpeak = false, onToggleAutoSpeak }: { text: string; autoSpeak?: boolean; onToggleAutoSpeak?: () => void }) {
-  const [speaking, setSpeaking] = useState(false);
+export function GuardianVoiceButton({ text }: { text: string }) {
+  const [status, setStatus] = useState<VoiceStatus>("idle");
   const supported = typeof window !== "undefined" && "speechSynthesis" in window;
-
-  useEffect(() => {
-    if (!supported) return;
-    const onStart = () => setSpeaking(true);
-    const onEnd = () => setSpeaking(false);
-    window.speechSynthesis.addEventListener("start", onStart);
-    window.speechSynthesis.addEventListener("end", onEnd);
-    window.speechSynthesis.addEventListener("error", onEnd);
-    return () => { window.speechSynthesis.removeEventListener("start", onStart); window.speechSynthesis.removeEventListener("end", onEnd); window.speechSynthesis.removeEventListener("error", onEnd); };
-  }, [supported]);
-
+  useEffect(() => () => { if (supported) window.speechSynthesis.cancel(); }, [supported]);
   if (!supported) return null;
-  return <div className="flex items-center gap-1">
-    <Button type="button" variant="ghost" size="icon" onClick={() => { if (speaking) window.speechSynthesis.cancel(); else speakGuardian(text); }} className="h-7 w-7 rounded-full text-cyan-200/70 hover:bg-cyan-300/10 hover:text-cyan-100" aria-label={speaking ? "Stop Guardian voice" : "Play Guardian voice"}>
-      {speaking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Volume2 className="h-3.5 w-3.5" />}
-    </Button>
-    {onToggleAutoSpeak && <Button type="button" variant="ghost" size="icon" onClick={onToggleAutoSpeak} className={`h-7 w-7 rounded-full ${autoSpeak ? "text-violet-200" : "text-slate-600"}`} aria-label={autoSpeak ? "Disable automatic Guardian voice" : "Enable automatic Guardian voice"}>
-      {autoSpeak ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
-    </Button>}
-  </div>;
+  const speaking = status === "speaking";
+  return <Button type="button" variant="ghost" size="icon" onClick={() => { if (speaking) { window.speechSynthesis.cancel(); setStatus("idle"); } else speakGuardian(text, setStatus); }} className={`h-7 w-7 rounded-full ${status === "error" ? "text-rose-300" : "text-cyan-200/70 hover:bg-cyan-300/10 hover:text-cyan-100"}`} aria-label={speaking ? "Stop Guardian voice" : "Play Guardian voice"} title={status === "error" ? "Voice failed — try again" : "Play Guardian voice"}>
+    {speaking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : status === "error" ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+  </Button>;
 }
