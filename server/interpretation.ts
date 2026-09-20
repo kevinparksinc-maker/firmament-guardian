@@ -70,7 +70,12 @@ Make the reader recognizable to themselves through ordinary scenes: the moment b
 async function ask(messages: Message[], maxTokens = 7000, thinkingBudget = 1800) {
   try {
     const response = await invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens, thinking: { type: "enabled", budget_tokens: thinkingBudget } });
-    return textOf(response.choices[0]?.message?.content ?? "The interpretation engine returned no text.");
+    const firstChoice = response.choices?.[0];
+    const alternate = (response as unknown as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> }).output_text
+      ?? (response as unknown as { output?: Array<{ content?: Array<{ text?: string }> }> }).output?.flatMap(item => item.content ?? []).map(item => item.text ?? "").join("\n");
+    const text = textOf(firstChoice?.message?.content ?? alternate ?? "");
+    if (!text.trim()) throw new Error("The AI provider returned no readable chapter text.");
+    return text;
   } catch (error) {
     console.error("[Interpretation] LLM request failed:", error);
     const message = error instanceof Error ? error.message : String(error);
