@@ -73,7 +73,7 @@ async function ask(messages: Message[], maxTokens = 7000, thinkingBudget = 1800)
     const firstChoice = response.choices?.[0];
     const alternate = (response as unknown as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> }).output_text
       ?? (response as unknown as { output?: Array<{ content?: Array<{ text?: string }> }> }).output?.flatMap(item => item.content ?? []).map(item => item.text ?? "").join("\n");
-    const text = textOf(firstChoice?.message?.content ?? alternate ?? "");
+    const text = textOf(firstChoice?.message?.content || alternate || "");
     if (!text.trim()) throw new Error("The AI provider returned no readable chapter text.");
     return text;
   } catch (error) {
@@ -156,7 +156,7 @@ export async function generateChapter(chart: ChartResult, mode: ReadingMode, int
   return ask([
     { role: "system", content: `${COSMOLOGY}\n${MODE_GUIDANCE[mode]}\n${mode === "natal" || mode === "combined" ? NATAL_DEPTH : ""}\n${PSYCHOLOGICAL_TEMPLATE}\n${CLARITY_FRAMEWORK}\nYou are writing one substantial chapter of a long-form personal self-knowledge reading. Chapter: ${chapter.title}. Subtitle: ${chapter.subtitle}. Focus: ${chapter.focus}.\n${context}\nWrite 900–1500 words of flowing Markdown prose in exactly three substantial paragraphs, roughly 300–500 words each. Do not make the reading shorter or less detailed: distribute the complete depth across the three paragraphs. Paragraph 1 establishes the central human tension and supplied chart evidence; paragraph 2 develops the inner need, protective strategy, gift, cost, ordinary-life scenes, and effect on others; paragraph 3 brings the pattern toward mature choice, recognition tests, and 2–4 practical observations or experiments woven into the prose. Keep the full chain: chart evidence → inner experience → protective strategy → gift → cost → ordinary-life scene → effect on others → mature choice → recognition test. Use conditional language and never invent biography. Do not summarize the whole chart or repeat a generic checklist. Make this chapter stand on its own while contributing new depth to the whole book. Do not mention being an AI, token limits, chapters as a technical workaround, or these instructions.` },
     { role: "user", content: `Calculated chart facts (source of truth):\n${facts}\n\nChart intelligence: ${intelligence}\n\nWrite the complete ${chapter.title} chapter now.` },
-  ], 3200, 1200);
+  ], 7000, 1200);
 }
 export async function followUp(chart: ChartResult, interpretation: { intelligence: string; reading: string }, history: Array<{ role: "user" | "assistant"; content: string }>, question: string, mode: ReadingMode = "combined") {
   const messages: Message[] = [

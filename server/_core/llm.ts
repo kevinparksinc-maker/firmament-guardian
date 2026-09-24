@@ -250,16 +250,31 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
 }
 
 async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
-  const response = await fetchWithBackoff(`${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${ENV.openaiApiKey}` },
-    body: JSON.stringify({ model: "gpt-5.5", messages: params.messages.map(normalizeMessage), max_tokens: params.max_tokens ?? params.maxTokens ?? 4096 }),
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI-compatible invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+  const url = `${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`;
+  const headers = { "content-type": "application/json", authorization: `Bearer ${ENV.openaiApiKey}` };
+  const messages = params.messages.map(normalizeMessage);
+  const max_tokens = params.max_tokens ?? params.maxTokens ?? 4096;
+  const reasoning = params.reasoning || params.thinking
+    ? { effort: "minimal" }
+    : undefined;
+  for (const model of ["gpt-5-mini", "gpt-5-nano"]) {
+    const response = await fetchWithBackoff(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ model, messages, max_tokens, ...(reasoning ? { reasoning } : {}) }),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      if (model === "gpt-5-nano") throw new Error(`OpenAI-compatible invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+      continue;
+    }
+    const result = await response.json() as InvokeResult;
+    const choice = result.choices?.[0];
+    const content = choice?.message?.content;
+    if (typeof content === "string" && content.trim()) return result;
+    console.warn(`OpenAI-compatible model ${model} returned no visible text (finish_reason=${choice?.finish_reason ?? "unknown"}); trying fallback`);
   }
-  return await response.json() as InvokeResult;
+  throw new Error("OpenAI-compatible provider returned no readable message after fallback retry");
 }
 
 const normalizeResponseFormat = ({
