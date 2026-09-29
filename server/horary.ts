@@ -3,6 +3,7 @@ import { withCurrentQuestion } from "./_core/conversation";
 import { invokeLLM, type Message } from "./_core/llm";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
 import { HORARY_TOPICS } from "../shared/horary";
+import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
@@ -215,7 +216,7 @@ INTERPRETATION STANDARD
 - Give a proportionate, practical next step. Avoid deterministic forecasts, guarantees, fear, medical diagnosis, or advice that replaces qualified professional guidance. Astrology is a symbolic interpretive practice, not scientifically established evidence.
 - Do not mention Tarot, cards, suits, or spreads. Do not claim certainty or supernatural authority. The reader retains agency.
 
-Write a substantial but focused first judgment in clear Markdown, normally 700–1,100 words. Depth means maximum understanding, not padding. End by stating what evidence could change or weaken the provisional conclusion.`;
+Write a complete but focused first judgment in clear Markdown. Let the evidence and complexity determine the length; do not pad, repeat, or force a word count. End by stating what evidence could change or weaken the provisional conclusion.`;
 
 function responseText(content: string | Array<{ type: string; text?: string }> | undefined) {
   return typeof content === "string"
@@ -233,7 +234,7 @@ async function answer(messages: Message[], maxTokens = 5000) {
 export async function openHoraryQuestion(input: HoraryInput) {
   const chart = await calculateHoraryChart(input);
   const reading = await answer([
-    { role: "system", content: HORARY_SYSTEM },
+    { role: "system", content: buildAstrologyInterpreterSystem(HORARY_SYSTEM) },
     { role: "user", content: `Use only these calculated facts as the source of truth. Do not recalculate or add missing traditional considerations.\n\n${chart.evidenceText}\n\nGive the complete horary judgment now.` },
   ]);
   return { chart, reading };
@@ -245,7 +246,7 @@ export async function horaryFollowUp(
   question: string,
 ) {
   return answer([
-    { role: "system", content: `${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.` },
+    { role: "system", content: buildAstrologyInterpreterSystem(`${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.`) },
     { role: "user", content: `Original horary evidence:\n\n${chart.evidenceText}` },
     ...withCurrentQuestion(history, question, 12),
   ], 3200);

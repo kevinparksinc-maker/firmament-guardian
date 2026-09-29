@@ -63,6 +63,8 @@ describe("horary astrology", () => {
     expect(messages[0].content).toContain("Do not mention Tarot");
     expect(messages[0].content).toContain("Never switch or collapse these roles");
     expect(messages[0].content).toContain("Do not calculate or claim any aspect");
+    expect(messages[0].content).toContain("KNOWLEDGE IS THE MATERIAL.");
+    expect(messages[0].content).toContain("ASTROLOGY DOMAIN ADAPTER");
     expect(messages[1].content).toContain(sampleInput.question);
     expect(messages[1].content).toContain(result.chart.querentRuler);
     expect(messages[1].content).toContain(result.chart.subjectRuler);
