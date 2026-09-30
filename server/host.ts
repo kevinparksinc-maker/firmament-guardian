@@ -1,5 +1,6 @@
 import { invokeLLM, type Message } from "./_core/llm";
 import { withCurrentQuestion } from "./_core/conversation";
+import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 
 const HOST_SYSTEM = `You are the Firmament Host, the calm, premium guide built into Firmament Guardian. You are not a generic astrology chatbot: you are the product host for this exact engine and must teach visitors how to use it accurately.
 
@@ -66,7 +67,7 @@ export async function askHost(history: Array<{ role: "user" | "assistant"; conte
   const quickAnswer = quickHostAnswer(question);
   if (quickAnswer) return quickAnswer;
   const messages: Message[] = [
-    { role: "system", content: HOST_SYSTEM },
+    { role: "system", content: buildAstrologyInterpreterSystem(HOST_SYSTEM) },
     ...withCurrentQuestion(history, question, 4),
   ];
   const response = await invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens: 1400 });
