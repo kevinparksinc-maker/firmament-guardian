@@ -4,6 +4,7 @@ import { invokeLLM, type Message } from "./_core/llm";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
 import { HORARY_TOPICS } from "../shared/horary";
 import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { calculateLookahead, type Lookahead } from "./horaryLookahead";
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
@@ -48,6 +49,8 @@ export type HoraryChart = {
   houses: Array<{ house: number; longitude: number; sign: string; ruler: string }>;
   placements: HoraryPlacement[];
   relevantAspects: HoraryAspect[];
+  otherCloseAspects: HoraryAspect[];
+  lookahead: Lookahead;
   evidenceText: string;
 };
 
@@ -146,6 +149,14 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   const relevantAspects = uniquePairs(placements, aspectNames)
     .map(([first, second]) => aspectBetween(first, second))
     .filter((aspect): aspect is HoraryAspect => Boolean(aspect));
+  const significatorNames = new Set(aspectNames);
+  // Other close contacts may add context, but do not become additional significators.
+  const otherCloseAspects = uniquePairs(placements, CLASSICAL_PLANETS)
+    .filter(([first, second]) => !(significatorNames.has(first.name) && significatorNames.has(second.name)))
+    .map(([first, second]) => aspectBetween(first, second))
+    .filter((aspect): aspect is HoraryAspect => Boolean(aspect));
+  // Future exact contacts and stations are astronomical data, not event forecasts.
+  const lookahead = calculateLookahead(calculated.julianDay, input.timezone);
   const ascendantLongitude = calculated.ascendant.longitude;
   const ascendantSign = signOf(ascendantLongitude);
   const askedAt = calculated.utc;
@@ -159,6 +170,18 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   const aspectLines = relevantAspects.length
     ? relevantAspects.map(row => `- ${row.first} ${row.aspect} ${row.second}, orb ${row.orb}° (${row.phase})`).join("\n")
     : "- No major aspect among the listed significators and Moon was within the configured 5° orb.";
+  const otherAspectLines = otherCloseAspects.length
+    ? otherCloseAspects.map(row => `- ${row.first} ${row.aspect} ${row.second}, orb ${row.orb}° (${row.phase})`).join("\n")
+    : "- None within the configured 5° orb.";
+  const upcomingLines = lookahead.upcomingAspects.length
+    ? lookahead.upcomingAspects.map(row => {
+        const role = significatorNames.has(row.first) || significatorNames.has(row.second) ? "involves a significator or the Moon" : "background only";
+        return `- ${row.first} ${row.aspect} ${row.second}: exact ${row.exactAtLocal} (${role})`;
+      }).join("\n")
+    : "- None found in the window.";
+  const stationLines = lookahead.stations.length
+    ? lookahead.stations.map(row => `- ${row.planet} turns ${row.turns} on ${row.atLocal}`).join("\n")
+    : "- No planet changes direction in the window.";
   const evidenceText = [
     `Question: ${input.question}`,
     `Question asked at: ${askedAt} UTC (${input.date} ${input.time} local; ${input.timezone})`,
@@ -173,7 +196,10 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Traditional planetary placements:\n${placementLines}`,
     `House cusps and traditional rulers:\n${houseLines}`,
     `Major aspects among the querent, person, matter significators, and Moon (maximum 5° orb):\n${aspectLines}`,
-    "Method boundary: this first version calculates house rulers, planetary positions, retrograde status, Moon placement, and close major aspects. It does not calculate essential dignity, reception, prohibition, collection/translation of light, fixed-star testimony, or a traditional timing estimate; do not invent those factors.",
+    `Other close major aspects among the seven classical planets (max 5° orb; at least one planet is not a significator or the Moon):\n${otherAspectLines}`,
+    `Upcoming exact aspects (calculated from the ephemeris; local timezone ${input.timezone}; Moon contacts cover ${lookahead.moonWindowDays} days and other contacts cover ${lookahead.windowDays} days). A listed date/time is when the planetary contact becomes exact, not a prediction of when an event will happen:\n${upcomingLines}`,
+    `Planetary stations in the next ${lookahead.windowDays} days (date indicates when the planet changes apparent direction, not an event prediction):\n${stationLines}`,
+    "Method boundary: this version calculates house rulers, planetary positions, retrograde status, Moon placement, close major aspects, exact-aspect dates, and planetary stations. It does not calculate essential dignity, reception, prohibition, collection/translation of light, fixed-star testimony, or the traditional method of estimating event timing from signs and houses; do not invent those factors or any other timing.",
   ].join("\n\n");
 
   return {
@@ -195,6 +221,8 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     houses,
     placements,
     relevantAspects,
+    otherCloseAspects,
+    lookahead,
     evidenceText,
   };
 }
@@ -205,14 +233,14 @@ INTERPRETATION STANDARD
 - Keep significator roles exact. The querent is always the person asking (House 1 and its ruler). The person asked about is either the querent (House 1) or another person (House 7), as explicitly supplied. The selected topic house is counted from that person; the evidence provides the actual chart house after turning. The topic ruler signifies the matter, not automatically the person or their intentions. Never switch or collapse these roles.
 - A planet's house placement is where that planet is located; it is not the house that planet rules. The Moon may simultaneously rule the selected topic and serve as a general co-significator; if so, label both roles, and do not mistake the Moon's own placement house for the topic house.
 - If the question wording and the explicitly selected person/topic do not align, say the assignment is ambiguous and ask the user to clarify in follow-up rather than assigning an actor to the wrong house. For a career question about another person, use only the turned topic house and the person-house assignment explicitly supplied in the evidence.
-- Use only the aspect list explicitly supplied in the calculated evidence. Do not calculate or claim any aspect from the raw positions yourself, and do not call non-significator planets additional significators.
+- Use only the aspect lists explicitly supplied in the calculated evidence (significator/Moon aspects, other close aspects, and upcoming exact aspects). Do not calculate or claim any aspect or date from raw positions yourself, and do not call non-significator planets additional significators. Aspects involving neither a significator nor the Moon are background context, not testimony, and must not carry the judgment on their own.
 - Do not infer that an offer, promise, decision, or another person's intention exists unless it is stated in the question or supported by the calculated testimony. Distinguish what the question already says from what the chart indicates.
 - Begin with the question in plain language. Offer a provisional leaning (yes, no, mixed, or insufficient testimony) only when the supplied chart evidence supports one; explain what is supporting and what complicates it. Do not force certainty.
 - Explain the chart evidence before its meaning: House 1 and its ruler identify the querent; the supplied person choice identifies the subject (House 1 for the querent, House 7 for another person); the topic ruler is for the selected house counted from that subject, with its actual chart house supplied; the Moon is a co-significator and sequence-of-events indicator; then discuss only the supplied aspects among these roles.
 - For each important factor, develop WHAT → WHY → HOW → CONSEQUENCE → MEANING in connected prose. Explain technical terms so a reader without astrology training can follow the judgment.
 - Make the story cumulative: show how the question and querent are established, what condition or obstacle the chart indicates, what the Moon and relevant contacts add, how contradictions modify the picture, and what the full testimony suggests about the question.
 - Connect factors by explaining what their relationship produces; do not list disconnected definitions or repeat the same conclusion in several forms. Every major conclusion must point to evidence in the supplied chart.
-- Be clear where testimony is weak or mixed. If a traditional consideration is not in the supplied evidence, say that it was not calculated; never invent dignity, reception, prohibition, timing, biography, or aspects.
+- Be clear where testimony is weak or mixed. If a traditional consideration is not in the supplied evidence, say that it was not calculated; never invent dignity, reception, prohibition, biography, aspects, or timing. A date may be given only if present in the supplied upcoming-aspect or station lists, and must be described as the exact planetary contact or directional station—not as when a real-world event will happen.
 - Give a proportionate, practical next step. Avoid deterministic forecasts, guarantees, fear, medical diagnosis, or advice that replaces qualified professional guidance. Astrology is a symbolic interpretive practice, not scientifically established evidence.
 - Do not mention Tarot, cards, suits, or spreads. Do not claim certainty or supernatural authority. The reader retains agency.
 

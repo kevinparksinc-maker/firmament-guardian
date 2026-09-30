@@ -39,6 +39,10 @@ describe("horary astrology", () => {
     expect(chart.topicRuler).toBe(chart.houses[9].ruler);
     expect(chart.moon.name).toBe("Moon");
     expect(chart.placements.some(planet => planet.name === "Moon")).toBe(true);
+    expect(chart.lookahead).toMatchObject({ windowDays: 90, moonWindowDays: 3 });
+    expect(chart.evidenceText).toContain("Upcoming exact aspects");
+    expect(chart.evidenceText).toContain("not a prediction of when an event will happen");
+    expect(chart.evidenceText).toContain("Planetary stations");
     expect(chart.evidenceText).toContain("Method boundary");
     expect(chart.evidenceText).toContain("does not calculate essential dignity");
   });
@@ -63,6 +67,7 @@ describe("horary astrology", () => {
     expect(messages[0].content).toContain("Do not mention Tarot");
     expect(messages[0].content).toContain("Never switch or collapse these roles");
     expect(messages[0].content).toContain("Do not calculate or claim any aspect");
+    expect(messages[0].content).toContain("not as when a real-world event will happen");
     expect(messages[0].content).toContain("KNOWLEDGE IS THE MATERIAL.");
     expect(messages[0].content).toContain("ASTROLOGY DOMAIN ADAPTER");
     expect(messages[1].content).toContain(sampleInput.question);
@@ -70,6 +75,8 @@ describe("horary astrology", () => {
     expect(messages[1].content).toContain(result.chart.subjectRuler);
     expect(messages[1].content).toContain(result.chart.topicRuler);
     expect(messages[1].content).toContain("Significator roles");
+    expect(messages[1].content).toContain("Upcoming exact aspects");
+    expect(messages[1].content).toContain("Planetary stations");
     expect(messages[1].content).toContain("Do not recalculate");
   });
 
