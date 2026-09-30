@@ -84,12 +84,27 @@ export function InterpretationPanel({ chart }: { chart: ChartResult }) {
     recognition.onend = () => { setIsListening(false); recognitionRef.current = null; }; recognition.onerror = () => { setIsListening(false); recognitionRef.current = null; };
     recognitionRef.current = recognition; setIsListening(true); recognition.start();
   };
-  const busy = Boolean(activeChapter) || generate.isPending || chapterMutation.isPending;
+  const busy = Boolean(activeChapter) || generate.isPending || chapterMutation.isPending || chat.isPending;
   const completedCount = interpretation?.chapters.filter(chapter => chapter.status === "complete").length ?? 0;
+  const selectMode = (nextMode: ReadingMode) => {
+    if (busy) return;
+    recognitionRef.current?.stop();
+    setMode(nextMode);
+    setInterpretation(null);
+    setMessages([]);
+    setActiveChapter(null);
+    setOralQuestion("");
+    setIsListening(false);
+    setLastAnswer("");
+    setFollowUps([]);
+    generate.reset();
+    chapterMutation.reset();
+    chat.reset();
+  };
 
   return <section id="ai-reading" className="mt-10 scroll-mt-8 space-y-7 border-t border-white/10 pt-10 sm:mt-14 sm:pt-14">
     <div className="mx-auto max-w-4xl text-center"><div className="mb-3 flex items-center justify-center gap-2 text-xs uppercase tracking-[0.28em] text-cyan-300"><BookOpen className="h-4 w-4"/> Your personal reading</div><h2 className="font-serif text-4xl leading-tight text-white sm:text-5xl">A story written in your sky</h2><p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">This is a private self-knowledge profile, not a data dump. Choose a layer and let the guide unfold the patterns, needs, gifts, defenses, relationships, and growth edges you may recognize in your own life.</p></div>
-    <Card className="mx-auto max-w-5xl overflow-hidden border-cyan-200/15 bg-gradient-to-br from-cyan-100/[0.08] via-white/[0.035] to-violet-200/[0.06] text-slate-100 shadow-2xl shadow-cyan-950/20"><CardContent className="p-4 sm:p-6"><div className="mb-4 flex items-center gap-3 text-sm text-slate-300"><Compass className="h-4 w-4 text-cyan-300"/><span>What would you like to read?</span></div><div className="grid gap-3 md:grid-cols-3">{modes.map(item => <button key={item.value} type="button" onClick={() => { setMode(item.value); setInterpretation(null); setMessages([]); }} className={`group rounded-2xl border p-4 text-left transition-all sm:p-5 ${mode === item.value ? "border-cyan-300/60 bg-cyan-200/10 shadow-lg shadow-cyan-950/20" : "border-white/10 bg-black/10 hover:border-white/25 hover:bg-white/[0.06]"}`}><div className="flex items-start justify-between gap-3"><div><div className="text-base font-semibold text-white">{item.label}</div><div className="mt-1 text-xs uppercase tracking-[0.16em] text-cyan-200/70">{item.short}</div></div>{mode === item.value && <span className="rounded-full bg-cyan-300/15 p-1 text-cyan-200"><Check className="h-4 w-4"/></span>}</div><div className="mt-4 text-sm leading-6 text-slate-400">{item.description}</div></button>)}</div></CardContent></Card>
+    <Card className="mx-auto max-w-5xl overflow-hidden border-cyan-200/15 bg-gradient-to-br from-cyan-100/[0.08] via-white/[0.035] to-violet-200/[0.06] text-slate-100 shadow-2xl shadow-cyan-950/20"><CardContent className="p-4 sm:p-6"><div className="mb-4 flex items-center gap-3 text-sm text-slate-300"><Compass className="h-4 w-4 text-cyan-300"/><span>What would you like to read?</span></div><div className="grid gap-3 md:grid-cols-3">{modes.map(item => <button key={item.value} type="button" onClick={() => selectMode(item.value)} disabled={busy} className={`group rounded-2xl border p-4 text-left transition-all sm:p-5 ${mode === item.value ? "border-cyan-300/60 bg-cyan-200/10 shadow-lg shadow-cyan-950/20" : "border-white/10 bg-black/10 hover:border-white/25 hover:bg-white/[0.06]"} disabled:cursor-not-allowed disabled:opacity-60`}><div className="flex items-start justify-between gap-3"><div><div className="text-base font-semibold text-white">{item.label}</div><div className="mt-1 text-xs uppercase tracking-[0.16em] text-cyan-200/70">{item.short}</div></div>{mode === item.value && <span className="rounded-full bg-cyan-300/15 p-1 text-cyan-200"><Check className="h-4 w-4"/></span>}</div><div className="mt-4 text-sm leading-6 text-slate-400">{item.description}</div></button>)}</div></CardContent></Card>
     {!interpretation && <div className="mx-auto max-w-5xl"><Button onClick={run} disabled={busy} className="h-12 w-full rounded-xl bg-cyan-400 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-950/30 hover:bg-cyan-300">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <WandSparkles className="mr-2 h-4 w-4"/>}{busy ? "Opening the first chapter…" : `Begin your ${selected.label.toLowerCase()}`}</Button></div>}
     {generate.error && <div className="mx-auto max-w-5xl rounded-2xl border border-rose-300/20 bg-rose-400/10 p-5 text-sm leading-6 text-rose-100"><div className="font-medium">The chart map could not be opened.</div><div className="mt-1 text-rose-200/80">{generate.error.message}</div><Button variant="outline" onClick={run} className="mt-4 border-rose-200/30 bg-transparent text-rose-100 hover:bg-rose-100/10">Try again</Button></div>}
     {interpretation ? <div className="mx-auto max-w-5xl space-y-6">
