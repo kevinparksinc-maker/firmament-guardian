@@ -7,6 +7,7 @@ import { calculateChart, geocodeLocation } from "./astronomy";
 import { followUp, generateChapter, generateInterpretation, READING_CHAPTERS } from "./interpretation";
 import { askHost } from "./host";
 import { horaryFollowUp, openHoraryQuestion } from "./horary";
+import { horaryFollowUpHistorySchema } from "./horary-input";
 
 const chartInput = z.object({ location: z.string().min(2), latitude: z.number(), longitude: z.number(), timezone: z.string().min(2), date: z.string(), time: z.string(), transitLocation: z.string().optional(), transitLatitude: z.number().optional(), transitLongitude: z.number().optional(), transitTimezone: z.string().optional(), transitDate: z.string().optional(), transitTime: z.string().optional() });
 const chartResultInput = z.object({ chart: z.any() });
@@ -26,7 +27,7 @@ export const appRouter = router({
   }),
   horary: router({
     open: publicProcedure.input(horaryQuestionInput).mutation(({ input }) => openHoraryQuestion(input)),
-    followUp: publicProcedure.input(z.object({ chart: z.any(), history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) })).max(20), question: z.string().trim().min(1).max(2000) })).mutation(({ input }) => horaryFollowUp(input.chart, input.history, input.question)),
+    followUp: publicProcedure.input(z.object({ chart: z.any(), history: horaryFollowUpHistorySchema, question: z.string().trim().min(1).max(2000) })).mutation(({ input }) => horaryFollowUp(input.chart, input.history, input.question)),
   }),
 });
 export type AppRouter = typeof appRouter;
