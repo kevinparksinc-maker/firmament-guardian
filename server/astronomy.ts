@@ -3,7 +3,7 @@ import tzLookup from "tz-lookup";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
 
 export type ChartInput = { location: string; latitude: number; longitude: number; timezone: string; date: string; time: string; transitLocation?: string; transitLatitude?: number; transitLongitude?: number; transitTimezone?: string; transitDate?: string; transitTime?: string };
-export type ChartRow = { name: string; longitude: number; display: string; house: number; retrograde?: boolean; overlay: Overlay };
+export type ChartRow = { name: string; longitude: number; display: string; house: number; retrograde?: boolean; speed?: number; overlay: Overlay };
 export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition"; orb: number };
 export type TransitRow = ChartRow & { natalContacts: TransitContact[] };
 export type ChartResult = { input: ChartInput; utc: string; julianDay: number; ascendant: ChartRow; descendant: ChartRow; northNode: ChartRow; southNode: ChartRow; houses: number[]; movingBodies: ChartRow[]; frozenStars: ChartRow[]; transitDate: string; transits: TransitRow[]; validation: { passed: boolean; notes: string[] } };
@@ -38,7 +38,7 @@ export async function calculateChart(input: ChartInput): Promise<ChartResult> {
   const asc = Number(houseResult?.data?.points?.[0] ?? cusps[0]);
   if (cusps.length !== 12 || Number.isNaN(asc)) throw new Error("Swiss Ephemeris failed to calculate topocentric house cusps.");
   const planetNames = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
-  const movingBodies = planetNames.map((name, i) => { const p = safeCalc(jd, i); return { name, longitude: p.longitude, display: `${formatLongitude(p.longitude)}${p.speed < 0 ? " ®" : ""}`, house: houseFor(p.longitude, cusps), retrograde: p.speed < 0, overlay: overlay(p.longitude) }; });
+  const movingBodies = planetNames.map((name, i) => { const p = safeCalc(jd, i); return { name, longitude: p.longitude, display: `${formatLongitude(p.longitude)}${p.speed < 0 ? " ®" : ""}`, house: houseFor(p.longitude, cusps), retrograde: p.speed < 0, speed: p.speed, overlay: overlay(p.longitude) }; });
   const ascRow = { name: "Ascendant", longitude: asc, display: formatLongitude(asc), house: 1, overlay: overlay(asc) };
   const nodePosition = safeCalc(jd, 10).longitude; const northNode = { name: "North Node", longitude: nodePosition, display: formatLongitude(nodePosition), house: houseFor(nodePosition, cusps), retrograde: true, overlay: overlay(nodePosition) }; const southNodePosition = normalizeLongitude(nodePosition + 180); const southNode = { name: "South Node", longitude: southNodePosition, display: formatLongitude(southNodePosition), house: houseFor(southNodePosition, cusps), retrograde: true, overlay: overlay(southNodePosition) }; const descendant = { name: "Descendant", longitude: normalizeLongitude(asc + 180), display: formatLongitude(normalizeLongitude(asc + 180)), house: 7, overlay: overlay(normalizeLongitude(asc + 180)) };
   const frozenStars = FIXED_STARS.map(([name, longitude]) => ({ name, longitude, display: formatLongitude(longitude), house: houseFor(longitude, cusps), overlay: overlay(longitude) }));
