@@ -182,7 +182,24 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
 }
 
 export async function geocodeLocation(query: string) {
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`; const response = await fetch(url, { headers: { "User-Agent": "Bible Believers AstrologyHybridZodiac/1.0" } });
-  if (!response.ok) throw new Error("Location search is temporarily unavailable."); const data: any[] = await response.json(); if (!data[0]) throw new Error("No matching place found.");
-  const item = data[0]; const lat = Number(item.lat); const lon = Number(item.lon); const timezone = tzLookup(lat, lon); return { label: item.display_name, latitude: lat, longitude: lon, timezone };
+  const normalizedQuery = query.trim();
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(normalizedQuery)}`;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: { "User-Agent": "Bible Believers AstrologyHybridZodiac/1.0", Accept: "application/json" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!response.ok) throw new Error(`geocoder returned ${response.status}`);
+      const data: any[] = await response.json();
+      if (!data[0]) throw new Error("No matching place found.");
+      const item = data[0]; const lat = Number(item.lat); const lon = Number(item.lon); const timezone = tzLookup(lat, lon); return { label: item.display_name, latitude: lat, longitude: lon, timezone };
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+  if (lastError instanceof Error && lastError.message === "No matching place found.") throw lastError;
+  throw new Error("Location search is temporarily unavailable. Please try the pin again in a moment.");
 }
