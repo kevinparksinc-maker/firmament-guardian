@@ -72,20 +72,20 @@ describe("horary astrology", () => {
     const messages = mocked.invokeLLM.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
 
     expect(result.reading).toContain("evidence-led horary reading");
-    expect(messages[0].content).toContain("Do not mention Tarot");
-    expect(messages[0].content).toContain("Keep significator roles exact");
-    expect(messages[0].content).toContain("Do not recalculate from raw positions");
-    expect(messages[0].content).toContain("answer, not the calculations");
-    expect(messages[0].content).toContain("350–700 words");
+    expect(messages[0].content).toContain("THE FIRMAMENT — MASTER AI HORARY INTERPRETER");
+    expect(messages[0].content).toContain("CALCULATE DEEPLY. JUDGE HIERARCHICALLY. INTERPRET HUMANLY.");
+    expect(messages[0].content).toContain("The user should feel that the entire relevant chart was considered.");
+    expect(messages[0].content).toContain("Do not expose hidden chain-of-thought");
+    expect(messages[0].content).toContain("WHAT IS THE ANSWER?");
     expect(messages[1].content).toContain(sampleInput.question);
     expect(messages[1].content).toContain(result.chart.querentRuler);
     expect(messages[1].content).toContain(result.chart.subjectRuler);
     expect(messages[1].content).toContain(result.chart.topicRuler);
-    expect(messages[1].content).toContain("Roles:");
-    expect(messages[1].content).toContain("compact calculated evidence");
-    expect(messages[1].content).toContain("Relevant major aspects supplied by the calculator");
-    expect(messages[1].content).toContain("Do not recalculate from raw positions");
-    expect(messages[1].content).not.toContain("GOD VIEW / GEOCENTRIC EVIDENCE SET");
+    expect(messages[1].content).toContain("Significator roles:");
+    expect(messages[1].content).toContain("GOD VIEW / GEOCENTRIC EVIDENCE SET");
+    expect(messages[1].content).toContain("TRADITIONAL LOTS / ARABIC PARTS");
+    expect(messages[1].content).toContain("LUNAR MANSION / MANZIL / DECAN CONTEXT");
+    expect(messages[1].content).toContain("complete calculated evidence");
   });
 
   it("adds a person natal layer while keeping transit and God View at the question moment", async () => {
@@ -119,7 +119,7 @@ describe("horary astrology", () => {
 
     const messages = mocked.invokeLLM.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
     expect(messages.filter(message => message.role === "user" && message.content === question)).toHaveLength(1);
-    expect(messages.some(message => message.content.includes("Original horary evidence"))).toBe(true);
+    expect(messages.some(message => message.content.includes("Original complete horary evidence"))).toBe(true);
     expect(messages.some(message => message.content.includes("Will the hypothetical applicant accept the new role?"))).toBe(true);
     expect(messages[0].content).toContain("Keep the original chart and question fixed");
   });

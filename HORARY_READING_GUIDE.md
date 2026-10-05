@@ -1,52 +1,51 @@
 # Horary Reading Guide
 
+## Purpose
+
+The Horary AI is designed to make the user feel that the question was genuinely examined—not merely that a chart was generated. It performs deep analysis internally, weighs testimony hierarchically, and translates the result into clear, compassionate, practical language.
+
+The full instruction set is stored in [`server/horary-instructions.ts`](./server/horary-instructions.ts). It is based on the Master Horary Interpreter instructions supplied for Firmament.
+
+> **Calculate deeply. Judge hierarchically. Interpret humanly.**
+
 ## What happens when a question is submitted
 
 1. **The question is fixed.** The app uses the date, local time, timezone, and resolved location where the question was asked.
 2. **One question chart is calculated.** The astronomy engine calculates the Ascendant, Equal House cusps, planetary longitudes, speeds, retrogrades, and the canonical geocentric Moon position.
-3. **Roles are assigned.**
-   - The person asking is the **querent**, represented by House 1 and its traditional ruler.
-   - If the question is about another person, that person is represented by House 7.
-   - The selected topic house is counted from the person the question is about. For example, a career question about another person uses that person's 10th house, which becomes actual chart House 4 after turning from House 7.
-   - The Moon is treated as a general co-significator and sequence-of-events indicator.
-4. **The engine selects relevant testimony.** It checks only the supplied major aspects among the querent ruler, subject ruler, topic ruler, and Moon. It labels each contact as applying, separating, or unclear using the calculated planetary speeds.
-5. **Traditional support is calculated separately.** Lots, dignity/debility indicators, receptions, radicality cautions, fixed-star contacts, timing aids, and lunar divisions are calculated as supporting evidence. They are not allowed to become an automatic answer by themselves.
-6. **The AI receives compact judgment evidence.** The first judgment now receives the question, roles, Moon, core placements, relevant aspects, radicality cautions, and configured reception support. It does not receive the full technical appendix as the primary writing material.
-7. **The AI writes the answer first.** The first response must use:
-   - `Judgment`
-   - `Why`
-   - `What complicates it`
-   - `Practical next step`
+3. **Roles are assigned.** The person asking is the querent, represented by House 1 and its traditional ruler. If the question is about another person, that person is represented by House 7. The selected topic house is counted from the person the question is about. The Moon is treated as a major indicator of unfolding circumstances.
+4. **The engine supplies the relevant evidence.** This includes significators, house rulers, planetary conditions, applying and separating aspects, reception, Moon sequence, traditional factors, timing aids, lunar subdivisions, fixed-star testimony, and the distinct God View and Agent View layers when available.
+5. **The AI examines the whole relevant sky.** The model is not limited to a compact summary. It receives the complete calculated evidence and is instructed to determine what the user is actually asking, which factors genuinely relate to it, what supports the answer, what modifies or contradicts it, and which evidence is strongest.
+6. **The AI judges hierarchically.** Evidence is treated as primary, supporting, modifying, contradictory, timing, or contextual testimony. The system does not count positive and negative factors like votes, and secondary systems do not automatically override core horary testimony.
+7. **The AI translates the result into human meaning.** It preserves the user’s actual wording and context, explains technical language in ordinary terms, acknowledges uncertainty, avoids invented facts, and offers a grounded next step when appropriate.
 
-   It should state a provisional yes/no/mixed/insufficient-testimony leaning immediately, explain only the strongest two or three factors, and avoid planet-by-planet inventories, degree lists, house-cusp lists, or calculation logs.
+## The user-facing reading
 
-## Why the old reading felt like a calculation dump
+The answer should normally include:
 
-The previous Horary prompt required the model to explain nearly every supplied layer, including:
+- **Judgment:** the direct answer and its category, such as yes, no, leaning yes, leaning no, mixed/conditional, delayed, or insufficient testimony;
+- **Why:** the strongest converging factors and what they mean in this question;
+- **What complicates it:** obstacles, contradictions, delays, uncertainty, or conditions;
+- **What this means for you:** the translation from astrological testimony into the user’s lived situation;
+- **Practical next step:** grounded guidance that preserves the user’s agency.
 
-- all significator roles;
-- all three Natal/Transit/God View evidence sets;
-- every God View/Agent View relationship row;
-- upcoming exact contacts and planetary stations;
-- Lots and Arabic Parts;
-- dignity and debility scores;
-- reception;
-- fixed stars;
-- radicality considerations;
-- traditional timing;
-- lunar mansion, Manzil, and Decan overlays.
+The reading should feel like a conversation rather than a textbook or computer-generated report. A simple question can receive a concise answer. A question carrying significant emotional, relational, financial, or life-direction weight should be allowed to breathe. The goal is not short output; it is meaningful understanding.
 
-That produced technically rich output, but it placed the evidence ahead of the human answer and encouraged the model to repeat calculations inside the interpretation. The general-purpose Master Interpreter prompt also added a large amount of instructional text and encouraged deep symbolic elaboration.
+The interface places **Your answer** before the technical evidence, but the answer is now based on the full evidence set rather than a shortened calculation summary. The technical evidence remains available for inspection afterward.
 
-## What changed
+## Personal resonance without manipulation
 
-- The first AI request now uses a **compact Horary-specific prompt** rather than the oversized general interpreter prompt.
-- The first judgment is limited to the strongest testimony and normally 350–700 words.
-- Technical panels remain available after the answer for readers who want to inspect the calculations.
-- The UI now places **Your answer** before chart evidence, frame translation, the orrery, and follow-up tools.
-- The technical evidence is explicitly labeled optional.
-- The same question chart remains fixed for follow-up questions; follow-ups do not silently recast the chart.
+The interpreter should connect symbolism to the human reality of the question so the user can recognize the situation, while never pretending to know undisclosed facts. It must not manufacture intimacy, claim supernatural certainty, create fear or dependency, tell the user what they secretly feel without evidence, or present speculation as fact.
 
-## What the judgment does not claim
+The intended tone is compassionate without being sentimental, direct without being cold, and profound without being theatrical. Resonance is not certainty.
 
-Horary is presented as symbolic interpretation, not certainty or scientific proof. The system should not claim a guaranteed event, invent an absent traditional doctrine, assign a missing placement, or turn an exact planetary contact into a guaranteed real-world date.
+## Technical evidence and boundaries
+
+The technical panel may include chart data, significators, rulers, planetary conditions, aspects, applying/separating status, reception, dignity/debility, Moon sequence, lunar mansion, Manzil, Decan, Nakshatra, fixed stars, God View, Agent View, translations, timing indicators, Lots, Arabic Parts, and other calculated testimony.
+
+The panel is for inspection. The user-facing judgment is for understanding. The interpreter must not invent absent placements, aspects, dates, degrees, houses, traditional doctrines, or historical correspondences. Exact planetary contacts must not be presented as guaranteed real-world events.
+
+Horary remains a symbolic interpretive tradition rather than scientifically established proof. It must not replace qualified medical, legal, financial, or mental-health advice.
+
+## Follow-up questions
+
+A follow-up remains anchored to the original horary chart and question. The system does not silently recast the chart. It uses the existing evidence to answer what the user is asking now, and only treats the interaction as a new horary when it is genuinely a new question rather than a clarification of the original one.

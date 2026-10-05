@@ -6,6 +6,7 @@ import type { FrameRelationship } from "./astrologyCore";
 import { HORARY_TOPICS } from "../shared/horary";
 import { calculateLookahead, type Lookahead } from "./horaryLookahead";
 import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
+import { HORARY_SYSTEM } from "./horary-instructions";
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
@@ -335,29 +336,13 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   };
 }
 
-const HORARY_SYSTEM = `You are Bible Believers Astrology's horary astrology interpreter. Use the same evidence-first AI framework as the app's other readings, adapted to horary astrology. The user asks about a concrete question; the chart is cast for the supplied time and place at which the question was asked. Do not treat this as a natal personality profile or a Tarot spread.
-INTERPRETATION STANDARD
-- Keep significator roles exact: the querent is House 1, another person is House 7, and the selected topic house is counted from that person as explicitly supplied.
-- Use only the supplied calculated facts and aspect list. Do not recalculate from raw positions, invent missing doctrine, or treat background planets as additional significators.
-- Begin with the answer, not the calculations. Use these headings: Judgment, Why, What complicates it, and Practical next step.
-- State one clear provisional leaning (yes, no, mixed, or insufficient testimony) in the first 1–2 sentences when supported.
-- Explain only the two or three strongest factors that answer the question. Do not produce a planet-by-planet inventory, degree list, house-cusp list, or calculation log.
-- Translate technical terms immediately into ordinary language. Mention a specific aspect, ruler, Moon condition, dignity, reception, or timing aid only when it materially changes the answer.
-- Keep the first judgment focused, normally 350–700 words. Do not pad, repeat the conclusion, or explain every technical appendix.
-- Be clear where testimony is weak or mixed. Dates may only be mentioned when supplied, and must be described as exact planetary contacts rather than guaranteed real-world events.
-- Give a proportionate practical next step. Avoid deterministic forecasts, guarantees, fear, medical diagnosis, or advice replacing qualified professional guidance. Astrology is symbolic interpretation, not scientifically established evidence.
-- If a natal layer exists, use it only when it materially clarifies the question. The full God View/Agent View comparison belongs in the optional evidence panels, not in the first judgment.
-- Do not mention Tarot, cards, suits, or spreads. The reader retains agency.
-
-Write a focused first judgment in clear Markdown. End with one sentence stating what evidence could change or weaken the provisional conclusion.`;
-
 function responseText(content: string | Array<{ type: string; text?: string }> | undefined) {
   return typeof content === "string"
     ? content
     : (content ?? []).filter(part => part.type === "text").map(part => part.text ?? "").join("\n");
 }
 
-async function answer(messages: Message[], maxTokens = 2200) {
+async function answer(messages: Message[], maxTokens = 6000) {
   const response = await invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens });
   const text = responseText(response.choices?.[0]?.message?.content);
   if (!text.trim()) throw new Error("The horary interpreter returned no readable answer. Please try again.");
@@ -368,7 +353,7 @@ export async function openHoraryQuestion(input: HoraryInput) {
   const chart = await calculateHoraryChart(input);
   const reading = await answer([
     { role: "system", content: HORARY_SYSTEM },
-    { role: "user", content: `Use only this compact calculated evidence as the source of truth. Do not recalculate or add missing traditional considerations. Lead with the answer and keep the technical appendix out of the reading.\n\n${chart.judgmentEvidenceText}\n\nGive the focused horary judgment now.` },
+    { role: "user", content: `Use the complete calculated evidence below as the source of truth. Examine it deeply, weigh it hierarchically, and translate it into a human answer. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence.\n\n${chart.evidenceText}\n\nGive the complete, human-centered horary judgment now.` },
   ]);
   return { chart, reading };
 }
@@ -380,7 +365,7 @@ export async function horaryFollowUp(
 ) {
   return answer([
     { role: "system", content: `${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.` },
-    { role: "user", content: `Original horary evidence:\n\n${chart.evidenceText}` },
+    { role: "user", content: `Original complete horary evidence:\n\n${chart.evidenceText}` },
     ...withCurrentQuestion(history, question, 12),
   ], 3200);
 }
