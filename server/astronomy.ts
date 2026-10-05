@@ -23,9 +23,14 @@ export type ChartInput = {
 };
 
 export type MoonUncertainty = { from: number; to: number; label: string };
+export type MomentPrecision = "exact" | "date-only-reference";
+export type TransitHouseFrame = "transit-location" | "natal-location" | "god-fixed";
 export type ChartRow = {
   name: string;
+  /** Canonical geocentric longitude, shared by the God and Agent house frames. */
   longitude: number;
+  /** Observer-specific (parallax-corrected) longitude. Present for the Moon only, and only when a location is resolved. */
+  topocentricLongitude?: number;
   display: string;
   house: number;
   godHouse?: number;
@@ -56,6 +61,8 @@ export type ChartResult = {
   frozenStars: ChartRow[];
   godPlacements: Array<ChartRow & DualPlacement>;
   transitDate: string;
+  momentPrecision: MomentPrecision;
+  transitHouseFrame: TransitHouseFrame;
   transits: TransitRow[];
   validation: { passed: boolean; notes: string[] };
 };
@@ -73,15 +80,26 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
 
 const MOSHIER_FLAGS = 4 | 256;
 const TOPOCENTRIC_FLAG = 32768;
-function safeCalc(jd: number, planet: number, topocentric = false) {
-  const flags = MOSHIER_FLAGS | (topocentric ? TOPOCENTRIC_FLAG : 0);
+function rawCalc(jd: number, planet: number, flags: number) {
   const result: any = (sweph as any).calc_ut(jd, planet, flags); const data = result?.data ?? result;
   if (!data || Number.isNaN(Number(data[0]))) throw new Error("Swiss Ephemeris failed to calculate a planetary position.");
   return { longitude: normalizeLongitude(Number(data[0])), speed: Number(data[3] ?? 0) };
 }
+/** Geocentric position. Never touches sweph's global topocentric observer. */
+function safeCalc(jd: number, planet: number) {
+  return rawCalc(jd, planet, MOSHIER_FLAGS);
+}
+/** Parallax-corrected Moon longitude for one observer; always restores the zero observer. */
+function topocentricMoonLongitude(jd: number, longitude: number, latitude: number, elevation = 0) {
+  const sw = sweph as any;
+  try {
+    sw.set_topo?.(longitude, latitude, elevation);
+    return rawCalc(jd, 1, MOSHIER_FLAGS | TOPOCENTRIC_FLAG).longitude;
+  } finally {
+    sw.set_topo?.(0, 0, 0);
+  }
+}
 function planetaryTopocentric(planet: number, locationAvailable: boolean) {
-  // Apply observer-specific parallax to the Moon; keep the other planetary
-  // longitudes geocentric so location changes only the horizon/house layer.
   return locationAvailable && planet === 1;
 }
 function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number } | null {
@@ -93,16 +111,16 @@ function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope,
   const date = transit ? input.transitDate : input.date;
   const time = transit ? input.transitTime : input.time;
   const timezone = transit ? input.transitTimezone : input.timezone;
-  if (!date) return new Date();
-  if (worldview === "god" && (!time || (!transit && input.birthTimeKnown === false))) return new Date(`${date}T12:00:00.000Z`);
+  if (!date) return { date: new Date(), precision: "exact" as const };
+  if (worldview === "god" && (!time || (!transit && input.birthTimeKnown === false))) return { date: new Date(`${date}T12:00:00.000Z`), precision: "date-only-reference" as const };
   if (!time || !timezone) throw new Error("An exact date, time, and timezone are required for Agent View.");
-  return parseLocalToUtc(date, time, timezone);
+  return { date: parseLocalToUtc(date, time, timezone), precision: "exact" as const };
 }
 function julianDay(date: Date) {
   return Number((sweph as any).julday(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours() + date.getUTCMinutes() / 60, 1));
 }
 function row(name: string, longitude: number, house: number, worldview: Worldview, ascendant: number | null, extra: Partial<ChartRow> = {}): ChartRow {
-  const dual = dualPlacement(longitude, ascendant) as DualPlacement;
+  const dual = dualPlacement(longitude, ascendant, name) as DualPlacement;
   return { name, longitude, display: formatLongitude(longitude), house, godHouse: dual.godHouse, ...(dual.agentHouse == null ? {} : { agentHouse: dual.agentHouse }), ...(dual.frameRelationship ? { frameRelationship: dual.frameRelationship } : {}), royalStarContacts: dual.royalStarContacts, overlay: overlay(longitude), ...extra };
 }
 function fixedHouseRows(worldview: Worldview, ascendant: number | null) {
@@ -116,15 +134,17 @@ function moonRange(date: string): MoonUncertainty | undefined {
   return { from, to, label: `${formatLongitude(from)} to ${formatLongitude(to)} possible on this date` };
 }
 
-export async function calculateChart(input: ChartInput): Promise<ChartResult> {
-  const worldview: Worldview = input.worldview ?? "agent"; const readingScope: ReadingScope = input.readingScope ?? "combined";
+export async function calculateChart(rawInput: ChartInput): Promise<ChartResult> {
+  const worldview: Worldview = rawInput.worldview ?? "agent"; const readingScope: ReadingScope = rawInput.readingScope ?? "combined";
+  // Natal-only readings never use transit fields, so stale or half-filled form values are ignored.
+  const input: ChartInput = readingScope === "natal"
+    ? { ...rawInput, transitLocation: undefined, transitLatitude: undefined, transitLongitude: undefined, transitTimezone: undefined, transitDate: undefined, transitTime: undefined }
+    : rawInput;
   const agentViewAvailable = worldview !== "god" && Boolean(input.time && input.timezone && input.location);
   if (worldview !== "god" && !agentViewAvailable) throw new Error("Agent View requires birth location, date, time, and timezone.");
   if (worldview === "god" && readingScope !== "transit" && !input.date) throw new Error("God View Natal readings require a birth date; birth time and location are optional.");
-  const utcDate = momentFor(input, worldview, readingScope); const jd = julianDay(utcDate);
+  const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
-  if (hasAgentLocation) (sweph as any).set_topo?.(input.longitude, input.latitude, input.elevation ?? 0);
-  else (sweph as any).set_topo?.(0, 0, 0);
   const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, 0, input.latitude, input.longitude, "E") : null;
   const asc = hasAgentLocation ? Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0]) : null;
   const mc = hasAgentLocation ? Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]) : null;
@@ -132,30 +152,37 @@ export async function calculateChart(input: ChartInput): Promise<ChartResult> {
   const houses = fixedHouseRows(worldview, asc);
   const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
   const planetNames = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
-  const movingBodies = planetNames.map((name, i) => { const p = safeCalc(jd, i, planetaryTopocentric(i, hasAgentLocation)); return row(name, p.longitude, houseFor(p.longitude), worldview, asc, { retrograde: p.speed < 0, speed: p.speed, ...(worldview === "god" && name === "Moon" && input.birthTimeKnown === false ? { uncertainty: moonRange(input.date) } : {}) }); });
+  const movingBodies = planetNames.map((name, i) => { const p = safeCalc(jd, i); const topocentricLongitude = planetaryTopocentric(i, hasAgentLocation) ? topocentricMoonLongitude(jd, input.longitude, input.latitude, input.elevation ?? 0) : undefined; return row(name, p.longitude, houseFor(p.longitude), worldview, asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }), ...(worldview === "god" && name === "Moon" && input.birthTimeKnown === false ? { uncertainty: moonRange(input.date) } : {}) }); });
   const ascRow = asc == null ? null : row("Ascendant", asc, 1, worldview, asc);
   const descLongitude = asc == null ? null : normalizeLongitude(asc + 180); const descendant = descLongitude == null ? null : row("Descendant", descLongitude, 7, worldview, asc);
   const mcRow = mc == null ? null : row("Midheaven", mc, houseFor(mc), worldview, asc);
   const nodePosition = safeCalc(jd, 10).longitude; const northNode = row("North Node", nodePosition, houseFor(nodePosition), worldview, asc, { retrograde: true, speed: 0 }); const southNodePosition = normalizeLongitude(nodePosition + 180); const southNode = row("South Node", southNodePosition, houseFor(southNodePosition), worldview, asc, { retrograde: true, speed: 0 });
   const frozenStars = FIXED_STARS.map(([name, longitude]) => row(name, longitude, houseFor(longitude), worldview, asc));
   const allPlacements = [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), ...(mcRow ? [mcRow] : []), northNode, southNode];
-  const godPlacements = allPlacements.map(placement => ({ ...placement, ...dualPlacement(placement.longitude, asc) }));
-  const reference = { Sun: 238.0392, Moon: 102.8030, Ascendant: 277.3745, Antares: 225.0167, Hamal: 12.9333 }; const delta = (a: number, b: number) => Math.abs(((a - b + 180) % 360) - 180);
+  const godPlacements = allPlacements.map(placement => ({ ...placement, ...dualPlacement(placement.longitude, asc, placement.name) }));
+  const reference = { Sun: 238.0392, Moon: 103.5007, Ascendant: 277.3745, Antares: 225.0167, Hamal: 12.9333 }; const delta = (a: number, b: number) => Math.abs(((a - b + 180) % 360) - 180);
   const actual = { Sun: movingBodies.find(r => r.name === "Sun")?.longitude ?? 0, Moon: movingBodies.find(r => r.name === "Moon")?.longitude ?? 0, Ascendant: asc ?? 0, Antares: 225.0167, Hamal: 12.9333 };
   const isDallas = input.date === "1986-11-20" && input.location.toLowerCase().includes("dallas"); const withinArcminute = ["Sun", "Moon", "Antares", "Hamal"].every(key => delta(actual[key as keyof typeof actual], reference[key as keyof typeof reference]) <= 1 / 60) && delta(actual.Ascendant, reference.Ascendant) <= 2 / 60;
   const validation = isDallas && agentViewAvailable ? { passed: withinArcminute, notes: withinArcminute ? ["Dallas reference profile verified; the published Ascendant is rounded to the nearest minute, so it uses a two-arcminute display-reference tolerance.", "Frozen stars remain precession-locked; Antares and Hamal use the prescribed constants."] : ["Dallas profile calculated, but one or more reference placements exceeded the one-arcminute tolerance."] } : { passed: false, notes: ["Reference validation runs automatically for the documented Dallas profile in Agent View."] };
-  const transitDate = input.transitDate && input.transitTime && input.transitTimezone ? momentFor(input, worldview, readingScope, true) : new Date(); const transitJd = julianDay(transitDate);
-  const transitHasLocation = worldview !== "god" && Number.isFinite(input.transitLatitude) && Number.isFinite(input.transitLongitude); if (transitHasLocation) (sweph as any).set_topo?.(input.transitLongitude, input.transitLatitude, input.elevation ?? 0);
-  const transitAsc = transitHasLocation ? Number((sweph as any).houses_ex(transitJd, 0, input.transitLatitude, input.transitLongitude, "E")?.data?.points?.[0]) : null;
+  const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
+  const transitInputsPresent = Boolean(input.transitDate?.trim() || input.transitTime?.trim() || input.transitTimezone?.trim() || input.transitLocation?.trim() || transitCoordinatesPresent);
+  const transitLocationResolved = worldview !== "god" && Boolean(input.transitLocation?.trim() && input.transitTimezone?.trim() && Number.isFinite(input.transitLatitude) && Number.isFinite(input.transitLongitude));
+  if (worldview !== "god" && transitInputsPresent && !transitLocationResolved) throw new Error("Transit location must be resolved before calculating transit houses.");
+  const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
+  const transitHasLocation = worldview !== "god" && transitLocationResolved;
+  const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, 0, input.transitLatitude, input.transitLongitude, "E") : null;
+  const transitAsc = transitHasLocation ? Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0]) : null;
+  if (transitHasLocation && Number.isNaN(transitAsc)) throw new Error("Swiss Ephemeris failed to calculate the transit Ascendant for Equal House.");
+  const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
-  const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i, planetaryTopocentric(i, transitHasLocation)); const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed }), natalContacts: contacts }; });
+  const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts }; });
   const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
-  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }], validation };
+  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }], validation };
 }
 
 export async function geocodeLocation(query: string) {
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`; const response = await fetch(url, { headers: { "User-Agent": "FirmamentHybridZodiac/1.0" } });
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`; const response = await fetch(url, { headers: { "User-Agent": "Bible Believers AstrologyHybridZodiac/1.0" } });
   if (!response.ok) throw new Error("Location search is temporarily unavailable."); const data: any[] = await response.json(); if (!data[0]) throw new Error("No matching place found.");
   const item = data[0]; const lat = Number(item.lat); const lon = Number(item.lon); const timezone = tzLookup(lat, lon); return { label: item.display_name, latitude: lat, longitude: lon, timezone };
 }

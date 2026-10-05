@@ -30,7 +30,7 @@ describe("horary astrology", () => {
 
     expect(chart.question).toBe(sampleInput.question);
     expect(chart.askedAt).toMatch(/^2024-07-15T16:34:00/);
-    expect(chart.houseSystem).toBe("Topocentric Equal House");
+    expect(chart.houseSystem).toBe("Equal House");
     expect(chart.subjectHouse).toBe(1);
     expect(chart.actualTopicHouse).toBe(10);
     expect(chart.houses).toHaveLength(12);

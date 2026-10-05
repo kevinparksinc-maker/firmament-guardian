@@ -100,6 +100,11 @@ export type InvokeResult = {
   };
 };
 
+type ProviderResponse = InvokeResult & {
+  output_text?: string;
+  output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+};
+
 export type JsonSchema = {
   name: string;
   schema: Record<string, unknown>;
@@ -226,6 +231,22 @@ const assertApiKey = () => {
 const contentToText = (content: Message["content"]): string =>
   ensureArray(content).map(part => typeof part === "string" ? part : part.type === "text" ? part.text : "").join("\n");
 
+const responseContentToText = (content: unknown): string => {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.map(part => {
+    if (typeof part === "string") return part;
+    return part && typeof part === "object" && "text" in part && typeof part.text === "string" ? part.text : "";
+  }).filter(Boolean).join("\n");
+};
+
+const readableAssistantText = (result: ProviderResponse): string => {
+  const choiceText = responseContentToText(result.choices?.[0]?.message?.content);
+  if (choiceText.trim()) return choiceText;
+  if (typeof result.output_text === "string" && result.output_text.trim()) return result.output_text;
+  return result.output?.flatMap(item => item.content ?? []).map(item => item.text ?? "").filter(Boolean).join("\n") ?? "";
+};
+
 async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
   const system = params.messages.filter(message => message.role === "system").map(message => contentToText(message.content)).join("\n\n");
   const messages = params.messages.filter(message => message.role !== "system" && (message.role === "user" || message.role === "assistant")).map(message => ({
@@ -260,27 +281,43 @@ async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
   const headers = { "content-type": "application/json", authorization: `Bearer ${ENV.openaiApiKey}` };
   const messages = params.messages.map(normalizeMessage);
   const max_tokens = params.max_tokens ?? params.maxTokens ?? 4096;
-  const reasoning = params.reasoning || params.thinking
-    ? { effort: "minimal" }
-    : undefined;
-  for (const model of ["gpt-5-mini", "gpt-5-nano"]) {
-    const response = await fetchWithBackoff(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ model, messages, max_tokens, ...(reasoning ? { reasoning } : {}) }),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      if (model === "gpt-5-nano") throw new Error(`OpenAI-compatible invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
-      continue;
+  const requestedModel = params.model && !params.model.startsWith("claude") ? params.model : undefined;
+  const models = requestedModel ? [requestedModel] : ["gpt-5-mini", "gpt-5-nano"];
+  let lastFailure = "no readable message";
+
+  for (const model of models) {
+    // Some compatible gateways return an empty message when reasoning consumes
+    // the completion budget. Retry the same model with a plain request before
+    // switching models, rather than repeating the same request shape.
+    const requestVariants = [
+      { max_tokens, ...(params.reasoning || params.thinking ? { reasoning: { effort: "minimal" } } : {}) },
+      { max_completion_tokens: max_tokens },
+    ];
+    for (const requestOptions of requestVariants) {
+      const response = await fetchWithBackoff(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ model, messages, ...requestOptions }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastFailure = `provider error ${response.status}: ${errorText.slice(0, 300)}`;
+        continue;
+      }
+      const result = await response.json() as ProviderResponse;
+      const choice = result.choices?.[0];
+      const text = readableAssistantText(result);
+      if (text.trim()) {
+        if (!choice?.message?.content) {
+          result.choices = [{ index: 0, message: { role: "assistant", content: text }, finish_reason: choice?.finish_reason ?? "stop" }];
+        }
+        return result;
+      }
+      lastFailure = `model ${model} returned no visible text (finish_reason=${choice?.finish_reason ?? "unknown"})`;
+      console.warn(`OpenAI-compatible ${lastFailure}; trying a compatible fallback request`);
     }
-    const result = await response.json() as InvokeResult;
-    const choice = result.choices?.[0];
-    const content = choice?.message?.content;
-    if (typeof content === "string" && content.trim()) return result;
-    console.warn(`OpenAI-compatible model ${model} returned no visible text (finish_reason=${choice?.finish_reason ?? "unknown"}); trying fallback`);
   }
-  throw new Error("OpenAI-compatible provider returned no readable message after fallback retry");
+  throw new Error(`OpenAI-compatible provider returned no readable message after fallback retries (${lastFailure})`);
 }
 
 const normalizeResponseFormat = ({

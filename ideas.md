@@ -1,4 +1,4 @@
-# Firmament Guardian design brief
+# Bible Believers Astrology design brief
 
 ## Direction
 **Astral Observatory / Quiet Guardian** — a calm, dark-sky interface for reflective chart work, built around a restrained observatory palette and precise data surfaces.

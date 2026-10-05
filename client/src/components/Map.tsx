@@ -86,11 +86,6 @@ declare global {
   }
 }
 
-type MapsRuntimeConfig = {
-  apiUrl: string;
-  browserKey: string;
-};
-
 let mapsScriptPromise: Promise<void> | null = null;
 
 function loadMapScript(): Promise<void> {
@@ -98,25 +93,11 @@ function loadMapScript(): Promise<void> {
   if (mapsScriptPromise) return mapsScriptPromise;
 
   mapsScriptPromise = (async () => {
-    const configResponse = await fetch("/api/runtime-config");
-    if (!configResponse.ok) {
-      throw new Error(`Maps runtime configuration failed (${configResponse.status})`);
-    }
-
-    const config = (await configResponse.json()) as Partial<MapsRuntimeConfig>;
-    if (!config.apiUrl || !config.browserKey) {
-      throw new Error("Maps runtime configuration is unavailable");
-    }
-    const apiUrl = config.apiUrl;
-    const browserKey = config.browserKey;
-
     await new Promise<void>((resolve, reject) => {
       const script = document.createElement("script");
-      const mapsUrl = `${apiUrl.replace(/\/+$/, "")}/v1/maps/proxy/maps/api/js`;
+      const mapsUrl = "/api/maps/javascript";
       const params = new URLSearchParams({
-        key: browserKey,
-        v: "weekly",
-        libraries: "marker,places,geocoding,geometry",
+        origin: window.location.origin,
       });
       script.src = `${mapsUrl}?${params.toString()}`;
       script.async = true;

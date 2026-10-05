@@ -1,4 +1,4 @@
-# Firmament mobile visual system
+# Bible Believers Astrology mobile visual system
 
 ## Prototype routes
 
@@ -10,7 +10,7 @@
 
 ### Sky Home
 
-- **Top:** Firmament wordmark, “The living sky” title, exit/back action.
+- **Top:** Bible Believers Astrology wordmark, “The living sky” title, exit/back action.
 - **Hero:** atmospheric starfield, one-sentence promise, primary “Open three-layer orrery” action.
 - **Quick actions:** Ask Horary and Explore Maps.
 - **Map module:** horizontal system selector with Zodiac, Nakshatra, Manazil, and Decan.
@@ -21,7 +21,7 @@
 - **Layer selector:** Natal / Transit / God View tabs.
 - **Central visualization:** concentric SVG rings with consistent semantic colors.
 - **Planet detail grid:** body glyph, degree/context, and layer-specific explanation.
-- **Reading rule:** local houses belong only to Natal / Agent; God View remains geocentric and observer-independent.
+- Reading rule: local houses belong only to Natal / Agent; God View remains geocentric and observer-independent. Planetary longitude is canonical and geocentric in both frames; Agent View may additionally expose a topocentric lunar correction when a location is resolved.
 
 ## Semantic color tokens
 

@@ -1,8 +1,8 @@
-# Firmament Guardian Premium App Plan
+# Bible Believers Astrology Premium App Plan
 
 ## Product scope
 
-Upgrade Firmament Guardian into a private personal observatory rather than a calculator with AI attached. The first premium build covers roadmap items 1–8: exceptional first session, premium visual chart exploration, guided AI readings, persistent personal history, daily/monthly return value, relationship intelligence, trust/privacy, and premium exports.
+Upgrade Bible Believers Astrology into a private personal observatory rather than a calculator with AI attached. The first premium build covers roadmap items 1–8: exceptional first session, premium visual chart exploration, guided AI readings, persistent personal history, daily/monthly return value, relationship intelligence, trust/privacy, and premium exports.
 
 The existing public chart calculation, natal/transit/combined reading modes, AI host, chapter generation, transit calculations, and live deployment remain intact. New functionality must be additive and must not remove the current calculation or interpretation paths.
 
@@ -29,7 +29,7 @@ The existing public chart calculation, natal/transit/combined reading modes, AI 
 - **Typography**: Playfair Display/Georgia-style serif for interpretation and chapter titles; compact sans/mono labels for coordinates, timestamps, and system state.
 - **Brand essence**: a private personal observatory that explains how the sky meets your story. Personality: precise, intimate, luminous.
 - **Brand voice**: direct, reflective, evidence-aware. Example lines: “Start with the sky you want to understand.” and “Here is the chart evidence beneath this interpretation.”
-- **Wordmark/mark**: preserve the Firmament Guardian wordmark and develop a small orbital-guardian mark for saved readings and exports.
+- **Wordmark/mark**: preserve the Bible Believers Astrology wordmark and develop a small orbital-guardian mark for saved readings and exports.
 - **Signature brand color**: luminous cyan `#67e8f9`, reserved for active discovery and evidence links.
 
 ## Project structure
@@ -61,3 +61,25 @@ The existing public chart calculation, natal/transit/combined reading modes, AI 
 ## Verification and delivery
 
 Use automatic TypeScript diagnostics, existing Vitest coverage, database migration checks, route-manifest checks, and production build checks. Validate actual API responses against the frontend contracts. Preserve the current public URL and publish each completed stage from a canonical main checkpoint.
+
+## Approved deployment execution amendment — October 2026
+
+### Scope
+Deploy the supplied Bible Believers Astrology archive as a production-ready managed web application. The deployment imports and builds the existing application without removing or rewriting its pages, content, interactions, routes, or visual presentation. Work in this delivery is limited to runtime compatibility, dependency/build reliability, managed database/authentication integration, deployment configuration, and verification.
+
+### Approved visual decision
+The confirmed **Modern Apocrypha** direction—serious editorial presentation, charcoal surfaces, and restrained crimson accents—sets the quality bar for the deployed experience. Because the approved scope requires the archive's current visual presentation to be preserved, this deployment does not restyle the product; the existing authored UI remains the source of truth. Any future visual iteration should use Modern Apocrypha as its reference without disturbing existing chart and reading workflows.
+
+### Production implementation
+- Import the complete archive into the managed Git workspace, retaining the existing React/Vite client, Express/tRPC server, Drizzle schema and migrations, routes, assets, tests, and `app.config.ts` branding metadata.
+- Use the managed server and MySQL-compatible database already enabled for this project. Apply the committed non-destructive Drizzle migrations before validating history-saving functionality.
+- Preserve public chart calculation, interpretation, horary, and visual observatory flows. Align the existing OAuth/session code with the managed Manus runtime environment so authenticated history remains compatible with Preview and production.
+- Keep the application server as the sole public target. Its Docker image installs the pinned pnpm toolchain with the lockfile and workspace lifecycle policy, builds Vite assets and the Express entry point, honors `PORT`, and exposes unauthenticated `GET /health`.
+- Use the existing `manus-routes.json` as the route contract, updating it only if source routes differ. Validate it directly from the running application.
+
+### Deployment project structure
+- `client/`: preserved React application, public assets and route manifest.
+- `server/`: preserved Express/tRPC APIs, astronomy and interpretation services; only platform-runtime compatibility fixes are permitted.
+- `drizzle/`: existing additive schema migrations applied to the managed database.
+- `Dockerfile`: production image contract; copies all install-policy inputs before `pnpm install`.
+- `plan.md` and `TODO.md`: recorded deployment scope and completion evidence.

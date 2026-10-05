@@ -2,7 +2,7 @@
 
 ## Scope decision
 
-This implementation is additive. The existing Swiss Ephemeris, Topocentric Equal House, Horary significator, transit, fixed-star, and interpretation flows remain in place. The new work adds a relationship layer around the existing calculated placements.
+This implementation is additive. The existing Swiss Ephemeris, geocentric planetary calculation, optional topocentric lunar correction, Equal House, Horary significator, transit, fixed-star, and interpretation flows remain in place. The relationship layer uses one canonical longitude in both God and Agent frames.
 
 ## Audit before implementation
 
@@ -10,12 +10,12 @@ This implementation is additive. The existing Swiss Ephemeris, Topocentric Equal
 |---|---|---|
 | One astronomical position | The app already stored one `longitude` per calculated row and exposed `godHouse`/`agentHouse` fields. | There was no structured object explaining the relationship between the two frames. |
 | God View | Existing fixed Aries-to-Pisces mapping in `godHouseFor()`. Standalone God View does not require an Ascendant or personal location. | The UI showed the fixed frame, but did not explain how it relates to the Agent frame. |
-| Agent View | Existing topocentric body calculation, Ascendant, and 30-degree Equal House assignment. Transit houses use the transit observation location. | The UI exposed houses but did not provide a deliberate translation back to the broader frame. |
+| Agent View | Existing geocentric body calculation, optional topocentric lunar longitude, Ascendant, and 30-degree Equal House assignment. Transit houses expose whether they use the transit or natal location. | The UI exposed houses but did not provide a deliberate translation back to the broader frame. |
 | Relationship layer | Prompt guidance mentioned God/Agent context. | No typed relationship classification, themes, translation, tension, concealment, or synthesis existed. |
 | AI evidence trail | AI received `godPlacements` and basic house fields. | The relationship layer was not supplied as a named structured evidence set. |
 | Main chart UI | Worldview buttons and dual-house labels existed. | No paired God View / Agent View / Relationship presentation made the “same body” concept explicit. |
 | Horary | Horary correctly calculated significators, Moon, aspects, lookahead, transit evidence, and God View evidence. | Horary did not show or pass a dedicated God/Agent translation layer. |
-| Automated tests | Core God/Agent math, God stability in standalone mode, Agent topocentric behavior, and Horary calculation were covered. | No tests covered relationship classification, metadata propagation, or same-row dual presentation. |
+| Automated tests | Core God/Agent math, God stability in standalone mode, canonical longitude with optional lunar parallax, and Horary calculation are covered. | No tests covered relationship classification, metadata propagation, or same-row dual presentation. |
 
 ## Implemented expansion
 
@@ -88,16 +88,16 @@ The panel is visible in the main chart result and in Horary results.
 ## Validation
 
 - TypeScript: `pnpm check` passed.
-- Full tests: **11 test files, 39 tests passed**.
+- Full tests: **12 test files, 47 tests passed**.
 - Production build: `pnpm build` passed.
 
 ## Remaining gaps / architectural notes
 
-### 1. Strict God View independence inside dual topocentric calculations
+### 1. Explicit canonical-position contract
 
-Standalone `worldview: "god"` calculations are already location-independent and covered by existing tests. In the existing dual/Agent calculation path, the engine deliberately preserves the current topocentric Agent calculation and attaches both frame labels to that one row. This preserves the requested “one row / one longitude” rule and avoids replacing the working engine.
+Standalone `worldview: "god"` calculations are location-independent and covered by existing tests. Agent and dual calculations now use the same canonical geocentric longitude for signs, God Houses, stars, aspects, contacts, and evidence. When a location is resolved, the Moon may also carry `topocentricLongitude` for Agent-specific parallax use; it never replaces `longitude`. Topocentric calls isolate and restore Swiss Ephemeris observer state, and natal-only requests return transit fields sanitized away.
 
-If Firmament later requires God House assignments in a dual chart to remain mathematically identical across different observer locations while Agent positions remain topocentric, the engine will need a deliberate canonical-position contract that returns one shared geocentric longitude plus a separate observer-specific house projection. That is an architectural decision because it changes the current one-position/topocentric behavior and should not be introduced silently.
+Transit results also expose `transitHouseFrame` (`transit-location`, `natal-location`, or `god-fixed`) and `momentPrecision` (`exact` or `date-only-reference`) so interpretation never has to infer the coordinate frame or whether noon UTC was an intentional approximation.
 
 ### 2. Relationship prose is deterministic house-theme scaffolding
 

@@ -214,9 +214,14 @@ class SDKServer {
       if (
         !isNonEmptyString(openId) ||
         !isNonEmptyString(appId) ||
-        !isNonEmptyString(name)
+        typeof name !== "string"
       ) {
         console.warn("[Auth] Session payload missing required fields");
+        return null;
+      }
+
+      if (appId !== ENV.appId) {
+        console.warn("[Auth] Session project ID did not match this application");
         return null;
       }
 

@@ -1,4 +1,4 @@
-# Firmament Astrology-Only Final Validation Report
+# Bible Believers Astrology-Only Final Validation Report
 
 Validation date: 2026-10-03
 
@@ -25,7 +25,7 @@ Validated the astrology-only source tree, excluding the separate `simulation-lab
 | Check | Result |
 |---|---|
 | TypeScript (`pnpm check`) | Passed |
-| Full Vitest suite | **12 test files, 42 tests passed** |
+| Full Vitest suite | **12 test files, 47 tests passed** |
 | New aspect/Horary regression suite | 3 tests passed |
 | God/Agent relationship suite | 5 tests passed |
 | Production build (`pnpm build`) | Passed |
@@ -64,6 +64,8 @@ The smoke assertions checked:
 - Transit contact names, aspects, and 3° orb bounds.
 - God Natal absence of personal Ascendant and Agent View.
 - Date-only Moon uncertainty.
+- Canonical geocentric longitude shared across house frames, with optional topocentric lunar longitude.
+- Transit-location validation, explicit moment precision, and explicit transit house-frame metadata.
 - Horary no-natal empty contact arrays and correct evidence wording.
 - Horary natal preservation of natal comparison evidence.
 
@@ -80,7 +82,7 @@ Observed smoke counts:
 The live home page successfully rendered the built-in Dallas example chart, including:
 
 - Reference verified status.
-- Agent View and Topocentric Equal House label.
+- Agent View with geocentric planetary positions, optional topocentric lunar correction, and Equal House labeling.
 - Natal positions and angles.
 - Transit positions and natal aspect contacts.
 - Chart wheel.

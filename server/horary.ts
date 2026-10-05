@@ -47,7 +47,7 @@ export type HoraryChart = {
   askedAt: string;
   location: string;
   timezone: string;
-  houseSystem: "Topocentric Equal House";
+  houseSystem: "Equal House";
   ascendant: { longitude: number; display: string; sign: string };
   querentRuler: string;
   topicRuler: string;
@@ -215,7 +215,18 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     .join("\n");
   const frameLines = placements
     .filter(row => row.frameRelationship && row.godHouse != null && row.agentHouse != null)
-    .map(row => `- ${row.name}: one longitude ${row.display}; God House ${row.godHouse} (${row.frameRelationship!.godThemes.join(", ")}); Agent House ${row.agentHouse} (${row.frameRelationship!.agentThemes.join(", ")}); relationship ${row.frameRelationship!.type}; translation: ${row.frameRelationship!.translation}`)
+    .map(row => {
+      const relationship = row.frameRelationship!;
+      return [
+        `- ${row.name}: one calculated longitude ${row.display}`,
+        `  - God View: House ${row.godHouse}; themes: ${relationship.godThemes.join(" · ")}`,
+        `  - Agent View: House ${row.agentHouse}; themes: ${relationship.agentThemes.join(" · ")}`,
+        `  - Relationship shown in the box: ${relationship.type}`,
+        `  - Translation shown in the box: ${relationship.translation}`,
+        relationship.tension ? `  - Tension / visibility note shown in the box: ${relationship.tension}` : null,
+        `  - Synthesis shown in the box: ${relationship.synthesis}`,
+      ].filter((line): line is string => Boolean(line)).join("\n");
+    })
     .join("\n") || "- No dual God/Agent relationship was calculated.";
   const aspectLines = relevantAspects.length
     ? relevantAspects.map(row => `- ${row.first} ${row.aspect} ${row.second}, orb ${row.orb}° (${row.phase})`).join("\n")
@@ -250,7 +261,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Question: ${input.question}`,
     `Question asked at: ${askedAt} UTC (${input.date} ${input.time} local; ${input.timezone})`,
     `Location: ${input.location} (${input.latitude.toFixed(4)}, ${input.longitude.toFixed(4)})`,
-    `House system: Topocentric Equal House, using topocentric planetary positions and 30-degree cusps from the calculated Ascendant.`,
+    `House system: Equal House, with 30-degree cusps from the calculated Ascendant. Planetary longitudes are geocentric; a separate topocentric (parallax-corrected) Moon longitude is available but is not used for houses or aspects.`,
     `Question topic: ${topic.label} (${ordinal(input.topicHouse)} house from the ${input.subject === "querent" ? "querent" : "other person"}).`,
     `Ascendant: ${ascendant.display} (${ascendantSign}); querent's primary ruler: ${querentRuler}.`,
     `Person asked about: ${input.subject === "querent" ? "the querent (House 1)" : "another person (House 7)"}; that person's ruler: ${subjectRuler}.`,
@@ -289,7 +300,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     askedAt,
     location: input.location,
     timezone: input.timezone,
-    houseSystem: "Topocentric Equal House",
+    houseSystem: "Equal House",
     ascendant: { longitude: ascendantLongitude, display: ascendant.display, sign: ascendantSign },
     querentRuler,
     topicRuler,
@@ -307,7 +318,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   };
 }
 
-const HORARY_SYSTEM = `You are Firmament's horary astrology interpreter. Use the same evidence-first AI framework as the app's other readings, adapted to horary astrology. The user asks about a concrete question; the chart is cast for the supplied time and place at which the question was asked. Do not treat this as a natal personality profile or a Tarot spread.
+const HORARY_SYSTEM = `You are Bible Believers Astrology's horary astrology interpreter. Use the same evidence-first AI framework as the app's other readings, adapted to horary astrology. The user asks about a concrete question; the chart is cast for the supplied time and place at which the question was asked. Do not treat this as a natal personality profile or a Tarot spread.
 
 INTERPRETATION STANDARD
 - Keep significator roles exact. The querent is always the person asking (House 1 and its ruler). The person asked about is either the querent (House 1) or another person (House 7), as explicitly supplied. The selected topic house is counted from that person; the evidence provides the actual chart house after turning. The topic ruler signifies the matter, not automatically the person or their intentions. Never switch or collapse these roles.
@@ -328,6 +339,7 @@ INTERPRETATION STANDARD
 - TRANSIT / QUESTION-MOMENT describes the sky when the question was asked and its contacts against the person's natal foundation when available. Use this layer for activation and timing context, not as a replacement for the natal chart.
 - GOD VIEW / GEOCENTRIC describes the same question moment without an observer, horizon, Ascendant, or local houses. Use it for whole-sky context and geocentric planetary relationships only; never assign it personal houses or call it the person's natal chart.
 - When synthesizing, name the layer before making a claim: “In the natal layer…”, “At the question moment…”, or “In God View…”. If the layers disagree in meaning, explain the distinction rather than averaging them together.
+- FRAME TRANSLATION REQUIREMENT: The evidence includes the exact God View and Agent View house/theme pairs, relationship type, Translation, optional tension note, and Synthesis displayed in the “God's View of the Horary Agent” box. Treat those supplied strings as calculated interpretive evidence. Include a dedicated “God's View of the Horary Agent” or “Frame translation” section in the first judgment. For every supplied relationship row in that evidence block, explicitly name the planet, its one calculated longitude, the God View house/themes, the Agent View house/themes, and then explain the supplied Translation and Synthesis in plain language. Do not collapse this into a generic sentence that God View is merely context, and do not replace the supplied Translation/Synthesis with a new generic interpretation. This frame translation is secondary context: it must clarify how the wider field becomes lived through the Agent house, but it must never override the primary horary significators, supplied aspects, or provisional judgment.
 
 Write a complete but focused first judgment in clear Markdown. Let the evidence and complexity determine the length; do not pad, repeat, or force a word count. End by stating what evidence could change or weaken the provisional conclusion.`;
 

@@ -2,11 +2,11 @@
   "routes": [
     {
       "path": "/",
-      "title": "Firmament Guardian"
+      "title": "Bible Believers Astrology"
     },
     {
       "path": "/sky",
-      "title": "Firmament Sky Home"
+      "title": "Bible Believers Astrology Sky Home"
     },
     {
       "path": "/horary",

@@ -1,4 +1,4 @@
-# Firmament Guardian
+# Bible Believers Astrology
 
 A TypeScript astrology and interpretation app: a dark, interactive observatory for natal charts, transit readings, and AI-guided chart interpretation, including Horary charts.
 

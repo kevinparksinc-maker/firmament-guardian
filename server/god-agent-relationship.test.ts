@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFrameRelationship, ROYAL_STARS, royalStarContacts } from "./astrologyCore";
+import { buildFrameRelationship, ROYAL_STARS, royalStarContacts, translationFor } from "./astrologyCore";
 import { calculateChart } from "./astronomy";
 
 describe("God's View of the Agent relationship layer", () => {
@@ -64,6 +64,27 @@ describe("God's View of the Agent relationship layer", () => {
     expect(buildFrameRelationship(8, 5)).toMatchObject({ type: "translation", tension: null });
     expect(buildFrameRelationship(8, 2)).toMatchObject({ type: "tension" });
     expect(buildFrameRelationship(3, 12)).toMatchObject({ type: "concealment", tension: null });
+  });
+
+  it("writes unique planet-specific translations and syntheses from both house frames", () => {
+    const planets = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
+    const relationships = planets.map(planet => translationFor(planet, 11, 9));
+    const translations = relationships.map(row => row.translation);
+    const syntheses = relationships.map(row => row.synthesis);
+
+    expect(new Set(translations).size).toBe(planets.length);
+    expect(new Set(syntheses).size).toBe(planets.length);
+    planets.forEach((planet, index) => {
+      expect(translations[index]).toContain(planet);
+      expect(translations[index]).toContain("God House 11");
+      expect(translations[index]).toContain("Agent House 9");
+      expect(syntheses[index]).toContain(planet);
+    });
+
+    expect(translationFor("Neptune", 1, 3).translation).toContain("Neptune in God House 1");
+    expect(translationFor("Neptune", 1, 3).translation).toContain("Agent House 3");
+    expect(translationFor("Neptune", 1, 12).translation).toContain("1st-house undoing/opposition to the Agent");
+    expect(translationFor("Pluto", 11, 9).translation).toContain("Pluto in God House 11");
   });
 
   it("returns a known Royal Star contact at the configured star longitude", () => {
