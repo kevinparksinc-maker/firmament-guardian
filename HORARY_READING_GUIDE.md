@@ -8,6 +8,8 @@ The full instruction set is stored in [`server/horary-instructions.ts`](./server
 
 > **Calculate deeply. Judge hierarchically. Interpret humanly.**
 
+> **Care-centered imperative:** Every meaningful placement, aspect, calculation, and judgment must come back to what it means for this specific person, how it may manifest in the life situation they described, and what understanding or agency it gives them. Care is not decorative tone; it is the interpretive method and the central quality standard.
+
 ## What happens when a question is submitted
 
 1. **The question is fixed.** The app uses the date, local time, timezone, and resolved location where the question was asked.
