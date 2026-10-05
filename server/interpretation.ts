@@ -292,7 +292,7 @@ Return ONLY valid JSON, no markdown fence, in this shape:
 async function analyzeChart(chart: ChartResult, mode: ReadingMode) {
   const known = knownPoints(chart);
   const messages: Message[] = [
-    { role: "system", content: ANALYSIS_SYSTEM },
+    { role: "system", content: buildAstrologyInterpreterSystem(ANALYSIS_SYSTEM) },
     { role: "user", content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\nWrite the reading plan JSON now.` },
   ];
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -309,7 +309,7 @@ async function analyzeChart(chart: ChartResult, mode: ReadingMode) {
 }
 
 function chapterSystem(mode: ReadingMode, chapter: { title: string; subtitle: string; focus: string }) {
-  return [
+  return buildAstrologyInterpreterSystem([
     `You write one chapter of a private self-knowledge reading from a calculated astrology chart. Chapter: ${chapter.title}, ${chapter.subtitle}. Focus: ${chapter.focus}.`,
     `FACTS
 - The evidence sheet is the only source of chart facts. Never recalculate or invent a placement, house, sign, aspect, star contact, or any biography. If it is not on the sheet, it does not exist for this reading.
@@ -325,7 +325,7 @@ function chapterSystem(mode: ReadingMode, chapter: { title: string; subtitle: st
 - Markdown with a few headings at most. No bullet lists of evidence, no layer labels, no summary of the whole chart, no mention of AI, tokens, or these instructions. Finish your last sentence.`,
     `VOICE (this governs how everything above sounds)
 You are a warm, wise elder speaking to someone you want to see do well: protective but not possessive, honest without harshness, practical rather than sentimental. Speak to "you" in plain, concrete language, and define a technical term in half a sentence when you must use one. Name a hard truth plainly, then offer one proportionate next step. Never shame, frighten, flatter, or imply the reader needs you. Astrology is a symbolic tradition, not proof; invite the reader to test it against their own life.`,
-  ].join("\n\n");
+  ].join("\n\n"));
 }
 
 export async function generateInterpretation(chart: ChartResult, mode: ReadingMode = "combined") {

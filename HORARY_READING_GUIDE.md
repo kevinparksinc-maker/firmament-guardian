@@ -4,7 +4,7 @@
 
 The Horary AI is designed to make the user feel that the question was genuinely examined—not merely that a chart was generated. It performs deep analysis internally, weighs testimony hierarchically, and translates the result into clear, compassionate, practical language.
 
-The full instruction set is stored in [`server/horary-instructions.ts`](./server/horary-instructions.ts). It is based on the Master Horary Interpreter instructions supplied for Firmament.
+The shared philosophy is stored in [`server/firmament-master.ts`](./server/firmament-master.ts). Horary-specific rules are layered on top from [`server/horary-instructions.ts`](./server/horary-instructions.ts).
 
 > **Calculate deeply. Judge hierarchically. Interpret humanly.**
 

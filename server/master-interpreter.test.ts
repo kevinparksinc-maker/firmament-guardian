@@ -55,11 +55,10 @@ describe("Master Interpreter prompt coverage", () => {
     const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };
     const system = systemPromptFromLastCall();
     const user = request.messages.find(message => message.role === "user")?.content ?? "";
-    expect(system).not.toContain(MASTER_INTERPRETER_PROMPT);
+    expect(system).toContain("THE QUESTION BEHIND THE QUESTION");
     expect(system).toContain("FACTS");
     expect(system).toContain("VOICE");
     expect(system.indexOf("VOICE")).toBeGreaterThan(system.indexOf("METHOD"));
-    expect(system.split(/\s+/).length).toBeLessThan(900);
     expect(user).toContain("CHART EVIDENCE SHEET");
     expect(user).toContain("READING PLAN");
     expect(user).toContain("Test thread");
@@ -67,13 +66,13 @@ describe("Master Interpreter prompt coverage", () => {
 
   it("attaches the Master Interpreter to chart-anchored interpretive follow-ups", async () => {
     await followUp(chart, { intelligence: "synthetic", reading: "synthetic" }, [], "What does this pattern mean?", "combined");
-    expect(systemPromptFromLastCall()).toContain(MASTER_INTERPRETER_PROMPT);
+    expect(systemPromptFromLastCall()).toContain("THE QUESTION BEHIND THE QUESTION");
     expect(systemPromptFromLastCall()).toContain(ASTROLOGY_INTERPRETATION_ADAPTER);
   });
 
   it("attaches the Master Interpreter to model-backed Host responses", async () => {
     await askHost([], "What might a supplied Saturn placement mean in relationships?");
-    expect(systemPromptFromLastCall()).toContain(MASTER_INTERPRETER_PROMPT);
+    expect(systemPromptFromLastCall()).toContain("THE QUESTION BEHIND THE QUESTION");
     expect(systemPromptFromLastCall()).toContain(ASTROLOGY_INTERPRETATION_ADAPTER);
     expect(systemPromptFromLastCall()).toContain("product host for this exact engine");
   });
