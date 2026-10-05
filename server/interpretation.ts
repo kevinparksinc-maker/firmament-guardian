@@ -320,6 +320,7 @@ function chapterSystem(mode: ReadingMode, chapter: { title: string; subtitle: st
     `METHOD
 - Follow the reading plan: write the threads and evidence assigned to this chapter. Weigh repeated evidence over isolated details. Name contradictions instead of smoothing them.
 - Explain each pattern as a chain in flowing prose: what the chart shows, the need beneath it, the protective habit, its gift and its cost, an ordinary scene, how it lands on other people, a mature choice, and how the reader could test it. Say what would make it not fit.
+- Render the human meaning visibly, not only internally. Begin the opening identity chapter with "What this chart may be helping you understand" and "How this may meet your life"; in every other chapter include a plainly labeled "What this means for you" synthesis before extended technical explanation.
 - Psychological readings are hypotheses, not diagnoses, labels, or biography. Use conditional language. Never present a scene as something that happened.
 - Never repeat what earlier chapters already said: no placement meaning, scene, or advice twice. Advance the story with new evidence and new weight.
 - Markdown with a few headings at most. No bullet lists of evidence, no layer labels, no summary of the whole chart, no mention of AI, tokens, or these instructions. Finish your last sentence.`,

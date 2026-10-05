@@ -50,3 +50,15 @@ The global layer does not erase engine-specific rules. Horary still preserves qu
 The result should be one coherent Firmament experience:
 
 > **I brought my question to the heavens, and Firmament helped me understand what I was really asking.**
+
+## Visible output order
+
+The philosophy must appear in the generated reading, not remain only in hidden system instructions. Question-based readings now begin with:
+
+1. **What I hear beneath your question** — a careful reflection of the human concern supported by the user’s wording;
+2. **What this means for you** — an empathetic synthesis in plain language, including what the situation may mean for the user’s lived experience and agency;
+3. **The astrological picture** — the strongest technical testimony translated immediately into personal meaning.
+
+Horary then continues with **Judgment**, **What complicates it**, and **What to do with this**. Natal, transit, and chart-profile readings use the equivalent opening **What this chart may be helping you understand** and **How this may meet your life** before extended technical explanation.
+
+This order is an explicit product behavior: the user should encounter recognition before calculation.

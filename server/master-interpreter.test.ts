@@ -56,6 +56,9 @@ describe("Master Interpreter prompt coverage", () => {
     const system = systemPromptFromLastCall();
     const user = request.messages.find(message => message.role === "user")?.content ?? "";
     expect(system).toContain("THE QUESTION BEHIND THE QUESTION");
+    expect(system).toContain("VISIBLE INTERPRETATION FORMAT — REQUIRED");
+    expect(system).toContain("What I hear beneath your question");
+    expect(system).toContain("What this means for you");
     expect(system).toContain("FACTS");
     expect(system).toContain("VOICE");
     expect(system.indexOf("VOICE")).toBeGreaterThan(system.indexOf("METHOD"));

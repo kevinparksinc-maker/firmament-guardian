@@ -1,4 +1,5 @@
 import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
+import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
 
 /**
  * The user-supplied Master Interpreter operating instructions.
@@ -1018,7 +1019,7 @@ Apply the Master Interpreter to astrology only when the user asks for a chart in
 - Keep any domain-specific rules that follow this adapter (for example, horary significator assignments) as additional constraints, but never let them authorize facts absent from the calculated evidence.`;
 
 export function buildAstrologyInterpreterSystem(...domainInstructions: string[]): string {
-  return [FIRMAMENT_MASTER_INTERPRETATION_PROMPT, FIRMAMENT_CARE_DELIVERY_STANDARD, ASTROLOGY_INTERPRETATION_ADAPTER, ...domainInstructions]
+  return [FIRMAMENT_MASTER_INTERPRETATION_PROMPT, FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT, ASTROLOGY_INTERPRETATION_ADAPTER, ...domainInstructions]
     .filter(section => section.trim().length > 0)
     .join("\n\n---\n\n");
 }

@@ -8,6 +8,7 @@ import { calculateLookahead, type Lookahead } from "./horaryLookahead";
 import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
 import { HORARY_SYSTEM as HORARY_SPECIALIZED_SYSTEM } from "./horary-instructions";
 import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
+import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
@@ -337,7 +338,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   };
 }
 
-const HORARY_SYSTEM = `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
+const HORARY_SYSTEM = `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\nFor the first answer to a horary question, render these exact sections before technical details, in this order:\n\n## What I hear beneath your question\nName the human concern supported by the wording. For a relationship question, acknowledge the uncertainty, hope, longing, or need for protection that is actually present without inventing feelings.\n\n## What this means for you\nGive the empathetic synthesis: distinguish what the user is hoping for from what the chart can responsibly say, and explain what the situation may mean for their choices and emotional reality.\n\n## Judgment\nAnswer the horary question directly with an evidence-calibrated category.\n\n## The astrological picture\nExplain the strongest testimony and immediately translate each factor into this person’s situation.\n\n## What complicates it\nName contradictions, delays, limits, and uncertainty.\n\n## What to do with this\nOffer a grounded next step that preserves the user’s agency. Never state that another person will definitely contact, return, change, or feel a particular way.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
 
 function responseText(content: string | Array<{ type: string; text?: string }> | undefined) {
   return typeof content === "string"
@@ -356,7 +357,7 @@ export async function openHoraryQuestion(input: HoraryInput) {
   const chart = await calculateHoraryChart(input);
   const reading = await answer([
     { role: "system", content: HORARY_SYSTEM },
-    { role: "user", content: `Use the complete calculated evidence below as the source of truth. Examine it deeply, weigh it hierarchically, and translate it into a human answer. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence.\n\n${chart.evidenceText}\n\nGive the complete, human-centered horary judgment now.` },
+    { role: "user", content: `Use the complete calculated evidence below as the source of truth. Examine it deeply, weigh it hierarchically, and translate it into a human answer. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. The first visible sections must be exactly: “What I hear beneath your question,” “What this means for you,” then “Judgment,” before “The astrological picture.”\n\n${chart.evidenceText}\n\nGive the complete, human-centered horary judgment now.` },
   ]);
   return { chart, reading };
 }
