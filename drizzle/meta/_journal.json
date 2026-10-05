@@ -8,6 +8,13 @@
       "when": 1788735438157,
       "tag": "0000_mature_steve_rogers",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1790890405406,
+      "tag": "0001_left_taskmaster",
+      "breakpoints": true
     }
   ]
 }

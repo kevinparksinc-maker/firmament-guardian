@@ -30,7 +30,7 @@ describe("horary astrology", () => {
 
     expect(chart.question).toBe(sampleInput.question);
     expect(chart.askedAt).toMatch(/^2024-07-15T16:34:00/);
-    expect(chart.houseSystem).toBe("Polich–Page (T)");
+    expect(chart.houseSystem).toBe("Topocentric Equal House");
     expect(chart.subjectHouse).toBe(1);
     expect(chart.actualTopicHouse).toBe(10);
     expect(chart.houses).toHaveLength(12);
@@ -40,11 +40,20 @@ describe("horary astrology", () => {
     expect(chart.moon.name).toBe("Moon");
     expect(chart.placements.some(planet => planet.name === "Moon")).toBe(true);
     expect(chart.lookahead).toMatchObject({ windowDays: 90, moonWindowDays: 3 });
+    expect(chart.natalChart).toBeUndefined();
+    expect(chart.transitChart.transitDate).toBe(chart.askedAt);
+    expect(chart.godChart.ascendant).toBeNull();
+    expect(chart.evidenceText).toContain("NATAL / AGENT EVIDENCE SET");
+    expect(chart.evidenceText).toContain("TRANSIT / QUESTION-MOMENT EVIDENCE SET");
+    expect(chart.evidenceText).toContain("GOD VIEW / GEOCENTRIC EVIDENCE SET");
     expect(chart.evidenceText).toContain("Upcoming exact aspects");
     expect(chart.evidenceText).toContain("not a prediction of when an event will happen");
     expect(chart.evidenceText).toContain("Planetary stations");
     expect(chart.evidenceText).toContain("Method boundary");
-    expect(chart.evidenceText).toContain("does not calculate essential dignity");
+    expect(chart.evidenceText).toContain("traditional layer now calculates configured Lots");
+    expect(chart.traditional.lots).toHaveLength(4);
+    expect(chart.traditional.dignities.length).toBeGreaterThan(0);
+    expect(chart.traditional.overlays.some(row => row.nakshatra && row.manzil && row.decan)).toBe(true);
   });
 
   it("turns the selected topic house from the 7th when the question is about another person", async () => {
@@ -67,6 +76,9 @@ describe("horary astrology", () => {
     expect(messages[0].content).toContain("Do not mention Tarot");
     expect(messages[0].content).toContain("Never switch or collapse these roles");
     expect(messages[0].content).toContain("Do not calculate or claim any aspect");
+    expect(messages[0].content).toContain("NATAL / AGENT");
+    expect(messages[0].content).toContain("TRANSIT / QUESTION-MOMENT");
+    expect(messages[0].content).toContain("GOD VIEW / GEOCENTRIC");
     expect(messages[0].content).toContain("not as when a real-world event will happen");
     expect(messages[0].content).toContain("KNOWLEDGE IS THE MATERIAL.");
     expect(messages[0].content).toContain("ASTROLOGY DOMAIN ADAPTER");
@@ -78,6 +90,26 @@ describe("horary astrology", () => {
     expect(messages[1].content).toContain("Upcoming exact aspects");
     expect(messages[1].content).toContain("Planetary stations");
     expect(messages[1].content).toContain("Do not recalculate");
+  });
+
+  it("adds a person natal layer while keeping transit and God View at the question moment", async () => {
+    const chart = await calculateHoraryChart({
+      ...sampleInput,
+      natal: {
+        location: "Dallas, Texas, USA",
+        latitude: 32.7767,
+        longitude: -96.797,
+        timezone: "America/Chicago",
+        date: "1986-11-20",
+        time: "10:06",
+      },
+    });
+
+    expect(chart.natalChart?.input.date).toBe("1986-11-20");
+    expect(chart.natalChart?.ascendant).not.toBeNull();
+    expect(chart.transitChart.transitDate).toBe(chart.askedAt);
+    expect(chart.godChart.transitDate).toBe(chart.askedAt);
+    expect(chart.godChart.ascendant).toBeNull();
   });
 
   it("keeps follow-up chat anchored to the same chart and submits the current turn only once", async () => {

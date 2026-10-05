@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { HORARY_TOPICS } from "@shared/horary";
 import { HoraryLookaheadEvidence } from "@/components/HoraryLookaheadEvidence";
+import { HoraryOrrery } from "@/components/HoraryOrrery";
+import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
+import { TraditionalHoraryEvidence } from "@/components/TraditionalHoraryEvidence";
 import { formatLongitude } from "@shared/hybrid";
 import type { HoraryChart } from "../../../server/horary";
 
@@ -36,12 +39,17 @@ export default function HoraryPage() {
   const [topicHouse, setTopicHouse] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [place, setPlace] = useState<ResolvedPlace | null>(null);
+  const [birthLocationQuery, setBirthLocationQuery] = useState("");
+  const [birthPlace, setBirthPlace] = useState<ResolvedPlace | null>(null);
+  const [birthDate, setBirthDate] = useState("");
+  const [birthTime, setBirthTime] = useState("");
   const [date, setDate] = useState(initialMoment.date);
   const [time, setTime] = useState(initialMoment.time);
   const [horary, setHorary] = useState<HoraryResult | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
   const geocode = trpc.hybrid.geocode.useQuery({ query: locationQuery }, { enabled: false, retry: false });
+  const birthGeocode = trpc.hybrid.geocode.useQuery({ query: birthLocationQuery }, { enabled: false, retry: false });
   const cast = trpc.horary.open.useMutation({
     onSuccess: result => {
       setHorary(result);
@@ -61,7 +69,18 @@ export default function HoraryPage() {
     setLocationQuery(result.data.label);
   };
 
+  const resolveBirthPlace = async () => {
+    if (birthLocationQuery.trim().length < 2) return;
+    const result = await birthGeocode.refetch();
+    if (!result.data) return;
+    const resolved = { ...result.data, query: result.data.label.trim() };
+    setBirthPlace(resolved);
+    setBirthLocationQuery(result.data.label);
+  };
+
   const locationIsResolved = Boolean(place && place.query === locationQuery.trim());
+  const birthLocationIsResolved = Boolean(birthPlace && birthPlace.query === birthLocationQuery.trim());
+  const hasCompleteNatal = birthLocationIsResolved && birthDate.length === 10 && birthTime.length === 5;
   const canCast = question.trim().length >= 10 && topicHouse !== "" && locationIsResolved && date.length === 10 && time.length === 5 && !cast.isPending;
 
   const castQuestion = () => {
@@ -80,6 +99,7 @@ export default function HoraryPage() {
       timezone: place.timezone,
       date,
       time,
+      ...(hasCompleteNatal && birthPlace ? { natal: { location: birthPlace.label, latitude: birthPlace.latitude, longitude: birthPlace.longitude, timezone: birthPlace.timezone, date: birthDate, time: birthTime } } : {}),
     });
   };
 
@@ -117,6 +137,7 @@ export default function HoraryPage() {
               <div className="space-y-2"><Label htmlFor="horary-subject" className="text-slate-200">Who is the question about?</Label><select id="horary-subject" value={subject} onChange={event => setSubject(event.target.value as "querent" | "other")} className="h-11 w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50"><option value="querent">Me — I am the person in the question</option><option value="other">Another person — I am asking about them</option></select><p className="text-xs text-slate-500">You remain the querent (House 1). Another person is represented by House 7.</p></div>
               <div className="space-y-2"><Label htmlFor="horary-topic" className="text-slate-200">What area relative to {subject === "querent" ? "me" : "this person"}?</Label><select id="horary-topic" value={topicHouse} onChange={event => setTopicHouse(event.target.value)} className="h-11 w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50"><option value="">Choose the relevant topic house</option>{HORARY_TOPICS.map(topic => <option key={topic.house} value={topic.house}>House {topic.house} from {subject === "querent" ? "me" : "this person"} — {topic.label}</option>)}</select><p className="text-xs text-slate-500">The asker remains House 1; another person is House 7. For someone else, the topic house is turned from House 7—for example, their 10th house is actual chart House 4.</p></div>
               <div className="space-y-2"><Label htmlFor="horary-location" className="text-slate-200">Where were you when you asked?</Label><div className="flex gap-2"><Input id="horary-location" value={locationQuery} onChange={event => setLocationQuery(event.target.value)} placeholder="City, region, country" className="border-white/10 bg-black/20 text-white"/><Button type="button" variant="outline" onClick={resolvePlace} disabled={geocode.isFetching || locationQuery.trim().length < 2} className="shrink-0 border-white/10 bg-white/[0.04] text-cyan-100 hover:bg-white/[0.08]"><MapPin className="mr-2 h-4 w-4"/>{geocode.isFetching ? "Resolving" : "Resolve"}</Button></div>{locationIsResolved && place && <p className="text-xs text-emerald-200">{place.latitude.toFixed(4)}°, {place.longitude.toFixed(4)}° · {place.timezone}</p>}{geocode.error && <p className="text-xs text-rose-300">{geocode.error.message}</p>}{place && !locationIsResolved && <p className="text-xs text-amber-200">Resolve this location again before casting the question chart.</p>}</div>
+              <div className="space-y-3 rounded-xl border border-amber-200/15 bg-amber-100/[0.035] p-4"><div><p className="text-xs uppercase tracking-[.18em] text-amber-200">Optional natal layer</p><p className="mt-1 text-xs leading-5 text-slate-500">Add the person’s birth details to compare the question-time transit against their natal chart. Leave blank for a horary + God View reading without a personal natal layer.</p></div><div className="flex gap-2"><Input id="birth-location" value={birthLocationQuery} onChange={event => setBirthLocationQuery(event.target.value)} placeholder="Birth city, region, country" className="border-white/10 bg-black/20 text-white"/><Button type="button" variant="outline" onClick={resolveBirthPlace} disabled={birthGeocode.isFetching || birthLocationQuery.trim().length < 2} className="shrink-0 border-white/10 bg-white/[0.04] text-amber-100 hover:bg-white/[0.08]"><MapPin className="mr-2 h-4 w-4"/>{birthGeocode.isFetching ? "Resolving" : "Resolve"}</Button></div>{birthLocationIsResolved && birthPlace && <p className="text-xs text-emerald-200">{birthPlace.latitude.toFixed(4)}°, {birthPlace.longitude.toFixed(4)}° · {birthPlace.timezone}</p>}<div className="grid gap-3 sm:grid-cols-2"><Input aria-label="Birth date" type="date" value={birthDate} onChange={event => setBirthDate(event.target.value)} className="border-white/10 bg-black/20 text-white"/><Input aria-label="Birth time" type="time" value={birthTime} onChange={event => setBirthTime(event.target.value)} className="border-white/10 bg-black/20 text-white"/></div>{birthLocationQuery && !hasCompleteNatal && <p className="text-xs text-amber-200">Resolve the birth place and enter both birth date and time to enable the natal layer.</p>}</div>
               <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="horary-date" className="text-slate-200">Local date asked</Label><Input id="horary-date" type="date" value={date} onChange={event => setDate(event.target.value)} className="border-white/10 bg-black/20 text-white"/></div><div className="space-y-2"><Label htmlFor="horary-time" className="text-slate-200">Local time asked</Label><Input id="horary-time" type="time" value={time} onChange={event => setTime(event.target.value)} className="border-white/10 bg-black/20 text-white"/></div></div>
               {cast.error && <div role="alert" className="rounded-xl border border-rose-300/20 bg-rose-400/[0.08] p-3 text-sm text-rose-200">{cast.error.message}</div>}
               <Button type="button" onClick={castQuestion} disabled={!canCast} className="h-12 w-full bg-cyan-300 font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50">{cast.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Casting the question chart and preparing your reading…</> : <><Orbit className="mr-2 h-4 w-4"/>Cast chart & interpret</>}</Button>
@@ -125,7 +146,7 @@ export default function HoraryPage() {
 
           <Card className="border-cyan-200/15 bg-gradient-to-br from-cyan-100/[0.07] to-violet-100/[0.035] text-slate-100">
             <CardHeader><CardTitle className="flex items-center gap-2 font-serif text-xl"><Clock3 className="h-5 w-5 text-cyan-200"/>How the judgment works</CardTitle></CardHeader>
-            <CardContent className="space-y-4 text-sm leading-6 text-slate-400"><p>The chart is calculated for the question’s local date, time, and resolved location using Firmament’s existing tropical ephemeris and Polich–Page houses.</p><p>The chart distinguishes you (House 1), the person asked about (House 1 or 7), and the selected topic house counted from that person. It calculates their rulers, the Moon, and close major aspects. The expanded evidence also lists upcoming exact planetary contacts and stations; those are astronomical dates, not predictions of real-world events.</p><p className="rounded-xl border border-white/10 bg-black/15 p-3 text-xs leading-5 text-slate-500">This is reflective astrological interpretation—not certainty, a guarantee, or a substitute for medical, legal, or financial advice. The feature will say when a traditional factor has not been calculated rather than inventing it.</p></CardContent>
+            <CardContent className="space-y-4 text-sm leading-6 text-slate-400"><p>The chart is calculated for the question’s local date, time, and resolved location using Firmament’s tropical ephemeris with topocentric planetary positions and Topocentric Equal House cusps.</p><p>The chart distinguishes you (House 1), the person asked about (House 1 or 7), and the selected topic house counted from that person. It calculates their rulers, the Moon, and close major aspects. The expanded evidence also lists upcoming exact planetary contacts and stations; those are astronomical dates, not predictions of real-world events.</p><p className="rounded-xl border border-white/10 bg-black/15 p-3 text-xs leading-5 text-slate-500">This is reflective astrological interpretation—not certainty, a guarantee, or a substitute for medical, legal, or financial advice. The feature will say when a traditional factor has not been calculated rather than inventing it.</p></CardContent>
           </Card>
         </section>
 
@@ -136,15 +157,19 @@ export default function HoraryPage() {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Querent · House 1</p><p className="mt-2 text-lg font-medium text-cyan-100">{horary.chart.querentRuler}</p><p className="text-xs text-slate-500">Ascendant {horary.chart.ascendant.display} · {horary.chart.ascendant.sign}</p></div><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Person asked about · House {horary.chart.subjectHouse}</p><p className="mt-2 text-lg font-medium text-amber-100">{horary.chart.subjectRuler}</p><p className="text-xs text-slate-500">{horary.chart.subject === "querent" ? "Same as the querent" : "Turned House 7 person"}</p></div><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Matter · chart House {horary.chart.actualTopicHouse}</p><p className="mt-2 text-lg font-medium text-violet-100">{horary.chart.topicRuler}</p><p className="text-xs text-slate-500">Relative House {horary.chart.topicHouse} · {horary.chart.topicLabel}</p></div><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Moon · co-significator</p><p className="mt-2 text-lg font-medium text-amber-100">{horary.chart.moon.display}</p><p className="text-xs text-slate-500">{horary.chart.moon.sign} · House {horary.chart.moon.house}{horary.chart.moon.retrograde ? " · retrograde" : ""}</p></div></div>
               <details className="group rounded-xl border border-white/10 bg-black/10 p-4"><summary className="cursor-pointer text-sm font-medium text-slate-200">Inspect calculated placements, houses, and major contacts</summary><div className="mt-4 grid gap-5 xl:grid-cols-2"><div><p className="mb-2 text-xs uppercase tracking-[.16em] text-slate-500">Classical planets</p><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="text-slate-500"><tr><th className="py-2 pr-3">Planet</th><th className="py-2 pr-3">Position</th><th className="py-2">House</th></tr></thead><tbody className="divide-y divide-white/5">{horary.chart.placements.filter(row => ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"].includes(row.name)).map(row => <tr key={row.name}><td className="py-2 pr-3 text-slate-200">{row.name}{row.retrograde ? " ℞" : ""}</td><td className="py-2 pr-3 font-mono text-cyan-100">{row.display}</td><td className="py-2 text-slate-400">{row.house}</td></tr>)}</tbody></table></div></div><div><p className="mb-2 text-xs uppercase tracking-[.16em] text-slate-500">House cusps and rulers</p><div className="grid grid-cols-2 gap-2">{horary.chart.houses.map(row => <div key={row.house} className="rounded-lg border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-xs text-slate-400"><span className="text-slate-200">H{row.house}</span> {row.sign} · {row.ruler}<span className="block font-mono text-[10px] text-slate-600">{formatLongitude(row.longitude)}</span></div>)}</div><p className="mb-2 mt-5 text-xs uppercase tracking-[.16em] text-slate-500">Relevant major aspects · 5° orb</p>{horary.chart.relevantAspects.length ? <div className="flex flex-wrap gap-2">{horary.chart.relevantAspects.map((aspect, index) => <span key={`${aspect.first}-${aspect.second}-${index}`} className="rounded-full border border-cyan-200/10 bg-cyan-100/[0.04] px-2.5 py-1 text-[11px] text-cyan-100">{aspect.first} {aspect.aspect} {aspect.second} · {aspect.orb}° {aspect.phase}</span>)}</div> : <p className="text-xs text-slate-500">No close major contact among these significators was calculated.</p>}</div></div><HoraryLookaheadEvidence chart={horary.chart} /></details>
               <p className="text-xs text-slate-500">Evidence first; interpretation remains symbolic and provisional. The same question chart stays fixed for this conversation.</p>
+              <TraditionalHoraryEvidence chart={horary.chart} />
             </CardContent>
           </Card>
+
+          <FrameRelationshipPanel rows={horary.chart.placements as unknown as import("../../../server/astronomy").ChartRow[]} title="God's View of the Horary Agent" intro="The horary testimony remains primary. This panel adds the broader fixed zodiac frame and explains how the same question-time positions are translated through the local horary houses." />
 
           <Card className="overflow-hidden border-cyan-200/15 bg-white/[0.035] text-slate-100"><CardHeader className="border-b border-white/10"><CardTitle className="flex items-center gap-2 font-serif text-2xl"><Sun className="h-5 w-5 text-cyan-200"/>The horary reading</CardTitle><p className="text-sm text-slate-400">The interpretation moves from the question and its significators to the Moon, the supporting or conflicting testimony, and a practical next step.</p></CardHeader><CardContent className="p-0"><div className="p-4 sm:p-6"><div className="prose prose-invert max-w-none prose-headings:text-white prose-p:leading-7 prose-p:text-slate-300 prose-strong:text-cyan-100">{horary.reading}</div></div></CardContent></Card>
 
           <Card className="overflow-hidden border-violet-200/15 bg-white/[0.035] text-slate-100"><CardHeader className="border-b border-white/10"><CardTitle className="flex items-center gap-2 font-serif text-2xl"><MessageCircle className="h-5 w-5 text-violet-200"/>Continue with this chart</CardTitle><p className="text-sm leading-6 text-slate-400">Ask what a specific testimony means or challenge the reading. Follow-ups use this same question chart, not a new or silently recalculated chart.</p></CardHeader><CardContent className="space-y-3 p-4 sm:p-6"><AIChatBox messages={messages} onSendMessage={sendFollowUp} isLoading={followUp.isPending} height="540px" placeholder="Ask a follow-up about this horary judgment…" emptyStateMessage="Your horary chart is ready for follow-up questions." suggestedPrompts={["Which chart factor most strongly supports that conclusion?", "What is the main uncertainty or counter-testimony?", "What practical next step follows from this judgment?"]}/>{followUp.error && <p role="alert" className="text-sm text-rose-300">{followUp.error.message}</p>}</CardContent></Card>
+          <HoraryOrrery natal={horary.chart.natalChart} transit={horary.chart.transitChart} god={horary.chart.godChart}/>
         </section>}
 
-        <footer className="mt-8 flex items-center gap-2 border-t border-white/10 pt-5 text-xs text-slate-600"><Moon className="h-3.5 w-3.5"/>A question chart is a distinct horary reading; it does not modify your natal chart or the sports simulation project.</footer>
+        <footer className="mt-8 flex items-center gap-2 border-t border-white/10 pt-5 text-xs text-slate-600"><Moon className="h-3.5 w-3.5"/>A question chart is a distinct horary reading; it does not modify your natal chart.</footer>
       </main>
     </div>
   );

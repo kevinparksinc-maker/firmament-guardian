@@ -1,0 +1,20 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "title": "Firmament Guardian"
+    },
+    {
+      "path": "/sky",
+      "title": "Firmament Sky Home"
+    },
+    {
+      "path": "/horary",
+      "title": "Horary Chart Reading"
+    },
+    {
+      "path": "/history",
+      "title": "Private Sky Archive"
+    }
+  ]
+}

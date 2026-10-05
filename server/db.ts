@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertSavedChart, InsertSavedReading, InsertUser, savedCharts, savedReadings, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,28 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function createSavedChart(input: InsertSavedChart) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const result = await db.insert(savedCharts).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function listSavedCharts(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(savedCharts).where(eq(savedCharts.openId, openId)).orderBy(desc(savedCharts.updatedAt));
+}
+
+export async function createSavedReading(input: InsertSavedReading) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const result = await db.insert(savedReadings).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function listSavedReadings(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(savedReadings).where(eq(savedReadings.openId, openId)).orderBy(desc(savedReadings.updatedAt));
+}

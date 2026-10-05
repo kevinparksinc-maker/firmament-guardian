@@ -10,6 +10,19 @@ import "./index.css";
 
 const queryClient = new QueryClient();
 
+async function fetchApiResponse(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await globalThis.fetch(input, {
+    ...(init ?? {}),
+    credentials: "include",
+  });
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const preview = (await response.clone().text()).slice(0, 240).replace(/\s+/g, " ");
+    throw new Error(`API request failed: HTTP ${response.status} ${response.statusText}. Non-JSON response (${contentType || "no content-type"}): ${preview}`);
+  }
+  return response;
+}
+
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
@@ -63,10 +76,7 @@ const trpcClient = trpc.createClient({
         return {};
       },
       fetch(input, init) {
-        return globalThis.fetch(input, {
-          ...(init ?? {}),
-          credentials: "include",
-        });
+        return fetchApiResponse(input, init);
       },
     }),
   ],

@@ -30,9 +30,8 @@ body {
   min-width: 320px;
   color: hsl(var(--foreground));
   background:
-    radial-gradient(900px 600px at 4% -12%, rgba(119, 92, 255, .22), transparent 62%),
-    radial-gradient(760px 520px at 103% 10%, rgba(19, 196, 212, .16), transparent 58%),
-    radial-gradient(900px 620px at 50% 110%, rgba(207, 146, 63, .09), transparent 62%),
+    linear-gradient(180deg, rgba(3, 5, 12, .26) 0%, rgba(3, 5, 12, .62) 58%, rgba(3, 5, 12, .92) 100%),
+    url('/assets/firmament-starfield.png') center top / cover fixed no-repeat,
     #050711;
   overflow-x: hidden;
 }
@@ -42,7 +41,7 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: .23;
+  opacity: .12;
   background-image: radial-gradient(rgba(255,255,255,.78) .6px, transparent .7px);
   background-size: 43px 43px;
   mask-image: linear-gradient(to bottom, black, transparent 82%);
@@ -53,8 +52,8 @@ body::after {
   inset: 0;
   z-index: -2;
   pointer-events: none;
-  opacity: .28;
-  background: linear-gradient(115deg, transparent 0 28%, rgba(103,232,249,.05) 42%, transparent 58%), linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  opacity: .22;
+  background: linear-gradient(115deg, transparent 0 28%, rgba(103,232,249,.06) 42%, transparent 58%), linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
   background-size: auto, 72px 72px, 72px 72px;
   mask-image: linear-gradient(to bottom, black, transparent 90%);
 }
@@ -69,7 +68,8 @@ main.relative > header { position: relative; padding: 2rem 0 2.25rem; border-bot
 main.relative > header::before { content: ''; position: absolute; right: 5%; top: -5rem; width: 18rem; height: 18rem; border: 1px solid rgba(103,232,249,.12); border-radius: 999px; box-shadow: 0 0 90px rgba(103,232,249,.08), inset 0 0 40px rgba(167,139,250,.05); pointer-events: none; }
 main.relative > header::after { content: ''; position: absolute; left: 0; bottom: -1px; width: 260px; height: 1px; background: linear-gradient(90deg, #67e8f9, #a78bfa 52%, transparent); box-shadow: 0 0 16px rgba(103,232,249,.5); }
 main.relative > header h1 { max-width: 800px; font-size: clamp(3.2rem, 7vw, 6.8rem); line-height: .92; letter-spacing: -.06em; text-wrap: balance; text-shadow: 0 0 50px rgba(129, 140, 248, .22); }
-main.relative > header p { color: rgba(203, 213, 225, .7); max-width: 610px; font-size: .92rem; }
+main.relative > header p { color: rgba(203, 213, 225, .78); max-width: 610px; }
+main.relative .text-slate-400 { color: rgba(203, 213, 225, .76); }
 main.relative > header .text-xs.uppercase { color: #67e8f9; font-weight: 700; letter-spacing: .34em; }
 main.relative > header .text-xs.uppercase span { background: #67e8f9; box-shadow: 0 0 14px rgba(103,232,249,.8); }
 

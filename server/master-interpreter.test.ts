@@ -45,11 +45,24 @@ describe("Master Interpreter prompt coverage", () => {
     expect(ASTROLOGY_INTERPRETATION_ADAPTER).toContain("calculation engine and the supplied chart evidence are the sole source of chart facts");
   });
 
-  it("attaches the Master Interpreter to generated chart chapters", async () => {
-    await generateChapter(chart, "natal", "synthetic chart intelligence", "identity");
-    expect(systemPromptFromLastCall()).toContain(MASTER_INTERPRETER_PROMPT);
-    expect(systemPromptFromLastCall()).toContain(ASTROLOGY_INTERPRETATION_ADAPTER);
-    expect(systemPromptFromLastCall()).toContain("CLARITY, PRECISION & ELABORATION FRAMEWORK");
+  it("writes chapters from a distilled prompt, the evidence sheet, and the reading plan", async () => {
+    const analysis = JSON.stringify({
+      threads: [{ title: "Test thread", insight: "A synthetic insight.", evidence: ["Sun — Aries 1°"], chapters: ["identity"] }],
+      tensions: [],
+      chapters: { identity: { angle: "A synthetic angle.", evidence: ["Sun — Aries 1°"] } },
+    });
+    await generateChapter(chart, "natal", "synthetic chart intelligence", "identity", [], analysis);
+    const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };
+    const system = systemPromptFromLastCall();
+    const user = request.messages.find(message => message.role === "user")?.content ?? "";
+    expect(system).not.toContain(MASTER_INTERPRETER_PROMPT);
+    expect(system).toContain("FACTS");
+    expect(system).toContain("VOICE");
+    expect(system.indexOf("VOICE")).toBeGreaterThan(system.indexOf("METHOD"));
+    expect(system.split(/\s+/).length).toBeLessThan(900);
+    expect(user).toContain("CHART EVIDENCE SHEET");
+    expect(user).toContain("READING PLAN");
+    expect(user).toContain("Test thread");
   });
 
   it("attaches the Master Interpreter to chart-anchored interpretive follow-ups", async () => {

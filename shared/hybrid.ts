@@ -1,8 +1,10 @@
 export const ZODIAC_SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"] as const;
 
+// Frozen symbolic anchors used by the hybrid zodiac. These are intentionally
+// precession-locked rather than live ephemeris positions.
 export const FIXED_STARS = [
-  ["Hamal", 12.9333], ["Algol", 31.4333], ["Aldebaran", 45.05], ["Rigel", 52.1], ["Polaris", 63.8333],
-  ["Sirius", 79.35], ["Regulus", 125.0833], ["Spica", 179.1], ["Antares", 225.0167], ["Fomalhaut", 309.1167],
+  ["Hamal", 12.9333], ["Algol", 31.4333], ["Aldebaran", 45], ["Rigel", 52.1], ["Polaris", 63.8333],
+  ["Sirius", 79.35], ["Regulus", 135], ["Spica", 179.1], ["Antares", 225.0167], ["Fomalhaut", 315],
 ] as const;
 
 export const NAKSHATRAS = ["Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"] as const;

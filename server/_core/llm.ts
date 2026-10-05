@@ -234,6 +234,12 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
   }));
   const maxTokens = params.max_tokens ?? params.maxTokens ?? 4096;
   const body: Record<string, unknown> = { model: params.model ?? "claude-sonnet-4-6", max_tokens: maxTokens, messages };
+  const thinking = params.thinking as { type?: string; budget_tokens?: number } | undefined;
+  if (thinking?.type === "enabled") {
+    const budget = Math.max(1024, Math.floor(thinking.budget_tokens ?? 1024));
+    body.thinking = { type: "enabled", budget_tokens: budget };
+    body.max_tokens = maxTokens + budget; // thinking tokens must not eat the visible answer
+  }
   if (system) body.system = system;
   const response = await fetchWithBackoff("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -325,7 +331,7 @@ const normalizeResponseFormat = ({
 const RETRY_MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 500;
 const RETRY_MAX_DELAY_MS = 30_000;
-const LLM_REQUEST_TIMEOUT_MS = 90_000;
+const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
 type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
 

@@ -86,27 +86,57 @@ declare global {
   }
 }
 
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
-const FORGE_BASE_URL =
-  import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
-  "https://forge.butterfly-effect.dev";
-const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
+type MapsRuntimeConfig = {
+  apiUrl: string;
+  browserKey: string;
+};
 
-function loadMapScript() {
-  return new Promise(resolve => {
-    const script = document.createElement("script");
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
-    script.async = true;
-    script.crossOrigin = "anonymous";
-    script.onload = () => {
-      resolve(null);
-      script.remove(); // Clean up immediately
-    };
-    script.onerror = () => {
-      console.error("Failed to load Google Maps script");
-    };
-    document.head.appendChild(script);
+let mapsScriptPromise: Promise<void> | null = null;
+
+function loadMapScript(): Promise<void> {
+  if (window.google?.maps) return Promise.resolve();
+  if (mapsScriptPromise) return mapsScriptPromise;
+
+  mapsScriptPromise = (async () => {
+    const configResponse = await fetch("/api/runtime-config");
+    if (!configResponse.ok) {
+      throw new Error(`Maps runtime configuration failed (${configResponse.status})`);
+    }
+
+    const config = (await configResponse.json()) as Partial<MapsRuntimeConfig>;
+    if (!config.apiUrl || !config.browserKey) {
+      throw new Error("Maps runtime configuration is unavailable");
+    }
+    const apiUrl = config.apiUrl;
+    const browserKey = config.browserKey;
+
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      const mapsUrl = `${apiUrl.replace(/\/+$/, "")}/v1/maps/proxy/maps/api/js`;
+      const params = new URLSearchParams({
+        key: browserKey,
+        v: "weekly",
+        libraries: "marker,places,geocoding,geometry",
+      });
+      script.src = `${mapsUrl}?${params.toString()}`;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      script.onload = () => {
+        script.remove();
+        resolve();
+      };
+      script.onerror = () => {
+        script.remove();
+        reject(new Error("Failed to load Google Maps script"));
+      };
+      document.head.appendChild(script);
+    });
+  })().catch(error => {
+    mapsScriptPromise = null;
+    throw error;
   });
+
+  return mapsScriptPromise;
 }
 
 interface MapViewProps {
@@ -126,9 +156,18 @@ export function MapView({
   const map = useRef<google.maps.Map | null>(null);
 
   const init = usePersistFn(async () => {
-    await loadMapScript();
+    try {
+      await loadMapScript();
+    } catch (error) {
+      console.error(error);
+      return;
+    }
     if (!mapContainer.current) {
       console.error("Map container not found");
+      return;
+    }
+    if (!window.google?.maps) {
+      console.error("Google Maps API did not initialize");
       return;
     }
     map.current = new window.google.maps.Map(mapContainer.current, {

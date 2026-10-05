@@ -2,14 +2,17 @@ import { calculateChart, type ChartInput } from "./astronomy";
 import { withCurrentQuestion } from "./_core/conversation";
 import { invokeLLM, type Message } from "./_core/llm";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
+import type { FrameRelationship } from "./astrologyCore";
 import { HORARY_TOPICS } from "../shared/horary";
 import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import { calculateLookahead, type Lookahead } from "./horaryLookahead";
+import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
   subject: "querent" | "other";
   topicHouse: number;
+  natal?: Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time">;
 };
 
 type HoraryPlacement = {
@@ -20,6 +23,9 @@ type HoraryPlacement = {
   house: number;
   retrograde: boolean;
   speed: number;
+  godHouse?: number;
+  agentHouse?: number;
+  frameRelationship?: FrameRelationship;
 };
 
 type HoraryAspect = {
@@ -41,7 +47,7 @@ export type HoraryChart = {
   askedAt: string;
   location: string;
   timezone: string;
-  houseSystem: "Polich–Page (T)";
+  houseSystem: "Topocentric Equal House";
   ascendant: { longitude: number; display: string; sign: string };
   querentRuler: string;
   topicRuler: string;
@@ -51,6 +57,10 @@ export type HoraryChart = {
   relevantAspects: HoraryAspect[];
   otherCloseAspects: HoraryAspect[];
   lookahead: Lookahead;
+  natalChart?: Awaited<ReturnType<typeof calculateChart>>;
+  transitChart: Awaited<ReturnType<typeof calculateChart>>;
+  godChart: Awaited<ReturnType<typeof calculateChart>>;
+  traditional: TraditionalHoraryEvidence;
   evidenceText: string;
 };
 
@@ -121,6 +131,39 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     transitDate: input.date,
     transitTime: input.time,
   });
+  if (!calculated.ascendant) throw new Error("Horary requires an Agent View Ascendant.");
+  const ascendant = calculated.ascendant;
+  const natalChart = input.natal
+    ? await calculateChart({
+        ...input.natal,
+        transitLocation: input.location,
+        transitLatitude: input.latitude,
+        transitLongitude: input.longitude,
+        transitTimezone: input.timezone,
+        transitDate: input.date,
+        transitTime: input.time,
+        worldview: "agent",
+        readingScope: "combined",
+        birthTimeKnown: Boolean(input.natal.time),
+      })
+    : undefined;
+  // Without a natal profile there is nothing for the question-moment sky to contact.
+  // Do not compare the question chart against itself: that invents natal contacts.
+  const transitChart = natalChart ?? { ...calculated, transits: calculated.transits.map(row => ({ ...row, natalContacts: [] })) };
+  const godChart = await calculateChart({
+    location: "",
+    latitude: 0,
+    longitude: 0,
+    timezone: input.timezone,
+    date: input.date,
+    time: input.time,
+    transitDate: input.date,
+    transitTime: input.time,
+    transitTimezone: input.timezone,
+    worldview: "god",
+    readingScope: "transit",
+    birthTimeKnown: true,
+  });
 
   const placements: HoraryPlacement[] = calculated.movingBodies.map(row => ({
     name: row.name,
@@ -130,6 +173,9 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     house: row.house,
     retrograde: Boolean(row.retrograde),
     speed: row.speed ?? 0,
+    godHouse: row.godHouse,
+    agentHouse: row.agentHouse,
+    frameRelationship: row.frameRelationship,
   }));
   const houses = calculated.houses.map((longitude, index) => {
     const sign = signOf(longitude);
@@ -157,7 +203,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     .filter((aspect): aspect is HoraryAspect => Boolean(aspect));
   // Future exact contacts and stations are astronomical data, not event forecasts.
   const lookahead = calculateLookahead(calculated.julianDay, input.timezone);
-  const ascendantLongitude = calculated.ascendant.longitude;
+  const ascendantLongitude = ascendant.longitude;
   const ascendantSign = signOf(ascendantLongitude);
   const askedAt = calculated.utc;
   const placementLines = placements
@@ -167,6 +213,10 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   const houseLines = houses
     .map(row => `- House ${row.house}: ${row.sign} on cusp; ruler ${row.ruler}`)
     .join("\n");
+  const frameLines = placements
+    .filter(row => row.frameRelationship && row.godHouse != null && row.agentHouse != null)
+    .map(row => `- ${row.name}: one longitude ${row.display}; God House ${row.godHouse} (${row.frameRelationship!.godThemes.join(", ")}); Agent House ${row.agentHouse} (${row.frameRelationship!.agentThemes.join(", ")}); relationship ${row.frameRelationship!.type}; translation: ${row.frameRelationship!.translation}`)
+    .join("\n") || "- No dual God/Agent relationship was calculated.";
   const aspectLines = relevantAspects.length
     ? relevantAspects.map(row => `- ${row.first} ${row.aspect} ${row.second}, orb ${row.orb}° (${row.phase})`).join("\n")
     : "- No major aspect among the listed significators and Moon was within the configured 5° orb.";
@@ -182,24 +232,50 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   const stationLines = lookahead.stations.length
     ? lookahead.stations.map(row => `- ${row.planet} turns ${row.turns} on ${row.atLocal}`).join("\n")
     : "- No planet changes direction in the window.";
+  const traditional = calculateTraditionalHorary({ ascendant: { name: "Ascendant", longitude: ascendant.longitude, house: 1 }, houses, placements, topicRuler, subjectRuler, querentRuler });
+  const lotLines = traditional.lots.map(lot => `- ${lot.name}: ${lot.display}; house ${lot.house}; ${lot.formula}; ${lot.meaning}`).join("\n");
+  const dignityLines = traditional.dignities.map(row => `- ${row.planet}: ${row.sign}, house ${row.house}; essential ${row.essential.length ? row.essential.join(", ") : "none"} (${row.essentialScore}); accidental ${row.accidental.join(", ")} (${row.accidentalScore}); debilities ${row.debilities.length ? row.debilities.join(", ") : "none"}`).join("\n");
+  const receptionLines = traditional.receptions.length ? traditional.receptions.map(row => `- ${row.description}`).join("\n") : "- No configured reception found among the classical planets.";
+  const starLines = traditional.fixedStars.length ? traditional.fixedStars.map(row => `- ${row.planet} conjunct ${row.star}, orb ${row.orb}°; nature ${row.nature}; ${row.meaning}`).join("\n") : "- No classical planet or Ascendant is within the configured 1° fixed-star orb.";
+  const overlayLines = traditional.overlays.map(row => `- ${row.body}: ${row.display}; Nakshatra ${row.nakshatra} Pada ${row.pada}; Manzil ${row.manzil}; Decan ${row.decan}`).join("\n");
+  const timingLines = traditional.timing.length ? traditional.timing.map(row => `- ${row.from} ${row.aspect} ${row.to}: ${row.degreesToPerfection}°; ${row.estimatedUnits}; ${row.method}`).join("\n") : "- No configured key-significator perfection estimate was available.";
+  const natalEvidence = natalChart
+    ? `NATAL / AGENT EVIDENCE SET (person's birth chart; local houses belong to the person):\n${natalChart.movingBodies.map(row => `- ${row.name}: ${row.display}; house ${row.house}`).join("\n")}\n- Ascendant: ${natalChart.ascendant?.display ?? "unavailable"}\n- Birth UTC: ${natalChart.utc}`
+    : "NATAL / AGENT EVIDENCE SET: unavailable; no complete person birth profile was supplied. Do not infer or invent a natal chart.";
+  const transitEvidence = natalChart
+    ? `TRANSIT / QUESTION-MOMENT EVIDENCE SET (sky at the supplied question moment, compared with the natal foundation):\n${transitChart.transits.map(row => `- ${row.name}: ${row.display}; contacts ${row.natalContacts.length ? row.natalContacts.map(contact => `${contact.aspect} natal ${contact.natalName} (${contact.orb}°)`).join(", ") : "none within configured orb"}`).join("\n")}\n- Transit UTC: ${transitChart.transitDate}`
+    : `TRANSIT / QUESTION-MOMENT EVIDENCE SET (sky at the supplied question moment; positions only, because no natal profile was supplied, so there are no natal contacts to report):\n${transitChart.transits.map(row => `- ${row.name}: ${row.display}`).join("\n")}\n- Transit UTC: ${transitChart.transitDate}`;
+  const godEvidence = `GOD VIEW / GEOCENTRIC EVIDENCE SET (same question moment; no observer, horizon, Ascendant, or local houses):\n${godChart.movingBodies.map(row => `- ${row.name}: ${row.display}; God House ${row.godHouse}`).join("\n")}\n- Transit UTC: ${godChart.transitDate}`;
   const evidenceText = [
     `Question: ${input.question}`,
     `Question asked at: ${askedAt} UTC (${input.date} ${input.time} local; ${input.timezone})`,
     `Location: ${input.location} (${input.latitude.toFixed(4)}, ${input.longitude.toFixed(4)})`,
-    `House system: Polich–Page (T), matching the existing app calculation engine.`,
+    `House system: Topocentric Equal House, using topocentric planetary positions and 30-degree cusps from the calculated Ascendant.`,
     `Question topic: ${topic.label} (${ordinal(input.topicHouse)} house from the ${input.subject === "querent" ? "querent" : "other person"}).`,
-    `Ascendant: ${calculated.ascendant.display} (${ascendantSign}); querent's primary ruler: ${querentRuler}.`,
+    `Ascendant: ${ascendant.display} (${ascendantSign}); querent's primary ruler: ${querentRuler}.`,
     `Person asked about: ${input.subject === "querent" ? "the querent (House 1)" : "another person (House 7)"}; that person's ruler: ${subjectRuler}.`,
     `Topic house: house ${input.topicHouse} counted from the person asked about is actual chart house ${actualTopicHouse}; cusp sign ${houses[actualTopicHouse - 1].sign}; topic ruler ${topicRuler}.`,
     `Significator roles: querent = House 1 ruler ${querentRuler}; person asked about = House ${subjectHouse} ruler ${subjectRuler}; matter = actual chart House ${actualTopicHouse} ruler ${topicRuler}. Do not interchange these roles.`,
     `Moon: ${moon.display}, ${moon.sign}, house ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
     `Traditional planetary placements:\n${placementLines}`,
     `House cusps and traditional rulers:\n${houseLines}`,
+    `GOD VIEW / AGENT VIEW RELATIONSHIP EVIDENCE (contextual layer; do not replace horary testimony):\n${frameLines}`,
     `Major aspects among the querent, person, matter significators, and Moon (maximum 5° orb):\n${aspectLines}`,
     `Other close major aspects among the seven classical planets (max 5° orb; at least one planet is not a significator or the Moon):\n${otherAspectLines}`,
     `Upcoming exact aspects (calculated from the ephemeris; local timezone ${input.timezone}; Moon contacts cover ${lookahead.moonWindowDays} days and other contacts cover ${lookahead.windowDays} days). A listed date/time is when the planetary contact becomes exact, not a prediction of when an event will happen:\n${upcomingLines}`,
     `Planetary stations in the next ${lookahead.windowDays} days (date indicates when the planet changes apparent direction, not an event prediction):\n${stationLines}`,
-    "Method boundary: this version calculates house rulers, planetary positions, retrograde status, Moon placement, close major aspects, exact-aspect dates, and planetary stations. It does not calculate essential dignity, reception, prohibition, collection/translation of light, fixed-star testimony, or the traditional method of estimating event timing from signs and houses; do not invent those factors or any other timing.",
+    `TRADITIONAL LOTS / ARABIC PARTS (calculated formulas; interpret in context):\n${lotLines}`,
+    `ESSENTIAL AND ACCIDENTAL DIGNITY / DEBILITY (traditional scoring aid, not a standalone judgment):\n${dignityLines}`,
+    `RECEPTION / MUTUAL RECEPTION:\n${receptionLines}`,
+    `FIXED-STAR TESTIMONY (conjunctions within 1° only):\n${starLines}`,
+    `RADICALITY / CONSIDERATIONS BEFORE JUDGMENT: status ${traditional.radicality.status}; ${traditional.radicality.explanation}\n${traditional.radicality.considerations.length ? traditional.radicality.considerations.map(row => `- ${row}`).join("\n") : "- No configured caution was triggered."}`,
+    `TRADITIONAL EVENT-TIMING AID (degrees to perfection and modality estimate; not a guaranteed event date):\n${timingLines}`,
+    `LUNAR MANSION / MANZIL / DECAN CONTEXT FOR CLASSICAL PLANETS AND ASCENDANT:\n${overlayLines}`,
+    natalEvidence,
+    transitEvidence,
+    godEvidence,
+    "Three-layer reading rule: keep the NATAL / AGENT, TRANSIT / QUESTION-MOMENT, and GOD VIEW / GEOCENTRIC evidence sets explicitly separate. Use natal houses only for the person layer; use transit contacts to describe activation; use God View for the whole-sky context. Never turn God View into local houses or a personal Ascendant.",
+    "Method boundary: the traditional layer now calculates configured Lots, dignity/debility indicators, reception, close fixed-star testimony, radicality cautions, a non-deterministic perfection timing aid, and lunar mansion/Manzil/Decan overlays. It still does not calculate every traditional doctrine, including prohibition, collection/translation of light, all sect/ruler conditions, or a complete traditional timing judgment; do not invent those factors.",
   ].join("\n\n");
 
   return {
@@ -213,8 +289,8 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     askedAt,
     location: input.location,
     timezone: input.timezone,
-    houseSystem: "Polich–Page (T)",
-    ascendant: { longitude: ascendantLongitude, display: calculated.ascendant.display, sign: ascendantSign },
+    houseSystem: "Topocentric Equal House",
+    ascendant: { longitude: ascendantLongitude, display: ascendant.display, sign: ascendantSign },
     querentRuler,
     topicRuler,
     moon,
@@ -223,6 +299,10 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     relevantAspects,
     otherCloseAspects,
     lookahead,
+    natalChart,
+    transitChart,
+    godChart,
+    traditional,
     evidenceText,
   };
 }
@@ -243,6 +323,11 @@ INTERPRETATION STANDARD
 - Be clear where testimony is weak or mixed. If a traditional consideration is not in the supplied evidence, say that it was not calculated; never invent dignity, reception, prohibition, biography, aspects, or timing. A date may be given only if present in the supplied upcoming-aspect or station lists, and must be described as the exact planetary contact or directional station—not as when a real-world event will happen.
 - Give a proportionate, practical next step. Avoid deterministic forecasts, guarantees, fear, medical diagnosis, or advice that replaces qualified professional guidance. Astrology is a symbolic interpretive practice, not scientifically established evidence.
 - Do not mention Tarot, cards, suits, or spreads. Do not claim certainty or supernatural authority. The reader retains agency.
+- The evidence may contain three explicitly labeled sets: NATAL / AGENT, TRANSIT / QUESTION-MOMENT, and GOD VIEW / GEOCENTRIC. Treat them as different coordinate frames, not interchangeable duplicates.
+- NATAL / AGENT describes the person's enduring birth chart, including their local houses and angles. If it says unavailable, state that the person's natal layer was not supplied and do not infer it from the question chart.
+- TRANSIT / QUESTION-MOMENT describes the sky when the question was asked and its contacts against the person's natal foundation when available. Use this layer for activation and timing context, not as a replacement for the natal chart.
+- GOD VIEW / GEOCENTRIC describes the same question moment without an observer, horizon, Ascendant, or local houses. Use it for whole-sky context and geocentric planetary relationships only; never assign it personal houses or call it the person's natal chart.
+- When synthesizing, name the layer before making a claim: “In the natal layer…”, “At the question moment…”, or “In God View…”. If the layers disagree in meaning, explain the distinction rather than averaging them together.
 
 Write a complete but focused first judgment in clear Markdown. Let the evidence and complexity determine the length; do not pad, repeat, or force a word count. End by stating what evidence could change or weaken the provisional conclusion.`;
 
