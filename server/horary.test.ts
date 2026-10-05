@@ -74,6 +74,8 @@ describe("horary astrology", () => {
     expect(result.reading).toContain("evidence-led horary reading");
     expect(messages[0].content).toContain("THE FIRMAMENT — MASTER AI HORARY INTERPRETER");
     expect(messages[0].content).toContain("CARE-CENTERED IMPERATIVE — NON-NEGOTIABLE");
+    expect(messages[0].content).toContain("CARE-FIRST DELIVERY STANDARD — NON-NEGOTIABLE");
+    expect(messages[0].content).toContain("Never write as though a loved one is merely a significator");
     expect(messages[0].content).toContain("what it means for this specific person");
     expect(messages[0].content).toContain("CALCULATE DEEPLY. JUDGE HIERARCHICALLY. INTERPRET HUMANLY.");
     expect(messages[0].content).toContain("The user should feel that the entire relevant chart was considered.");

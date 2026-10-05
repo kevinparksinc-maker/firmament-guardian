@@ -7,7 +7,7 @@ import { HORARY_TOPICS } from "../shared/horary";
 import { calculateLookahead, type Lookahead } from "./horaryLookahead";
 import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
 import { HORARY_SYSTEM as HORARY_SPECIALIZED_SYSTEM } from "./horary-instructions";
-import { FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
+import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
@@ -337,7 +337,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   };
 }
 
-const HORARY_SYSTEM = `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
+const HORARY_SYSTEM = `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
 
 function responseText(content: string | Array<{ type: string; text?: string }> | undefined) {
   return typeof content === "string"
