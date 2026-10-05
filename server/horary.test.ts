@@ -72,24 +72,20 @@ describe("horary astrology", () => {
     const messages = mocked.invokeLLM.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
 
     expect(result.reading).toContain("evidence-led horary reading");
-    expect(messages[0].content).toContain("WHAT → WHY → HOW → CONSEQUENCE → MEANING");
     expect(messages[0].content).toContain("Do not mention Tarot");
-    expect(messages[0].content).toContain("Never switch or collapse these roles");
-    expect(messages[0].content).toContain("Do not calculate or claim any aspect");
-    expect(messages[0].content).toContain("NATAL / AGENT");
-    expect(messages[0].content).toContain("TRANSIT / QUESTION-MOMENT");
-    expect(messages[0].content).toContain("GOD VIEW / GEOCENTRIC");
-    expect(messages[0].content).toContain("not as when a real-world event will happen");
-    expect(messages[0].content).toContain("KNOWLEDGE IS THE MATERIAL.");
-    expect(messages[0].content).toContain("ASTROLOGY DOMAIN ADAPTER");
+    expect(messages[0].content).toContain("Keep significator roles exact");
+    expect(messages[0].content).toContain("Do not recalculate from raw positions");
+    expect(messages[0].content).toContain("answer, not the calculations");
+    expect(messages[0].content).toContain("350–700 words");
     expect(messages[1].content).toContain(sampleInput.question);
     expect(messages[1].content).toContain(result.chart.querentRuler);
     expect(messages[1].content).toContain(result.chart.subjectRuler);
     expect(messages[1].content).toContain(result.chart.topicRuler);
-    expect(messages[1].content).toContain("Significator roles");
-    expect(messages[1].content).toContain("Upcoming exact aspects");
-    expect(messages[1].content).toContain("Planetary stations");
-    expect(messages[1].content).toContain("Do not recalculate");
+    expect(messages[1].content).toContain("Roles:");
+    expect(messages[1].content).toContain("compact calculated evidence");
+    expect(messages[1].content).toContain("Relevant major aspects supplied by the calculator");
+    expect(messages[1].content).toContain("Do not recalculate from raw positions");
+    expect(messages[1].content).not.toContain("GOD VIEW / GEOCENTRIC EVIDENCE SET");
   });
 
   it("adds a person natal layer while keeping transit and God View at the question moment", async () => {

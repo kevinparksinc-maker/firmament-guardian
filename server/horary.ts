@@ -4,7 +4,6 @@ import { invokeLLM, type Message } from "./_core/llm";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
 import type { FrameRelationship } from "./astrologyCore";
 import { HORARY_TOPICS } from "../shared/horary";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import { calculateLookahead, type Lookahead } from "./horaryLookahead";
 import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
 
@@ -62,6 +61,7 @@ export type HoraryChart = {
   godChart: Awaited<ReturnType<typeof calculateChart>>;
   traditional: TraditionalHoraryEvidence;
   evidenceText: string;
+  judgmentEvidenceText: string;
 };
 
 const TRADITIONAL_RULERS: Record<string, string> = {
@@ -250,6 +250,10 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   const starLines = traditional.fixedStars.length ? traditional.fixedStars.map(row => `- ${row.planet} conjunct ${row.star}, orb ${row.orb}°; nature ${row.nature}; ${row.meaning}`).join("\n") : "- No classical planet or Ascendant is within the configured 1° fixed-star orb.";
   const overlayLines = traditional.overlays.map(row => `- ${row.body}: ${row.display}; Nakshatra ${row.nakshatra} Pada ${row.pada}; Manzil ${row.manzil}; Decan ${row.decan}`).join("\n");
   const timingLines = traditional.timing.length ? traditional.timing.map(row => `- ${row.from} ${row.aspect} ${row.to}: ${row.degreesToPerfection}°; ${row.estimatedUnits}; ${row.method}`).join("\n") : "- No configured key-significator perfection estimate was available.";
+  const corePlacementLines = placements
+    .filter(row => significatorNames.has(row.name))
+    .map(row => `- ${row.name}: ${row.display}; ${row.sign}, House ${row.house}${row.retrograde ? "; retrograde" : ""}`)
+    .join("\n");
   const natalEvidence = natalChart
     ? `NATAL / AGENT EVIDENCE SET (person's birth chart; local houses belong to the person):\n${natalChart.movingBodies.map(row => `- ${row.name}: ${row.display}; house ${row.house}`).join("\n")}\n- Ascendant: ${natalChart.ascendant?.display ?? "unavailable"}\n- Birth UTC: ${natalChart.utc}`
     : "NATAL / AGENT EVIDENCE SET: unavailable; no complete person birth profile was supplied. Do not infer or invent a natal chart.";
@@ -288,6 +292,18 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     "Three-layer reading rule: keep the NATAL / AGENT, TRANSIT / QUESTION-MOMENT, and GOD VIEW / GEOCENTRIC evidence sets explicitly separate. Use natal houses only for the person layer; use transit contacts to describe activation; use God View for the whole-sky context. Never turn God View into local houses or a personal Ascendant.",
     "Method boundary: the traditional layer now calculates configured Lots, dignity/debility indicators, reception, close fixed-star testimony, radicality cautions, a non-deterministic perfection timing aid, and lunar mansion/Manzil/Decan overlays. It still does not calculate every traditional doctrine, including prohibition, collection/translation of light, all sect/ruler conditions, or a complete traditional timing judgment; do not invent those factors.",
   ].join("\n\n");
+  const judgmentEvidenceText = [
+    `Question: ${input.question}`,
+    `Question asked at: ${askedAt} UTC (${input.date} ${input.time} local; ${input.timezone})`,
+    `Question topic: ${topic.label}; the selected relative House ${input.topicHouse} is actual chart House ${actualTopicHouse}.`,
+    `Roles: querent = House 1 ruler ${querentRuler}; person asked about = House ${subjectHouse} ruler ${subjectRuler}; matter = actual House ${actualTopicHouse} ruler ${topicRuler}. Keep these roles separate.`,
+    `Ascendant: ${ascendant.display}; Moon: ${moon.display}, ${moon.sign}, House ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
+    `Core placements:\n${corePlacementLines}`,
+    `Relevant major aspects supplied by the calculator (maximum 5° orb):\n${aspectLines}`,
+    `Radicality / considerations before judgment: status ${traditional.radicality.status}; ${traditional.radicality.explanation}${traditional.radicality.considerations.length ? `\n- ${traditional.radicality.considerations.join("\n- ")}` : ""}`,
+    `Configured traditional support: ${traditional.receptions.length ? traditional.receptions.map(row => row.description).join("; ") : "No configured reception found."}`,
+    "This is the compact judgment evidence. Do not recalculate from raw positions. The complete technical appendix remains available separately in the chart interface if the reader asks for it.",
+  ].join("\n\n");
 
   return {
     question: input.question,
@@ -315,33 +331,25 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     godChart,
     traditional,
     evidenceText,
+    judgmentEvidenceText,
   };
 }
 
 const HORARY_SYSTEM = `You are Bible Believers Astrology's horary astrology interpreter. Use the same evidence-first AI framework as the app's other readings, adapted to horary astrology. The user asks about a concrete question; the chart is cast for the supplied time and place at which the question was asked. Do not treat this as a natal personality profile or a Tarot spread.
-
 INTERPRETATION STANDARD
-- Keep significator roles exact. The querent is always the person asking (House 1 and its ruler). The person asked about is either the querent (House 1) or another person (House 7), as explicitly supplied. The selected topic house is counted from that person; the evidence provides the actual chart house after turning. The topic ruler signifies the matter, not automatically the person or their intentions. Never switch or collapse these roles.
-- A planet's house placement is where that planet is located; it is not the house that planet rules. The Moon may simultaneously rule the selected topic and serve as a general co-significator; if so, label both roles, and do not mistake the Moon's own placement house for the topic house.
-- If the question wording and the explicitly selected person/topic do not align, say the assignment is ambiguous and ask the user to clarify in follow-up rather than assigning an actor to the wrong house. For a career question about another person, use only the turned topic house and the person-house assignment explicitly supplied in the evidence.
-- Use only the aspect lists explicitly supplied in the calculated evidence (significator/Moon aspects, other close aspects, and upcoming exact aspects). Do not calculate or claim any aspect or date from raw positions yourself, and do not call non-significator planets additional significators. Aspects involving neither a significator nor the Moon are background context, not testimony, and must not carry the judgment on their own.
-- Do not infer that an offer, promise, decision, or another person's intention exists unless it is stated in the question or supported by the calculated testimony. Distinguish what the question already says from what the chart indicates.
-- Begin with the question in plain language. Offer a provisional leaning (yes, no, mixed, or insufficient testimony) only when the supplied chart evidence supports one; explain what is supporting and what complicates it. Do not force certainty.
-- Explain the chart evidence before its meaning: House 1 and its ruler identify the querent; the supplied person choice identifies the subject (House 1 for the querent, House 7 for another person); the topic ruler is for the selected house counted from that subject, with its actual chart house supplied; the Moon is a co-significator and sequence-of-events indicator; then discuss only the supplied aspects among these roles.
-- For each important factor, develop WHAT → WHY → HOW → CONSEQUENCE → MEANING in connected prose. Explain technical terms so a reader without astrology training can follow the judgment.
-- Make the story cumulative: show how the question and querent are established, what condition or obstacle the chart indicates, what the Moon and relevant contacts add, how contradictions modify the picture, and what the full testimony suggests about the question.
-- Connect factors by explaining what their relationship produces; do not list disconnected definitions or repeat the same conclusion in several forms. Every major conclusion must point to evidence in the supplied chart.
-- Be clear where testimony is weak or mixed. If a traditional consideration is not in the supplied evidence, say that it was not calculated; never invent dignity, reception, prohibition, biography, aspects, or timing. A date may be given only if present in the supplied upcoming-aspect or station lists, and must be described as the exact planetary contact or directional station—not as when a real-world event will happen.
-- Give a proportionate, practical next step. Avoid deterministic forecasts, guarantees, fear, medical diagnosis, or advice that replaces qualified professional guidance. Astrology is a symbolic interpretive practice, not scientifically established evidence.
-- Do not mention Tarot, cards, suits, or spreads. Do not claim certainty or supernatural authority. The reader retains agency.
-- The evidence may contain three explicitly labeled sets: NATAL / AGENT, TRANSIT / QUESTION-MOMENT, and GOD VIEW / GEOCENTRIC. Treat them as different coordinate frames, not interchangeable duplicates.
-- NATAL / AGENT describes the person's enduring birth chart, including their local houses and angles. If it says unavailable, state that the person's natal layer was not supplied and do not infer it from the question chart.
-- TRANSIT / QUESTION-MOMENT describes the sky when the question was asked and its contacts against the person's natal foundation when available. Use this layer for activation and timing context, not as a replacement for the natal chart.
-- GOD VIEW / GEOCENTRIC describes the same question moment without an observer, horizon, Ascendant, or local houses. Use it for whole-sky context and geocentric planetary relationships only; never assign it personal houses or call it the person's natal chart.
-- When synthesizing, name the layer before making a claim: “In the natal layer…”, “At the question moment…”, or “In God View…”. If the layers disagree in meaning, explain the distinction rather than averaging them together.
-- FRAME TRANSLATION REQUIREMENT: The evidence includes the exact God View and Agent View house/theme pairs, relationship type, Translation, optional tension note, and Synthesis displayed in the “God's View of the Horary Agent” box. Treat those supplied strings as calculated interpretive evidence. Include a dedicated “God's View of the Horary Agent” or “Frame translation” section in the first judgment. For every supplied relationship row in that evidence block, explicitly name the planet, its one calculated longitude, the God View house/themes, the Agent View house/themes, and then explain the supplied Translation and Synthesis in plain language. Do not collapse this into a generic sentence that God View is merely context, and do not replace the supplied Translation/Synthesis with a new generic interpretation. This frame translation is secondary context: it must clarify how the wider field becomes lived through the Agent house, but it must never override the primary horary significators, supplied aspects, or provisional judgment.
+- Keep significator roles exact: the querent is House 1, another person is House 7, and the selected topic house is counted from that person as explicitly supplied.
+- Use only the supplied calculated facts and aspect list. Do not recalculate from raw positions, invent missing doctrine, or treat background planets as additional significators.
+- Begin with the answer, not the calculations. Use these headings: Judgment, Why, What complicates it, and Practical next step.
+- State one clear provisional leaning (yes, no, mixed, or insufficient testimony) in the first 1–2 sentences when supported.
+- Explain only the two or three strongest factors that answer the question. Do not produce a planet-by-planet inventory, degree list, house-cusp list, or calculation log.
+- Translate technical terms immediately into ordinary language. Mention a specific aspect, ruler, Moon condition, dignity, reception, or timing aid only when it materially changes the answer.
+- Keep the first judgment focused, normally 350–700 words. Do not pad, repeat the conclusion, or explain every technical appendix.
+- Be clear where testimony is weak or mixed. Dates may only be mentioned when supplied, and must be described as exact planetary contacts rather than guaranteed real-world events.
+- Give a proportionate practical next step. Avoid deterministic forecasts, guarantees, fear, medical diagnosis, or advice replacing qualified professional guidance. Astrology is symbolic interpretation, not scientifically established evidence.
+- If a natal layer exists, use it only when it materially clarifies the question. The full God View/Agent View comparison belongs in the optional evidence panels, not in the first judgment.
+- Do not mention Tarot, cards, suits, or spreads. The reader retains agency.
 
-Write a complete but focused first judgment in clear Markdown. Let the evidence and complexity determine the length; do not pad, repeat, or force a word count. End by stating what evidence could change or weaken the provisional conclusion.`;
+Write a focused first judgment in clear Markdown. End with one sentence stating what evidence could change or weaken the provisional conclusion.`;
 
 function responseText(content: string | Array<{ type: string; text?: string }> | undefined) {
   return typeof content === "string"
@@ -349,7 +357,7 @@ function responseText(content: string | Array<{ type: string; text?: string }> |
     : (content ?? []).filter(part => part.type === "text").map(part => part.text ?? "").join("\n");
 }
 
-async function answer(messages: Message[], maxTokens = 5000) {
+async function answer(messages: Message[], maxTokens = 2200) {
   const response = await invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens });
   const text = responseText(response.choices?.[0]?.message?.content);
   if (!text.trim()) throw new Error("The horary interpreter returned no readable answer. Please try again.");
@@ -359,8 +367,8 @@ async function answer(messages: Message[], maxTokens = 5000) {
 export async function openHoraryQuestion(input: HoraryInput) {
   const chart = await calculateHoraryChart(input);
   const reading = await answer([
-    { role: "system", content: buildAstrologyInterpreterSystem(HORARY_SYSTEM) },
-    { role: "user", content: `Use only these calculated facts as the source of truth. Do not recalculate or add missing traditional considerations.\n\n${chart.evidenceText}\n\nGive the complete horary judgment now.` },
+    { role: "system", content: HORARY_SYSTEM },
+    { role: "user", content: `Use only this compact calculated evidence as the source of truth. Do not recalculate or add missing traditional considerations. Lead with the answer and keep the technical appendix out of the reading.\n\n${chart.judgmentEvidenceText}\n\nGive the focused horary judgment now.` },
   ]);
   return { chart, reading };
 }
@@ -371,7 +379,7 @@ export async function horaryFollowUp(
   question: string,
 ) {
   return answer([
-    { role: "system", content: buildAstrologyInterpreterSystem(`${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.`) },
+    { role: "system", content: `${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.` },
     { role: "user", content: `Original horary evidence:\n\n${chart.evidenceText}` },
     ...withCurrentQuestion(history, question, 12),
   ], 3200);
