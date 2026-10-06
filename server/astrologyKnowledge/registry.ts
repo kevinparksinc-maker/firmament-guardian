@@ -1,0 +1,257 @@
+import type { AstrologyRule, AstrologySource } from "./types";
+
+export const ASTROLOGY_SOURCES: AstrologySource[] = [
+  {
+    id: "firmament-ephemeris",
+    name: "Firmament local ephemeris",
+    tradition: "firmament",
+    authorityType: "calculation",
+    status: "active",
+    capabilities: ["canonical-longitude", "houses", "transits", "fixed-stars"],
+  },
+  {
+    id: "firmament-architecture",
+    name: "Firmament architecture",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "5-degree-relationships",
+      "god-view",
+      "agent-view",
+      "nakshatra-overlay",
+      "manzil-overlay",
+    ],
+  },
+  {
+    id: "local-western-rules",
+    name: "Firmament Western rule set",
+    tradition: "western",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "planets",
+      "signs",
+      "houses",
+      "aspects",
+      "dignity",
+      "transits",
+    ],
+  },
+  {
+    id: "local-vedic-rules",
+    name: "Firmament Vedic rule set",
+    tradition: "vedic",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "d1",
+      "house-lords",
+      "nakshatra",
+      "drishti",
+      "varga-architecture",
+    ],
+  },
+  {
+    id: "tvam-jyotish",
+    name: "Tvam Jyotish",
+    tradition: "vedic",
+    authorityType: "reference",
+    url: "https://apps.apple.com/us/app/tvam-jyotish-vedic-astrology/id1449579147",
+    status: "reference-only",
+    capabilities: [
+      "planet-analysis",
+      "nakshatra",
+      "yoga",
+      "varga",
+      "dasha",
+      "sade-sati",
+    ],
+  },
+  {
+    id: "local-arabic-rules",
+    name: "Firmament Arabic rule set",
+    tradition: "arabic",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "sect",
+      "whole-sign-houses",
+      "lots",
+      "manazil",
+      "planetary-hours",
+      "twelfth-parts",
+    ],
+  },
+  {
+    id: "canopy-arabian",
+    name: "Canopy: Arabian Astrology",
+    tradition: "arabic",
+    authorityType: "reference",
+    url: "https://play.google.com/store/apps/details?id=stellarappsllc.com.canopy",
+    status: "reference-only",
+    capabilities: [
+      "planetary-hours",
+      "manazil",
+      "dignity",
+      "lots",
+      "fixed-stars",
+      "transits",
+    ],
+  },
+  {
+    id: "astrology-api",
+    name: "Astrology-API.io",
+    tradition: "vedic",
+    authorityType: "api",
+    url: "https://astrology-api.io",
+    status: "reference-only",
+    capabilities: ["positions", "houses", "drishti", "varga", "transits"],
+  },
+];
+
+export const ASTROLOGY_RULES: AstrologyRule[] = [
+  {
+    id: "western-5-degree-geometry",
+    tradition: "western",
+    technique: "aspects",
+    subject: "planetary-relationship",
+    kind: "deterministic-rule",
+    sourceId: "firmament-architecture",
+    status: "implemented",
+    statement:
+      "Unified Firmament relationships use a maximum five-degree orb with proximity weighting.",
+  },
+  {
+    id: "western-dignity-basic",
+    tradition: "western",
+    technique: "dignity",
+    subject: "planet",
+    kind: "deterministic-rule",
+    sourceId: "local-western-rules",
+    status: "implemented",
+    statement:
+      "Basic domicile, exaltation, fall, and detriment conditions are resolved from the supplied sign.",
+  },
+  {
+    id: "vedic-nakshatra-27",
+    tradition: "vedic",
+    technique: "nakshatra",
+    subject: "planet",
+    kind: "deterministic-rule",
+    sourceId: "firmament-architecture",
+    status: "implemented",
+    statement:
+      "The fixed 360-degree spine is divided into 27 equal 13°20′ lunar mansions and four padas per mansion.",
+  },
+  {
+    id: "vedic-house-lords",
+    tradition: "vedic",
+    technique: "house-lord",
+    subject: "house",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "implemented",
+    statement:
+      "Classical sign rulers are mapped to the supplied Agent Ascendant and house placements.",
+  },
+  {
+    id: "vedic-graha-drishti",
+    tradition: "vedic",
+    technique: "drishti",
+    subject: "planet",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "implemented",
+    statement:
+      "Traditional whole-house planetary aspects are resolved for Mars, Jupiter, Saturn, and the seventh aspect.",
+  },
+  {
+    id: "vedic-varga-architecture",
+    tradition: "vedic",
+    technique: "varga",
+    subject: "divisional-chart",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "incomplete",
+    statement:
+      "D2, D3, D9, and D10 contracts are reserved; chart-specific varga calculation is not yet enabled.",
+  },
+  {
+    id: "vedic-dasha-architecture",
+    tradition: "vedic",
+    technique: "dasha",
+    subject: "timing",
+    kind: "deterministic-rule",
+    sourceId: "tvam-jyotish",
+    status: "incomplete",
+    statement:
+      "Dasha retrieval is reference-only until a verified ayanamsa, birth-time, and Vimshottari implementation is supplied.",
+  },
+  {
+    id: "arabic-day-sect",
+    tradition: "arabic",
+    technique: "sect",
+    subject: "chart",
+    kind: "deterministic-rule",
+    sourceId: "local-arabic-rules",
+    status: "implemented",
+    statement:
+      "Day/night sect is resolved from whether the Sun is in houses 7–12 or 1–6 in Agent View.",
+  },
+  {
+    id: "arabic-lots",
+    tradition: "arabic",
+    technique: "lots",
+    subject: "fortune-spirit",
+    kind: "deterministic-rule",
+    sourceId: "local-arabic-rules",
+    status: "implemented",
+    statement:
+      "Fortune and Spirit use sect-sensitive luminary formulas; results are normalized to 0–360 degrees.",
+  },
+  {
+    id: "arabic-manazil-28",
+    tradition: "arabic",
+    technique: "manzil",
+    subject: "moon",
+    kind: "deterministic-rule",
+    sourceId: "firmament-architecture",
+    status: "implemented",
+    statement:
+      "The fixed 360-degree spine is divided into 28 equal Manzil sectors with explicit boundaries.",
+  },
+  {
+    id: "arabic-planetary-hours",
+    tradition: "arabic",
+    technique: "planetary-hours",
+    subject: "timing",
+    kind: "deterministic-rule",
+    sourceId: "canopy-arabian",
+    status: "incomplete",
+    statement:
+      "Planetary-hour calculation requires local sunrise and sunset data and is not inferred without those inputs.",
+  },
+  {
+    id: "arabic-twelfth-parts",
+    tradition: "arabic",
+    technique: "twelfth-parts",
+    subject: "planet",
+    kind: "deterministic-rule",
+    sourceId: "canopy-arabian",
+    status: "incomplete",
+    statement:
+      "Twelfth-parts methodology is reserved pending an explicit house/sign doctrine setting.",
+  },
+];
+
+export function sourceById(id: string) {
+  return ASTROLOGY_SOURCES.find(source => source.id === id);
+}
+export function rulesFor(plan: { domains: string[]; techniques: string[] }) {
+  return ASTROLOGY_RULES.filter(
+    rule =>
+      plan.domains.includes(rule.tradition) &&
+      plan.techniques.includes(rule.technique)
+  );
+}

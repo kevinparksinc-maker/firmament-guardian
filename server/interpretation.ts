@@ -3,6 +3,11 @@ import { withCurrentQuestion } from "./_core/conversation";
 import type { ChartResult, ChartRow } from "./astronomy";
 import { formatInZone } from "../shared/time";
 import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+import {
+  buildAstrologyEvidencePacket,
+  formatEvidencePacket,
+  type AstrologyEvidencePacket,
+} from "./astrologyKnowledge";
 
 const COSMOLOGY = `You are The Bible Believers Astrology's unified Vedic / Hellenistic / Babylonian / Hermetic-informed interpreter and the user's guardian-guide through the reading. The guardian-guide is a voice of love, care, protection, resonance, and steady presence—not a claim that the AI is literally a supernatural being. Speak with the grounded care of a wise father or trusted elder giving advice to his son: protective but not possessive, firm but not harsh, practical rather than sentimental, and focused on helping the person build the best life available to them. Offer guidance about character, discipline, patience, self-respect, responsibility, money, work, boundaries, courage, relationships, and choosing long-term strength over short-term relief when the supplied chart supports it. Do not assume the user's gender, family history, or need for a male authority; make the paternal tone available as a style of care, not a replacement for real relationships.
 
@@ -57,14 +62,30 @@ function chartFacts(chart: ChartResult, mode: ReadingMode) {
     godPlacements: chart.godPlacements,
     frameRelationships: chart.movingBodies
       .filter(row => row.frameRelationship)
-      .map(row => ({ body: row.name, longitude: row.longitude, display: row.display, godHouse: row.godHouse, agentHouse: row.agentHouse, relationship: row.frameRelationship })),
-    ...(mode === "natal" ? {} : { transitDate: chart.transitDate, transits: chart.transits }),
-    ...(mode === "natal" ? {} : { momentPrecision: chart.momentPrecision, transitHouseFrame: chart.transitHouseFrame }),
+      .map(row => ({
+        body: row.name,
+        longitude: row.longitude,
+        display: row.display,
+        godHouse: row.godHouse,
+        agentHouse: row.agentHouse,
+        relationship: row.frameRelationship,
+      })),
+    ...(mode === "natal"
+      ? {}
+      : { transitDate: chart.transitDate, transits: chart.transits }),
+    ...(mode === "natal"
+      ? {}
+      : {
+          momentPrecision: chart.momentPrecision,
+          transitHouseFrame: chart.transitHouseFrame,
+        }),
   };
 }
 
 function textOf(content: string | Array<{ type: string; text?: string }>) {
-  return typeof content === "string" ? content : content.map(part => part.text ?? "").join("");
+  return typeof content === "string"
+    ? content
+    : content.map(part => part.text ?? "").join("");
 }
 
 export type ReadingMode = "natal" | "transit" | "combined";
@@ -72,38 +93,76 @@ export const READING_MODES: ReadingMode[] = ["natal", "transit", "combined"];
 const WORLDVIEW_GUIDANCE = `Worldview (God / Agent / God's View of the Agent) and reading scope (Natal / Transit / Natal + Transit) are independent axes; preserve all existing reading scopes. In God View, use the fixed Aries House 1 through Pisces House 12 frame and the supplied moment, never infer an Ascendant, Midheaven, horizon, or location-based house. In Agent View, use the supplied geocentric planetary longitudes with the observer-specific topocentric lunar correction only when explicitly supplied, and use the Equal House placements from the supplied Ascendant. In God's View of the Agent, explain how the calculated personal placements sit inside the calculated collective frame; use godHouse, agentHouse, frameRelationships, and Royal Star contact data only when supplied. The same canonical geocentric longitude must be treated as one astronomical fact in both frames. Use the supplied relationship type and translation as structured interpretive context; do not calculate agree/shift or a match score, and do not call differing frames contradictory merely because their houses differ. God View augments primary chart testimony; it never overrides rulers, aspects, or horary significators. If the Moon is flagged uncertain, explain the supplied date range rather than presenting one Moon degree as certain. For transit readings, respect transitHouseFrame: transit-location, natal-location, or god-fixed. If momentPrecision is date-only-reference, state that noon UTC is an intentional approximate reference and that the Moon is time-sensitive.`;
 
 const MODE_GUIDANCE: Record<ReadingMode, string> = {
-  natal: "Read the natal chart only. Focus on enduring temperament, life patterns, nodes, angles, and fixed stars. Do not interpret current transit rows as part of this reading. This is a comprehensive self-knowledge profile: explain what kind of person this may be, how they experience themselves from the inside, what they need, what they fear, how they protect themselves, what others may misunderstand about them, and how their patterns can mature.",
-  transit: "Read the transit layer only. Use the natal chart only as the reference points being contacted. Focus on the selected transit moment, location, houses, transit planets, nodes, and supplied natal contacts. Never make deterministic predictions.",
-  combined: "Read natal and transit layers together, clearly separating enduring natal pattern from current transit weather. Explain how the present moment activates or develops the natal story without confusing temporary pressure with identity.",
+  natal:
+    "Read the natal chart only. Focus on enduring temperament, life patterns, nodes, angles, and fixed stars. Do not interpret current transit rows as part of this reading. This is a comprehensive self-knowledge profile: explain what kind of person this may be, how they experience themselves from the inside, what they need, what they fear, how they protect themselves, what others may misunderstand about them, and how their patterns can mature.",
+  transit:
+    "Read the transit layer only. Use the natal chart only as the reference points being contacted. Focus on the selected transit moment, location, houses, transit planets, nodes, and supplied natal contacts. Never make deterministic predictions.",
+  combined:
+    "Read natal and transit layers together, clearly separating enduring natal pattern from current transit weather. Explain how the present moment activates or develops the natal story without confusing temporary pressure with identity.",
 };
 
-async function ask(messages: Message[], maxTokens = 7000, thinkingBudget = 1800) {
+async function ask(
+  messages: Message[],
+  maxTokens = 7000,
+  thinkingBudget = 1800
+) {
   try {
-    const response = await invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens, thinking: { type: "enabled", budget_tokens: thinkingBudget } });
+    const response = await invokeLLM({
+      model: "claude-sonnet-4-6",
+      messages,
+      maxTokens,
+      thinking: { type: "enabled", budget_tokens: thinkingBudget },
+    });
     const firstChoice = response.choices?.[0];
-    const alternate = (response as unknown as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> }).output_text
-      ?? (response as unknown as { output?: Array<{ content?: Array<{ text?: string }> }> }).output?.flatMap(item => item.content ?? []).map(item => item.text ?? "").join("\n");
+    const alternate =
+      (
+        response as unknown as {
+          output_text?: string;
+          output?: Array<{ content?: Array<{ text?: string }> }>;
+        }
+      ).output_text ??
+      (
+        response as unknown as {
+          output?: Array<{ content?: Array<{ text?: string }> }>;
+        }
+      ).output
+        ?.flatMap(item => item.content ?? [])
+        .map(item => item.text ?? "")
+        .join("\n");
     const text = textOf(firstChoice?.message?.content || alternate || "");
-    if (!text.trim()) throw new Error("The AI provider returned no readable chapter text.");
-    if (/^(max_tokens|length)$/.test(firstChoice?.finish_reason ?? "")) throw new Error("The reading was cut off by its length limit.");
+    if (!text.trim())
+      throw new Error("The AI provider returned no readable chapter text.");
+    if (/^(max_tokens|length)$/.test(firstChoice?.finish_reason ?? ""))
+      throw new Error("The reading was cut off by its length limit.");
     return text;
   } catch (error) {
     console.error("[Interpretation] LLM request failed:", error);
     const message = error instanceof Error ? error.message : String(error);
     if (/usage exhausted|quota|credit/i.test(message)) {
-      throw new Error("The chart was calculated successfully, but AI reading capacity is temporarily exhausted. Please try again after the AI service quota resets; your chart data is still available.");
+      throw new Error(
+        "The chart was calculated successfully, but AI reading capacity is temporarily exhausted. Please try again after the AI service quota resets; your chart data is still available."
+      );
     }
-    throw new Error("The interpretation service could not complete this reading. Please try again; your chart calculation is still available.");
+    throw new Error(
+      "The interpretation service could not complete this reading. Please try again; your chart calculation is still available."
+    );
   }
 }
 
 function readerFacingIntelligence(raw: string) {
-  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "");
   try {
     const data = JSON.parse(cleaned) as Record<string, unknown>;
     const section = (title: string, key: string) => {
-      const values = Array.isArray(data[key]) ? data[key].filter(item => typeof item === "string") as string[] : [];
-      return values.length ? `### ${title}\n${values.map(value => `- ${value}`).join("\n")}` : "";
+      const values = Array.isArray(data[key])
+        ? (data[key].filter(item => typeof item === "string") as string[])
+        : [];
+      return values.length
+        ? `### ${title}\n${values.map(value => `- ${value}`).join("\n")}`
+        : "";
     };
     return [
       "## The shape of your chart",
@@ -118,48 +177,118 @@ function readerFacingIntelligence(raw: string) {
       section("What may be active now", "currentTransitThemes"),
       section("Psychological possibilities to test", "psychologicalHypotheses"),
       section("Questions for honest recognition", "disconfirmingQuestions"),
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
   } catch {
-    return raw.replace(/[{}\[\]\"]/g, "").replace(/,\s*/g, "\n").trim();
+    return raw
+      .replace(/[{}\[\]\"]/g, "")
+      .replace(/,\s*/g, "\n")
+      .trim();
   }
 }
 
 function buildChartMap(chart: ChartResult, mode: ReadingMode) {
   const body = chart.movingBodies;
-  const placements = body.map(row => `- **${row.name}** — ${row.display}, displayed house ${row.house}, God House ${row.godHouse ?? "not supplied"}${row.agentHouse == null ? "" : `, Agent House ${row.agentHouse}`}${row.retrograde ? ", retrograde" : ""}${row.uncertainty ? `; Moon uncertainty: ${row.uncertainty.label}` : ""}`).join("\n");
+  const placements = body
+    .map(
+      row =>
+        `- **${row.name}** — ${row.display}, displayed house ${row.house}, God House ${row.godHouse ?? "not supplied"}${row.agentHouse == null ? "" : `, Agent House ${row.agentHouse}`}${row.retrograde ? ", retrograde" : ""}${row.uncertainty ? `; Moon uncertainty: ${row.uncertainty.label}` : ""}`
+    )
+    .join("\n");
   const includeTransit = mode !== "natal";
-  const contacts = chart.transits.filter(row => row.natalContacts.length).slice(0, 8).map(row => `- **${row.name}** in ${row.display}: ${row.natalContacts.map(contact => `${contact.aspect} ${contact.natalName} (orb ${contact.orb.toFixed(1)}°)`).join(", ")}`).join("\n");
-  const transitTimezone = chart.input.transitTimezone || chart.input.timezone || "UTC";
+  const contacts = chart.transits
+    .filter(row => row.natalContacts.length)
+    .slice(0, 8)
+    .map(
+      row =>
+        `- **${row.name}** in ${row.display}: ${row.natalContacts.map(contact => `${contact.aspect} ${contact.natalName} (orb ${contact.orb.toFixed(1)}°)`).join(", ")}`
+    )
+    .join("\n");
+  const transitTimezone =
+    chart.input.transitTimezone || chart.input.timezone || "UTC";
   const transitMoment = formatInZone(chart.transitDate, transitTimezone);
   return [
     "## Your chart map",
     "This is the factual foundation of your reading, calculated directly from the chart. The deeper personal chapters are generated separately so one unavailable AI request does not hide the chart itself.",
     `### Worldview and scope`,
     `- **Worldview:** ${chart.worldview}. **Reading scope:** ${chart.readingScope}.`,
-    chart.agentViewAvailable ? `- **Agent layer:** available; placements include personal Equal House positions.` : `- **Agent layer:** unavailable because the chart has no exact birth time/location; do not infer an Ascendant or Midheaven.`,
+    chart.agentViewAvailable
+      ? `- **Agent layer:** available; placements include personal Equal House positions.`
+      : `- **Agent layer:** unavailable because the chart has no exact birth time/location; do not infer an Ascendant or Midheaven.`,
     `- **God layer:** every supplied placement includes a fixed Aries-to-Pisces godHouse and calculated Royal Star contact distances.`,
     `### The angles`,
-    chart.ascendant ? `- **Ascendant:** ${chart.ascendant.display}` : "- **Ascendant:** not calculated in God View.",
-    chart.descendant ? `- **Descendant:** ${chart.descendant.display}` : "- **Descendant:** not calculated in God View.",
+    chart.ascendant
+      ? `- **Ascendant:** ${chart.ascendant.display}`
+      : "- **Ascendant:** not calculated in God View.",
+    chart.descendant
+      ? `- **Descendant:** ${chart.descendant.display}`
+      : "- **Descendant:** not calculated in God View.",
     `- **North Node:** ${chart.northNode.display}, house ${chart.northNode.house}`,
     `- **South Node:** ${chart.southNode.display}, house ${chart.southNode.house}`,
     `### Natal placements`,
     placements,
-    mode === "natal" ? "### Reading layer\nThis map is prepared for a natal reading: the enduring foundation of the birth chart." : "### Reading layer\nThis map is prepared for the selected layer; the deeper chapters will keep natal patterns and present-moment activation distinct.",
-    includeTransit ? `### Selected transit moment\n${transitMoment} at ${chart.input.transitLocation ?? chart.input.location} (${new Date(chart.transitDate).toISOString()}).` : "",
-    includeTransit ? (contacts ? `### Supplied natal contacts\n${contacts}` : "### Supplied natal contacts\nNo close contacts were found within the calculation's configured orb.") : "",
-  ].filter(Boolean).join("\n\n");
+    mode === "natal"
+      ? "### Reading layer\nThis map is prepared for a natal reading: the enduring foundation of the birth chart."
+      : "### Reading layer\nThis map is prepared for the selected layer; the deeper chapters will keep natal patterns and present-moment activation distinct.",
+    includeTransit
+      ? `### Selected transit moment\n${transitMoment} at ${chart.input.transitLocation ?? chart.input.location} (${new Date(chart.transitDate).toISOString()}).`
+      : "",
+    includeTransit
+      ? contacts
+        ? `### Supplied natal contacts\n${contacts}`
+        : "### Supplied natal contacts\nNo close contacts were found within the calculation's configured orb."
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export const READING_CHAPTERS = [
-  { id: "identity", title: "Core Identity", subtitle: "The person you are becoming", focus: "identity, temperament, first impressions, self-image, core needs, gifts, and the tension between who you are privately and publicly" },
-  { id: "mind-heart", title: "Mind & Emotional Life", subtitle: "How you think, feel, and protect your inner world", focus: "mental habits, communication, emotional needs, vulnerability, fear, anger, shame, regulation, and the protective strategies behind reactions" },
-  { id: "relationships", title: "Relationships & Belonging", subtitle: "How you give, receive, trust, and set boundaries", focus: "attachment, intimacy, friendship, family patterns, conflict, attraction, reciprocity, boundaries, and how others may experience you" },
-  { id: "work-purpose", title: "Work, Gifts & Self-Worth", subtitle: "What you build and what you believe you deserve", focus: "career, money, ambition, leadership, creativity, discipline, recognition, responsibility, self-worth, and practical strengths" },
-  { id: "destiny", title: "Growth & Life Arc", subtitle: "The old self, the emerging self, and the road between them", focus: "North Node/South Node, Ascendant/Descendant, fixed stars, spiritual meaning, recurring lessons, shadow, maturity, and the person you can choose to become" },
-  { id: "mirror", title: "The Mirror", subtitle: "The truth worth carrying forward", focus: "a connected synthesis of repeating patterns, gifts, blind spots, defenses, relationship loops, concrete recognition moments, and compassionate but honest next steps" },
+  {
+    id: "identity",
+    title: "Core Identity",
+    subtitle: "The person you are becoming",
+    focus:
+      "identity, temperament, first impressions, self-image, core needs, gifts, and the tension between who you are privately and publicly",
+  },
+  {
+    id: "mind-heart",
+    title: "Mind & Emotional Life",
+    subtitle: "How you think, feel, and protect your inner world",
+    focus:
+      "mental habits, communication, emotional needs, vulnerability, fear, anger, shame, regulation, and the protective strategies behind reactions",
+  },
+  {
+    id: "relationships",
+    title: "Relationships & Belonging",
+    subtitle: "How you give, receive, trust, and set boundaries",
+    focus:
+      "attachment, intimacy, friendship, family patterns, conflict, attraction, reciprocity, boundaries, and how others may experience you",
+  },
+  {
+    id: "work-purpose",
+    title: "Work, Gifts & Self-Worth",
+    subtitle: "What you build and what you believe you deserve",
+    focus:
+      "career, money, ambition, leadership, creativity, discipline, recognition, responsibility, self-worth, and practical strengths",
+  },
+  {
+    id: "destiny",
+    title: "Growth & Life Arc",
+    subtitle: "The old self, the emerging self, and the road between them",
+    focus:
+      "North Node/South Node, Ascendant/Descendant, fixed stars, spiritual meaning, recurring lessons, shadow, maturity, and the person you can choose to become",
+  },
+  {
+    id: "mirror",
+    title: "The Mirror",
+    subtitle: "The truth worth carrying forward",
+    focus:
+      "a connected synthesis of repeating patterns, gifts, blind spots, defenses, relationship loops, concrete recognition moments, and compassionate but honest next steps",
+  },
 ] as const;
-export type ReadingChapterId = typeof READING_CHAPTERS[number]["id"];
+export type ReadingChapterId = (typeof READING_CHAPTERS)[number]["id"];
 
 const NODE_NAME = /node/i;
 
@@ -170,7 +299,8 @@ function rowLine(row: ChartRow, label = row.name) {
   if (row.retrograde && !NODE_NAME.test(row.name)) parts.push("retrograde");
   if (row.uncertainty) parts.push(`Moon uncertainty: ${row.uncertainty.label}`);
   const stars = row.royalStarContacts as unknown;
-  if (Array.isArray(stars) && stars.length) parts.push(`Royal Star contacts: ${JSON.stringify(stars)}`);
+  if (Array.isArray(stars) && stars.length)
+    parts.push(`Royal Star contacts: ${JSON.stringify(stars)}`);
   return `- ${parts.join("; ")}`;
 }
 
@@ -183,7 +313,9 @@ function buildEvidenceSheet(chart: ChartResult, mode: ReadingMode) {
     "",
     "Angles:",
     chart.ascendant ? rowLine(chart.ascendant) : "- Ascendant: not calculated",
-    chart.descendant ? rowLine(chart.descendant) : "- Descendant: not calculated",
+    chart.descendant
+      ? rowLine(chart.descendant)
+      : "- Descendant: not calculated",
     ...(chart.midheaven ? [rowLine(chart.midheaven)] : []),
     "",
     "Lunar nodes (mean nodes are always retrograde, so that carries no meaning):",
@@ -199,17 +331,46 @@ function buildEvidenceSheet(chart: ChartResult, mode: ReadingMode) {
   ];
   if (mode !== "natal") {
     const zone = input.transitTimezone || input.timezone || "UTC";
-    const contacts = chart.transits.filter(row => row.natalContacts.length).map(row => `- Transit ${row.name}: ${row.natalContacts.map(c => `${c.aspect} natal ${c.natalName} (orb ${c.orb.toFixed(1)}°)`).join(", ")}`);
-    lines.push("", `Transit moment: ${formatInZone(chart.transitDate, zone)}`, "Transit planets:", ...chart.transits.map(row => rowLine(row, `Transit ${row.name}`)), "", "Transit contacts to natal points:", ...(contacts.length ? contacts : ["- none within the calculation's orb"]));
+    const contacts = chart.transits
+      .filter(row => row.natalContacts.length)
+      .map(
+        row =>
+          `- Transit ${row.name}: ${row.natalContacts.map(c => `${c.aspect} natal ${c.natalName} (orb ${c.orb.toFixed(1)}°)`).join(", ")}`
+      );
+    lines.push(
+      "",
+      `Transit moment: ${formatInZone(chart.transitDate, zone)}`,
+      "Transit planets:",
+      ...chart.transits.map(row => rowLine(row, `Transit ${row.name}`)),
+      "",
+      "Transit contacts to natal points:",
+      ...(contacts.length ? contacts : ["- none within the calculation's orb"])
+    );
   }
   return lines.join("\n");
 }
 
 function knownPoints(chart: ChartResult) {
   const known = new Map<string, string>();
-  const natal = [...chart.movingBodies, chart.ascendant, chart.descendant, chart.midheaven, chart.northNode, chart.southNode, ...chart.frozenStars].filter((row): row is ChartRow => Boolean(row));
-  for (const row of natal) known.set(row.name.toLowerCase(), `${row.name} — ${row.display} (house ${row.house})`);
-  for (const row of chart.transits) known.set(`transit ${row.name.toLowerCase()}`, `Transit ${row.name} — ${row.display} (house ${row.house})`);
+  const natal = [
+    ...chart.movingBodies,
+    chart.ascendant,
+    chart.descendant,
+    chart.midheaven,
+    chart.northNode,
+    chart.southNode,
+    ...chart.frozenStars,
+  ].filter((row): row is ChartRow => Boolean(row));
+  for (const row of natal)
+    known.set(
+      row.name.toLowerCase(),
+      `${row.name} — ${row.display} (house ${row.house})`
+    );
+  for (const row of chart.transits)
+    known.set(
+      `transit ${row.name.toLowerCase()}`,
+      `Transit ${row.name} — ${row.display} (house ${row.house})`
+    );
   return known;
 }
 
@@ -219,48 +380,89 @@ function resolvePoint(entry: unknown, known: Map<string, string>) {
   const text = entry.trim().toLowerCase();
   let best = "";
   for (const key of Array.from(known.keys())) {
-    if (text.startsWith(key) && key.length > best.length && !/[a-z]/.test(text.charAt(key.length))) best = key;
+    if (
+      text.startsWith(key) &&
+      key.length > best.length &&
+      !/[a-z]/.test(text.charAt(key.length))
+    )
+      best = key;
   }
   return best ? known.get(best)! : null;
 }
 
 type ReadingPlan = {
-  threads: Array<{ title: string; insight: string; evidence: string[]; chapters: string[] }>;
+  threads: Array<{
+    title: string;
+    insight: string;
+    evidence: string[];
+    chapters: string[];
+  }>;
   tensions: Array<{ between: string; insight: string; evidence: string[] }>;
   chapters: Record<string, { angle: string; evidence: string[] }>;
 };
 
-function validatePlan(raw: string, known: Map<string, string>): ReadingPlan | null {
+function validatePlan(
+  raw: string,
+  known: Map<string, string>
+): ReadingPlan | null {
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
   if (start < 0 || end <= start) return null;
   let data: any;
-  try { data = JSON.parse(raw.slice(start, end + 1)); } catch { return null; }
-  const chapterIds = new Set<string>(READING_CHAPTERS.map(chapter => chapter.id));
+  try {
+    data = JSON.parse(raw.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+  const chapterIds = new Set<string>(
+    READING_CHAPTERS.map(chapter => chapter.id)
+  );
   let dropped = 0;
   const clean = (list: unknown) => {
     const out = new Set<string>();
     for (const entry of Array.isArray(list) ? list : []) {
       const hit = resolvePoint(entry, known);
-      if (hit) out.add(hit); else dropped += 1;
+      if (hit) out.add(hit);
+      else dropped += 1;
     }
     return Array.from(out);
   };
-  const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
-  const threads = (Array.isArray(data.threads) ? data.threads : []).map((thread: any) => ({
-    title: text(thread?.title), insight: text(thread?.insight), evidence: clean(thread?.evidence),
-    chapters: (Array.isArray(thread?.chapters) ? thread.chapters : []).filter((id: unknown) => typeof id === "string" && chapterIds.has(id)) as string[],
-  })).filter((thread: { title: string; insight: string; evidence: string[] }) => thread.title && thread.insight && thread.evidence.length);
-  const tensions = (Array.isArray(data.tensions) ? data.tensions : []).map((tension: any) => ({
-    between: text(tension?.between), insight: text(tension?.insight), evidence: clean(tension?.evidence),
-  })).filter((tension: { between: string; insight: string; evidence: string[] }) => tension.between && tension.insight && tension.evidence.length);
+  const text = (value: unknown) =>
+    typeof value === "string" ? value.trim() : "";
+  const threads = (Array.isArray(data.threads) ? data.threads : [])
+    .map((thread: any) => ({
+      title: text(thread?.title),
+      insight: text(thread?.insight),
+      evidence: clean(thread?.evidence),
+      chapters: (Array.isArray(thread?.chapters) ? thread.chapters : []).filter(
+        (id: unknown) => typeof id === "string" && chapterIds.has(id)
+      ) as string[],
+    }))
+    .filter(
+      (thread: { title: string; insight: string; evidence: string[] }) =>
+        thread.title && thread.insight && thread.evidence.length
+    );
+  const tensions = (Array.isArray(data.tensions) ? data.tensions : [])
+    .map((tension: any) => ({
+      between: text(tension?.between),
+      insight: text(tension?.insight),
+      evidence: clean(tension?.evidence),
+    }))
+    .filter(
+      (tension: { between: string; insight: string; evidence: string[] }) =>
+        tension.between && tension.insight && tension.evidence.length
+    );
   const chapters: ReadingPlan["chapters"] = {};
   for (const id of Array.from(chapterIds)) {
     const item = data.chapters?.[id];
     const evidence = clean(item?.evidence);
-    if (item && evidence.length) chapters[id] = { angle: text(item.angle), evidence };
+    if (item && evidence.length)
+      chapters[id] = { angle: text(item.angle), evidence };
   }
-  if (dropped) console.warn(`[Interpretation] reading plan: dropped ${dropped} evidence entries that are not on the chart`);
+  if (dropped)
+    console.warn(
+      `[Interpretation] reading plan: dropped ${dropped} evidence entries that are not on the chart`
+    );
   if (threads.length < 2 || Object.keys(chapters).length < 4) return null;
   return { threads, tensions, chapters };
 }
@@ -268,15 +470,47 @@ function validatePlan(raw: string, known: Map<string, string>): ReadingPlan | nu
 function chapterPlan(analysis: string, chapterId: string) {
   if (!analysis) return "";
   let plan: ReadingPlan;
-  try { plan = JSON.parse(analysis) as ReadingPlan; } catch { return ""; }
+  try {
+    plan = JSON.parse(analysis) as ReadingPlan;
+  } catch {
+    return "";
+  }
   const isMirror = chapterId === "mirror";
-  const threads = isMirror ? plan.threads : plan.threads.filter(thread => thread.chapters.includes(chapterId));
+  const threads = isMirror
+    ? plan.threads
+    : plan.threads.filter(thread => thread.chapters.includes(chapterId));
   const mine = plan.chapters[chapterId];
-  const out = ["READING PLAN (decided after reading the whole chart; follow it)"];
-  if (threads.length) out.push(isMirror ? "All threads to weave together:" : "Threads this chapter carries:", ...threads.map(thread => `- ${thread.title}: ${thread.insight} Evidence: ${thread.evidence.join("; ")}.`));
-  if (plan.tensions.length) out.push("Tensions in the chart:", ...plan.tensions.map(tension => `- ${tension.between}: ${tension.insight} Evidence: ${tension.evidence.join("; ")}.`));
-  if (mine && !isMirror) out.push(`Evidence that is the main subject of THIS chapter: ${mine.evidence.join("; ")}.`, `Angle for this chapter: ${mine.angle}`, "Other chapters own the remaining placements. Mention one of them here only briefly, to connect threads.");
-  if (isMirror) out.push("The Mirror owns no placements of its own. It names the few threads that actually connect the chapters, the gifts, blind spots, and loops they create together, and one honest next step.");
+  const out = [
+    "READING PLAN (decided after reading the whole chart; follow it)",
+  ];
+  if (threads.length)
+    out.push(
+      isMirror
+        ? "All threads to weave together:"
+        : "Threads this chapter carries:",
+      ...threads.map(
+        thread =>
+          `- ${thread.title}: ${thread.insight} Evidence: ${thread.evidence.join("; ")}.`
+      )
+    );
+  if (plan.tensions.length)
+    out.push(
+      "Tensions in the chart:",
+      ...plan.tensions.map(
+        tension =>
+          `- ${tension.between}: ${tension.insight} Evidence: ${tension.evidence.join("; ")}.`
+      )
+    );
+  if (mine && !isMirror)
+    out.push(
+      `Evidence that is the main subject of THIS chapter: ${mine.evidence.join("; ")}.`,
+      `Angle for this chapter: ${mine.angle}`,
+      "Other chapters own the remaining placements. Mention one of them here only briefly, to connect threads."
+    );
+  if (isMirror)
+    out.push(
+      "The Mirror owns no placements of its own. It names the few threads that actually connect the chapters, the gifts, blind spots, and loops they create together, and one honest next step."
+    );
   return out.join("\n");
 }
 
@@ -289,11 +523,21 @@ Rules: use only what the sheet states. Never invent an aspect, house, sign, or s
 Return ONLY valid JSON, no markdown fence, in this shape:
 {"threads":[{"title":"","insight":"","evidence":["Sun"],"chapters":["identity"]}],"tensions":[{"between":"","insight":"","evidence":["Moon"]}],"chapters":{"identity":{"angle":"what this chapter should uniquely say","evidence":["Sun"]},"mind-heart":{"angle":"","evidence":[]},"relationships":{"angle":"","evidence":[]},"work-purpose":{"angle":"","evidence":[]},"destiny":{"angle":"","evidence":[]}}}`;
 
-async function analyzeChart(chart: ChartResult, mode: ReadingMode) {
+async function analyzeChart(
+  chart: ChartResult,
+  mode: ReadingMode,
+  evidencePacket: AstrologyEvidencePacket
+) {
   const known = knownPoints(chart);
   const messages: Message[] = [
-    { role: "system", content: buildAstrologyInterpreterSystem(ANALYSIS_SYSTEM) },
-    { role: "user", content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\nWrite the reading plan JSON now.` },
+    {
+      role: "system",
+      content: buildAstrologyInterpreterSystem(ANALYSIS_SYSTEM),
+    },
+    {
+      role: "user",
+      content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nWrite the reading plan JSON now.`,
+    },
   ];
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -308,47 +552,103 @@ async function analyzeChart(chart: ChartResult, mode: ReadingMode) {
   return "";
 }
 
-function chapterSystem(mode: ReadingMode, chapter: { title: string; subtitle: string; focus: string }) {
-  return buildAstrologyInterpreterSystem([
-    `You write one chapter of a private self-knowledge reading from a calculated astrology chart. Chapter: ${chapter.title}, ${chapter.subtitle}. Focus: ${chapter.focus}.`,
-    `FACTS
+function chapterSystem(
+  mode: ReadingMode,
+  chapter: { title: string; subtitle: string; focus: string }
+) {
+  return buildAstrologyInterpreterSystem(
+    [
+      `You write one chapter of a private self-knowledge reading from a calculated astrology chart. Chapter: ${chapter.title}, ${chapter.subtitle}. Focus: ${chapter.focus}.`,
+      `FACTS
 - The evidence sheet is the only source of chart facts. Never recalculate or invent a placement, house, sign, aspect, star contact, or any biography. If it is not on the sheet, it does not exist for this reading.
 - Use each placement exactly as the sheet states it. Never call the lunar nodes retrograde.
 - Stay consistent with every fact in earlier chapters.
 - God View uses fixed Aries-to-Pisces houses and never an Ascendant. Agent View uses the personal Equal House placements. If the Moon is flagged uncertain, give the supplied date range, not one degree.
 - ${MODE_GUIDANCE[mode]}`,
-    `METHOD
+      `METHOD
 - Follow the reading plan: write the threads and evidence assigned to this chapter. Weigh repeated evidence over isolated details. Name contradictions instead of smoothing them.
 - Explain each pattern as a chain in flowing prose: what the chart shows, the need beneath it, the protective habit, its gift and its cost, an ordinary scene, how it lands on other people, a mature choice, and how the reader could test it. Say what would make it not fit.
 - Render the human meaning visibly, not only internally. Begin the opening identity chapter with "What this chart may be helping you understand" and "How this may meet your life"; in every other chapter include a plainly labeled "What this means for you" synthesis before extended technical explanation.
 - Psychological readings are hypotheses, not diagnoses, labels, or biography. Use conditional language. Never present a scene as something that happened.
 - Never repeat what earlier chapters already said: no placement meaning, scene, or advice twice. Advance the story with new evidence and new weight.
 - Markdown with a few headings at most. No bullet lists of evidence, no layer labels, no summary of the whole chart, no mention of AI, tokens, or these instructions. Finish your last sentence.`,
-    `VOICE (this governs how everything above sounds)
+      `VOICE (this governs how everything above sounds)
 You are a warm, wise elder speaking to someone you want to see do well: protective but not possessive, honest without harshness, practical rather than sentimental. Speak to "you" in plain, concrete language, and define a technical term in half a sentence when you must use one. Name a hard truth plainly, then offer one proportionate next step. Never shame, frighten, flatter, or imply the reader needs you. Astrology is a symbolic tradition, not proof; invite the reader to test it against their own life.`,
-  ].join("\n\n"));
+    ].join("\n\n")
+  );
 }
 
-export async function generateInterpretation(chart: ChartResult, mode: ReadingMode = "combined") {
-  const intelligence = buildChartMap(chart, mode);
-  const analysis = await analyzeChart(chart, mode);
-  return { intelligence, analysis, reading: "", generatedAt: new Date().toISOString(), chapters: READING_CHAPTERS.map(chapter => ({ ...chapter, status: "pending" as const })) };
+export async function generateInterpretation(
+  chart: ChartResult,
+  mode: ReadingMode = "combined",
+  question = "What should I understand from this chart?"
+) {
+  const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
+  const intelligence = `${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}`;
+  const analysis = await analyzeChart(chart, mode, evidencePacket);
+  return {
+    intelligence,
+    evidencePacket,
+    analysis,
+    reading: "",
+    generatedAt: new Date().toISOString(),
+    chapters: READING_CHAPTERS.map(chapter => ({
+      ...chapter,
+      status: "pending" as const,
+    })),
+  };
 }
-
-export async function generateChapter(chart: ChartResult, mode: ReadingMode, intelligence: string, chapterId: ReadingChapterId, completedChapters: string[] = [], analysis = "") {
+export async function generateChapter(
+  chart: ChartResult,
+  mode: ReadingMode,
+  intelligence: string,
+  chapterId: ReadingChapterId,
+  completedChapters: string[] = [],
+  analysis = "",
+  question = ""
+) {
   const chapter = READING_CHAPTERS.find(item => item.id === chapterId);
   if (!chapter) throw new Error("That reading chapter is not available.");
-  const facts = buildEvidenceSheet(chart, mode);
-  const context = completedChapters.length ? `Already written chapters, full text below. Do not repeat any point, placement meaning, scene, or advice already made in them. Stay consistent with every fact they state, and put new weight on evidence they left untouched.${chapterId === "mirror" ? " This is the Mirror: synthesize across all chapters into the few threads that actually connect them. Do not re-list evidence." : ""}\n\n${completedChapters.join("\n\n---\n\n")}` : "This is the opening chapter; establish the emotional and narrative foundation.";
-  return ask([
-    { role: "system", content: chapterSystem(mode, chapter) },
-    { role: "user", content: `${facts}\n\n${chapterPlan(analysis, chapterId)}\n\n${context}\n\nWrite the complete ${chapter.title} chapter now.` },
-  ], 3800, 1500);
+  const evidencePacket = buildAstrologyEvidencePacket(
+    chart,
+    `${question ? `User question: ${question}\n\n` : ""}Chapter focus: ${chapter.title}. ${chapter.focus}`,
+    mode
+  );
+  const facts = `${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}`;
+  const context = completedChapters.length
+    ? `Already written chapters, full text below. Do not repeat any point, placement meaning, scene, or advice already made in them. Stay consistent with every fact they state, and put new weight on evidence they left untouched.${chapterId === "mirror" ? " This is the Mirror: synthesize across all chapters into the few threads that actually connect them. Do not re-list evidence." : ""}\n\n${completedChapters.join("\n\n---\n\n")}`
+    : "This is the opening chapter; establish the emotional and narrative foundation.";
+  return ask(
+    [
+      { role: "system", content: chapterSystem(mode, chapter) },
+      {
+        role: "user",
+        content: `${facts}\n\n${chapterPlan(analysis, chapterId)}\n\n${context}\n\nWrite the complete ${chapter.title} chapter now.`,
+      },
+    ],
+    3800,
+    1500
+  );
 }
-export async function followUp(chart: ChartResult, interpretation: { intelligence: string; reading: string }, history: Array<{ role: "user" | "assistant"; content: string }>, question: string, mode: ReadingMode = "combined") {
+export async function followUp(
+  chart: ChartResult,
+  interpretation: { intelligence: string; reading: string },
+  history: Array<{ role: "user" | "assistant"; content: string }>,
+  question: string,
+  mode: ReadingMode = "combined"
+) {
+  const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
   const messages: Message[] = [
-    { role: "system", content: buildAstrologyInterpreterSystem(`${COSMOLOGY}\n${WORLDVIEW_GUIDANCE}\n${MODE_GUIDANCE[mode]}\n${CLARITY_FRAMEWORK}\nAnswer follow-up questions in the same life-story voice as the reading. Be the user's steady guardian-guide and wise elder: listen for the fear or need beneath the question, respond with care, and then give the clearest honest answer the evidence supports. If the question concerns a transit, treat it as a full present-tense life chapter: connect the supplied transit planet to the supplied natal factor, describe the psychological pressure and protective strategy it may activate, show how that could replay in an ordinary scene, and offer a mature response plus brief fatherly counsel. Do not turn transits into deterministic forecasts. Do not produce a checklist unless the user explicitly asks for one. Place the answer inside a small narrative: what may have happened internally, how the pattern learned to protect itself, how it tends to replay in present life, and what a different choice could look like in an actual scene. Expose the chain chart factor → symbolism → inner dynamic → protective strategy → trigger/reaction/payoff/cost → behavior → example → recognition moment through flowing prose. If the user asks “why,” explain the psychological mechanism without clinical labels. Offer one practical observation or experiment, not a prescription. Include what evidence would contradict the interpretation. Use only the supplied chart and reading. If a factor was not supplied, say: “That factor was not supplied by the calculation engine, so I cannot use it reliably.” Never imply the user needs the AI in order to be safe, whole, or guided.`) },
-    { role: "user", content: `Chart facts:\n${JSON.stringify(chartFacts(chart, mode))}\n\nChart Intelligence:\n${interpretation.intelligence}\n\nGenerated reading:\n${interpretation.reading}` },
+    {
+      role: "system",
+      content: buildAstrologyInterpreterSystem(
+        `${COSMOLOGY}\n${WORLDVIEW_GUIDANCE}\n${MODE_GUIDANCE[mode]}\n${CLARITY_FRAMEWORK}\nAnswer follow-up questions in the same life-story voice as the reading. Be the user's steady guardian-guide and wise elder: listen for the fear or need beneath the question, respond with care, and then give the clearest honest answer the evidence supports. If the question concerns a transit, treat it as a full present-tense life chapter: connect the supplied transit planet to the supplied natal factor, describe the psychological pressure and protective strategy it may activate, show how that could replay in an ordinary scene, and offer a mature response plus brief fatherly counsel. Do not turn transits into deterministic forecasts. Do not produce a checklist unless the user explicitly asks for one. Place the answer inside a small narrative: what may have happened internally, how the pattern learned to protect itself, how it tends to replay in present life, and what a different choice could look like in an actual scene. Expose the chain chart factor → symbolism → inner dynamic → protective strategy → trigger/reaction/payoff/cost → behavior → example → recognition moment through flowing prose. If the user asks “why,” explain the psychological mechanism without clinical labels. Offer one practical observation or experiment, not a prescription. Include what evidence would contradict the interpretation. Use only the supplied chart and reading. If a factor was not supplied, say: “That factor was not supplied by the calculation engine, so I cannot use it reliably.” Never imply the user needs the AI in order to be safe, whole, or guided.`
+      ),
+    },
+    {
+      role: "user",
+      content: `Chart facts:\n${JSON.stringify(chartFacts(chart, mode))}\n\n${formatEvidencePacket(evidencePacket)}\n\nChart Intelligence:\n${interpretation.intelligence}\n\nGenerated reading:\n${interpretation.reading}`,
+    },
     ...withCurrentQuestion(history, question, 12),
   ];
   return ask(messages, 5000);
