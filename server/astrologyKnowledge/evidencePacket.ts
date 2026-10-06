@@ -265,9 +265,9 @@ export function buildAstrologyEvidencePacket(
   mode: "natal" | "transit" | "combined" = chart.readingScope
 ): AstrologyEvidencePacket {
   const plan = planKnowledge(question, mode);
-  const genesis = analyzeGenesisPatterns(chart);
   const astro = runGenesisAstroPipeline(chart);
   const originalPattern = runGenesisPatternPipeline(chart);
+  const genesis = analyzeGenesisPatterns(chart);
   const westernEvidence = resolveWesternEvidence(chart, plan);
   const vedicEvidence = resolveVedicEvidence(chart, plan);
   const arabicEvidence = resolveArabicEvidence(chart, plan);
@@ -337,8 +337,8 @@ export function buildAstrologyEvidencePacket(
   const astroEvidence = genesisAstroEvidence(astro);
   const all = [
     ...westernEvidence,
-    ...patternEvidence,
     ...astroEvidence,
+    ...patternEvidence,
     ...vedicEvidence,
     ...arabicEvidence,
     ...timingEvidence,
@@ -471,8 +471,8 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
     `Question: ${packet.question}`,
     `Plan: ${packet.plan.reasons.join(" ")}`,
     section("Western evidence", packet.westernEvidence),
-    section("Genesis pattern evidence", packet.patternEvidence),
     section("Genesis Astro Engine evidence", packet.genesisAstroEvidence),
+    section("Genesis Pattern Engine evidence", packet.patternEvidence),
     section("Vedic evidence", packet.vedicEvidence),
     section("Arabic evidence", packet.arabicEvidence),
     section("Lunar evidence", packet.lunarEvidence),

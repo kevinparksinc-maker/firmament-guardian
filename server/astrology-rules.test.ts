@@ -168,7 +168,9 @@ describe("deterministic astrology rule fixtures", () => {
       engine: "genesis-pattern-engine",
       role: "active pattern-recognition, Astro Engine, and hard-coded interpretive rules",
     });
-    expect(formatEvidencePacket(packet)).toContain("Genesis pattern evidence");
+    expect(formatEvidencePacket(packet)).toContain(
+      "Genesis Pattern Engine evidence"
+    );
   });
 
   it("runs the original Genesis Astro Engine as a live pipeline stage", async () => {
