@@ -39,6 +39,24 @@ export const ASTROLOGY_SOURCES: AstrologySource[] = [
     ],
   },
   {
+    id: "genesis-pattern-rules",
+    name: "Genesis local pattern engine",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "configurable-aspects",
+      "transit-to-natal-aspects",
+      "stelliums",
+      "grand-trines",
+      "t-squares",
+      "dignity",
+      "house-emphasis",
+      "archetypes",
+      "signatures",
+    ],
+  },
+  {
     id: "local-vedic-rules",
     name: "Firmament Vedic rule set",
     tradition: "vedic",
@@ -132,6 +150,19 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
     status: "implemented",
     statement:
       "Basic domicile, exaltation, fall, and detriment conditions are resolved from the supplied sign.",
+  },
+  {
+    id: "genesis-pattern-engine",
+    tradition: "firmament",
+    technique: "pattern-recognition",
+    subject: "chart",
+    kind: "deterministic-rule",
+    sourceId: "genesis-pattern-rules",
+    status: "implemented",
+    doctrine:
+      "Genesis v2 pattern engine adapted to Firmament chart rows and house frame",
+    statement:
+      "Genesis detects configurable aspects, transit-to-natal activations, stelliums, Grand Trines, T-Squares, dignity, house emphasis, archetypes, and high-level signatures.",
   },
   {
     id: "vedic-nakshatra-27",

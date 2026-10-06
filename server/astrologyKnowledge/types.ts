@@ -105,6 +105,7 @@ export type AstrologyEvidencePacket = {
     }>;
   };
   westernEvidence: EvidenceItem[];
+  patternEvidence: EvidenceItem[];
   vedicEvidence: EvidenceItem[];
   arabicEvidence: EvidenceItem[];
   lunarEvidence: EvidenceItem[];
@@ -117,6 +118,7 @@ export type AstrologyEvidencePacket = {
   incomplete: string[];
   sourceTrace: SourceTrace[];
   doctrine: {
+    genesis: Record<string, unknown>;
     western: Record<string, unknown>;
     vedic: Record<string, unknown>;
     arabic: Record<string, unknown>;

@@ -5,7 +5,93 @@ import { resolveVedicEvidence } from "./vedic";
 import { resolveArabicEvidence } from "./arabic";
 import { resolveRelationships } from "./resolver";
 import { ASTROLOGY_RULES, ASTROLOGY_SOURCES } from "./registry";
+import { analyzeGenesisPatterns } from "../patterns/genesisEngine";
 import type { AstrologyEvidencePacket, EvidenceItem } from "./types";
+
+function genesisEvidence(
+  genesis: ReturnType<typeof analyzeGenesisPatterns>
+): EvidenceItem[] {
+  const trace = (technique: string) => ({
+    sourceId: "genesis-pattern-rules",
+    tradition: "firmament" as const,
+    technique,
+    sourceTitle: "Genesis local pattern engine",
+    retrievedAt: new Date().toISOString(),
+    ruleId: "genesis-pattern-engine",
+    confidence: "high" as const,
+    calculationSettings: genesis.config,
+  });
+  return [
+    ...genesis.dominantPatterns.map(pattern => ({
+      id: `genesis-pattern-${pattern.type}-${pattern.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "pattern-recognition",
+      subject: pattern.name,
+      statement: `${pattern.name}: ${pattern.description} Strength ${pattern.strength.toFixed(2)}; planets ${pattern.planets.join(", ")}.`,
+      concepts: [
+        "genesis",
+        pattern.type,
+        ...pattern.planets.map(planet => planet.toLowerCase()),
+      ],
+      polarity:
+        pattern.type === "t_square"
+          ? ("pressured" as const)
+          : ("supportive" as const),
+      strength: pattern.strength,
+      ruleId: "genesis-pattern-engine",
+      sourceId: "genesis-pattern-rules",
+      sourceTrace: trace("pattern-recognition"),
+    })),
+    ...genesis.archetypes.map(archetype => ({
+      id: `genesis-archetype-${archetype.archetype.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "archetype",
+      subject: archetype.archetype,
+      statement: `${archetype.archetype} (${archetype.intensity}): ${archetype.themes.join(", ")}.`,
+      concepts: ["genesis", "archetype", ...archetype.themes],
+      polarity: "mixed" as const,
+      strength:
+        archetype.intensity === "extreme"
+          ? 1
+          : archetype.intensity === "high"
+            ? 0.85
+            : 0.7,
+      ruleId: "genesis-pattern-engine",
+      sourceId: "genesis-pattern-rules",
+      sourceTrace: trace("archetype"),
+    })),
+    ...genesis.signatures.map((signature, index) => ({
+      id: `genesis-signature-${index}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "signature",
+      subject: "chart-signature",
+      statement: signature,
+      concepts: ["genesis", "signature"],
+      polarity: "neutral" as const,
+      strength: 0.75,
+      ruleId: "genesis-pattern-engine",
+      sourceId: "genesis-pattern-rules",
+      sourceTrace: trace("signature"),
+    })),
+    ...genesis.vedicYogas.map(yoga => ({
+      id: `genesis-yoga-${yoga.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "vedic-yoga",
+      subject: yoga.name,
+      statement: yoga.message,
+      concepts: ["genesis", "vedic-yoga", yoga.name.toLowerCase()],
+      polarity: "supportive" as const,
+      strength: 0.8,
+      ruleId: "genesis-pattern-engine",
+      sourceId: "genesis-pattern-rules",
+      sourceTrace: trace("vedic-yoga"),
+    })),
+  ];
+}
 
 export function buildAstrologyEvidencePacket(
   chart: ChartResult,
@@ -13,6 +99,7 @@ export function buildAstrologyEvidencePacket(
   mode: "natal" | "transit" | "combined" = chart.readingScope
 ): AstrologyEvidencePacket {
   const plan = planKnowledge(question, mode);
+  const genesis = analyzeGenesisPatterns(chart);
   const westernEvidence = resolveWesternEvidence(chart, plan);
   const vedicEvidence = resolveVedicEvidence(chart, plan);
   const arabicEvidence = resolveArabicEvidence(chart, plan);
@@ -77,8 +164,10 @@ export function buildAstrologyEvidencePacket(
               },
             }))
         );
+  const patternEvidence = genesisEvidence(genesis);
   const all = [
     ...westernEvidence,
+    ...patternEvidence,
     ...vedicEvidence,
     ...arabicEvidence,
     ...timingEvidence,
@@ -142,6 +231,7 @@ export function buildAstrologyEvidencePacket(
         })),
     },
     westernEvidence,
+    patternEvidence,
     vedicEvidence,
     arabicEvidence,
     lunarEvidence,
@@ -154,6 +244,13 @@ export function buildAstrologyEvidencePacket(
     incomplete,
     sourceTrace,
     doctrine: {
+      genesis: {
+        role: "pattern-recognition and hard-coded interpretive rules",
+        engine: genesis.doctrine,
+        aspectOrbs: genesis.config,
+        houseFrame:
+          "uses Firmament-calculated chart houses; does not replace Firmament ephemeris or worldview calculations",
+      },
       western: {
         relationshipOrb: 5,
         houseFrame: chart.agentViewAvailable
@@ -201,6 +298,7 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
     `Question: ${packet.question}`,
     `Plan: ${packet.plan.reasons.join(" ")}`,
     section("Western evidence", packet.westernEvidence),
+    section("Genesis pattern evidence", packet.patternEvidence),
     section("Vedic evidence", packet.vedicEvidence),
     section("Arabic evidence", packet.arabicEvidence),
     section("Lunar evidence", packet.lunarEvidence),

@@ -4,6 +4,11 @@ import { resolveVedicEvidence } from "./astrologyKnowledge/vedic";
 import { overlay } from "../shared/hybrid";
 import { calculateArabicLots } from "./utils/arabicLots";
 import { detectWesternAspects } from "./utils/patternMatcher";
+import { analyzeGenesisPatterns } from "./patterns/genesisEngine";
+import {
+  buildAstrologyEvidencePacket,
+  formatEvidencePacket,
+} from "./astrologyKnowledge/evidencePacket";
 
 describe("deterministic astrology rule fixtures", () => {
   it("matches the documented Dallas natal houses and canonical positions", async () => {
@@ -117,5 +122,46 @@ describe("deterministic astrology rule fixtures", () => {
     expect(evidence.some(item => item.id === "vedic-drishti-Saturn-2")).toBe(
       true
     );
+  });
+
+  it("runs Genesis pattern recognition on Firmament chart calculations", async () => {
+    const chart = await calculateChart({
+      location: "Dallas, Texas, USA",
+      latitude: 32.7767,
+      longitude: -96.797,
+      timezone: "America/Chicago",
+      date: "1986-11-20",
+      time: "10:06",
+      worldview: "agent",
+      readingScope: "natal",
+      birthTimeKnown: true,
+    });
+    const analysis = analyzeGenesisPatterns(chart);
+    expect(analysis.doctrine).toBe("genesis-pattern-engine");
+    expect(analysis.config.orbConjunction).toBe(8);
+    expect(
+      analysis.dominantPatterns.some(pattern => pattern.type === "stellium")
+    ).toBe(true);
+    expect(
+      analysis.archetypes.some(archetype => archetype.archetype === "Stellium")
+    ).toBe(true);
+    expect(Array.isArray(analysis.vedicYogas)).toBe(true);
+
+    const packet = buildAstrologyEvidencePacket(
+      chart,
+      "Why do my relationships keep repeating the same pattern?",
+      "natal"
+    );
+    expect(packet.patternEvidence.length).toBeGreaterThan(0);
+    expect(
+      packet.patternEvidence.every(
+        item => item.sourceId === "genesis-pattern-rules"
+      )
+    ).toBe(true);
+    expect(packet.doctrine.genesis).toMatchObject({
+      engine: "genesis-pattern-engine",
+      role: "pattern-recognition and hard-coded interpretive rules",
+    });
+    expect(formatEvidencePacket(packet)).toContain("Genesis pattern evidence");
   });
 });
