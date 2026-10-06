@@ -5,6 +5,7 @@ import { overlay } from "../shared/hybrid";
 import { calculateArabicLots } from "./utils/arabicLots";
 import { detectWesternAspects } from "./utils/patternMatcher";
 import { analyzeGenesisPatterns } from "./patterns/genesisEngine";
+import { runGenesisAstroPipeline } from "./genesisBackup/adapter";
 import {
   buildAstrologyEvidencePacket,
   formatEvidencePacket,
@@ -160,8 +161,29 @@ describe("deterministic astrology rule fixtures", () => {
     ).toBe(true);
     expect(packet.doctrine.genesis).toMatchObject({
       engine: "genesis-pattern-engine",
-      role: "pattern-recognition and hard-coded interpretive rules",
+      role: "active pattern-recognition, Astro Engine, and hard-coded interpretive rules",
     });
     expect(formatEvidencePacket(packet)).toContain("Genesis pattern evidence");
+  });
+
+  it("runs the original Genesis Astro Engine as a live pipeline stage", async () => {
+    const chart = await calculateChart({
+      location: "Dallas, Texas, USA",
+      latitude: 32.7767,
+      longitude: -96.797,
+      timezone: "America/Chicago",
+      date: "1986-11-20",
+      time: "10:06",
+      worldview: "agent",
+      readingScope: "natal",
+      birthTimeKnown: true,
+    });
+    const astro = runGenesisAstroPipeline(chart);
+    expect(astro.engine).toBe("genesis-astro-engine");
+    expect(astro.result).not.toBeNull();
+    expect(astro.result?.mind).toBeDefined();
+    expect(astro.result?.soul).toBeDefined();
+    expect(astro.result?.spirit).toBeDefined();
+    expect(astro.natalInput).toContain("Sun:");
   });
 });

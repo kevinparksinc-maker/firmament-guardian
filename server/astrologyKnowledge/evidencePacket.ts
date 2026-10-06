@@ -6,6 +6,7 @@ import { resolveArabicEvidence } from "./arabic";
 import { resolveRelationships } from "./resolver";
 import { ASTROLOGY_RULES, ASTROLOGY_SOURCES } from "./registry";
 import { analyzeGenesisPatterns } from "../patterns/genesisEngine";
+import { runGenesisAstroPipeline } from "../genesisBackup/adapter";
 import type { AstrologyEvidencePacket, EvidenceItem } from "./types";
 
 function genesisEvidence(
@@ -93,6 +94,95 @@ function genesisEvidence(
   ];
 }
 
+function genesisAstroEvidence(
+  astro: ReturnType<typeof runGenesisAstroPipeline>
+): EvidenceItem[] {
+  const trace = (technique: string) => ({
+    sourceId: "genesis-astro-engine",
+    tradition: "firmament" as const,
+    technique,
+    sourceTitle: "Genesis Astro Engine",
+    retrievedAt: new Date().toISOString(),
+    ruleId: "genesis-astro-engine",
+    confidence: "high" as const,
+  });
+  const evidence: EvidenceItem[] = [];
+  if (astro.result) {
+    for (const pillar of ["mind", "soul", "spirit"] as const) {
+      evidence.push({
+        id: `genesis-astro-${pillar}`,
+        tradition: "firmament",
+        category: "deterministic-rule",
+        technique: "astro-pillar",
+        subject: pillar,
+        statement: `Genesis Astro Engine ${pillar}: ${astro.result[pillar].state}. ${astro.result[pillar].body}`,
+        concepts: ["genesis", "astro-engine", pillar],
+        polarity: "mixed",
+        strength: 0.8,
+        ruleId: "genesis-astro-engine",
+        sourceId: "genesis-astro-engine",
+        sourceTrace: trace("astro-pillar"),
+      });
+    }
+    for (const activation of astro.result.activations.slice(0, 18)) {
+      evidence.push({
+        id: `genesis-astro-activation-${activation.transitPlanet}-${activation.natalPlanet}-${activation.aspect}`,
+        tradition: "firmament",
+        category: "deterministic-rule",
+        technique: "astro-transit",
+        subject: activation.natalPlanet,
+        statement: `Genesis Astro Engine activation: ${activation.summary} Orb ${activation.orb.toFixed(2)}°; priority ${activation.priority.toFixed(2)}.`,
+        concepts: ["genesis", "astro-engine", "transit", activation.aspect],
+        polarity: ["square", "opposition"].includes(activation.aspect)
+          ? "pressured"
+          : "supportive",
+        strength: Math.max(0, Math.min(1, 1 - activation.orb / 8)),
+        ruleId: "genesis-astro-engine",
+        sourceId: "genesis-astro-engine",
+        sourceTrace: trace("astro-transit"),
+      });
+    }
+  }
+  if (astro.error) {
+    evidence.push({
+      id: "genesis-astro-error",
+      tradition: "firmament",
+      category: "uncertainty",
+      technique: "astro-engine",
+      subject: "reading",
+      statement: `Genesis Astro Engine could not complete: ${astro.error}`,
+      concepts: ["genesis", "astro-engine", "incomplete"],
+      polarity: "neutral",
+      strength: 0,
+      ruleId: "genesis-astro-engine",
+      sourceId: "genesis-astro-engine",
+      sourceTrace: trace("astro-engine"),
+    });
+  }
+  for (const yoga of astro.yogas) {
+    evidence.push({
+      id: `genesis-astro-yoga-${yoga.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament",
+      category: "deterministic-rule",
+      technique: "vedic-yoga",
+      subject: yoga.name,
+      statement: yoga.message,
+      concepts: [
+        "genesis",
+        "astro-engine",
+        "vedic-yoga",
+        yoga.name.toLowerCase(),
+      ],
+      polarity: "supportive",
+      strength: 0.8,
+      ruleId: "genesis-astro-engine",
+      sourceId: "genesis-astro-engine",
+      sourceTrace: trace("vedic-yoga"),
+    });
+  }
+  return evidence;
+}
+
 export function buildAstrologyEvidencePacket(
   chart: ChartResult,
   question: string,
@@ -100,6 +190,7 @@ export function buildAstrologyEvidencePacket(
 ): AstrologyEvidencePacket {
   const plan = planKnowledge(question, mode);
   const genesis = analyzeGenesisPatterns(chart);
+  const astro = runGenesisAstroPipeline(chart);
   const westernEvidence = resolveWesternEvidence(chart, plan);
   const vedicEvidence = resolveVedicEvidence(chart, plan);
   const arabicEvidence = resolveArabicEvidence(chart, plan);
@@ -165,9 +256,11 @@ export function buildAstrologyEvidencePacket(
             }))
         );
   const patternEvidence = genesisEvidence(genesis);
+  const astroEvidence = genesisAstroEvidence(astro);
   const all = [
     ...westernEvidence,
     ...patternEvidence,
+    ...astroEvidence,
     ...vedicEvidence,
     ...arabicEvidence,
     ...timingEvidence,
@@ -232,6 +325,7 @@ export function buildAstrologyEvidencePacket(
     },
     westernEvidence,
     patternEvidence,
+    genesisAstroEvidence: astroEvidence,
     vedicEvidence,
     arabicEvidence,
     lunarEvidence,
@@ -245,8 +339,9 @@ export function buildAstrologyEvidencePacket(
     sourceTrace,
     doctrine: {
       genesis: {
-        role: "pattern-recognition and hard-coded interpretive rules",
+        role: "active pattern-recognition, Astro Engine, and hard-coded interpretive rules",
         engine: genesis.doctrine,
+        astroEngine: astro.engine,
         aspectOrbs: genesis.config,
         houseFrame:
           "uses Firmament-calculated chart houses; does not replace Firmament ephemeris or worldview calculations",
@@ -299,6 +394,7 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
     `Plan: ${packet.plan.reasons.join(" ")}`,
     section("Western evidence", packet.westernEvidence),
     section("Genesis pattern evidence", packet.patternEvidence),
+    section("Genesis Astro Engine evidence", packet.genesisAstroEvidence),
     section("Vedic evidence", packet.vedicEvidence),
     section("Arabic evidence", packet.arabicEvidence),
     section("Lunar evidence", packet.lunarEvidence),

@@ -106,6 +106,7 @@ export type AstrologyEvidencePacket = {
   };
   westernEvidence: EvidenceItem[];
   patternEvidence: EvidenceItem[];
+  genesisAstroEvidence: EvidenceItem[];
   vedicEvidence: EvidenceItem[];
   arabicEvidence: EvidenceItem[];
   lunarEvidence: EvidenceItem[];
