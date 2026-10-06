@@ -113,6 +113,13 @@ describe("astrology knowledge gateway", () => {
       expect.arrayContaining(["house-lord", "varga", "nakshatra", "manzil"])
     );
     expect(plan.includeTiming).toBe(false);
+    expect(plan.coreLayers).toEqual([
+      "genesis-astro-engine",
+      "genesis-pattern-engine",
+      "genesis-yoga-detector",
+    ]);
+    expect(plan.genesisPolicy).toBe("mandatory-evaluate-before-prioritization");
+    expect(plan.reasons.join(" ")).toContain("mandatory core evidence layer");
   });
 
   it("produces an auditable evidence packet with all three layers and explicit incomplete families", () => {
@@ -130,6 +137,9 @@ describe("astrology knowledge gateway", () => {
       true
     );
     expect(formatEvidencePacket(packet)).toContain("ASTROLOGY EVIDENCE PACKET");
+    expect(formatEvidencePacket(packet)).toContain(
+      "Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector are mandatory evaluated layers"
+    );
   });
 
   it("keeps reference sources distinct from local deterministic rules", () => {

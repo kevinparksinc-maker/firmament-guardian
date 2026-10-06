@@ -27,7 +27,10 @@ export function planKnowledge(
     "astro-engine",
     "pattern-recognition",
   ]);
-  const reasons: string[] = [];
+  const reasons: string[] = [
+    "Genesis is a mandatory core evidence layer: Astro Engine, Pattern Engine, and Yoga Detector execute and are reviewed before question-specific prioritization.",
+    "The question planner controls emphasis only; it may classify Genesis findings as primary, supporting, contextual, or non-decisive, but it may not bypass or downgrade the Genesis layer itself.",
+  ];
   if (relationship) {
     [
       "7th-house",
@@ -102,12 +105,18 @@ export function planKnowledge(
       "Timing language or a transit reading requests current activation; unavailable timing families remain explicitly marked incomplete."
     );
   }
-  if (!reasons.length)
+  if (reasons.length === 2)
     reasons.push(
-      "No narrow domain was detected; the gateway uses a balanced identity, Moon, angle, aspect, lunar, and cross-system scan."
+      "No narrow domain was detected; the gateway uses a balanced identity, Moon, angle, aspect, lunar, and cross-system scan after the mandatory Genesis evaluation."
     );
   return {
     question,
+    coreLayers: [
+      "genesis-astro-engine",
+      "genesis-pattern-engine",
+      "genesis-yoga-detector",
+    ],
+    genesisPolicy: "mandatory-evaluate-before-prioritization",
     domains,
     subjects: Array.from(subjects),
     techniques: Array.from(techniques),

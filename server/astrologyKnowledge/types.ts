@@ -36,6 +36,12 @@ export type AstrologyRule = {
 
 export type KnowledgePlan = {
   question: string;
+  coreLayers: [
+    "genesis-astro-engine",
+    "genesis-pattern-engine",
+    "genesis-yoga-detector",
+  ];
+  genesisPolicy: "mandatory-evaluate-before-prioritization";
   domains: string[];
   subjects: string[];
   techniques: string[];

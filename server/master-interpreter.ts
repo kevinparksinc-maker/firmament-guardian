@@ -1,4 +1,7 @@
-import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
+import {
+  FIRMAMENT_CARE_DELIVERY_STANDARD,
+  FIRMAMENT_MASTER_INTERPRETATION_PROMPT,
+} from "./firmament-master";
 import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
 
 /**
@@ -28,11 +31,11 @@ export const MASTER_INTERPRETER_PROMPT = [
   "",
   "The standard for successful interpretation is therefore not:",
   "",
-  "\"Does this sound knowledgeable?\"",
+  '"Does this sound knowledgeable?"',
   "",
   "The standard is:",
   "",
-  "\"Does the reader now understand something they did not understand before?\"",
+  '"Does the reader now understand something they did not understand before?"',
   "",
   "You must preserve the depth and internal logic of the source system while making that system understandable to someone who may have little or no prior knowledge of it.",
   "",
@@ -102,7 +105,7 @@ export const MASTER_INTERPRETER_PROMPT = [
   "",
   "Do not stop at:",
   "",
-  "\"Saturn represents limitation.\"",
+  '"Saturn represents limitation."',
   "",
   "Explain the broader principle:",
   "",
@@ -241,7 +244,7 @@ export const MASTER_INTERPRETER_PROMPT = [
   "",
   "WHAT THE SYMBOL IS DOING HERE.",
   "",
-  "A Tarot card in \"What is hidden?\" is not interpreted identically to the same card in \"What should I understand?\"",
+  'A Tarot card in "What is hidden?" is not interpreted identically to the same card in "What should I understand?"',
   "",
   "A planet in the 4th house is not equivalent to that planet in the 10th.",
   "",
@@ -629,7 +632,7 @@ export const MASTER_INTERPRETER_PROMPT = [
   "",
   "When a configuration contains multiple interacting layers, explain those layers.",
   "",
-  "XX. THE \"WHY THIS, WHY HERE, WHY NOW\" TEST",
+  'XX. THE "WHY THIS, WHY HERE, WHY NOW" TEST',
   "Before finalizing a significant interpretation, internally test:",
   "",
   "WHY THIS?",
@@ -672,7 +675,7 @@ export const MASTER_INTERPRETER_PROMPT = [
   "XXII. DO NOT HIDE BEHIND ESOTERIC LANGUAGE",
   "Avoid using phrases such as:",
   "",
-  "\"The energies are shifting.\"",
+  '"The energies are shifting."',
   "",
   "unless you explain what that means.",
   "",
@@ -680,11 +683,11 @@ export const MASTER_INTERPRETER_PROMPT = [
   "",
   "Instead of:",
   "",
-  "\"There is a transformation of energy.\"",
+  '"There is a transformation of energy."',
   "",
   "Explain:",
   "",
-  "\"The existing arrangement is becoming difficult to maintain, which creates pressure for a different way of organizing the situation.\"",
+  '"The existing arrangement is becoming difficult to maintain, which creates pressure for a different way of organizing the situation."',
   "",
   "Symbolic language may remain in the interpretation, but it must be accompanied by intelligible meaning.",
   "",
@@ -831,7 +834,7 @@ export const MASTER_INTERPRETER_PROMPT = [
   "",
   "A symbol of separation does not automatically mean:",
   "",
-  "\"You will physically leave.\"",
+  '"You will physically leave."',
   "",
   "It may represent:",
   "",
@@ -877,27 +880,27 @@ export const MASTER_INTERPRETER_PROMPT = [
   "",
   "Ideally the explanation progresses:",
   "",
-  "\"Here is what this symbol means.\"",
+  '"Here is what this symbol means."',
   "",
   "then:",
   "",
-  "\"Here is why that meaning matters in this position.\"",
+  '"Here is why that meaning matters in this position."',
   "",
   "then:",
   "",
-  "\"Here is what changes because these other symbols are present.\"",
+  '"Here is what changes because these other symbols are present."',
   "",
   "then:",
   "",
-  "\"Here is the pattern that emerges.\"",
+  '"Here is the pattern that emerges."',
   "",
   "then:",
   "",
-  "\"Here is what that pattern means in your actual question.\"",
+  '"Here is what that pattern means in your actual question."',
   "",
   "then:",
   "",
-  "\"Now you can see why the interpretation says what it says.\"",
+  '"Now you can see why the interpretation says what it says."',
   "",
   "That final transition is the objective.",
   "",
@@ -975,7 +978,7 @@ export const MASTER_INTERPRETER_PROMPT = [
   "XXXIII. FINAL OPERATING PRINCIPLE",
   "Before every final interpretation, ask:",
   "",
-  "\"If this person knew nothing about this system, would they understand what I am telling them, why I am telling them, how the symbolism leads there, what modifies it, and what the complete pattern means?\"",
+  '"If this person knew nothing about this system, would they understand what I am telling them, why I am telling them, how the symbolism leads there, what modifies it, and what the complete pattern means?"',
   "",
   "If the answer is no:",
   "",
@@ -1012,14 +1015,23 @@ Apply the Master Interpreter to astrology only when the user asks for a chart in
 
 - The calculation engine and the supplied chart evidence are the sole source of chart facts. Never recalculate or infer missing placements, houses, aspects, dignity, reception, star contacts, timing, or biography from raw values or general knowledge.
 - Preserve the chart system and mode explicitly supplied with the reading. Distinguish natal foundations from current transit activation, and do not import a different zodiac or house system.
+- Genesis is a mandatory core evidence layer for every applicable astrology reading: evaluate the Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector before question-specific prioritization. The planner may classify Genesis findings as primary, supporting, contextual, or non-decisive, but it may never bypass, omit, or downgrade the Genesis layer because another tradition or question appears more prominent.
 - Separate calculated fact, traditional astrological correspondence, contextual interpretation, plausible human expression, and concrete prediction. Identify when an advanced factor or data point was not calculated; do not fill gaps with speculation.
 - Translate signs, planets, houses, aspects, rulers, retrogrades, nodes, fixed stars, Nakshatras, Manzils, and Decans into ordinary human experience only when those factors are actually supplied and relevant. Define technical terms when they matter.
 - Answer the user's actual question or selected reading mode first. Treat psychological patterns as conditional hypotheses to test, not diagnosis or established biography. Include alternative possibilities and disconfirming evidence when the chart is mixed.
 - Astrology is a symbolic interpretive tradition, not scientifically established proof. Do not claim certainty, fate, guaranteed events, or exact timing without a supplied defensible method. Do not replace qualified medical, legal, financial, or mental-health advice.
 - Keep any domain-specific rules that follow this adapter (for example, horary significator assignments) as additional constraints, but never let them authorize facts absent from the calculated evidence.`;
 
-export function buildAstrologyInterpreterSystem(...domainInstructions: string[]): string {
-  return [FIRMAMENT_MASTER_INTERPRETATION_PROMPT, FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT, ASTROLOGY_INTERPRETATION_ADAPTER, ...domainInstructions]
+export function buildAstrologyInterpreterSystem(
+  ...domainInstructions: string[]
+): string {
+  return [
+    FIRMAMENT_MASTER_INTERPRETATION_PROMPT,
+    FIRMAMENT_CARE_DELIVERY_STANDARD,
+    FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT,
+    ASTROLOGY_INTERPRETATION_ADAPTER,
+    ...domainInstructions,
+  ]
     .filter(section => section.trim().length > 0)
     .join("\n\n---\n\n");
 }

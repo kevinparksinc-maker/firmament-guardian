@@ -469,6 +469,7 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
   return [
     "ASTROLOGY EVIDENCE PACKET",
     `Question: ${packet.question}`,
+    "Core policy: Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector are mandatory evaluated layers. The planner may prioritize their findings, but may not bypass the Genesis layer.",
     `Plan: ${packet.plan.reasons.join(" ")}`,
     section("Western evidence", packet.westernEvidence),
     section("Genesis Astro Engine evidence", packet.genesisAstroEvidence),
