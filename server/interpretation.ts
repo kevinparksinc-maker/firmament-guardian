@@ -390,6 +390,48 @@ function resolvePoint(entry: unknown, known: Map<string, string>) {
   return best ? known.get(best)! : null;
 }
 
+function evidenceAnchors(packet: AstrologyEvidencePacket) {
+  const anchors = new Map<string, string>();
+  const items = [
+    ...packet.genesisAstroEvidence,
+    ...packet.patternEvidence,
+    ...packet.westernEvidence,
+    ...packet.vedicEvidence,
+    ...packet.arabicEvidence,
+    ...packet.timingEvidence,
+    ...packet.fixedStarEvidence,
+  ];
+  for (const item of items) {
+    anchors.set(item.subject.trim().toLowerCase(), item.statement);
+    anchors.set(item.id.trim().toLowerCase(), item.statement);
+    anchors.set(item.statement.trim().toLowerCase(), item.statement);
+  }
+  return anchors;
+}
+
+function resolveSemanticEvidence(entry: string, semantic: Map<string, string>) {
+  const text = entry.trim().toLowerCase();
+  const exact = semantic.get(text);
+  if (exact) return exact;
+  const tokens = text
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter(token => token && token !== "in" && token !== "the");
+  if (!tokens.length) return null;
+  for (const [key, value] of Array.from(semantic.entries())) {
+    const keyTokens = key
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(" ")
+      .filter(token => token && token !== "in" && token !== "the");
+    if (
+      keyTokens.length === tokens.length &&
+      keyTokens.every(token => tokens.includes(token))
+    )
+      return value;
+  }
+  return null;
+}
+
 type ReadingPlan = {
   threads: Array<{
     title: string;
@@ -403,7 +445,8 @@ type ReadingPlan = {
 
 function validatePlan(
   raw: string,
-  known: Map<string, string>
+  known: Map<string, string>,
+  semantic: Map<string, string>
 ): ReadingPlan | null {
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
@@ -417,13 +460,15 @@ function validatePlan(
   const chapterIds = new Set<string>(
     READING_CHAPTERS.map(chapter => chapter.id)
   );
-  let dropped = 0;
   const clean = (list: unknown) => {
     const out = new Set<string>();
     for (const entry of Array.isArray(list) ? list : []) {
       const hit = resolvePoint(entry, known);
       if (hit) out.add(hit);
-      else dropped += 1;
+      else if (typeof entry === "string") {
+        const semanticHit = resolveSemanticEvidence(entry, semantic);
+        out.add(semanticHit ?? entry.trim());
+      } else out.add(String(entry));
     }
     return Array.from(out);
   };
@@ -459,10 +504,6 @@ function validatePlan(
     if (item && evidence.length)
       chapters[id] = { angle: text(item.angle), evidence };
   }
-  if (dropped)
-    console.warn(
-      `[Interpretation] reading plan: dropped ${dropped} evidence entries that are not on the chart`
-    );
   if (threads.length < 2 || Object.keys(chapters).length < 4) return null;
   return { threads, tensions, chapters };
 }
@@ -518,7 +559,7 @@ const ANALYSIS_SYSTEM = `You are the silent first reader of a calculated astrolo
 
 Read the whole evidence sheet before deciding anything. Find the 4 to 6 main threads of this chart: evidence that repeats, angular emphasis, the nodal axis, close star contacts, and in transit modes the strongest contacts. Find 2 to 4 real tensions: places where two parts of the chart pull against each other. Then assign evidence to chapters so the chapters do not overlap: each placement is the main subject of at most one chapter. The Mirror chapter gets no evidence of its own, only synthesis.
 
-Rules: use only what the sheet states. Never invent an aspect, house, sign, or star contact; no natal-to-natal aspects were calculated. Evidence entries must be exact point names from the sheet, such as "Sun", "Moon", "Ascendant", "North Node", "Regulus", "Transit Saturn". Write insights as hypotheses about how a person may experience the pattern, in plain language.
+Rules: use only what the sheet states. Never invent an aspect, house, sign, or star contact; no natal-to-natal aspects were calculated. Evidence entries may reference exact chart points from the sheet, such as "Sun", "Moon", "Ascendant", "North Node", "Regulus", or "Transit Saturn", or any calculated evidence label explicitly stated in the Astrology Evidence Packet, such as a Genesis pattern, activation, archetype, yoga, or cross-system convergence. Preserve the selected evidence label; do not discard it merely because it is not a single point name. Write insights as hypotheses about how a person may experience the pattern, in plain language.
 
 Return ONLY valid JSON, no markdown fence, in this shape:
 {"threads":[{"title":"","insight":"","evidence":["Sun"],"chapters":["identity"]}],"tensions":[{"between":"","insight":"","evidence":["Moon"]}],"chapters":{"identity":{"angle":"what this chapter should uniquely say","evidence":["Sun"]},"mind-heart":{"angle":"","evidence":[]},"relationships":{"angle":"","evidence":[]},"work-purpose":{"angle":"","evidence":[]},"destiny":{"angle":"","evidence":[]}}}`;
@@ -529,6 +570,7 @@ async function analyzeChart(
   evidencePacket: AstrologyEvidencePacket
 ) {
   const known = knownPoints(chart);
+  const semantic = evidenceAnchors(evidencePacket);
   const messages: Message[] = [
     {
       role: "system",
@@ -541,7 +583,11 @@ async function analyzeChart(
   ];
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const plan = validatePlan(await ask(messages, 4500, 3500), known);
+      const plan = validatePlan(
+        await ask(messages, 4500, 3500),
+        known,
+        semantic
+      );
       if (plan) return JSON.stringify(plan);
       console.warn("[Interpretation] reading plan failed validation; retrying");
     } catch (error) {

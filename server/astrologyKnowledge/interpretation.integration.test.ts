@@ -157,4 +157,47 @@ describe("interpretation.generate knowledge gateway integration", () => {
       )
     ).toBe(true);
   });
+
+  it("preserves selected calculated evidence labels in the reading plan", async () => {
+    const plan = {
+      threads: [
+        {
+          title: "Calculated pattern",
+          insight:
+            "A selected Genesis pattern should remain available to the reading.",
+          evidence: ["Stellium in Scorpio"],
+          chapters: ["work-purpose"],
+        },
+        {
+          title: "Selected activation",
+          insight:
+            "A selected activation should remain available to the reading.",
+          evidence: ["Genesis Astro Engine activation"],
+          chapters: ["mind-heart"],
+        },
+      ],
+      tensions: [],
+      chapters: {
+        identity: { angle: "identity", evidence: ["Stellium in Scorpio"] },
+        "mind-heart": {
+          angle: "mind",
+          evidence: ["Genesis Astro Engine activation"],
+        },
+        relationships: { angle: "relationships", evidence: ["Venus"] },
+        "work-purpose": { angle: "work", evidence: ["Stellium in Scorpio"] },
+      },
+    };
+    mocked.invokeLLM.mockResolvedValueOnce({
+      choices: [
+        { message: { role: "assistant", content: JSON.stringify(plan) } },
+      ],
+    });
+    const result = await generateInterpretation(
+      chart,
+      "natal",
+      "What is the major pattern affecting my career?"
+    );
+    expect(result.analysis).toContain("Stellium in Scorpio");
+    expect(result.analysis).toContain("Genesis Astro Engine activation");
+  });
 });
