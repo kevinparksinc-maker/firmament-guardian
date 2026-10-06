@@ -73,6 +73,23 @@ export const ASTROLOGY_SOURCES: AstrologySource[] = [
     ],
   },
   {
+    id: "genesis-pattern-engine-original",
+    name: "Genesis Pattern Engine v2.0",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "full-aspect-detection",
+      "transit-to-natal-aspects",
+      "stelliums",
+      "grand-trines",
+      "t-squares",
+      "planetary-strength",
+      "archetypes",
+      "signatures",
+    ],
+  },
+  {
     id: "local-vedic-rules",
     name: "Firmament Vedic rule set",
     tradition: "vedic",
@@ -192,6 +209,19 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
       "Original Genesis Astro Engine actively run over Firmament chart calculations",
     statement:
       "Genesis Astro Engine parses placements, detects transit activations, scores Mind/Soul/Spirit, detects Sade Sati and Moon phase, and emits readable chart summaries.",
+  },
+  {
+    id: "genesis-pattern-engine-original",
+    tradition: "firmament",
+    technique: "pattern-engine-original",
+    subject: "chart",
+    kind: "deterministic-rule",
+    sourceId: "genesis-pattern-engine-original",
+    status: "implemented",
+    doctrine:
+      "Original Genesis Pattern Engine v2.0 actively run over Firmament chart rows",
+    statement:
+      "The original Genesis Pattern Engine runs its configured aspects, planetary strength, classic configurations, archetypes, and signatures as a live reading stage.",
   },
   {
     id: "vedic-nakshatra-27",

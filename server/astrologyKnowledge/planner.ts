@@ -24,6 +24,8 @@ export function planKnowledge(
     "dignity",
     "nakshatra",
     "manzil",
+    "astro-engine",
+    "pattern-recognition",
   ]);
   const reasons: string[] = [];
   if (relationship) {
@@ -35,7 +37,14 @@ export function planKnowledge(
       "relationship-significators",
       "D9",
     ].forEach(value => subjects.add(value));
-    ["house-lord", "varga"].forEach(value => techniques.add(value));
+    [
+      "house-lord",
+      "varga",
+      "mind-soul-spirit",
+      "pattern-recognition",
+      "archetype",
+      "vedic-yoga",
+    ].forEach(value => techniques.add(value));
     reasons.push(
       "Relationship language activates the partnership axis, Venus, Moon, and relevant Vedic relationship evidence."
     );
@@ -51,7 +60,12 @@ export function planKnowledge(
       "Jupiter",
       "D10",
     ].forEach(value => subjects.add(value));
-    techniques.add("varga");
+    [
+      "varga",
+      "mind-soul-spirit",
+      "pattern-recognition",
+      "planetary-strength",
+    ].forEach(value => techniques.add(value));
     reasons.push(
       "Career or money language activates livelihood houses, rulers, significators, and D10 when available."
     );
@@ -72,6 +86,13 @@ export function planKnowledge(
     reasons.push(
       "Emotional language prioritizes the Moon, angles, and current activation rather than the whole chart equally."
     );
+    [
+      "mind-soul-spirit",
+      "astro-engine",
+      "pattern-recognition",
+      "sade-sati",
+      "moon-phase",
+    ].forEach(value => techniques.add(value));
   }
   if (timing) {
     techniques.add("transits");

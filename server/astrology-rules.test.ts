@@ -5,7 +5,10 @@ import { overlay } from "../shared/hybrid";
 import { calculateArabicLots } from "./utils/arabicLots";
 import { detectWesternAspects } from "./utils/patternMatcher";
 import { analyzeGenesisPatterns } from "./patterns/genesisEngine";
-import { runGenesisAstroPipeline } from "./genesisBackup/adapter";
+import {
+  runGenesisAstroPipeline,
+  runGenesisPatternPipeline,
+} from "./genesisBackup/adapter";
 import {
   buildAstrologyEvidencePacket,
   formatEvidencePacket,
@@ -155,8 +158,10 @@ describe("deterministic astrology rule fixtures", () => {
     );
     expect(packet.patternEvidence.length).toBeGreaterThan(0);
     expect(
-      packet.patternEvidence.every(
-        item => item.sourceId === "genesis-pattern-rules"
+      packet.patternEvidence.every(item =>
+        ["genesis-pattern-rules", "genesis-pattern-engine-original"].includes(
+          item.sourceId
+        )
       )
     ).toBe(true);
     expect(packet.doctrine.genesis).toMatchObject({
@@ -185,5 +190,26 @@ describe("deterministic astrology rule fixtures", () => {
     expect(astro.result?.soul).toBeDefined();
     expect(astro.result?.spirit).toBeDefined();
     expect(astro.natalInput).toContain("Sun:");
+  });
+
+  it("runs the original Genesis Pattern Engine as a live pipeline stage", async () => {
+    const chart = await calculateChart({
+      location: "Dallas, Texas, USA",
+      latitude: 32.7767,
+      longitude: -96.797,
+      timezone: "America/Chicago",
+      date: "1986-11-20",
+      time: "10:06",
+      worldview: "agent",
+      readingScope: "natal",
+      birthTimeKnown: true,
+    });
+    const patterns = runGenesisPatternPipeline(chart);
+    expect(patterns.engine).toBe("genesis-pattern-engine-original");
+    expect(patterns.analysis.config.orbConjunction).toBe(8);
+    expect(patterns.analysis.dominantPatterns.length).toBeGreaterThan(0);
+    expect(
+      Object.keys(patterns.analysis.planetaryStrength).length
+    ).toBeGreaterThan(0);
   });
 });
