@@ -106,6 +106,27 @@ export const ASTROLOGY_SOURCES: AstrologySource[] = [
     ],
   },
   {
+    id: "firmament-canon-knowledge",
+    name: "Firmament Structured Traditional Knowledge Canon",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "planets-canon",
+      "signs-canon",
+      "houses-canon",
+      "egyptian-and-ptolemaic-bounds",
+      "dorothean-triplicities",
+      "36-decans",
+      "28-manazil",
+      "27-nakshatras-108-padas",
+      "royal-and-fixed-stars",
+      "hermetic-lots",
+      "horary-mechanisms",
+      "god-to-agent-translation",
+    ],
+  },
+  {
     id: "local-vedic-rules",
     name: "Firmament Vedic rule set",
     tradition: "vedic",
@@ -374,6 +395,32 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
     status: "incomplete",
     statement:
       "Twelfth-parts methodology is reserved pending an explicit house/sign doctrine setting.",
+  },
+  {
+    id: "firmament-canon-dossier",
+    tradition: "firmament",
+    technique: "canon-placement-dossier",
+    subject: "placement",
+    kind: "deterministic-rule",
+    sourceId: "firmament-canon-knowledge",
+    status: "implemented",
+    doctrine:
+      "Epistemically categorized (FACT / TRADITION / FIRMAMENT_CANON) retrieval of Planet + Sign + House + Dignities + Bounds + 36 Decans + 28 Manazil + 27 Nakshatras/Padas + Fixed Stars + God→Agent translation",
+    statement:
+      "Retrieves complete deterministic traditional and Firmament Canon placement dossiers locally before Master AI synthesis.",
+  },
+  {
+    id: "firmament-traditional-mechanisms",
+    tradition: "arabic",
+    technique: "traditional-mechanisms",
+    subject: "chart",
+    kind: "deterministic-rule",
+    sourceId: "firmament-canon-knowledge",
+    status: "implemented",
+    doctrine:
+      "Applying/Separating Aspects, Mutual/Unilateral Receptions, Translation of Light, Collection of Light, Prohibition, Refranation, Cazimi, Combustion, Under the Beams, Retrograde",
+    statement:
+      "Detects traditional horary and natal relational mechanisms deterministically with source provenance.",
   },
 ];
 

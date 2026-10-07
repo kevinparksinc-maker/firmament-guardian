@@ -227,4 +227,34 @@ describe("astrology knowledge gateway", () => {
       "Firmament Life-Event & Situation Intelligence"
     );
   });
+
+  it("retrieves the structured Firmament Canon & Traditional Doctrine Dossier with FACT, TRADITION, and FIRMAMENT_CANON categories", () => {
+    const packet = buildAstrologyEvidencePacket(
+      chart,
+      "What are the core traditional placements and mechanisms in my chart?",
+      "natal"
+    );
+    expect(packet.canonDossier).toBeDefined();
+    expect(packet.canonDossier.placements.length).toBeGreaterThan(0);
+    const sunPlacement = packet.canonDossier.placements.find(
+      p => p.body === "Sun"
+    );
+    expect(sunPlacement).toBeDefined();
+    expect(sunPlacement?.planetDoctrine?.astronomicalFact.category).toBe("FACT");
+    expect(
+      sunPlacement?.planetDoctrine?.traditionalQualities.provenance
+        .epistemicCategory
+    ).toBe("TRADITION");
+    expect(sunPlacement?.planetDoctrine?.firmamentCanonNote.category).toBe(
+      "FIRMAMENT_CANON"
+    );
+    expect(sunPlacement?.decanRecord?.index).toBe(24); // Scorpio 3rd decan (230-240)
+    expect(sunPlacement?.manzilRecord?.name).toBeDefined();
+    expect(sunPlacement?.nakshatraRecord?.name).toBeDefined();
+    expect(sunPlacement?.activePada?.pada).toBeGreaterThanOrEqual(1);
+    expect(packet.canonDossier.arabicLotsSummary.length).toBeGreaterThanOrEqual(2);
+    expect(formatEvidencePacket(packet)).toContain(
+      "LOCAL FIRMAMENT CANON & TRADITIONAL DOCTRINE DOSSIER"
+    );
+  });
 });

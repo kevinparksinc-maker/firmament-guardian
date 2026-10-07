@@ -1,5 +1,6 @@
 import type { ChartResult } from "../astronomy";
 import type { BehavioralIntelligenceReport } from "./behavioral";
+import type { ChartCanonDossier } from "./canon/types";
 
 export type Tradition = "western" | "vedic" | "arabic" | "firmament";
 export type KnowledgeKind = "deterministic-rule" | "source-correspondence";
@@ -117,6 +118,8 @@ export type AstrologyEvidencePacket = {
   behavioralEvidence: EvidenceItem[];
   lifeEventEvidence: EvidenceItem[];
   behavioralReport: BehavioralIntelligenceReport;
+  canonEvidence: EvidenceItem[];
+  canonDossier: ChartCanonDossier;
   vedicEvidence: EvidenceItem[];
   arabicEvidence: EvidenceItem[];
   lunarEvidence: EvidenceItem[];

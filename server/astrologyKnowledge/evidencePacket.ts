@@ -14,6 +14,10 @@ import {
   behavioralReportToEvidenceItems,
   evaluateBehavioralIntelligence,
 } from "./behavioral";
+import {
+  canonDossierToEvidenceItems,
+  retrieveChartCanonDossier,
+} from "./canon";
 import type { AstrologyEvidencePacket, EvidenceItem } from "./types";
 
 function genesisEvidence(
@@ -346,12 +350,15 @@ export function buildAstrologyEvidencePacket(
   );
   const { behavioralEvidence, lifeEventEvidence } =
     behavioralReportToEvidenceItems(behavioralReport);
+  const canonDossier = retrieveChartCanonDossier(chart);
+  const canonEvidence = canonDossierToEvidenceItems(canonDossier);
   const all = [
     ...westernEvidence,
     ...astroEvidence,
     ...patternEvidence,
     ...behavioralEvidence,
     ...lifeEventEvidence,
+    ...canonEvidence,
     ...vedicEvidence,
     ...arabicEvidence,
     ...timingEvidence,
@@ -420,6 +427,8 @@ export function buildAstrologyEvidencePacket(
     behavioralEvidence,
     lifeEventEvidence,
     behavioralReport,
+    canonEvidence,
+    canonDossier,
     vedicEvidence,
     arabicEvidence,
     lunarEvidence,
@@ -498,6 +507,7 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
       "Firmament Life-Event & Situation Intelligence (E1-E5 event signatures, temporal states & cross-domain sequences)",
       packet.lifeEventEvidence
     ),
+    packet.canonDossier?.formattedSummaryForInterpreter ?? "",
     section("Vedic evidence", packet.vedicEvidence),
     section("Arabic evidence", packet.arabicEvidence),
     section("Lunar evidence", packet.lunarEvidence),
