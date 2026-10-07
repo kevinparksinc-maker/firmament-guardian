@@ -354,14 +354,18 @@ export function evaluateBehavioralIntelligence(
   question = "",
   mode: "natal" | "transit" | "combined" = chart.readingScope
 ): BehavioralIntelligenceReport {
-  const bodies = chart.movingBodies;
+  const bodies = (chart.movingBodies ?? []).filter((b): b is ChartRow =>
+    Boolean(b && typeof b.longitude === "number")
+  );
+  const transits = chart.transits ?? [];
+  const frozenStars = chart.frozenStars ?? [];
   const allPoints = [
     ...bodies,
     ...(chart.ascendant ? [chart.ascendant] : []),
     ...(chart.midheaven ? [chart.midheaven] : []),
-    chart.northNode,
-    chart.southNode,
-  ];
+    ...(chart.northNode ? [chart.northNode] : []),
+    ...(chart.southNode ? [chart.southNode] : []),
+  ].filter((b): b is ChartRow => Boolean(b && typeof b.longitude === "number"));
   const natalAspects = computeNatalAspects(allPoints, 5);
   const bodyByName = new Map(allPoints.map(b => [b.name, b]));
   const mutableCount = bodies.filter(b =>
@@ -507,9 +511,9 @@ export function evaluateBehavioralIntelligence(
 
     // Channel 7: Developmental & Transit State
     let state: BehavioralState = "baseline";
-    if (mode !== "natal" && chart.transits.length > 0) {
-      const transitHits = chart.transits.flatMap(t =>
-        t.natalContacts
+    if (mode !== "natal" && transits.length > 0) {
+      const transitHits = transits.flatMap(t =>
+        (t.natalContacts ?? [])
           .filter(c => pattern.primaryPlanets.includes(c.natalName))
           .map(c => ({ transit: t.name, ...c }))
       );
@@ -750,8 +754,8 @@ export function evaluateBehavioralIntelligence(
     // Transit activations
     let transitCount = 0;
     let tightestTransitOrb = 99;
-    if (mode !== "natal" && chart.transits.length > 0) {
-      for (const tr of chart.transits) {
+    if (mode !== "natal" && transits.length > 0) {
+      for (const tr of transits) {
         if (
           eventDef.primaryHouses.includes(tr.house) &&
           eventDef.primaryPlanets.includes(tr.name)
@@ -761,7 +765,7 @@ export function evaluateBehavioralIntelligence(
           );
           transitCount += 1;
         }
-        for (const contact of tr.natalContacts) {
+        for (const contact of tr.natalContacts ?? []) {
           if (
             eventDef.primaryPlanets.includes(tr.name) ||
             eventDef.primaryPlanets.includes(contact.natalName)
@@ -1150,7 +1154,7 @@ export function evaluateBehavioralIntelligence(
     .slice(0, 4)
     .map(([h, info]) => `House ${h} ruled by ${info.ruler} in House ${info.inHouse}`);
   const angularBodies = bodies.filter(b => ANGULAR_HOUSES.has(b.house));
-  const royalContacts = chart.frozenStars.flatMap(star =>
+  const royalContacts = frozenStars.flatMap(star =>
     (star.royalStarContacts ?? [])
       .filter(c => c.contact)
       .map(c => `${star.name} near ${c.name} (${c.distance.toFixed(1)}°)`)
@@ -1229,10 +1233,10 @@ export function evaluateBehavioralIntelligence(
     {
       system: "8. Development",
       category: "Structure",
-      status: chart.transits.length > 0 ? "convergent" : "supporting",
+      status: transits.length > 0 ? "convergent" : "supporting",
       evidenceSummary:
-        chart.transits.length > 0
-          ? `${chart.transits.filter(t => t.natalContacts.length > 0).length} active transit-to-natal contacts shaping current growth`
+        transits.length > 0
+          ? `${transits.filter(t => (t.natalContacts ?? []).length > 0).length} active transit-to-natal contacts shaping current growth`
           : "Evaluated via Natal Promise → Saturn/Node developmental arc",
     },
     {
@@ -1241,7 +1245,7 @@ export function evaluateBehavioralIntelligence(
       status: royalContacts.length > 0 ? "convergent" : "supporting",
       evidenceSummary: royalContacts.length
         ? royalContacts.slice(0, 3).join(" · ")
-        : `${chart.frozenStars.length} immutable frozen stars locked against tropical degrees`,
+        : `${frozenStars.length} immutable frozen stars locked against tropical degrees`,
     },
     {
       system: "10. Lunar Mansions (Manzils)",

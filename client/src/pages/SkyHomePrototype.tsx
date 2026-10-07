@@ -21,6 +21,7 @@ import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { LiveTransitFeed } from "@/components/LiveTransitFeed";
 import { BehavioralIntelligencePanel } from "@/components/BehavioralIntelligencePanel";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
+import { SkyObservatoryWheel } from "@/components/SkyObservatoryWheel";
 import { ChartWheel } from "@/components/ChartWheel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -847,6 +848,9 @@ export default function SkyHomePrototype() {
               </button>
             </div>
 
+            {/* High-Fidelity Traditional SVG Chart Wheel (Natal + Transit + Horary Aspects) */}
+            {activeChart && <SkyObservatoryWheel chart={activeChart} />}
+
             {/* Embedded Three-Layer Orrery */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
@@ -933,6 +937,8 @@ export default function SkyHomePrototype() {
                 Interpret These Positions in Guide →
               </Button>
             </div>
+
+            {activeChart && <SkyObservatoryWheel chart={activeChart} />}
 
             <ThreeLayerOrrery chart={activeChart} />
 
