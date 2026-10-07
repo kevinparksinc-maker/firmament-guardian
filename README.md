@@ -40,6 +40,13 @@ pnpm start    # run the production build
 
 A `Dockerfile` is included for containerized runs.
 
+## Production deployment
+
+The production container runs the compiled server with `pnpm start`, listens on the
+platform-provided `PORT` (defaulting to `3000`), and exposes `/health` as an
+unauthenticated readiness endpoint. The published frontend is built into
+`dist/public`; the server handles `/api/*` and the SPA fallback serves client routes.
+
 ## Configuration
 
 This app needs environment variables (database, auth, LLM). Create a local `.env` file; it is git-ignored and should never be committed.
