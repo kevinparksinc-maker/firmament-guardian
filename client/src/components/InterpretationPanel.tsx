@@ -162,9 +162,13 @@ export function InterpretationPanel({
   initialQuestion?: string;
 }) {
   const [mode, setMode] = useState<ReadingMode>(initialMode);
+  const [activeQuestion, setActiveQuestion] = useState<string>(initialQuestion);
   const [interpretation, setInterpretation] = useState<Interpretation | null>(
     null
   );
+  useEffect(() => {
+    setActiveQuestion(initialQuestion);
+  }, [initialQuestion]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeChapter, setActiveChapter] = useState<string | null>(null);
   const [oralQuestion, setOralQuestion] = useState("");
@@ -198,7 +202,11 @@ export function InterpretationPanel({
           }
         : current
     );
-  const generateChapterAt = async (base: Interpretation, index: number) => {
+  const generateChapterAt = async (
+    base: Interpretation,
+    index: number,
+    questionOverride = activeQuestion
+  ) => {
     const chapter = base.chapters[index];
     if (!chapter) return;
     setActiveChapter(chapter.id);
@@ -215,7 +223,7 @@ export function InterpretationPanel({
         chapterId: chapter.id as never,
         completedChapters: completed,
         analysis: base.analysis ?? "",
-        question: initialQuestion.trim(),
+        question: questionOverride.trim(),
       });
       setInterpretation(current =>
         current
@@ -241,7 +249,8 @@ export function InterpretationPanel({
                 : item
             ),
           },
-          nextIndex
+          nextIndex,
+          questionOverride
         );
     } catch (error) {
       updateChapter(chapter.id, {
@@ -254,7 +263,9 @@ export function InterpretationPanel({
       setActiveChapter(null);
     }
   };
-  const run = async () => {
+  const run = async (questionOverride?: string) => {
+    const q = (questionOverride ?? activeQuestion).trim();
+    if (questionOverride !== undefined) setActiveQuestion(questionOverride);
     setInterpretation(null);
     setMessages([]);
     setFollowUps([]);
@@ -263,11 +274,11 @@ export function InterpretationPanel({
       const base = await generate.mutateAsync({
         chart,
         mode,
-        question: initialQuestion.trim() || undefined,
+        question: q || undefined,
       });
       const initial = { ...base, chapters: base.chapters as Chapter[] };
       setInterpretation(initial);
-      await generateChapterAt(initial, 0);
+      await generateChapterAt(initial, 0, q);
     } finally {
       setActiveChapter(null);
     }
@@ -445,20 +456,21 @@ export function InterpretationPanel({
       <BehavioralIntelligencePanel
         chart={chart}
         mode={mode}
-        question={initialQuestion}
+        question={activeQuestion}
         onSelectPrompt={prompt => {
+          setActiveQuestion(prompt);
           setOralQuestion(prompt);
           if (interpretation) {
             send(prompt, mode);
           } else {
-            run();
+            run(prompt);
           }
         }}
       />
       {!interpretation && (
         <div className="mx-auto max-w-5xl">
           <Button
-            onClick={run}
+            onClick={() => run()}
             disabled={busy}
             className="h-12 w-full rounded-xl bg-cyan-400 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-950/30 hover:bg-cyan-300"
           >

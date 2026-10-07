@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import { angularDistance } from "../../../server/astrologyCore";
 import {
@@ -328,8 +328,24 @@ interface SkyObservatoryWheelProps {
 }
 
 export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
-  const [aspectFilter, setAspectFilter] = useState<AspectLayerFilter>("all");
+  const [aspectFilter, setAspectFilter] = useState<AspectLayerFilter>(
+    chart.readingScope === "natal"
+      ? "natal"
+      : chart.readingScope === "transit"
+        ? "transit"
+        : "all"
+  );
   const [topicHouse, setTopicHouse] = useState<number>(7);
+
+  useEffect(() => {
+    setAspectFilter(
+      chart.readingScope === "natal"
+        ? "natal"
+        : chart.readingScope === "transit"
+          ? "transit"
+          : "all"
+    );
+  }, [chart.readingScope]);
   const [selectedHouse, setSelectedHouse] = useState<number | null>(null);
   const [selectedNode, setSelectedNode] = useState<{
     layer: "natal" | "transit";
@@ -584,9 +600,25 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
       {/* Header & Aspect Layer Controls */}
       <div className="mb-5 flex flex-col gap-4 border-b border-slate-800/90 pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-300">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-300">
             <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_12px_#22d3ee]" />
-            High-Fidelity Traditional Observatory Wheel
+            <span>High-Fidelity Traditional Observatory Wheel</span>
+            <span className="text-slate-600">·</span>
+            <span className="text-violet-300">
+              {chart.worldview === "god"
+                ? "God View (Fixed 0° Aries Houses)"
+                : chart.worldview === "agent-vs-god"
+                  ? "God's View of the Agent (Dual Houses)"
+                  : "Agent View (Local Equal Houses)"}
+            </span>
+            <span className="text-slate-600">·</span>
+            <span className="text-emerald-300">
+              {chart.readingScope === "natal"
+                ? "Natal Layer"
+                : chart.readingScope === "transit"
+                  ? "Transit Layer"
+                  : "Natal + Transit Layer"}
+            </span>
           </div>
           <h2 className="mt-1 font-serif text-2xl text-white sm:text-3xl">
             Natal, Transit & Horary Aspect Geometry

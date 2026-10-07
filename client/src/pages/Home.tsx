@@ -18,6 +18,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { MapView } from "@/components/Map";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
+import { SkyObservatoryWheel } from "@/components/SkyObservatoryWheel";
 import { ChartWheel } from "@/components/ChartWheel";
 import { LiveTransitFeed } from "@/components/LiveTransitFeed";
 import { WelcomeHost } from "@/components/WelcomeHost";
@@ -332,10 +333,18 @@ export default function Home() {
       );
     }
   };
-  const calculateChart = async () => {
-    let nextForm = { ...form };
+  const calculateChart = async (
+    nextWorldview: Worldview = worldview,
+    nextReadingMode: ReadingMode = readingMode,
+    formOverride?: typeof form
+  ) => {
+    let nextForm = { ...(formOverride ?? form) };
     setFormError("");
-    if (worldview !== "god" && locationQuery.trim() && !nextForm.timezone) {
+    if (
+      nextWorldview !== "god" &&
+      locationQuery.trim() &&
+      !nextForm.timezone
+    ) {
       const res = await geo.refetch();
       if (res.data)
         nextForm = {
@@ -354,7 +363,7 @@ export default function Home() {
       }
     }
     if (
-      readingMode !== "natal" &&
+      nextReadingMode !== "natal" &&
       transitLocationQuery.trim() &&
       !nextForm.transitTimezone
     ) {
@@ -375,17 +384,39 @@ export default function Home() {
         return;
       }
     }
-    if (worldview !== "god" && (!nextForm.location || !nextForm.timezone)) {
+    if (
+      nextWorldview !== "god" &&
+      (!nextForm.location || !nextForm.timezone)
+    ) {
       setFormError(
-        "Resolve your birth city first, or enter a city such as Dallas, Texas."
+        "Resolve your birth city first, or click 'Try an example chart' below."
+      );
+      return;
+    }
+    if (
+      nextWorldview !== "god" &&
+      (!nextForm.date || !nextForm.time)
+    ) {
+      setFormError(
+        "Agent View requires a birth date, birth time, and resolved birth city."
+      );
+      return;
+    }
+    if (
+      nextWorldview === "god" &&
+      nextReadingMode !== "transit" &&
+      !nextForm.date
+    ) {
+      setFormError(
+        "God View Natal readings require a birth date (birth time and city are optional). Enter a birth date or switch to Transit Chart."
       );
       return;
     }
     setForm(nextForm);
     calculate.mutate({
       ...nextForm,
-      worldview,
-      readingScope: readingMode,
+      worldview: nextWorldview,
+      readingScope: nextReadingMode,
       birthTimeKnown: Boolean(nextForm.time),
     });
   };
@@ -550,7 +581,12 @@ export default function Home() {
                 <button
                   key={item.value}
                   type="button"
-                  onClick={() => setWorldview(item.value)}
+                  onClick={() => {
+                    setWorldview(item.value);
+                    if (result || (item.value === "god" && (readingMode === "transit" || Boolean(form.date)))) {
+                      void calculateChart(item.value, readingMode);
+                    }
+                  }}
                   className={`rounded-2xl border p-4 text-left transition-all sm:p-5 ${worldview === item.value ? "border-violet-300/70 bg-violet-200/10 shadow-lg shadow-violet-950/20" : "border-white/10 bg-black/10 hover:border-white/25 hover:bg-white/[0.06]"}`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -574,6 +610,9 @@ export default function Home() {
                   type="button"
                   onClick={() => {
                     setReadingMode(item.value);
+                    if (result || (worldview === "god" && item.value === "transit")) {
+                      void calculateChart(worldview, item.value);
+                    }
                     if (result)
                       window.setTimeout(
                         () =>
@@ -806,7 +845,7 @@ export default function Home() {
                 )}
                 <Button
                   className="h-12 w-full bg-violet-500 text-white shadow-lg shadow-violet-500/20 hover:bg-violet-400"
-                  onClick={calculateChart}
+                  onClick={() => void calculateChart()}
                   disabled={calculate.isPending}
                 >
                   {calculate.isPending ? (
@@ -823,6 +862,7 @@ export default function Home() {
                     setForm(exampleChart);
                     setLocationQuery(exampleChart.location);
                     setTransitLocationQuery(exampleChart.transitLocation);
+                    void calculateChart(worldview, readingMode, exampleChart);
                   }}
                 >
                   Try an example chart
@@ -906,7 +946,40 @@ export default function Home() {
                     </a>
                   </CardContent>
                 </Card>
+                <SkyObservatoryWheel chart={result} />
                 <ChartWheel chart={result} />
+                {result.worldview === "god" && (
+                  <div className="rounded-2xl border border-violet-300/25 bg-violet-950/20 p-5 text-sm text-slate-200">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-violet-300">
+                      Universal God View Active · Fixed 0° Aries to 360° Pisces Houses
+                    </div>
+                    <p className="mt-1.5 text-xs leading-6 text-slate-300">
+                      You are viewing the canonical geocentric frame (Aries = House 1 through Pisces = House 12) without a local horizon or Ascendant. Switch to{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWorldview("agent-vs-god");
+                          void calculateChart("agent-vs-god", readingMode);
+                        }}
+                        className="font-semibold text-cyan-300 underline hover:text-cyan-200"
+                      >
+                        God&apos;s View of the Agent
+                      </button>{" "}
+                      or{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWorldview("agent");
+                          void calculateChart("agent", readingMode);
+                        }}
+                        className="font-semibold text-cyan-300 underline hover:text-cyan-200"
+                      >
+                        Agent View
+                      </button>{" "}
+                      above to compare how these collective degrees translate into personal Equal Houses.
+                    </p>
+                  </div>
+                )}
                 <FrameRelationshipPanel rows={natalDisplayRows} />
                 {result.transits.length > 0 && (
                   <FrameRelationshipPanel

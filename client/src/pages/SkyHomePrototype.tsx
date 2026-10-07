@@ -20,6 +20,7 @@ import { OVERLAY_MAP_SPECS } from "@/design/overlayMapSpecs";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { LiveTransitFeed } from "@/components/LiveTransitFeed";
 import { BehavioralIntelligencePanel } from "@/components/BehavioralIntelligencePanel";
+import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { SkyObservatoryWheel } from "@/components/SkyObservatoryWheel";
 import { ChartWheel } from "@/components/ChartWheel";
@@ -27,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
+import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
 import {
   DECANS,
   MANAZIL,
@@ -508,7 +510,8 @@ export default function SkyHomePrototype() {
   const [screen, setScreen] = useState<"home" | "orrery" | "maps" | "guide">(
     "home"
   );
-  const [skyMode, setSkyMode] = useState<"personal" | "god">("personal");
+  const [worldview, setWorldview] = useState<Worldview>("agent-vs-god");
+  const [readingScope, setReadingScope] = useState<ReadingScope>("combined");
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [locationInput, setLocationInput] = useState(DEFAULT_PROFILE.location);
   const [guideQuestion, setGuideQuestion] = useState(
@@ -524,19 +527,23 @@ export default function SkyHomePrototype() {
     onSuccess: setActiveChart,
   });
 
-  const loadSky = (mode = skyMode, nextProfile = profile) => {
+  const loadSky = (
+    nextWorldview: Worldview = worldview,
+    nextScope: ReadingScope = readingScope,
+    nextProfile = profile
+  ) => {
     const now = new Date();
     const transitDate = now.toISOString().slice(0, 10);
     const transitTime = now.toISOString().slice(11, 16);
 
-    if (mode === "god") {
+    if (nextWorldview === "god") {
       calculateMutation.mutate({
-        location: "God View",
+        location: nextProfile.location || "God View",
         latitude: 0,
         longitude: 0,
         timezone: "UTC",
-        date: "",
-        time: "",
+        date: nextProfile.date || "1986-11-20",
+        time: nextProfile.time || "",
         transitLocation: "God View",
         transitLatitude: 0,
         transitLongitude: 0,
@@ -544,8 +551,8 @@ export default function SkyHomePrototype() {
         transitDate,
         transitTime,
         worldview: "god",
-        readingScope: "transit",
-        birthTimeKnown: false,
+        readingScope: nextScope,
+        birthTimeKnown: Boolean(nextProfile.time),
       });
     } else {
       calculateMutation.mutate({
@@ -556,16 +563,19 @@ export default function SkyHomePrototype() {
         transitTimezone: nextProfile.timezone,
         transitDate,
         transitTime,
-        worldview: "agent-vs-god",
-        readingScope: "combined",
+        worldview: nextWorldview,
+        readingScope: nextScope,
         birthTimeKnown: Boolean(nextProfile.time),
       });
     }
   };
 
   useEffect(() => {
-    loadSky("personal", DEFAULT_PROFILE);
-    const id = window.setInterval(() => loadSky(skyMode, profile), 5 * 60 * 1000);
+    loadSky("agent-vs-god", "combined", DEFAULT_PROFILE);
+    const id = window.setInterval(
+      () => loadSky(worldview, readingScope, profile),
+      5 * 60 * 1000
+    );
     return () => window.clearInterval(id);
   }, []);
 
@@ -584,8 +594,7 @@ export default function SkyHomePrototype() {
         setProfile(next);
       }
     }
-    setSkyMode("personal");
-    loadSky("personal", next);
+    loadSky(worldview, readingScope, next);
   };
 
   const moonLongitude =
@@ -680,45 +689,80 @@ export default function SkyHomePrototype() {
               </p>
             </div>
 
-            {/* Frame Switcher + Quick Birth Profile Controls */}
-            <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-800 bg-[#070b14] p-4 sm:min-w-[420px]">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex gap-1 rounded-lg border border-slate-800 bg-[#0b101b] p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSkyMode("personal");
-                      loadSky("personal", profile);
-                    }}
-                    className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                      skyMode === "personal"
-                        ? "bg-cyan-400 text-slate-950"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    Personal Natal + Transit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSkyMode("god");
-                      loadSky("god", profile);
-                    }}
-                    className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                      skyMode === "god"
-                        ? "bg-cyan-400 text-slate-950"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    Universal God View Only
-                  </button>
+            {/* Frame Switcher (Worldview + Scope) + Quick Birth Profile Controls */}
+            <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-800 bg-[#070b14] p-4 sm:min-w-[480px]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {/* Worldview Selector: Agent View / God View / God+Agent */}
+                <div
+                  className="flex gap-1 rounded-lg border border-slate-800 bg-[#0b101b] p-1"
+                  role="tablist"
+                  aria-label="Worldview frame selector"
+                >
+                  {(
+                    [
+                      { value: "agent", label: "Agent View" },
+                      { value: "god", label: "God View" },
+                      { value: "agent-vs-god", label: "God + Agent View" },
+                    ] as const
+                  ).map(item => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      role="tab"
+                      aria-selected={worldview === item.value}
+                      onClick={() => {
+                        setWorldview(item.value);
+                        loadSky(item.value, readingScope, profile);
+                      }}
+                      className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-semibold transition ${
+                        worldview === item.value
+                          ? "bg-violet-500 text-white"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Reading Scope Selector: Natal / Natal + Transit / Transit */}
+                <div
+                  className="flex gap-1 rounded-lg border border-slate-800 bg-[#0b101b] p-1"
+                  role="tablist"
+                  aria-label="Reading scope selector"
+                >
+                  {(
+                    [
+                      { value: "natal", label: "Natal" },
+                      { value: "combined", label: "Natal + Transit" },
+                      { value: "transit", label: "Transit" },
+                    ] as const
+                  ).map(item => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      role="tab"
+                      aria-selected={readingScope === item.value}
+                      onClick={() => {
+                        setReadingScope(item.value);
+                        loadSky(worldview, item.value, profile);
+                      }}
+                      className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-semibold transition ${
+                        readingScope === item.value
+                          ? "bg-cyan-400 text-slate-950"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
                 </div>
 
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => loadSky(skyMode, profile)}
+                  onClick={() => loadSky(worldview, readingScope, profile)}
                   disabled={calculateMutation.isPending}
                   className="border-slate-700 bg-slate-900 text-xs text-slate-200 hover:bg-slate-800"
                 >
@@ -730,42 +774,42 @@ export default function SkyHomePrototype() {
                 </Button>
               </div>
 
-              {skyMode === "personal" && (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_130px_96px_auto]">
-                  <Input
-                    value={locationInput}
-                    onChange={e => setLocationInput(e.target.value)}
-                    placeholder="Birth city (e.g. Dallas, TX)"
-                    className="h-9 border-slate-800 bg-[#0b101b] text-xs text-slate-100"
-                  />
-                  <Input
-                    type="date"
-                    value={profile.date}
-                    onChange={e =>
-                      setProfile(p => ({ ...p, date: e.target.value }))
-                    }
-                    className="h-9 border-slate-800 bg-[#0b101b] font-mono text-xs text-slate-100"
-                  />
-                  <Input
-                    type="time"
-                    value={profile.time}
-                    onChange={e =>
-                      setProfile(p => ({ ...p, time: e.target.value }))
-                    }
-                    className="h-9 border-slate-800 bg-[#0b101b] font-mono text-xs text-slate-100"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={resolveAndLoadPersonalSky}
-                    disabled={calculateMutation.isPending || geo.isFetching}
-                    className="h-9 whitespace-nowrap bg-violet-500 px-3 text-xs font-semibold text-white hover:bg-violet-400"
-                  >
-                    <MapPin className="mr-1 h-3.5 w-3.5" />
-                    Update
-                  </Button>
-                </div>
-              )}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_130px_96px_auto]">
+                <Input
+                  value={locationInput}
+                  onChange={e => setLocationInput(e.target.value)}
+                  placeholder="Birth city (e.g. Dallas, TX)"
+                  disabled={worldview === "god"}
+                  className="h-9 border-slate-800 bg-[#0b101b] text-xs text-slate-100 disabled:opacity-50"
+                />
+                <Input
+                  type="date"
+                  value={profile.date}
+                  onChange={e =>
+                    setProfile(p => ({ ...p, date: e.target.value }))
+                  }
+                  className="h-9 border-slate-800 bg-[#0b101b] font-mono text-xs text-slate-100"
+                />
+                <Input
+                  type="time"
+                  value={profile.time}
+                  onChange={e =>
+                    setProfile(p => ({ ...p, time: e.target.value }))
+                  }
+                  disabled={worldview === "god"}
+                  className="h-9 border-slate-800 bg-[#0b101b] font-mono text-xs text-slate-100 disabled:opacity-50"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={resolveAndLoadPersonalSky}
+                  disabled={calculateMutation.isPending || geo.isFetching}
+                  className="h-9 whitespace-nowrap bg-violet-500 px-3 text-xs font-semibold text-white hover:bg-violet-400"
+                >
+                  <MapPin className="mr-1 h-3.5 w-3.5" />
+                  Update
+                </Button>
+              </div>
             </div>
           </div>
         </section>
@@ -851,6 +895,11 @@ export default function SkyHomePrototype() {
             {/* High-Fidelity Traditional SVG Chart Wheel (Natal + Transit + Horary Aspects) */}
             {activeChart && <SkyObservatoryWheel chart={activeChart} />}
 
+            {/* God View vs. Agent View Frame Relationship Panel */}
+            {activeChart && activeChart.worldview !== "god" && (
+              <FrameRelationshipPanel rows={activeChart.movingBodies} />
+            )}
+
             {/* Embedded Three-Layer Orrery */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
@@ -870,10 +919,10 @@ export default function SkyHomePrototype() {
             <OverlayMap moonLongitude={moonLongitude} chart={activeChart} />
 
             {/* Live Transit Feed */}
-            {activeChart && (
+            {activeChart && readingScope !== "natal" && (
               <LiveTransitFeed
                 chart={activeChart}
-                onRefresh={() => loadSky(skyMode, profile)}
+                onRefresh={() => loadSky(worldview, readingScope, profile)}
                 refreshing={calculateMutation.isPending}
               />
             )}
@@ -900,7 +949,7 @@ export default function SkyHomePrototype() {
                 </div>
                 <BehavioralIntelligencePanel
                   chart={activeChart}
-                  mode={skyMode === "god" ? "transit" : "combined"}
+                  mode={readingScope}
                   question={guideQuestion}
                   onSelectPrompt={prompt => {
                     setGuideQuestion(prompt);
@@ -953,7 +1002,7 @@ export default function SkyHomePrototype() {
             {activeChart && (
               <LiveTransitFeed
                 chart={activeChart}
-                onRefresh={() => loadSky(skyMode, profile)}
+                onRefresh={() => loadSky(worldview, readingScope, profile)}
                 refreshing={calculateMutation.isPending}
               />
             )}
@@ -966,9 +1015,9 @@ export default function SkyHomePrototype() {
             {activeChart ? (
               <>
                 <InterpretationPanel
-                  key={`${JSON.stringify(activeChart.input)}:${activeChart.transitDate}:${skyMode}`}
+                  key={`${JSON.stringify(activeChart.input)}:${activeChart.transitDate}:${worldview}:${readingScope}`}
                   chart={activeChart}
-                  initialMode={skyMode === "god" ? "transit" : "combined"}
+                  initialMode={readingScope}
                   initialQuestion={guideQuestion}
                 />
               </>
