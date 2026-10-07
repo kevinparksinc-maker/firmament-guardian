@@ -437,7 +437,7 @@ export default function Home() {
     });
   };
   const refreshLiveTransit = () => {
-    if (!result) return;
+    if (!result || readingMode === "natal") return;
     const now = new Date();
     calculate.mutate({
       ...form,
@@ -448,15 +448,20 @@ export default function Home() {
       transitLongitude: form.transitLongitude || form.longitude,
       transitTimezone: form.transitTimezone || form.timezone,
       worldview,
-      readingScope: "combined",
+      readingScope: readingMode,
       birthTimeKnown: Boolean(form.time),
     });
   };
   useEffect(() => {
-    if (!result || (form.transitDate && form.transitTime)) return;
+    if (
+      !result ||
+      readingMode === "natal" ||
+      (form.transitDate && form.transitTime)
+    )
+      return;
     const id = window.setInterval(refreshLiveTransit, 5 * 60 * 1000);
     return () => window.clearInterval(id);
-  }, [result, form.transitDate, form.transitTime]);
+  }, [result, readingMode, worldview, form]);
   const summary = useMemo(
     () =>
       result
@@ -1231,10 +1236,11 @@ export default function Home() {
             )}
             {result && (
               <InterpretationPanel
-                key={`${JSON.stringify(result.input)}:${result.transitDate}:${readingMode}`}
+                key={`${result.input.location || "god"}:${result.input.date || "live"}:${result.input.time || "none"}:${result.worldview}`}
                 chart={result}
                 initialMode={readingMode}
                 initialQuestion={readingQuestion}
+                onModeChange={nextMode => setReadingMode(nextMode)}
               />
             )}
           </section>

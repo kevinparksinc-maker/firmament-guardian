@@ -39,6 +39,78 @@ type Interpretation = {
   generatedAt: string;
   chapters: Chapter[];
 };
+
+const READING_MEMORY_CACHE = new Map<
+  string,
+  { interpretation: Interpretation; messages: Message[] }
+>();
+
+function getReadingCacheKey(chart: ChartResult, mode: ReadingMode): string {
+  const loc = chart.input.location || "god-view";
+  const date = chart.input.date || "live";
+  const time = chart.input.time || "none";
+  return `firmament-reading-v2:${loc}:${date}:${time}:${chart.worldview}:${mode}`;
+}
+
+function loadCachedReading(
+  chart: ChartResult,
+  mode: ReadingMode
+): { interpretation: Interpretation; messages: Message[] } | null {
+  const key = getReadingCacheKey(chart, mode);
+  const inMem = READING_MEMORY_CACHE.get(key);
+  if (inMem) return inMem;
+  try {
+    if (typeof window !== "undefined") {
+      const raw =
+        window.sessionStorage.getItem(key) ??
+        window.localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          interpretation: Interpretation;
+          messages: Message[];
+        };
+        if (parsed?.interpretation?.chapters) {
+          const normalized: Interpretation = {
+            ...parsed.interpretation,
+            chapters: parsed.interpretation.chapters.map(ch =>
+              ch.status === "loading" ? { ...ch, status: "pending" } : ch
+            ),
+          };
+          const entry = {
+            interpretation: normalized,
+            messages: parsed.messages ?? [],
+          };
+          READING_MEMORY_CACHE.set(key, entry);
+          return entry;
+        }
+      }
+    }
+  } catch {
+    // Ignore storage read errors
+  }
+  return null;
+}
+
+function saveCachedReading(
+  chart: ChartResult,
+  mode: ReadingMode,
+  interpretation: Interpretation | null,
+  messages: Message[]
+) {
+  if (!interpretation) return;
+  const key = getReadingCacheKey(chart, mode);
+  const payload = { interpretation, messages };
+  READING_MEMORY_CACHE.set(key, payload);
+  try {
+    if (typeof window !== "undefined") {
+      const serialized = JSON.stringify(payload);
+      window.sessionStorage.setItem(key, serialized);
+      window.localStorage.setItem(key, serialized);
+    }
+  } catch {
+    // Ignore storage quota errors
+  }
+}
 type SpeechRecognitionLike = {
   lang: string;
   interimResults: boolean;
@@ -156,21 +228,49 @@ export function InterpretationPanel({
   chart,
   initialMode = "combined",
   initialQuestion = "",
+  onModeChange,
 }: {
   chart: ChartResult;
   initialMode?: ReadingMode;
   initialQuestion?: string;
+  onModeChange?: (mode: ReadingMode) => void;
 }) {
   const [mode, setMode] = useState<ReadingMode>(initialMode);
+  const prevInitialModeRef = useRef<ReadingMode>(initialMode);
   const [activeQuestion, setActiveQuestion] = useState<string>(initialQuestion);
   const [interpretation, setInterpretation] = useState<Interpretation | null>(
-    null
+    () => loadCachedReading(chart, initialMode)?.interpretation ?? null
   );
+  const [messages, setMessages] = useState<Message[]>(
+    () => loadCachedReading(chart, initialMode)?.messages ?? []
+  );
+  const [isGeneratingReading, setIsGeneratingReading] = useState(false);
+  const [collapsedChapters, setCollapsedChapters] = useState<
+    Record<string, boolean>
+  >({});
+
   useEffect(() => {
     setActiveQuestion(initialQuestion);
   }, [initialQuestion]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [activeChapter, setActiveChapter] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (prevInitialModeRef.current !== initialMode) {
+      prevInitialModeRef.current = initialMode;
+      if (!isGeneratingReading && initialMode !== mode) {
+        setMode(initialMode);
+        const cached = loadCachedReading(chart, initialMode);
+        setInterpretation(cached?.interpretation ?? null);
+        setMessages(cached?.messages ?? []);
+      }
+    }
+  }, [initialMode, isGeneratingReading, mode, chart]);
+
+  useEffect(() => {
+    if (interpretation) {
+      saveCachedReading(chart, mode, interpretation, messages);
+    }
+  }, [chart, mode, interpretation, messages]);
+
   const [oralQuestion, setOralQuestion] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [lastAnswer, setLastAnswer] = useState("");
@@ -209,7 +309,6 @@ export function InterpretationPanel({
   ) => {
     const chapter = base.chapters[index];
     if (!chapter) return;
-    setActiveChapter(chapter.id);
     updateChapter(chapter.id, { status: "loading", error: undefined });
     const completed = base.chapters
       .slice(0, index)
@@ -225,33 +324,20 @@ export function InterpretationPanel({
         analysis: base.analysis ?? "",
         question: questionOverride.trim(),
       });
-      setInterpretation(current =>
-        current
-          ? {
-              ...current,
-              chapters: current.chapters.map(item =>
-                item.id === chapter.id
-                  ? { ...item, status: "complete", content: result }
-                  : item
-              ),
-            }
-          : current
-      );
-      setActiveChapter(null);
+      const updatedBase: Interpretation = {
+        ...base,
+        chapters: base.chapters.map(item =>
+          item.id === chapter.id
+            ? { ...item, status: "complete", content: result }
+            : item
+        ),
+      };
+      setInterpretation(updatedBase);
+      saveCachedReading(chart, mode, updatedBase, messages);
+      setCollapsedChapters(prev => ({ ...prev, [chapter.id]: false }));
       const nextIndex = index + 1;
       if (nextIndex < base.chapters.length)
-        await generateChapterAt(
-          {
-            ...base,
-            chapters: base.chapters.map(item =>
-              item.id === chapter.id
-                ? { ...item, status: "complete", content: result }
-                : item
-            ),
-          },
-          nextIndex,
-          questionOverride
-        );
+        await generateChapterAt(updatedBase, nextIndex, questionOverride);
     } catch (error) {
       updateChapter(chapter.id, {
         status: "error",
@@ -260,7 +346,6 @@ export function InterpretationPanel({
             ? error.message
             : "This chapter could not be completed.",
       });
-      setActiveChapter(null);
     }
   };
   const run = async (questionOverride?: string) => {
@@ -269,7 +354,8 @@ export function InterpretationPanel({
     setInterpretation(null);
     setMessages([]);
     setFollowUps([]);
-    setActiveChapter("intelligence");
+    setCollapsedChapters({});
+    setIsGeneratingReading(true);
     try {
       const base = await generate.mutateAsync({
         chart,
@@ -278,13 +364,20 @@ export function InterpretationPanel({
       });
       const initial = { ...base, chapters: base.chapters as Chapter[] };
       setInterpretation(initial);
+      saveCachedReading(chart, mode, initial, []);
       await generateChapterAt(initial, 0, q);
     } finally {
-      setActiveChapter(null);
+      setIsGeneratingReading(false);
     }
   };
   const retryChapter = async (index: number) => {
-    if (interpretation) await generateChapterAt(interpretation, index);
+    if (!interpretation) return;
+    setIsGeneratingReading(true);
+    try {
+      await generateChapterAt(interpretation, index);
+    } finally {
+      setIsGeneratingReading(false);
+    }
   };
   const send = (question: string, questionMode: ReadingMode = mode) => {
     if (!interpretation) return;
@@ -374,7 +467,7 @@ export function InterpretationPanel({
     recognition.start();
   };
   const busy =
-    Boolean(activeChapter) ||
+    isGeneratingReading ||
     generate.isPending ||
     chapterMutation.isPending ||
     chat.isPending;
@@ -384,10 +477,13 @@ export function InterpretationPanel({
   const selectMode = (nextMode: ReadingMode) => {
     if (busy) return;
     recognitionRef.current?.stop();
+    prevInitialModeRef.current = nextMode;
     setMode(nextMode);
-    setInterpretation(null);
-    setMessages([]);
-    setActiveChapter(null);
+    onModeChange?.(nextMode);
+    const cached = loadCachedReading(chart, nextMode);
+    setInterpretation(cached?.interpretation ?? null);
+    setMessages(cached?.messages ?? []);
+    setCollapsedChapters({});
     setOralQuestion("");
     setIsListening(false);
     setLastAnswer("");
@@ -494,7 +590,7 @@ export function InterpretationPanel({
           <div className="mt-1 text-rose-200/80">{generate.error.message}</div>
           <Button
             variant="outline"
-            onClick={run}
+            onClick={() => void run()}
             className="mt-4 border-rose-200/30 bg-transparent text-rose-100 hover:bg-rose-100/10"
           >
             Try again
@@ -512,11 +608,21 @@ export function InterpretationPanel({
                 Your {selected.label.toLowerCase()}
               </h3>
               <p className="mt-2 text-sm text-slate-400">
-                A deep reading for {chart.input.location}, unfolding one
+                A deep reading for {chart.input.location || "God View"}, unfolding one
                 substantial chapter at a time.
               </p>
             </div>
             <div className="flex flex-wrap items-end gap-3 text-left sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void run()}
+                disabled={busy}
+                className="h-9 border-white/15 bg-white/5 px-3 text-xs text-slate-200 hover:bg-white/10"
+              >
+                <WandSparkles className="mr-2 h-3.5 w-3.5 text-cyan-300" />
+                Regenerate reading
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -542,6 +648,28 @@ export function InterpretationPanel({
               </div>
             </div>
           </div>
+
+          {/* Executive Opening Synthesis (Always Visible Immediately) */}
+          {interpretation.reading && (
+            <Card className="overflow-hidden border-cyan-300/25 bg-gradient-to-br from-cyan-950/35 via-[#0b101b] to-violet-950/25 text-slate-100 shadow-xl">
+              <CardHeader className="border-b border-white/10 px-5 py-4 sm:px-7">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                  Executive Chart Synthesis · All About You
+                </div>
+                <CardTitle className="mt-1 font-serif text-2xl text-white">
+                  Core Pattern Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className={`space-y-4 px-5 py-6 sm:px-8 ${prose}`}>
+                <AudioReader
+                  text={interpretation.reading}
+                  label="Listen to Core Pattern Overview"
+                />
+                <Streamdown>{interpretation.reading}</Streamdown>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="rounded-2xl border border-white/10 bg-black/15 p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
@@ -549,8 +677,7 @@ export function InterpretationPanel({
                   Reading map
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
-                  Choose a chapter to revisit or follow the next illuminated
-                  thread.
+                  All completed chapters stay open below. Click any chapter pill to jump directly to it.
                 </p>
               </div>
               <div className="h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
@@ -569,7 +696,10 @@ export function InterpretationPanel({
                   type="button"
                   disabled={chapter.status !== "complete"}
                   onClick={() => {
-                    setActiveChapter(chapter.id);
+                    setCollapsedChapters(prev => ({
+                      ...prev,
+                      [chapter.id]: false,
+                    }));
                     window.setTimeout(
                       () =>
                         document
@@ -599,68 +729,75 @@ export function InterpretationPanel({
             </div>
           </div>
           <div className="space-y-4">
-            {interpretation.chapters.map((chapter, index) => (
-              <Card
-                id={`reading-chapter-${chapter.id}`}
-                key={chapter.id}
-                className={`scroll-mt-28 overflow-hidden text-slate-100 ${chapter.status === "complete" ? "border-white/10 bg-white/[0.035]" : chapter.status === "loading" ? "border-cyan-300/30 bg-cyan-100/[0.05]" : chapter.status === "error" ? "border-rose-300/20 bg-rose-400/[0.05]" : "border-white/10 bg-black/10"}`}
-              >
-                <CardHeader
-                  className="cursor-pointer px-5 py-5 sm:px-7"
-                  onClick={() =>
-                    chapter.status === "complete" &&
-                    setActiveChapter(
-                      activeChapter === chapter.id ? null : chapter.id
-                    )
-                  }
+            {interpretation.chapters.map((chapter, index) => {
+              const isExpanded = !collapsedChapters[chapter.id];
+              return (
+                <Card
+                  id={`reading-chapter-${chapter.id}`}
+                  key={chapter.id}
+                  className={`scroll-mt-28 overflow-hidden text-slate-100 ${chapter.status === "complete" ? "border-white/10 bg-white/[0.035]" : chapter.status === "loading" ? "border-cyan-300/30 bg-cyan-100/[0.05]" : chapter.status === "error" ? "border-rose-300/20 bg-rose-400/[0.05]" : "border-white/10 bg-black/10"}`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div
-                      className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs ${chapter.status === "complete" ? "bg-cyan-300/15 text-cyan-200" : "bg-white/[0.07] text-slate-500"}`}
-                    >
-                      {chapter.status === "complete" ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        index + 1
+                  <CardHeader
+                    className="cursor-pointer px-5 py-5 sm:px-7"
+                    onClick={() =>
+                      chapter.status === "complete" &&
+                      setCollapsedChapters(prev => ({
+                        ...prev,
+                        [chapter.id]: !prev[chapter.id],
+                      }))
+                    }
+                  >
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs ${chapter.status === "complete" ? "bg-cyan-300/15 text-cyan-200" : "bg-white/[0.07] text-slate-500"}`}
+                      >
+                        {chapter.status === "complete" ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          index + 1
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs uppercase tracking-[0.2em] text-cyan-300/80">
+                          Chapter {index + 1}
+                        </div>
+                        <CardTitle className="mt-1 font-serif text-2xl text-white">
+                          {chapter.title}
+                        </CardTitle>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {chapter.subtitle}
+                        </p>
+                      </div>
+                      {chapter.status === "loading" && (
+                        <Loader2 className="mt-2 h-5 w-5 animate-spin text-cyan-300" />
+                      )}
+                      {chapter.status === "complete" && (
+                        <span className="mt-2 text-xs text-cyan-300/80">
+                          {isExpanded ? "Hide" : "Show"}
+                        </span>
                       )}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs uppercase tracking-[0.2em] text-cyan-300/80">
-                        Chapter {index + 1}
-                      </div>
-                      <CardTitle className="mt-1 font-serif text-2xl text-white">
-                        {chapter.title}
-                      </CardTitle>
-                      <p className="mt-1 text-sm text-slate-400">
-                        {chapter.subtitle}
+                  </CardHeader>
+                  {chapter.status === "loading" && (
+                    <CardContent className="px-5 pb-7 pt-0 text-sm leading-7 text-slate-400 sm:px-7">
+                      The guide is listening carefully to this part of the chart…
+                    </CardContent>
+                  )}
+                  {chapter.status === "error" && (
+                    <CardContent className="px-5 pb-7 pt-0 sm:px-7">
+                      <p className="text-sm leading-6 text-rose-200">
+                        {chapter.error}
                       </p>
-                    </div>
-                    {chapter.status === "loading" && (
-                      <Loader2 className="mt-2 h-5 w-5 animate-spin text-cyan-300" />
-                    )}
-                  </div>
-                </CardHeader>
-                {chapter.status === "loading" && (
-                  <CardContent className="px-5 pb-7 pt-0 text-sm leading-7 text-slate-400 sm:px-7">
-                    The guide is listening carefully to this part of the chart…
-                  </CardContent>
-                )}
-                {chapter.status === "error" && (
-                  <CardContent className="px-5 pb-7 pt-0 sm:px-7">
-                    <p className="text-sm leading-6 text-rose-200">
-                      {chapter.error}
-                    </p>
-                    <Button
-                      variant="outline"
-                      onClick={() => retryChapter(index)}
-                      className="mt-4 border-rose-200/30 bg-transparent text-rose-100 hover:bg-rose-100/10"
-                    >
-                      Retry this chapter
-                    </Button>
-                  </CardContent>
-                )}
-                {chapter.status === "complete" &&
-                  activeChapter === chapter.id && (
+                      <Button
+                        variant="outline"
+                        onClick={() => void retryChapter(index)}
+                        className="mt-4 border-rose-200/30 bg-transparent text-rose-100 hover:bg-rose-100/10"
+                      >
+                        Retry this chapter
+                      </Button>
+                    </CardContent>
+                  )}
+                  {chapter.status === "complete" && isExpanded && (
                     <CardContent
                       className={`space-y-5 border-t border-white/10 px-5 py-7 sm:px-8 sm:py-10 ${prose}`}
                     >
@@ -681,8 +818,9 @@ export function InterpretationPanel({
                       <Streamdown>{chapter.content}</Streamdown>
                     </CardContent>
                   )}
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
           {chapterMutation.error &&
             !interpretation.chapters.some(

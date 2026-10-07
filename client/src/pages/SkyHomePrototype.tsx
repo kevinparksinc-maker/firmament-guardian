@@ -572,12 +572,16 @@ export default function SkyHomePrototype() {
 
   useEffect(() => {
     loadSky("agent-vs-god", "combined", DEFAULT_PROFILE);
+  }, []);
+
+  useEffect(() => {
+    if (readingScope === "natal" || screen === "guide") return;
     const id = window.setInterval(
       () => loadSky(worldview, readingScope, profile),
       5 * 60 * 1000
     );
     return () => window.clearInterval(id);
-  }, []);
+  }, [worldview, readingScope, profile, screen]);
 
   const resolveAndLoadPersonalSky = async () => {
     let next = { ...profile };
@@ -1010,24 +1014,21 @@ export default function SkyHomePrototype() {
         )}
 
         {/* VIEW 4: GUIDE & ALL ABOUT YOU / PATTERN INTELLIGENCE */}
-        {screen === "guide" && (
-          <div className="space-y-8">
-            {activeChart ? (
-              <>
-                <InterpretationPanel
-                  key={`${JSON.stringify(activeChart.input)}:${activeChart.transitDate}:${worldview}:${readingScope}`}
-                  chart={activeChart}
-                  initialMode={readingScope}
-                  initialQuestion={guideQuestion}
-                />
-              </>
-            ) : (
-              <div className="rounded-2xl border border-slate-800 bg-[#0b101b] p-8 text-center text-sm text-slate-400">
-                Calculating ephemeris and pattern intelligence for your guide…
-              </div>
-            )}
-          </div>
-        )}
+        <div className={screen === "guide" ? "space-y-8" : "hidden"}>
+          {activeChart ? (
+            <InterpretationPanel
+              key={`${activeChart.input.location || "god"}:${activeChart.input.date || "live"}:${activeChart.input.time || "none"}:${worldview}`}
+              chart={activeChart}
+              initialMode={readingScope}
+              initialQuestion={guideQuestion}
+              onModeChange={nextMode => setReadingScope(nextMode)}
+            />
+          ) : (
+            <div className="rounded-2xl border border-slate-800 bg-[#0b101b] p-8 text-center text-sm text-slate-400">
+              Calculating ephemeris and pattern intelligence for your guide…
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Mobile Bottom Navigation Bar (<= 15% viewport height) */}

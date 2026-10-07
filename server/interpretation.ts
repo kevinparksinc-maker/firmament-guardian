@@ -103,15 +103,17 @@ const MODE_GUIDANCE: Record<ReadingMode, string> = {
 
 async function ask(
   messages: Message[],
-  maxTokens = 7000,
-  thinkingBudget = 1800
+  maxTokens = 4000,
+  thinkingBudget = 0
 ) {
   try {
     const response = await invokeLLM({
       model: "claude-sonnet-4-6",
       messages,
       maxTokens,
-      thinking: { type: "enabled", budget_tokens: thinkingBudget },
+      ...(thinkingBudget > 0
+        ? { thinking: { type: "enabled", budget_tokens: thinkingBudget } }
+        : {}),
     });
     const firstChoice = response.choices?.[0];
     const alternate =
@@ -566,6 +568,104 @@ Rules: use only what the sheet states. Never invent an aspect, house, sign, or s
 Return ONLY valid JSON, no markdown fence, in this shape:
 {"threads":[{"title":"","insight":"","evidence":["Sun"],"chapters":["identity"]}],"tensions":[{"between":"","insight":"","evidence":["Moon"]}],"chapters":{"identity":{"angle":"what this chapter should uniquely say","evidence":["Sun"]},"mind-heart":{"angle":"","evidence":[]},"relationships":{"angle":"","evidence":[]},"work-purpose":{"angle":"","evidence":[]},"destiny":{"angle":"","evidence":[]}}}`;
 
+function buildFallbackPlan(
+  chart: ChartResult,
+  evidencePacket: AstrologyEvidencePacket
+): ReadingPlan {
+  const byName = (name: string) =>
+    chart.movingBodies.find(b => b.name === name);
+  const fmt = (row?: ChartRow | null) =>
+    row ? `${row.name} — ${row.display} (house ${row.house})` : null;
+
+  const sun = fmt(byName("Sun"));
+  const moon = fmt(byName("Moon"));
+  const mercury = fmt(byName("Mercury"));
+  const venus = fmt(byName("Venus"));
+  const mars = fmt(byName("Mars"));
+  const jupiter = fmt(byName("Jupiter"));
+  const saturn = fmt(byName("Saturn"));
+  const asc = fmt(chart.ascendant);
+  const dsc = fmt(chart.descendant);
+  const nn = fmt(chart.northNode);
+  const sn = fmt(chart.southNode);
+
+  const topPattern =
+    evidencePacket.patternEvidence[0]?.statement ??
+    sun ??
+    "Core chart configuration";
+  const topBehavior =
+    evidencePacket.behavioralEvidence[0]?.statement ??
+    moon ??
+    "Emotional regulation pattern";
+
+  return {
+    threads: [
+      {
+        title: "Core Identity & Self-Presence",
+        insight:
+          "How your solar center and horizon shape how you meet the world versus what you protect privately.",
+        evidence: [sun, asc, topPattern].filter((x): x is string => Boolean(x)),
+        chapters: ["identity", "work-purpose"],
+      },
+      {
+        title: "Inner Emotional & Mental Processing",
+        insight:
+          "How your lunar needs and mental habits interpret pressure, safety, and unspoken signals.",
+        evidence: [moon, mercury, topBehavior].filter((x): x is string =>
+          Boolean(x)
+        ),
+        chapters: ["mind-heart", "relationships"],
+      },
+      {
+        title: "Relational Reciprocity & Boundaries",
+        insight:
+          "How attraction, loyalty, and protective strategies operate when closeness feels vulnerable.",
+        evidence: [venus, dsc, mars].filter((x): x is string => Boolean(x)),
+        chapters: ["relationships", "destiny"],
+      },
+    ],
+    tensions: [
+      {
+        between: "Self-Protection and Open Connection",
+        insight:
+          "Balancing the need for autonomy and composure against the deeper hunger to be genuinely known.",
+        evidence: [saturn, moon, venus].filter((x): x is string => Boolean(x)),
+      },
+    ],
+    chapters: {
+      identity: {
+        angle:
+          "Establish the core temperament, self-image, and the contrast between outer presentation and inner reality.",
+        evidence: [sun, asc, topPattern].filter((x): x is string => Boolean(x)),
+      },
+      "mind-heart": {
+        angle:
+          "Unpack how thought and emotion interact under stress, and the protective strategies used to stay safe.",
+        evidence: [moon, mercury, topBehavior].filter((x): x is string =>
+          Boolean(x)
+        ),
+      },
+      relationships: {
+        angle:
+          "Examine attachment, trust, reciprocity, and how boundaries are set or tested with others.",
+        evidence: [venus, dsc, mars].filter((x): x is string => Boolean(x)),
+      },
+      "work-purpose": {
+        angle:
+          "Explore vocation, discipline, self-worth, and how talent turns into enduring structure.",
+        evidence: [saturn, jupiter, mars, sun].filter((x): x is string =>
+          Boolean(x)
+        ),
+      },
+      destiny: {
+        angle:
+          "Trace the developmental arc from familiar habits toward conscious integration and life direction.",
+        evidence: [nn, sn, jupiter].filter((x): x is string => Boolean(x)),
+      },
+    },
+  };
+}
+
 async function analyzeChart(
   chart: ChartResult,
   mode: ReadingMode,
@@ -583,21 +683,18 @@ async function analyzeChart(
       content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nWrite the reading plan JSON now.`,
     },
   ];
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const plan = validatePlan(
-        await ask(messages, 4500, 3500),
-        known,
-        semantic
-      );
-      if (plan) return JSON.stringify(plan);
-      console.warn("[Interpretation] reading plan failed validation; retrying");
-    } catch (error) {
-      console.warn("[Interpretation] reading plan call failed:", error);
-    }
+  try {
+    const plan = validatePlan(
+      await ask(messages, 2400, 1024),
+      known,
+      semantic
+    );
+    if (plan) return JSON.stringify(plan);
+    console.warn("[Interpretation] reading plan failed validation; using deterministic fallback plan");
+  } catch (error) {
+    console.warn("[Interpretation] reading plan call failed; using deterministic fallback plan:", error);
   }
-  console.warn("[Interpretation] continuing without a reading plan");
-  return "";
+  return JSON.stringify(buildFallbackPlan(chart, evidencePacket));
 }
 
 function chapterSystem(
@@ -627,6 +724,54 @@ You are a warm, wise elder speaking to someone you want to see do well: protecti
   );
 }
 
+function buildExecutiveOverview(
+  chart: ChartResult,
+  mode: ReadingMode,
+  evidencePacket: AstrologyEvidencePacket
+): string {
+  const report = evidencePacket.behavioralReport;
+  const topDimensions = (report?.allAboutYouProfile ?? []).slice(0, 3);
+  const topBehaviors = (report?.dominantBehaviors ?? []).slice(0, 3);
+  const sun = chart.movingBodies.find(b => b.name === "Sun");
+  const moon = chart.movingBodies.find(b => b.name === "Moon");
+  const asc = chart.ascendant;
+
+  const lines: string[] = [
+    `### Foundational Signature (${mode === "natal" ? "Natal Foundation" : mode === "transit" ? "Present Transit Moment" : "Natal + Transit Synthesis"})`,
+    [
+      sun ? `**Sun** in ${sun.display} (House ${sun.house})` : null,
+      moon ? `**Moon** in ${moon.display} (House ${moon.house})` : null,
+      asc ? `**Ascendant** at ${asc.display}` : `**Worldview Frame**: ${chart.worldview === "god" ? "Universal God View (0° Aries–Pisces)" : "Personal & Collective Frame"}`,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  ];
+
+  if (topDimensions.length > 0) {
+    lines.push(
+      "",
+      "### Key Self-Knowledge Threads",
+      ...topDimensions.map(
+        dim =>
+          `- **${dim.question}** — ${dim.synthesis} *(Evidence: ${dim.astrologicalProof.slice(0, 2).join(", ") || "Whole-chart convergence"})*`
+      )
+    );
+  }
+
+  if (topBehaviors.length > 0) {
+    lines.push(
+      "",
+      "### Convergent Behavioral Patterns",
+      ...topBehaviors.map(
+        b =>
+          `- **${b.name}** (${b.confidenceLabel}): ${b.languagePrefix} ${b.definition} **Mature integration:** ${b.developmentalTrajectory.mature}`
+      )
+    );
+  }
+
+  return lines.join("\n");
+}
+
 export async function generateInterpretation(
   chart: ChartResult,
   mode: ReadingMode = "combined",
@@ -635,12 +780,13 @@ export async function generateInterpretation(
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
   const intelligence = `${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}`;
   const analysis = await analyzeChart(chart, mode, evidencePacket);
+  const reading = buildExecutiveOverview(chart, mode, evidencePacket);
   return {
     intelligence,
     evidencePacket,
     behavioralReport: evidencePacket.behavioralReport,
     analysis,
-    reading: "",
+    reading,
     generatedAt: new Date().toISOString(),
     chapters: READING_CHAPTERS.map(chapter => ({
       ...chapter,
@@ -701,5 +847,5 @@ export async function followUp(
     },
     ...withCurrentQuestion(history, question, 12),
   ];
-  return ask(messages, 5000);
+  return ask(messages, 5000, 1800);
 }
