@@ -206,6 +206,14 @@ describe("astrology knowledge gateway", () => {
       "combined"
     );
     expect(packet.behavioralReport).toBeDefined();
+    expect(packet.behavioralReport.allAboutYouProfile.length).toBe(16);
+    expect(
+      packet.behavioralReport.convergenceSimulationLab.sixteenSystems.length
+    ).toBe(16);
+    expect(
+      packet.behavioralReport.convergenceSimulationLab.simulationComparisons
+        .length
+    ).toBe(3);
     expect(packet.behavioralReport.dominantBehaviors.length).toBeGreaterThan(0);
     expect(packet.behavioralReport.activeLifeEvents.length).toBeGreaterThan(0);
     expect(packet.behavioralReport.polarityAxes.length).toBe(12);

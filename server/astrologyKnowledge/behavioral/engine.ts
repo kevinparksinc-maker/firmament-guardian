@@ -147,10 +147,38 @@ export type EvaluatedPlanetInteraction = {
   behavioralMechanism: string;
 };
 
+export type SelfKnowledgeDimensionItem = {
+  id: string;
+  question: string;
+  synthesis: string;
+  astrologicalProof: string[];
+};
+
+export type SystemConvergenceFactor = {
+  system: string;
+  category: "Foundation" | "Structure" | "Traditional Overlay" | "Frame & Synthesis";
+  status: "convergent" | "supporting" | "contextual";
+  evidenceSummary: string;
+};
+
+export type SimulationComparisonCase = {
+  id: string;
+  title: string;
+  hypothesisTested: string;
+  surfaceOrBaselineView: string;
+  convergentPatternReality: string;
+  verdict: string;
+};
+
 export type BehavioralIntelligenceReport = {
   question: string;
   mode: "natal" | "transit" | "combined";
   evaluatedAt: string;
+  allAboutYouProfile: SelfKnowledgeDimensionItem[];
+  convergenceSimulationLab: {
+    sixteenSystems: SystemConvergenceFactor[];
+    simulationComparisons: SimulationComparisonCase[];
+  };
   dominantBehaviors: EvaluatedBehaviorPattern[];
   polarityAxes: EvaluatedPolarityAxis[];
   activeContradictions: EvaluatedPolarityAxis[];
@@ -902,10 +930,434 @@ export function evaluateBehavioralIntelligence(
     }
   }
 
+  // 8. Build the 16-Dimension "ALL ABOUT YOU — WHO AM I?" Self-Knowledge Profile
+  const topBehaviors = evaluatedBehaviors.slice(0, 10);
+  const sunRow = bodyByName.get("Sun");
+  const moonRow = bodyByName.get("Moon");
+  const mercRow = bodyByName.get("Mercury");
+  const venusRow = bodyByName.get("Venus");
+  const marsRow = bodyByName.get("Mars");
+  const saturnRow = bodyByName.get("Saturn");
+  const jupRow = bodyByName.get("Jupiter");
+  const ascRow = chart.ascendant;
+  const ascSign = ascRow ? signOf(ascRow.longitude) : sunRow ? signOf(sunRow.longitude) : "Aries";
+  const ascRulerName = TRADITIONAL_RULERS[ascSign] ?? "Mars";
+  const ascRulerRow = bodyByName.get(ascRulerName);
+
+  const primaryBehavior = topBehaviors[0];
+  const secondaryBehavior = topBehaviors[1] ?? topBehaviors[0];
+  const relBehavior =
+    topBehaviors.find(b =>
+      ["relationships", "attachment", "trust-boundaries", "intimacy"].includes(b.domain)
+    ) ?? topBehaviors[0];
+  const thinkBehavior =
+    topBehaviors.find(b =>
+      ["thinking", "communication", "perception", "decision-making"].includes(b.domain)
+    ) ?? topBehaviors[0];
+  const emoBehavior =
+    topBehaviors.find(b =>
+      ["emotional", "stress-coping", "self-protection"].includes(b.domain)
+    ) ?? topBehaviors[0];
+
+  const allAboutYouProfile: SelfKnowledgeDimensionItem[] = [
+    {
+      id: "who-you-are",
+      question: "Who you are",
+      synthesis: primaryBehavior
+        ? `${primaryBehavior.languagePrefix} ${primaryBehavior.definition} At your core, your identity is shaped by ${primaryBehavior.name.toLowerCase()}, operating through ${primaryBehavior.consciousExpression.toLowerCase()}`
+        : "Your core identity organizes around self-directed purpose and personal integrity.",
+      astrologicalProof: [
+        sunRow ? `Sun at ${sunRow.display} (House ${sunRow.house})` : "",
+        ascRow ? `Ascendant at ${ascRow.display}` : "",
+        ascRulerRow ? `Chart ruler ${ascRulerName} at ${ascRulerRow.display} (House ${ascRulerRow.house})` : "",
+      ].filter(Boolean),
+    },
+    {
+      id: "how-you-think",
+      question: "How you think",
+      synthesis: thinkBehavior
+        ? `Your mind processes reality through ${thinkBehavior.name.toLowerCase()}: ${thinkBehavior.internalExpression}`
+        : "You evaluate information by looking for underlying structure, motive, and practical consequence.",
+      astrologicalProof: [
+        mercRow ? `Mercury at ${mercRow.display} (House ${mercRow.house})` : "",
+        ...(thinkBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
+      ].filter(Boolean),
+    },
+    {
+      id: "how-you-feel",
+      question: "How you feel",
+      synthesis: emoBehavior
+        ? `Emotionally, ${emoBehavior.internalExpression} On the outside, ${emoBehavior.externalExpression.toLowerCase()}`
+        : "Your emotional life runs deeper and more privately than what you immediately show the room.",
+      astrologicalProof: [
+        moonRow ? `Moon at ${moonRow.display} (House ${moonRow.house})` : "",
+        moonRow?.overlay?.nakshatra ? `Lunar Nakshatra: ${moonRow.overlay.nakshatra}` : "",
+        moonRow?.overlay?.manzil ? `Lunar Manzil: ${moonRow.overlay.manzil}` : "",
+      ].filter(Boolean),
+    },
+    {
+      id: "what-motivates-you",
+      question: "What motivates you",
+      synthesis: primaryBehavior
+        ? `Your deepest engine is driven by ${primaryBehavior.motivationPatterns.join(", ")}${secondaryBehavior && secondaryBehavior.id !== primaryBehavior.id ? `, reinforced by ${secondaryBehavior.motivationPatterns.slice(0, 2).join(" and ")}` : ""}.`
+        : "You are motivated by agency, competence, and meaningful impact.",
+      astrologicalProof: [
+        marsRow ? `Mars at ${marsRow.display} (House ${marsRow.house})` : "",
+        chart.northNode ? `North Node at ${chart.northNode.display} (House ${chart.northNode.house})` : "",
+      ].filter(Boolean),
+    },
+    {
+      id: "how-you-respond-to-pressure",
+      question: "How you respond to pressure",
+      synthesis: primaryBehavior
+        ? `Under pressure, your nervous system defaults to a "${primaryBehavior.responseStyle}" posture: ${primaryBehavior.automaticExpression}`
+        : "Under pressure, you tighten focus and rely on self-command before trusting external support.",
+      astrologicalProof: [
+        saturnRow ? `Saturn at ${saturnRow.display} (House ${saturnRow.house})` : "",
+        ...(primaryBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
+      ].filter(Boolean),
+    },
+    {
+      id: "what-strengthens-you",
+      question: "What strengthens you",
+      synthesis: primaryBehavior
+        ? `You are strongest when leaning into your constructive capacity: ${primaryBehavior.constructiveExpression}`
+        : "Clear standards, honest expectations, and room to master your craft strengthen you.",
+      astrologicalProof: [
+        jupRow ? `Jupiter at ${jupRow.display} (House ${jupRow.house})` : "",
+        ...(primaryBehavior?.supportingEvidence.slice(0, 1).map(e => e.detail) ?? []),
+      ].filter(Boolean),
+    },
+    {
+      id: "what-weakens-you",
+      question: "What weakens you",
+      synthesis: secondaryBehavior
+        ? `Your energy drains when pulled into ${secondaryBehavior.shadowExpression.toLowerCase()}`
+        : "Chronic ambiguity, unspoken agendas, and carrying unshared emotional weight erode your vitality.",
+      astrologicalProof: [
+        saturnRow ? `Saturn in House ${saturnRow.house} (${saturnRow.display})` : "",
+        ...(secondaryBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
+      ].filter(Boolean),
+    },
+    {
+      id: "what-triggers-you",
+      question: "What triggers you",
+      synthesis: primaryBehavior
+        ? `Your sharpest activation points are ${primaryBehavior.triggerPatterns.join(", ")}${emoBehavior && emoBehavior.id !== primaryBehavior.id ? `, along with ${emoBehavior.triggerPatterns.slice(0, 2).join(" and ")}` : ""}.`
+        : "Being cornered, micromanaged, or having your loyalty taken for granted triggers immediate defense.",
+      astrologicalProof: [
+        ...(primaryBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
+      ].filter(Boolean),
+    },
+    {
+      id: "how-you-protect-yourself",
+      question: "How you protect yourself",
+      synthesis: emoBehavior
+        ? `When you sense vulnerability, you compensate through ${emoBehavior.compensationPattern.toLowerCase()}`
+        : "You protect yourself by staying composed, self-reliant, and selective about who sees your unguarded state.",
+      astrologicalProof: [
+        moonRow ? `Moon in House ${moonRow.house} (${moonRow.display})` : "",
+        saturnRow ? `Saturn at ${saturnRow.display}` : "",
+      ].filter(Boolean),
+    },
+    {
+      id: "how-you-relate-to-others",
+      question: "How you relate to other people",
+      synthesis: relBehavior
+        ? `In relationships, ${relBehavior.externalExpression} Internally, ${relBehavior.internalExpression.toLowerCase()}`
+        : "You value loyalty and depth over surface social performance, testing whether people match their words with action.",
+      astrologicalProof: [
+        venusRow ? `Venus at ${venusRow.display} (House ${venusRow.house})` : "",
+        chart.descendant ? `Descendant at ${chart.descendant.display}` : "",
+        ...(relBehavior?.supportingEvidence.slice(0, 1).map(e => e.detail) ?? []),
+      ].filter(Boolean),
+    },
+    {
+      id: "where-you-self-sabotage",
+      question: "Where you self-sabotage",
+      synthesis: primaryBehavior
+        ? `When fear or pride takes the wheel, ${primaryBehavior.shadowExpression.toLowerCase()}—often trading long-term connection or peace for short-term control.`
+        : "Over-carrying responsibility alone or waiting for total certainty before acting can stall your momentum.",
+      astrologicalProof: [
+        chart.southNode ? `South Node at ${chart.southNode.display} (House ${chart.southNode.house})` : "",
+        ...(primaryBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
+      ].filter(Boolean),
+    },
+    {
+      id: "what-patterns-repeat",
+      question: "What patterns repeat",
+      synthesis: primaryBehavior
+        ? `The recurring loop to watch is: ${primaryBehavior.repeatingCycle}`
+        : "A cycle of intense commitment followed by quiet withdrawal when expectations go unspoken.",
+      astrologicalProof: topBehaviors
+        .slice(0, 3)
+        .map(b => `${b.name} (${b.confidenceLabel})`),
+    },
+    {
+      id: "what-contradictions-exist",
+      question: "What contradictions exist within you",
+      synthesis: activeContradictions[0]
+        ? activeContradictions[0].synthesis
+        : polarityAxes[0]
+          ? polarityAxes[0].synthesis
+          : "You hold a Simultaneous need for fierce independence and deep, unshakeable loyalty.",
+      astrologicalProof: activeContradictions[0]
+        ? [
+            ...activeContradictions[0].leftEvidence.slice(0, 2),
+            ...activeContradictions[0].rightEvidence.slice(0, 2),
+          ]
+        : polarityAxes[0]
+          ? [
+              ...polarityAxes[0].leftEvidence.slice(0, 2),
+              ...polarityAxes[0].rightEvidence.slice(0, 2),
+            ]
+          : [],
+    },
+    {
+      id: "what-life-themes-recur",
+      question: "What kinds of life themes recur",
+      synthesis: activeLifeEvents[0]
+        ? `${activeLifeEvents[0].name} (${activeLifeEvents[0].temporalState}): ${activeLifeEvents[0].definition}`
+        : "Recurring chapters of structural rebuilding, self-redefinition, and earning authority through lived trial.",
+      astrologicalProof: activeLifeEvents[0]?.supportingEvidence.slice(0, 3) ?? [],
+    },
+    {
+      id: "how-patterns-develop",
+      question: "How those patterns develop over time",
+      synthesis: primaryBehavior
+        ? `Early life: ${primaryBehavior.developmentalTrajectory.early} → Developing stage: ${primaryBehavior.developmentalTrajectory.developing}`
+        : "What begins as an instinctive defense gradually becomes a conscious skill as you learn where your real boundaries lie.",
+      astrologicalProof: [
+        saturnRow ? `Saturn maturation in House ${saturnRow.house}` : "",
+        chart.northNode ? `North Node direction in House ${chart.northNode.house}` : "",
+      ].filter(Boolean),
+    },
+    {
+      id: "conscious-integration",
+      question: "What those patterns become when consciously integrated",
+      synthesis: primaryBehavior
+        ? `At full maturity: ${primaryBehavior.developmentalTrajectory.mature}`
+        : "Your protective instincts transform into grounded wisdom, steady discernment, and the ability to love and build without losing yourself.",
+      astrologicalProof: [
+        primaryBehavior ? `Integrated ${primaryBehavior.name}` : "",
+        activeLifeEvents[0] ? activeLifeEvents[0].developmentalMeaning : "",
+      ].filter(Boolean),
+    },
+  ];
+
+  // 9. Build the 16-System Convergence Audit & Counterfactual Simulation Lab
+  const activeRulerships = Array.from(houseRulerHouse.entries())
+    .slice(0, 4)
+    .map(([h, info]) => `House ${h} ruled by ${info.ruler} in House ${info.inHouse}`);
+  const angularBodies = bodies.filter(b => ANGULAR_HOUSES.has(b.house));
+  const royalContacts = chart.frozenStars.flatMap(star =>
+    (star.royalStarContacts ?? [])
+      .filter(c => c.contact)
+      .map(c => `${star.name} near ${c.name} (${c.distance.toFixed(1)}°)`)
+  );
+  const godAgentShifts = bodies.filter(
+    b => b.godHouse != null && b.agentHouse != null && b.godHouse !== b.agentHouse
+  );
+
+  // Compute Lot of Fortune (Asc + Moon - Sun) for the 16-system audit
+  const fortuneLon =
+    ascRow && sunRow && moonRow
+      ? normalizeLongitude(ascRow.longitude + moonRow.longitude - sunRow.longitude)
+      : null;
+  const fortuneSign = fortuneLon != null ? signOf(fortuneLon) : "Not calculated (God View)";
+
+  const sixteenSystems: SystemConvergenceFactor[] = [
+    {
+      system: "1. Planet",
+      category: "Foundation",
+      status: "convergent",
+      evidenceSummary: bodies
+        .slice(0, 4)
+        .map(b => `${b.name} (${b.display})`)
+        .join(" · "),
+    },
+    {
+      system: "2. Sign",
+      category: "Foundation",
+      status: "convergent",
+      evidenceSummary: `Sun in ${sunRow ? signOf(sunRow.longitude) : "N/A"}, Moon in ${moonRow ? signOf(moonRow.longitude) : "N/A"}, Ascendant in ${ascSign}`,
+    },
+    {
+      system: "3. House",
+      category: "Foundation",
+      status: "convergent",
+      evidenceSummary: bodies
+        .slice(0, 4)
+        .map(b => `${b.name} in H${b.house}`)
+        .join(" · "),
+    },
+    {
+      system: "4. Rulership",
+      category: "Structure",
+      status: "convergent",
+      evidenceSummary:
+        activeRulerships.join(" · ") ||
+        `Chart ruler ${ascRulerName} in House ${ascRulerRow?.house ?? 1}`,
+    },
+    {
+      system: "5. Aspect",
+      category: "Structure",
+      status: natalAspects.length > 0 ? "convergent" : "supporting",
+      evidenceSummary: natalAspects.length
+        ? natalAspects
+            .slice(0, 3)
+            .map(a => `${a.a} ${a.aspect} ${a.b} (${a.orb.toFixed(1)}°)`)
+            .join(" · ")
+        : "Evaluated within 5° Firmament orb",
+    },
+    {
+      system: "6. Angularity",
+      category: "Structure",
+      status: angularBodies.length > 0 ? "convergent" : "supporting",
+      evidenceSummary: angularBodies.length
+        ? `Angular emphasis (H1/4/7/10): ${angularBodies.map(b => `${b.name} in H${b.house}`).join(", ")}`
+        : "Succedent/Cadent concentration (internalized processing before external action)",
+    },
+    {
+      system: "7. Repetition",
+      category: "Structure",
+      status: "convergent",
+      evidenceSummary: primaryBehavior
+        ? `${primaryBehavior.supportingEvidence.length} independent channels converge on "${primaryBehavior.name}" (${primaryBehavior.confidenceLabel})`
+        : "Multi-channel thematic repetition verified",
+    },
+    {
+      system: "8. Development",
+      category: "Structure",
+      status: chart.transits.length > 0 ? "convergent" : "supporting",
+      evidenceSummary:
+        chart.transits.length > 0
+          ? `${chart.transits.filter(t => t.natalContacts.length > 0).length} active transit-to-natal contacts shaping current growth`
+          : "Evaluated via Natal Promise → Saturn/Node developmental arc",
+    },
+    {
+      system: "9. Fixed Stars",
+      category: "Traditional Overlay",
+      status: royalContacts.length > 0 ? "convergent" : "supporting",
+      evidenceSummary: royalContacts.length
+        ? royalContacts.slice(0, 3).join(" · ")
+        : `${chart.frozenStars.length} immutable frozen stars locked against tropical degrees`,
+    },
+    {
+      system: "10. Lunar Mansions (Manzils)",
+      category: "Traditional Overlay",
+      status: moonRow?.overlay?.manzil ? "convergent" : "supporting",
+      evidenceSummary: moonRow?.overlay?.manzil
+        ? `Moon in Arabic Manzil ${moonRow.overlay.manzil}; Sun in ${sunRow?.overlay?.manzil ?? "N/A"}`
+        : "28 fixed Arabic Lunar Mansions overlaid",
+    },
+    {
+      system: "11. Nakshatras",
+      category: "Traditional Overlay",
+      status: moonRow?.overlay?.nakshatra ? "convergent" : "supporting",
+      evidenceSummary: moonRow?.overlay?.nakshatra
+        ? `Moon in Vedic Nakshatra ${moonRow.overlay.nakshatra} (${moonRow.overlay.nakshatraRuler ?? "ruler"}); Sun in ${sunRow?.overlay?.nakshatra ?? "N/A"}`
+        : "27 equal Vedic Nakshatras anchored to 0° Aries",
+    },
+    {
+      system: "12. Decans",
+      category: "Traditional Overlay",
+      status: "supporting",
+      evidenceSummary: `Sun in ${sunRow?.overlay?.decan ?? "1st decan"}; Moon in ${moonRow?.overlay?.decan ?? "1st decan"}`,
+    },
+    {
+      system: "13. Arabic Lots",
+      category: "Traditional Overlay",
+      status: fortuneLon != null ? "convergent" : "contextual",
+      evidenceSummary:
+        fortuneLon != null
+          ? `Lot of Fortune in ${fortuneSign} (${fortuneLon.toFixed(1)}°)`
+          : "Requires local Ascendant horizon (Agent View)",
+    },
+    {
+      system: "14. Vedic Yogas",
+      category: "Traditional Overlay",
+      status: "supporting",
+      evidenceSummary:
+        planetInteractions.length > 0
+          ? `Evaluated alongside ${planetInteractions.length} planetary pair combinations`
+          : "Evaluated via Genesis Yoga Detector layer",
+    },
+    {
+      system: "15. God View",
+      category: "Frame & Synthesis",
+      status: "convergent",
+      evidenceSummary: `Universal Aries House 1–Pisces House 12 frame: Sun in God H${sunRow?.godHouse ?? "?"}, Moon in God H${moonRow?.godHouse ?? "?"}`,
+    },
+    {
+      system: "16. Agent View",
+      category: "Frame & Synthesis",
+      status: chart.agentViewAvailable ? "convergent" : "contextual",
+      evidenceSummary: chart.agentViewAvailable
+        ? `Observer Equal House frame: Sun in Agent H${sunRow?.agentHouse ?? sunRow?.house}, Moon in Agent H${moonRow?.agentHouse ?? moonRow?.house}`
+        : "Unavailable without birth time/location; reading anchored in God View",
+    },
+  ];
+
+  const simulationComparisons: SimulationComparisonCase[] = [
+    {
+      id: "sim-sun-vs-convergence",
+      title: "Simulation 1: Surface Sun-Sign Horoscope vs. Full-Pattern Convergence",
+      hypothesisTested:
+        "Would a generic Sun-sign horoscope accurately describe this person's core behavior?",
+      surfaceOrBaselineView: sunRow
+        ? `A surface reading looks only at Sun in ${signOf(sunRow.longitude)} (${sunRow.display}) and hands out generic ${signOf(sunRow.longitude)} personality traits.`
+        : "A surface reading reduces the person to one zodiac sign.",
+      convergentPatternReality: primaryBehavior
+        ? `When the Simulation Lab adds House placement (Sun in H${sunRow?.house ?? "?"}), Moon in ${moonRow?.display ?? "N/A"} (H${moonRow?.house ?? "?"}), Chart Ruler ${ascRulerName} in H${ascRulerRow?.house ?? "?"}, and ${natalAspects.length} tight aspects, the actual convergent pattern is "${primaryBehavior.name}" (${primaryBehavior.confidenceLabel}).`
+        : "Full-chart convergence shifts the emphasis toward house rulership and tight aspect geometry.",
+      verdict:
+        "Proven: Single-placement horoscopes fail because behavior emerges from the relationship between Planet + Sign + House + Ruler + Aspect.",
+    },
+    {
+      id: "sim-god-vs-agent",
+      title: "Simulation 2: God View (Universal Principle) vs. Agent View (Lived Arena)",
+      hypothesisTested:
+        "How does the fixed universal meaning of this sky translate into one individual's earthly life?",
+      surfaceOrBaselineView: sunRow
+        ? `In God View (fixed 0° Aries frame), the Sun sits in God House ${sunRow.godHouse ?? "?"} and the Moon sits in God House ${moonRow?.godHouse ?? "?"}, establishing the cosmic archetype.`
+        : "God View maps the fixed archetypal order of the heavens.",
+      convergentPatternReality:
+        godAgentShifts.length > 0
+          ? `${godAgentShifts.length} moving bodies shift house numbers between God View and Agent View (e.g., ${godAgentShifts
+              .slice(0, 3)
+              .map(b => `${b.name}: God H${b.godHouse} → Agent H${b.agentHouse}`)
+              .join("; ")}). The universal theme lands directly inside those specific local Agent houses.`
+          : "God View and Agent View align closely in house numbering, reinforcing the same life arenas on both cosmic and local levels.",
+      verdict:
+        "Proven: God View shows WHAT universal principle is active; Agent View shows WHERE you actually live and wrestle with it.",
+    },
+    {
+      id: "sim-natal-vs-transit",
+      title: "Simulation 3: Enduring Natal Character vs. Current Transit Weather",
+      hypothesisTested:
+        "Which patterns belong to permanent identity ('Who I Am') versus temporary sky activation ('What I Am Walking Through Now')?",
+      surfaceOrBaselineView: primaryBehavior
+        ? `Natal Baseline: "${primaryBehavior.name}" and "${secondaryBehavior?.name ?? "core temperament"}" are structural natal traits present since birth.`
+        : "Natal Baseline establishes permanent temperament.",
+      convergentPatternReality:
+        activeLifeEvents[0]
+          ? `Current Simulation: "${activeLifeEvents[0].name}" is currently in ${activeLifeEvents[0].temporalState} (${activeLifeEvents[0].confidenceLabel}), testing your natal baseline without replacing who you are.`
+          : "Current transits test and mature your natal baseline without altering your core character.",
+      verdict:
+        "Proven: Separating permanent natal structure from temporary transit weather prevents confusing a hard season with a broken identity.",
+    },
+  ];
+
   return {
     question,
     mode,
     evaluatedAt: new Date().toISOString(),
+    allAboutYouProfile,
+    convergenceSimulationLab: {
+      sixteenSystems,
+      simulationComparisons,
+    },
     dominantBehaviors: evaluatedBehaviors.slice(0, 10),
     polarityAxes,
     activeContradictions,

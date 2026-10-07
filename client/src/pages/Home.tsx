@@ -498,6 +498,15 @@ export default function Home() {
             <p className="mt-3 max-w-3xl font-serif text-3xl leading-[1.12] tracking-tight text-white md:text-5xl">
               As Above, So Below.
             </p>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-cyan-100/90 sm:text-base">
+              <strong className="font-semibold text-cyan-300">
+                THE FIRMAMENT: Know Yourself Through the Patterns.
+              </strong>{" "}
+              Built for the person who genuinely wants to ask{" "}
+              <em>“Who am I, really?”</em>—translating ancient astrological
+              tradition, deterministic sky calculation, and 16-system pattern
+              convergence into personal self-understanding.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
             <Link
@@ -767,18 +776,19 @@ export default function Home() {
                     htmlFor="initial-reading-question"
                     className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200"
                   >
-                    Your reading question
+                    The Central Question · Who Am I?
                   </Label>
                   <Textarea
                     id="initial-reading-question"
                     value={readingQuestion}
                     onChange={event => setReadingQuestion(event.target.value)}
-                    placeholder="For example: Why do my relationships keep repeating the same pattern?"
+                    placeholder="For example: Who am I beneath the surface, and why do my relationships or life chapters keep repeating the same pattern?"
                     className="min-h-24 resize-y border-cyan-200/15 bg-black/20 text-slate-100 placeholder:text-slate-500"
                   />
                   <p className="text-[11px] leading-5 text-slate-500">
-                    This question guides the first evidence packet. You can
-                    continue with follow-up questions after the chart is ready.
+                    The First Layer is <strong>All About You</strong>. Ask a
+                    serious question about yourself, or leave blank for a
+                    complete self-knowledge investigation across all 16 systems.
                   </p>
                 </div>
                 {formError && (
