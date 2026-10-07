@@ -1,3 +1,4 @@
+import { GoogleGenAI } from "@google/genai";
 import { ENV } from "./env";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
@@ -223,8 +224,8 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
-    throw new Error("ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
 
@@ -444,10 +445,64 @@ const fetchWithBackoff = async (
     : new Error("LLM request failed after exhausting retries");
 };
 
+async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
+  const ai = new GoogleGenAI({
+    apiKey: ENV.geminiApiKey,
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
+    },
+  });
+  const systemInstruction = params.messages
+    .filter(message => message.role === "system")
+    .map(message => contentToText(message.content))
+    .join("\n\n");
+  const contents = params.messages
+    .filter(message => message.role !== "system" && (message.role === "user" || message.role === "assistant"))
+    .map(message => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: contentToText(message.content) }],
+    }));
+
+  const normalizedResponseFormat = normalizeResponseFormat({
+    responseFormat: params.responseFormat,
+    response_format: params.response_format,
+    outputSchema: params.outputSchema,
+    output_schema: params.output_schema,
+  });
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3.8-flash",
+    contents: contents.length > 0 ? contents : "Hello",
+    config: {
+      ...(systemInstruction ? { systemInstruction } : {}),
+      ...(normalizedResponseFormat?.type === "json_object" || normalizedResponseFormat?.type === "json_schema"
+        ? { responseMimeType: "application/json" }
+        : {}),
+    },
+  });
+
+  const text = response.text ?? "";
+  return {
+    id: `gemini-${Date.now()}`,
+    created: Math.floor(Date.now() / 1000),
+    model: "gemini-3.8-flash",
+    choices: [
+      {
+        index: 0,
+        message: { role: "assistant", content: text },
+        finish_reason: "stop",
+      },
+    ],
+  };
+}
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
   if (ENV.anthropicApiKey) return invokeAnthropic(params);
   if (ENV.openaiApiKey && ENV.openaiApiBase) return invokeOpenAI(params);
+  if (ENV.geminiApiKey && !ENV.forgeApiKey) return invokeGemini(params);
 
   const {
     messages,

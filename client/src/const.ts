@@ -32,7 +32,21 @@ export const startLogin = async (): Promise<void> => {
   try {
     const { appId, oauthPortalUrl } = await loadRuntimeConfig();
     if (!appId || !oauthPortalUrl) {
-      throw new Error("Manus OAuth is not configured for this application");
+      const resp = await fetch("/api/oauth/demo-login", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (resp.ok) {
+        const data = (await resp.json()) as { token?: string };
+        if (data.token) {
+          try {
+            sessionStorage.setItem("manus-cookie", `${COOKIE_NAME}=${data.token}`);
+          } catch {}
+        }
+        window.location.reload();
+        return;
+      }
+      throw new Error("OAuth is not configured for this application");
     }
 
     const redirectUri = `${window.location.origin}/api/oauth/callback`;

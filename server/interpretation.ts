@@ -395,6 +395,8 @@ function evidenceAnchors(packet: AstrologyEvidencePacket) {
   const items = [
     ...packet.genesisAstroEvidence,
     ...packet.patternEvidence,
+    ...packet.behavioralEvidence,
+    ...packet.lifeEventEvidence,
     ...packet.westernEvidence,
     ...packet.vedicEvidence,
     ...packet.arabicEvidence,
@@ -636,6 +638,7 @@ export async function generateInterpretation(
   return {
     intelligence,
     evidencePacket,
+    behavioralReport: evidencePacket.behavioralReport,
     analysis,
     reading: "",
     generatedAt: new Date().toISOString(),

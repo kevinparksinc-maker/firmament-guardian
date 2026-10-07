@@ -17,6 +17,7 @@ import { Streamdown } from "streamdown";
 import { trpc } from "@/lib/trpc";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
 import { AudioReader } from "@/components/AudioReader";
+import { BehavioralIntelligencePanel } from "@/components/BehavioralIntelligencePanel";
 import type { ChartResult } from "../../../server/astronomy";
 import { startLogin } from "@/const";
 
@@ -441,6 +442,19 @@ export function InterpretationPanel({
           </div>
         </CardContent>
       </Card>
+      <BehavioralIntelligencePanel
+        chart={chart}
+        mode={mode}
+        question={initialQuestion}
+        onSelectPrompt={prompt => {
+          setOralQuestion(prompt);
+          if (interpretation) {
+            send(prompt, mode);
+          } else {
+            run();
+          }
+        }}
+      />
       {!interpretation && (
         <div className="mx-auto max-w-5xl">
           <Button

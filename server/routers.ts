@@ -14,7 +14,10 @@ import {
 import { askHost } from "./host";
 import { horaryFollowUp, openHoraryQuestion } from "./horary";
 import { horaryFollowUpHistorySchema } from "./horary-input";
-import { diagnoseAstrologyEvidence } from "./astrologyKnowledge";
+import {
+  diagnoseAstrologyEvidence,
+  evaluateBehavioralIntelligence,
+} from "./astrologyKnowledge";
 
 const chartInput = z.object({
   location: z.string(),
@@ -100,6 +103,16 @@ export const appRouter = router({
       .mutation(({ input }) => calculateChart(input)),
   }),
   astrologyKnowledge: router({
+    behavioralReport: publicProcedure
+      .input(
+        chartResultInput.extend({
+          question: z.string().trim().max(2000).default(""),
+          mode: z.enum(["natal", "transit", "combined"]).default("combined"),
+        })
+      )
+      .query(({ input }) =>
+        evaluateBehavioralIntelligence(input.chart, input.question, input.mode)
+      ),
     diagnose: publicProcedure
       .input(
         chartResultInput.extend({

@@ -5,13 +5,21 @@ import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+// In-memory mock fallback when DATABASE_URL is not configured in AI Studio
+const mockUsers = new Map<string, typeof users.$inferSelect>();
+const mockCharts: Array<typeof savedCharts.$inferSelect> = [];
+const mockReadings: Array<typeof savedReadings.$inferSelect> = [];
+let nextUserId = 1;
+let nextChartId = 1;
+let nextReadingId = 1;
+
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
       _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.warn("[Database] Failed to connect, using in-memory mock:", error);
       _db = null;
     }
   }
@@ -25,7 +33,20 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
+    const now = new Date();
+    const existing = mockUsers.get(user.openId);
+    const role = user.role ?? existing?.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
+    mockUsers.set(user.openId, {
+      id: existing?.id ?? nextUserId++,
+      openId: user.openId,
+      name: user.name !== undefined ? (user.name ?? null) : (existing?.name ?? null),
+      email: user.email !== undefined ? (user.email ?? null) : (existing?.email ?? null),
+      loginMethod: user.loginMethod !== undefined ? (user.loginMethod ?? null) : (existing?.loginMethod ?? null),
+      role,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+      lastSignedIn: user.lastSignedIn ?? now,
+    });
     return;
   }
 
@@ -80,8 +101,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
+    return mockUsers.get(openId);
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
@@ -91,26 +111,54 @@ export async function getUserByOpenId(openId: string) {
 
 export async function createSavedChart(input: InsertSavedChart) {
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const now = new Date();
+    const id = nextChartId++;
+    mockCharts.unshift({
+      id,
+      openId: input.openId,
+      title: input.title,
+      location: input.location,
+      input: input.input,
+      chart: input.chart,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
+  }
   const result = await db.insert(savedCharts).values(input);
   return Number(result[0].insertId);
 }
 
 export async function listSavedCharts(openId: string) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return mockCharts.filter(c => c.openId === openId);
   return db.select().from(savedCharts).where(eq(savedCharts.openId, openId)).orderBy(desc(savedCharts.updatedAt));
 }
 
 export async function createSavedReading(input: InsertSavedReading) {
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const now = new Date();
+    const id = nextReadingId++;
+    mockReadings.unshift({
+      id,
+      openId: input.openId,
+      chartId: input.chartId ?? null,
+      title: input.title,
+      mode: input.mode,
+      content: input.content,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
+  }
   const result = await db.insert(savedReadings).values(input);
   return Number(result[0].insertId);
 }
 
 export async function listSavedReadings(openId: string) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return mockReadings.filter(r => r.openId === openId);
   return db.select().from(savedReadings).where(eq(savedReadings.openId, openId)).orderBy(desc(savedReadings.updatedAt));
 }

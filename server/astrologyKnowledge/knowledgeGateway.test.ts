@@ -198,4 +198,25 @@ describe("astrology knowledge gateway", () => {
     ]);
     expect(mixed.contradictions.length).toBeGreaterThan(0);
   });
+
+  it("evaluates the 200-pattern Human Behavior & Life-Event Intelligence System in the evidence packet", () => {
+    const packet = buildAstrologyEvidencePacket(
+      chart,
+      "Why do I feel guarded and intensely self-protective in relationships and emotional intimacy?",
+      "combined"
+    );
+    expect(packet.behavioralReport).toBeDefined();
+    expect(packet.behavioralReport.dominantBehaviors.length).toBeGreaterThan(0);
+    expect(packet.behavioralReport.activeLifeEvents.length).toBeGreaterThan(0);
+    expect(packet.behavioralReport.polarityAxes.length).toBe(12);
+    expect(packet.behavioralReport.doNotClaimRestrictions.length).toBeGreaterThanOrEqual(8);
+    expect(packet.behavioralEvidence.length).toBeGreaterThan(0);
+    expect(packet.lifeEventEvidence.length).toBeGreaterThan(0);
+    expect(formatEvidencePacket(packet)).toContain(
+      "Firmament Human Behavior Pattern Intelligence"
+    );
+    expect(formatEvidencePacket(packet)).toContain(
+      "Firmament Life-Event & Situation Intelligence"
+    );
+  });
 });

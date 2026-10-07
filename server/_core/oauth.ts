@@ -62,4 +62,28 @@ export function registerOAuthRoutes(app: Express) {
       res.status(500).json({ error: "OAuth callback failed" });
     }
   });
+
+  app.post("/api/oauth/demo-login", async (req: Request, res: Response) => {
+    try {
+      const openId = "local-observatory-user";
+      const name = "Observatory Keeper";
+      await db.upsertUser({
+        openId,
+        name,
+        email: "keeper@observatory.local",
+        loginMethod: "local",
+        lastSignedIn: new Date(),
+      });
+      const sessionToken = await sdk.createSessionToken(openId, {
+        name,
+        expiresInMs: ONE_YEAR_MS,
+      });
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      res.json({ ok: true, token: sessionToken });
+    } catch (error) {
+      console.error("[OAuth] Demo login failed", error);
+      res.status(500).json({ error: "Demo login failed" });
+    }
+  });
 }

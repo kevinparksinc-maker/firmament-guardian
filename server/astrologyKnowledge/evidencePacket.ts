@@ -10,6 +10,10 @@ import {
   runGenesisAstroPipeline,
   runGenesisPatternPipeline,
 } from "../genesisBackup/adapter";
+import {
+  behavioralReportToEvidenceItems,
+  evaluateBehavioralIntelligence,
+} from "./behavioral";
 import type { AstrologyEvidencePacket, EvidenceItem } from "./types";
 
 function genesisEvidence(
@@ -335,10 +339,19 @@ export function buildAstrologyEvidencePacket(
   const patternEvidence = genesisEvidence(genesis);
   patternEvidence.push(...genesisOriginalPatternEvidence(originalPattern));
   const astroEvidence = genesisAstroEvidence(astro);
+  const behavioralReport = evaluateBehavioralIntelligence(
+    chart,
+    question,
+    mode
+  );
+  const { behavioralEvidence, lifeEventEvidence } =
+    behavioralReportToEvidenceItems(behavioralReport);
   const all = [
     ...westernEvidence,
     ...astroEvidence,
     ...patternEvidence,
+    ...behavioralEvidence,
+    ...lifeEventEvidence,
     ...vedicEvidence,
     ...arabicEvidence,
     ...timingEvidence,
@@ -404,6 +417,9 @@ export function buildAstrologyEvidencePacket(
     westernEvidence,
     patternEvidence,
     genesisAstroEvidence: astroEvidence,
+    behavioralEvidence,
+    lifeEventEvidence,
+    behavioralReport,
     vedicEvidence,
     arabicEvidence,
     lunarEvidence,
@@ -474,6 +490,14 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
     section("Western evidence", packet.westernEvidence),
     section("Genesis Astro Engine evidence", packet.genesisAstroEvidence),
     section("Genesis Pattern Engine evidence", packet.patternEvidence),
+    section(
+      "Firmament Human Behavior Pattern Intelligence (7-channel convergence, 5-level confidence, triggers, motivations, responses & polarities)",
+      packet.behavioralEvidence
+    ),
+    section(
+      "Firmament Life-Event & Situation Intelligence (E1-E5 event signatures, temporal states & cross-domain sequences)",
+      packet.lifeEventEvidence
+    ),
     section("Vedic evidence", packet.vedicEvidence),
     section("Arabic evidence", packet.arabicEvidence),
     section("Lunar evidence", packet.lunarEvidence),

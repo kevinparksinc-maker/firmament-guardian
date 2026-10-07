@@ -90,6 +90,22 @@ export const ASTROLOGY_SOURCES: AstrologySource[] = [
     ],
   },
   {
+    id: "firmament-behavioral-intelligence",
+    name: "Firmament Human Behavior & Life-Event Pattern Intelligence",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "behavioral-patterns",
+      "7-channel-evidence-convergence",
+      "5-level-confidence-hierarchy",
+      "trigger-motivation-response-cycles",
+      "behavioral-polarities",
+      "life-event-signatures",
+      "event-sequence-chains",
+    ],
+  },
+  {
     id: "local-vedic-rules",
     name: "Firmament Vedic rule set",
     tradition: "vedic",
@@ -222,6 +238,32 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
       "Original Genesis Pattern Engine v2.0 actively run over Firmament chart rows",
     statement:
       "The original Genesis Pattern Engine runs its configured aspects, planetary strength, classic configurations, archetypes, and signatures as a live reading stage.",
+  },
+  {
+    id: "firmament-behavioral-pattern-engine",
+    tradition: "firmament",
+    technique: "behavioral-pattern",
+    subject: "human-behavior",
+    kind: "deterministic-rule",
+    sourceId: "firmament-behavioral-intelligence",
+    status: "implemented",
+    doctrine:
+      "7-channel behavioral convergence, 5-level confidence hierarchy, 12 polarity axes, and Trigger-Motivation-Response-Cycle synthesis",
+    statement:
+      "Evaluates observable human behavioral patterns, motivations, triggers, response styles, constructive/shadow expressions, counter-indicators, and dynamic polarities without clinical diagnosis.",
+  },
+  {
+    id: "firmament-life-event-engine",
+    tradition: "firmament",
+    technique: "life-event-signature",
+    subject: "life-situation",
+    kind: "deterministic-rule",
+    sourceId: "firmament-behavioral-intelligence",
+    status: "implemented",
+    doctrine:
+      "E1-E5 life-event convergence, State 1-9 temporal activation, and cross-domain event sequence chains",
+    statement:
+      "Evaluates life-situation signatures across natal promise, house rulers, transits, God/Agent translation, and multi-stage event sequences without claiming deterministic certainty.",
   },
   {
     id: "vedic-nakshatra-27",

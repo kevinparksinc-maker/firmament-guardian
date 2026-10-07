@@ -26,6 +26,8 @@ export function planKnowledge(
     "manzil",
     "astro-engine",
     "pattern-recognition",
+    "behavioral-pattern",
+    "life-event-signature",
   ]);
   const reasons: string[] = [
     "Genesis is a mandatory core evidence layer: Astro Engine, Pattern Engine, and Yoga Detector execute and are reviewed before question-specific prioritization.",
