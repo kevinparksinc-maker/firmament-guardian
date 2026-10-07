@@ -1,53 +1,1003 @@
-import { useEffect, useState } from "react";
-import { BookOpen, ChevronRight, Compass, Layers3, Map, Orbit, Sparkles, Stars } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  BookOpen,
+  Brain,
+  ChevronRight,
+  Compass,
+  Layers3,
+  Loader2,
+  Map,
+  MapPin,
+  Orbit,
+  RefreshCw,
+  Sparkles,
+  Stars,
+  UserCheck,
+} from "lucide-react";
 import { Link } from "wouter";
 import { ThreeLayerOrrery } from "@/components/ThreeLayerOrrery";
 import { OVERLAY_MAP_SPECS } from "@/design/overlayMapSpecs";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { LiveTransitFeed } from "@/components/LiveTransitFeed";
+import { BehavioralIntelligencePanel } from "@/components/BehavioralIntelligencePanel";
+import { InterpretationPanel } from "@/components/InterpretationPanel";
+import { ChartWheel } from "@/components/ChartWheel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
-import { DECANS, MANAZIL, NAKSHATRAS, formatLongitude, overlay, ZODIAC_SIGNS } from "../../../shared/hybrid";
+import {
+  DECANS,
+  MANAZIL,
+  NAKSHATRAS,
+  formatLongitude,
+  overlay,
+  ZODIAC_SIGNS,
+} from "../../../shared/hybrid";
 
-const overlayColors: Record<string, string> = { "Zodiac": "#f0f4f8", "Nakshatra": "#f6ae2d", "Manazil": "#9d4edd", "Decan": "#00e5ff" };
-const nakshatraMeanings: Record<string, string> = {
-  Ashwini: "Beginnings, healing, speed, and the instinct to initiate.", Bharani: "Containment, responsibility, transformation, and carrying what must mature.", Krittika: "Discernment, purification, courage, and the cutting away of excess.", Rohini: "Growth, beauty, nourishment, creativity, and making something thrive.", Mrigashira: "Searching, curiosity, gentleness, and following a promising trail.", Ardra: "Storms, emotional release, truth-telling, and renewal after disruption.", Punarvasu: "Return, restoration, hope, and finding the way back to what is essential.", Pushya: "Nourishment, protection, teaching, and steady spiritual or practical growth.", Ashlesha: "Perception, entwining, psychological depth, and the power to shed an old skin.", Magha: "Ancestry, dignity, authority, legacy, and honoring what came before.", "Purva Phalguni": "Pleasure, rest, creativity, romance, and enjoying the fruits of effort.", "Uttara Phalguni": "Commitment, friendship, agreements, generosity, and sustaining what is worthwhile.", Hasta: "Skill, craftsmanship, organization, healing hands, and shaping circumstances.", Chitra: "Design, beauty, vision, vitality, and making an inner image visible.", Swati: "Independence, movement, flexibility, and learning to stand in one’s own wind.", Vishakha: "Focus, ambition, branching choices, and dedication toward a defining goal.", Anuradha: "Devotion, friendship, cooperation, and perseverance through relationship.", Jyeshtha: "Maturity, protection, seniority, discernment, and responsible power.", Mula: "Roots, investigation, uprooting, truth beneath appearances, and radical reset.", "Purva Ashadha": "Conviction, cleansing, confidence, and the first wave of victory.", "Uttara Ashadha": "Endurance, integrity, universal principles, and lasting achievement.", Shravana: "Listening, learning, transmission, stories, and understanding through attention.", Dhanishta: "Rhythm, resources, community, timing, and the ability to coordinate action.", Shatabhisha: "Healing, solitude, pattern recognition, and uncovering what is hidden.", "Purva Bhadrapada": "Intensity, ideals, sacrifice, and transforming a passionate vision.", "Uttara Bhadrapada": "Depth, patience, compassion, and holding steady through profound change.", Revati: "Guidance, safe passage, completion, nourishment, and preparing for a new cycle.",
-};
-const decanRulerMeanings: Record<string, string> = {
-  Mars: "Mars emphasizes initiative, heat, courage, competition, and direct action.", Sun: "The Sun emphasizes vitality, visibility, confidence, leadership, and creative expression.", Venus: "Venus emphasizes attraction, pleasure, harmony, aesthetics, and relationship.", Mercury: "Mercury emphasizes language, learning, trade, analysis, and adaptable intelligence.", Moon: "The Moon emphasizes feeling, memory, nourishment, instinct, and changing conditions.", Saturn: "Saturn emphasizes structure, patience, boundaries, responsibility, and long-term work.", Jupiter: "Jupiter emphasizes growth, meaning, generosity, wisdom, and expanded perspective.",
+const OVERLAY_COLORS: Record<string, string> = {
+  Zodiac: "#f8fafc",
+  Nakshatra: "#f59e0b",
+  Manazil: "#a855f7",
+  Decan: "#06b6d4",
 };
 
-function OverlayMap({ moonLongitude }: { moonLongitude: number }) {
-  const [active, setActive] = useState("Nakshatra");
+const NAKSHATRA_MEANINGS: Record<string, string> = {
+  Ashwini: "Beginnings, healing, speed, and the instinct to initiate.",
+  Bharani: "Containment, responsibility, transformation, and carrying what must mature.",
+  Krittika: "Discernment, purification, courage, and the cutting away of excess.",
+  Rohini: "Growth, beauty, nourishment, creativity, and making something thrive.",
+  Mrigashira: "Searching, curiosity, gentleness, and following a promising trail.",
+  Ardra: "Storms, emotional release, truth-telling, and renewal after disruption.",
+  Punarvasu: "Return, restoration, hope, and finding the way back to what is essential.",
+  Pushya: "Nourishment, protection, teaching, and steady spiritual or practical growth.",
+  Ashlesha: "Perception, entwining, psychological depth, and the power to shed an old skin.",
+  Magha: "Ancestry, dignity, authority, legacy, and honoring what came before.",
+  "Purva Phalguni": "Pleasure, rest, creativity, romance, and enjoying the fruits of effort.",
+  "Uttara Phalguni": "Commitment, friendship, agreements, generosity, and sustaining what is worthwhile.",
+  Hasta: "Skill, craftsmanship, organization, healing hands, and shaping circumstances.",
+  Chitra: "Design, beauty, vision, vitality, and making an inner image visible.",
+  Swati: "Independence, movement, flexibility, and learning to stand in one’s own wind.",
+  Vishakha: "Focus, ambition, branching choices, and dedication toward a defining goal.",
+  Anuradha: "Devotion, friendship, cooperation, and perseverance through relationship.",
+  Jyeshtha: "Maturity, protection, seniority, discernment, and responsible power.",
+  Mula: "Roots, investigation, uprooting, truth beneath appearances, and radical reset.",
+  "Purva Ashadha": "Conviction, cleansing, confidence, and the first wave of victory.",
+  "Uttara Ashadha": "Endurance, integrity, universal principles, and lasting achievement.",
+  Shravana: "Listening, learning, transmission, stories, and understanding through attention.",
+  Dhanishta: "Rhythm, resources, community, timing, and the ability to coordinate action.",
+  Shatabhisha: "Healing, solitude, pattern recognition, and uncovering what is hidden.",
+  "Purva Bhadrapada": "Intensity, ideals, sacrifice, and transforming a passionate vision.",
+  "Uttara Bhadrapada": "Depth, patience, compassion, and holding steady through profound change.",
+  Revati: "Guidance, safe passage, completion, nourishment, and preparing for a new cycle.",
+};
+
+const MANZIL_MEANINGS: Record<string, string> = {
+  "Al-Sharatain": "The Two Signals — decisive beginnings, movement, and opening a new path.",
+  "Al-Butain": "The Little Belly — quiet gathering of resources, inner warmth, and hidden preparation.",
+  "Al-Thurayya": "The Pleiades — abundance, synthesis, craft, and luminous assembly.",
+  "Al-Dabaran": "The Follower (Aldebaran) — steady pursuit, endurance, and testing integrity.",
+  "Al-Haq'ah": "The White Spot — clarity of mind, study, and returning to core truth.",
+  "Al-Han'ah": "The Brand — partnership, mark of commitment, and mutual reliance.",
+  "Al-Dhira": "The Forearm — reach, practical aid, and earned breakthrough.",
+  "Al-Nathrah": "The Crib — shelter, family loyalty, nourishment, and deep belonging.",
+  "Al-Tarf": "The Glance — vigilance, boundary awareness, and selective trust.",
+  "Al-Jabhah": "The Forehead (Regulus) — sovereignty, heart courage, and leadership under pressure.",
+  "Al-Zubrah": "The Mane — strength, noble bearing, and consolidation of effort.",
+  "Al-Sarfah": "The Changer of Weather — turning points, seasonal transition, and adaptation.",
+  "Al-Awwa": "The Barker — articulate counsel, diplomacy, and protective alert.",
+  "Al-Simak": "The Unarmed (Spica) — grace, harvest, skill, and refined gift.",
+  "Al-Ghafr": "The Covering — veiled wisdom, private inquiry, and quiet reconciliation.",
+  "Al-Zubana": "The Claws — weighing value, restitution, and decisive balance.",
+  "Al-Iklil": "The Crown — honor earned through trial, focus, and loyalty.",
+  "Al-Qalb": "The Heart of the Scorpion (Antares) — fearless depth, crisis mastery, and core truth.",
+  "Al-Shaulah": "The Raised Tail — incisive action, release of poison, and breakthrough.",
+  "Al-Na'am": "The Ostriches — long-range stride, philosophical reach, and resilience.",
+  "Al-Baldah": "The City — quiet desert sanctuary, self-sufficiency, and contemplation.",
+  "Sa'd al-Dhabih": "The Lucky One of the Sacrificer — disciplined release for a higher aim.",
+  "Sa'd Bula": "The Lucky One of the Swallower — assimilation of experience and quiet recovery.",
+  "Sa'd al-Su'ud": "The Luck of Lucks — vital renewal, flowing favor, and emerging hope.",
+  "Sa'd al-Akhbiyah": "The Lucky Stars of the Tents — hidden germination and protected shelter.",
+  "Al-Fargh al-Muqaddam": "The First Spout — pouring forth vision, generosity, and creative flow.",
+  "Al-Fargh al-Mu'akhkhar": "The Second Spout — completing the vessel, endurance, and synthesis.",
+  "Batn al-Hut": "The Belly of the Fish — safe harbor, spiritual completion, and return to origin.",
+};
+
+const DECAN_RULER_MEANINGS: Record<string, string> = {
+  Mars: "Mars emphasizes initiative, heat, courage, competition, and direct action.",
+  Sun: "The Sun emphasizes vitality, visibility, confidence, leadership, and creative expression.",
+  Venus: "Venus emphasizes attraction, pleasure, harmony, aesthetics, and relationship.",
+  Mercury: "Mercury emphasizes language, learning, trade, analysis, and adaptable intelligence.",
+  Moon: "The Moon emphasizes feeling, memory, nourishment, instinct, and changing conditions.",
+  Saturn: "Saturn emphasizes structure, patience, boundaries, responsibility, and long-term work.",
+  Jupiter: "Jupiter emphasizes growth, meaning, generosity, wisdom, and expanded perspective.",
+};
+
+const PLANET_MARKERS: Record<string, { glyph: string; color: string }> = {
+  Moon: { glyph: "☽", color: "#f8fafc" },
+  Sun: { glyph: "☉", color: "#f59e0b" },
+  Mercury: { glyph: "☿", color: "#38bdf8" },
+  Venus: { glyph: "♀", color: "#f472b6" },
+  Mars: { glyph: "♂", color: "#fb7185" },
+  Jupiter: { glyph: "♃", color: "#c084fc" },
+  Saturn: { glyph: "♄", color: "#94a3b8" },
+};
+
+const DEFAULT_PROFILE = {
+  location: "Dallas, Texas, USA",
+  latitude: 32.7767,
+  longitude: -96.797,
+  timezone: "America/Chicago",
+  date: "1986-11-20",
+  time: "10:06",
+};
+
+function OverlayMap({
+  moonLongitude,
+  chart,
+}: {
+  moonLongitude: number;
+  chart: ChartResult | null;
+}) {
+  const [active, setActive] = useState<"Zodiac" | "Nakshatra" | "Manazil" | "Decan">("Nakshatra");
   const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
-  const spec = OVERLAY_MAP_SPECS.find(item => item.name === active) ?? OVERLAY_MAP_SPECS[0];
+  const [focusedBody, setFocusedBody] = useState<string>("Moon");
+
+  const bodies = useMemo(() => {
+    const source =
+      chart?.transits && chart.transits.length > 0
+        ? chart.transits
+        : chart?.movingBodies ?? [];
+    return source.filter(b => PLANET_MARKERS[b.name]);
+  }, [chart]);
+
+  const activeBodyRow =
+    bodies.find(b => b.name === focusedBody) ??
+    bodies.find(b => b.name === "Moon");
+  const cursorLongitude = activeBodyRow?.longitude ?? moonLongitude;
+
+  const spec =
+    OVERLAY_MAP_SPECS.find(item => item.name === active) ??
+    OVERLAY_MAP_SPECS[0];
   const segments = spec.segmentCount;
-  const liveSegment = Math.min(segments - 1, Math.floor(moonLongitude / spec.unitWidthDegrees));
+  const liveSegment = Math.min(
+    segments - 1,
+    Math.floor(cursorLongitude / spec.unitWidthDegrees)
+  );
   const inspectedSegment = selectedSegment ?? liveSegment;
   const segmentStart = inspectedSegment * spec.unitWidthDegrees;
   const segmentEnd = segmentStart + spec.unitWidthDegrees;
-  const zodiacSign = ZODIAC_SIGNS[Math.floor(moonLongitude / 30) % 12];
-  const moonOverlay = overlay(moonLongitude);
-  const selectedName = active === "Nakshatra" ? (NAKSHATRAS[inspectedSegment] ?? "Nakshatra") : active === "Manazil" ? (MANAZIL[inspectedSegment] ?? "Manzil") : active === "Decan" ? (DECANS[inspectedSegment] ?? "Decan") : (ZODIAC_SIGNS[inspectedSegment] ?? "Zodiac sign");
-  const decanRuler = selectedName.split(" ")[0];
-  const selectedMeaning = active === "Nakshatra"
-    ? (nakshatraMeanings[selectedName] ?? "A named 13°20′ lunar mansion in the 27-part Nakshatra cycle.")
-    : active === "Manazil"
-      ? "A traditional Arabic lunar station: a roughly 12°51′ segment used to track the Moon’s passage through the sky and time its changing conditions."
-      : active === "Decan"
-        ? `${decanRulerMeanings[decanRuler] ?? "A traditional planetary ruler marks the tone of this section."} This is the ${selectedName.replace(`${decanRuler} `, "")} decan: one of three 10° sections within its zodiac sign.`
-        : "A 30° tropical zodiac sign: the shared reference frame used to name the Moon’s longitude.";
-  const liveDetail = active === "Nakshatra" ? `${moonOverlay.nakshatra} · Pada ${moonOverlay.pada}` : active === "Manazil" ? moonOverlay.manzil : active === "Decan" ? moonOverlay.decan : zodiacSign;
-  return <section className="space-y-4" id="overlay-map"><div className="flex items-end justify-between"><div><div className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-300">Celestial atlas</div><h2 className="mt-1 font-serif text-2xl text-white">Overlay maps</h2></div><span className="text-[10px] uppercase tracking-[.16em] text-slate-500">360° field · live Moon</span></div><div className="flex gap-2 overflow-x-auto pb-1">{OVERLAY_MAP_SPECS.map(item => <button key={item.name} type="button" onClick={() => { setActive(item.name); setSelectedSegment(null); }} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[.12em] transition ${item.name === active ? "text-slate-950" : "border-white/10 bg-white/[.04] text-slate-400"}`} style={item.name === active ? { background: overlayColors[item.name], borderColor: overlayColors[item.name] } : undefined}>{item.name}</button>)}</div><div className="rounded-[1.7rem] border border-white/10 bg-[#070c16]/90 p-4"><div className="relative h-28 overflow-hidden rounded-xl border border-white/10 bg-black/20"><div className="absolute inset-x-0 top-1/2 h-px bg-white/10" />{Array.from({ length: segments }).map((_, index) => <button key={index} type="button" aria-label={`Inspect ${spec.name} segment ${index + 1}`} onClick={() => setSelectedSegment(index)} className={`absolute inset-y-0 border-r border-white/10 transition ${index === inspectedSegment ? "bg-white/[.14]" : "hover:bg-white/[.06]"}`} style={{ left: `${(index / segments) * 100}%`, width: `${100 / segments}%` }}><span className="absolute left-0 top-1/2 h-8 w-px -translate-y-1/2" style={{ background: overlayColors[active], opacity: index === inspectedSegment ? 1 : index % 3 === 0 ? .75 : .25 }} /></button>)}<div className="pointer-events-none absolute top-0 bottom-0 w-px bg-white" style={{ left: `${(moonLongitude / 360) * 100}%`, boxShadow: `0 0 14px ${overlayColors[active]}` }} /><div className="pointer-events-none absolute top-2 -translate-x-1/2 rounded-full px-2 py-1 text-[9px] font-semibold text-slate-950" style={{ left: `${(moonLongitude / 360) * 100}%`, background: overlayColors[active] }}>Moon</div><span className="absolute left-3 bottom-3 text-[9px] uppercase tracking-[.16em] text-slate-500">0° Aries</span><span className="absolute right-3 bottom-3 text-[9px] uppercase tracking-[.16em] text-slate-500">360° Pisces</span></div><div className="mt-4 flex items-start gap-3"><span className="mt-1 h-3 w-3 shrink-0 rounded-full" style={{ background: overlayColors[active] }} /><div><h3 className="text-base font-semibold text-white">{spec.name}</h3><p className="mt-1 text-xs leading-5 text-slate-400">{spec.shortDescription}</p><p className="mt-2 text-[10px] uppercase tracking-[.12em] text-slate-500">{spec.segmentCount} divisions · {spec.sourceLabel}</p><p className="mt-3 text-xs text-slate-300">Moon {formatLongitude(moonLongitude)} · {zodiacSign} · live cursor</p><div className="mt-3 rounded-xl border border-white/10 bg-white/[.04] p-3"><div className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-200">{selectedName}{active === "Nakshatra" && inspectedSegment === liveSegment ? ` · Pada ${moonOverlay.pada}` : ""}</div><p className="mt-1 text-xs leading-5 text-slate-300">{selectedMeaning}</p><p className="mt-2 text-[10px] leading-4 text-slate-500">Division {inspectedSegment + 1} · {formatLongitude(segmentStart)}–{formatLongitude(segmentEnd % 360)} · {inspectedSegment === liveSegment ? `Moon is here · ${liveDetail}` : "tap the live division to follow the Moon"}</p></div></div></div></div></section>;
+  const zodiacSign = ZODIAC_SIGNS[Math.floor(cursorLongitude / 30) % 12];
+  const cursorOverlay = overlay(cursorLongitude);
+
+  const selectedName =
+    active === "Nakshatra"
+      ? (NAKSHATRAS[inspectedSegment] ?? "Nakshatra")
+      : active === "Manazil"
+        ? (MANAZIL[inspectedSegment] ?? "Manzil")
+        : active === "Decan"
+          ? (DECANS[inspectedSegment] ?? "Decan")
+          : (ZODIAC_SIGNS[inspectedSegment] ?? "Zodiac sign");
+
+  const decanRuler = selectedName.split(" ")[0] ?? "Mars";
+  const selectedMeaning =
+    active === "Nakshatra"
+      ? (NAKSHATRA_MEANINGS[selectedName] ??
+        "A named 13°20′ lunar mansion in the 27-part Vedic Nakshatra cycle.")
+      : active === "Manazil"
+        ? (MANZIL_MEANINGS[selectedName] ??
+          "A traditional Arabic lunar station (12°51′) used to track the Moon’s passage through the fixed sky.")
+        : active === "Decan"
+          ? `${DECAN_RULER_MEANINGS[decanRuler] ?? "A traditional planetary ruler marks the tone of this section."} This is the ${selectedName.replace(`${decanRuler} `, "")} decan: one of three 10° faces within its zodiac sign.`
+          : "A 30° tropical zodiac sign: the shared geocentric reference band anchoring all four overlay traditions.";
+
+  const bodiesInSelectedSegment = bodies.filter(
+    b =>
+      b.longitude >= segmentStart &&
+      b.longitude < (segmentEnd > 360 ? 360 : segmentEnd)
+  );
+
+  return (
+    <section className="space-y-5" id="overlay-map">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-cyan-300">
+            Synchronized 360° Celestial Atlas
+          </div>
+          <h2 className="mt-1 font-serif text-2xl text-white sm:text-3xl">
+            Multi-Tradition Sky Overlay Maps
+          </h2>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400 sm:text-sm">
+            Inspect how the exact same astronomical degree simultaneously
+            activates the 12 Tropical Signs, 27 Vedic Nakshatras, 28 Arabic
+            Manazil, and 36 Hellenistic Decans.
+          </p>
+        </div>
+
+        {/* Interactive Tradition Selector */}
+        <div className="flex gap-1.5 rounded-xl border border-slate-800 bg-[#0b101b] p-1">
+          {OVERLAY_MAP_SPECS.map(item => (
+            <button
+              key={item.name}
+              type="button"
+              onClick={() => {
+                setActive(item.name);
+                setSelectedSegment(null);
+              }}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                item.name === active
+                  ? "text-slate-950 shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              style={
+                item.name === active
+                  ? { backgroundColor: OVERLAY_COLORS[item.name] }
+                  : undefined
+              }
+            >
+              {item.name} ({item.segmentCount})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-800 bg-[#070b14] p-4 sm:p-6">
+        {/* Tracked Body Selector Bar */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-2 text-xs font-medium text-slate-400">
+              Lock Cursor to Body:
+            </span>
+            {bodies.map(b => {
+              const meta = PLANET_MARKERS[b.name]!;
+              const isFocused = (activeBodyRow?.name ?? "Moon") === b.name;
+              return (
+                <button
+                  key={b.name}
+                  type="button"
+                  onClick={() => {
+                    setFocusedBody(b.name);
+                    setSelectedSegment(null);
+                  }}
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                    isFocused
+                      ? "border-cyan-400/60 bg-cyan-950/40 text-white"
+                      : "border-slate-800 bg-[#0b101b] text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                  }`}
+                >
+                  <span style={{ color: meta.color }}>{meta.glyph}</span>
+                  <span>{b.name}</span>
+                  <span className="font-mono text-[10px] tabular-nums text-slate-400">
+                    {b.longitude.toFixed(1)}°
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <span className="font-mono text-xs tabular-nums text-cyan-300">
+            {activeBodyRow?.name ?? "Moon"} at {formatLongitude(cursorLongitude)}
+          </span>
+        </div>
+
+        {/* Synchronized 4-Band Spectrographic Celestial Ribbon */}
+        <div className="space-y-2">
+          {OVERLAY_MAP_SPECS.map(bandSpec => {
+            const isSelectedBand = bandSpec.name === active;
+            const bandColor = OVERLAY_COLORS[bandSpec.name];
+            const bandLiveIdx = Math.min(
+              bandSpec.segmentCount - 1,
+              Math.floor(cursorLongitude / bandSpec.unitWidthDegrees)
+            );
+            return (
+              <div
+                key={bandSpec.name}
+                className={`relative rounded-xl border transition ${
+                  isSelectedBand
+                    ? "border-slate-700 bg-[#0d1424]"
+                    : "border-slate-800/60 bg-[#090d18] opacity-80 hover:opacity-100"
+                }`}
+              >
+                <div className="flex items-center justify-between px-3 py-1 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActive(bandSpec.name);
+                      setSelectedSegment(null);
+                    }}
+                    className="flex items-center gap-2 font-semibold text-slate-200 hover:text-white"
+                  >
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: bandColor }}
+                    />
+                    <span>{bandSpec.name}</span>
+                    <span className="font-mono text-[10px] text-slate-500">
+                      {bandSpec.segmentCount} divisions · {bandSpec.sourceLabel}
+                    </span>
+                  </button>
+                  <span className="font-mono text-[11px] tabular-nums text-slate-300">
+                    {bandSpec.name === "Nakshatra"
+                      ? `${cursorOverlay.nakshatra} (Pada ${cursorOverlay.pada})`
+                      : bandSpec.name === "Manazil"
+                        ? cursorOverlay.manzil
+                        : bandSpec.name === "Decan"
+                          ? cursorOverlay.decan
+                          : zodiacSign}
+                  </span>
+                </div>
+
+                <div
+                  className={`relative w-full overflow-hidden border-t border-slate-800/80 ${
+                    isSelectedBand ? "h-14" : "h-8"
+                  }`}
+                >
+                  {Array.from({ length: bandSpec.segmentCount }).map(
+                    (_, index) => {
+                      const isInspected =
+                        isSelectedBand && index === inspectedSegment;
+                      const isLiveHere = index === bandLiveIdx;
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          aria-label={`Inspect ${bandSpec.name} segment ${index + 1}`}
+                          onClick={() => {
+                            setActive(bandSpec.name);
+                            setSelectedSegment(index);
+                          }}
+                          className={`absolute inset-y-0 border-r border-slate-800/80 transition ${
+                            isInspected
+                              ? "bg-white/[0.16]"
+                              : isLiveHere
+                                ? "bg-white/[0.08]"
+                                : "hover:bg-white/[0.06]"
+                          }`}
+                          style={{
+                            left: `${(index / bandSpec.segmentCount) * 100}%`,
+                            width: `${100 / bandSpec.segmentCount}%`,
+                          }}
+                        >
+                          <span
+                            className="absolute left-0 top-1/2 h-4 w-px -translate-y-1/2"
+                            style={{
+                              backgroundColor: bandColor,
+                              opacity:
+                                isInspected || isLiveHere
+                                  ? 1
+                                  : index % 3 === 0
+                                    ? 0.65
+                                    : 0.25,
+                            }}
+                          />
+                        </button>
+                      );
+                    }
+                  )}
+
+                  {/* All Planetary Cursors on Active Band */}
+                  {bodies.map(b => {
+                    const meta = PLANET_MARKERS[b.name]!;
+                    const isPrimary =
+                      (activeBodyRow?.name ?? "Moon") === b.name;
+                    return (
+                      <div
+                        key={b.name}
+                        className="pointer-events-none absolute bottom-0 top-0"
+                        style={{ left: `${(b.longitude / 360) * 100}%` }}
+                      >
+                        <div
+                          className="h-full w-px"
+                          style={{
+                            backgroundColor: isPrimary ? "#ffffff" : meta.color,
+                            opacity: isPrimary ? 1 : 0.45,
+                          }}
+                        />
+                        {isSelectedBand && (
+                          <span
+                            className="absolute top-1 -translate-x-1/2 rounded px-1 py-0.5 font-mono text-[9px] font-bold leading-none"
+                            style={{
+                              backgroundColor: isPrimary
+                                ? bandColor
+                                : "#0b101b",
+                              color: isPrimary ? "#020617" : meta.color,
+                              border: isPrimary
+                                ? "none"
+                                : `1px solid ${meta.color}`,
+                            }}
+                          >
+                            {meta.glyph}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Degree Ruler Footer */}
+        <div className="mt-2 flex justify-between font-mono text-[10px] tabular-nums text-slate-500">
+          <span>0° Aries</span>
+          <span>90° Cancer</span>
+          <span>180° Libra</span>
+          <span>270° Capricorn</span>
+          <span>360° Pisces</span>
+        </div>
+
+        {/* Detailed Segment Telemetry Card */}
+        <div className="mt-5 grid gap-4 rounded-xl border border-slate-800 bg-[#0b101b] p-4 sm:grid-cols-[minmax(0,1fr)_280px] sm:p-5">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: OVERLAY_COLORS[active] }}
+              />
+              <span className="font-semibold text-white">{spec.name}</span>
+              <span>·</span>
+              <span className="font-mono tabular-nums text-cyan-300">
+                Division {inspectedSegment + 1} of {spec.segmentCount}
+              </span>
+              <span>·</span>
+              <span className="font-mono tabular-nums text-slate-400">
+                {formatLongitude(segmentStart)} –{" "}
+                {formatLongitude(segmentEnd % 360)}
+              </span>
+            </div>
+
+            <h3 className="mt-2 font-serif text-2xl text-white">
+              {selectedName}
+              {active === "Nakshatra" && inspectedSegment === liveSegment
+                ? ` · Pada ${cursorOverlay.pada}`
+                : ""}
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              {selectedMeaning}
+            </p>
+          </div>
+
+          <div className="flex flex-col justify-between rounded-xl border border-slate-800 bg-[#070b14] p-3.5 text-xs">
+            <div>
+              <div className="font-semibold text-slate-300">
+                Active Occupants in This Division
+              </div>
+              {bodiesInSelectedSegment.length > 0 ? (
+                <ul className="mt-2 space-y-1.5">
+                  {bodiesInSelectedSegment.map(b => (
+                    <li
+                      key={b.name}
+                      className="flex items-center justify-between font-mono text-slate-200"
+                    >
+                      <span>
+                        {PLANET_MARKERS[b.name]?.glyph} {b.name}
+                      </span>
+                      <span className="tabular-nums text-cyan-300">
+                        {b.display}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-slate-500">
+                  No major planets currently occupy this segment. Tap the
+                  highlighted cursor division to follow{" "}
+                  {activeBodyRow?.name ?? "the Moon"}.
+                </p>
+              )}
+            </div>
+            {selectedSegment !== null && selectedSegment !== liveSegment && (
+              <button
+                type="button"
+                onClick={() => setSelectedSegment(null)}
+                className="mt-3 w-full rounded-lg border border-cyan-400/30 bg-cyan-950/30 py-1.5 text-center font-medium text-cyan-200 hover:bg-cyan-950/50"
+              >
+                Re-center on {activeBodyRow?.name ?? "Moon"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default function SkyHomePrototype() {
-  const [screen, setScreen] = useState<"home" | "orrery">("home");
-  const [liveChart, setLiveChart] = useState<ChartResult | null>(null);
-  const liveTransit = trpc.hybrid.calculate.useMutation({ onSuccess: setLiveChart });
-  const refreshLiveSky = () => { const now = new Date(); liveTransit.mutate({ location: "God View", latitude: 0, longitude: 0, timezone: "UTC", date: "", time: "", transitLocation: "God View", transitLatitude: 0, transitLongitude: 0, transitTimezone: "UTC", transitDate: now.toISOString().slice(0, 10), transitTime: now.toISOString().slice(11, 16), worldview: "god", readingScope: "transit", birthTimeKnown: false }); };
-  useEffect(() => { refreshLiveSky(); const id = window.setInterval(refreshLiveSky, 5 * 60 * 1000); return () => window.clearInterval(id); }, []);
-  const nav = [{ key: "home" as const, label: "Sky", icon: Stars }, { key: "orrery" as const, label: "Orrery", icon: Orbit }, { key: "maps" as const, label: "Maps", icon: Map }, { key: "guide" as const, label: "Guide", icon: BookOpen }];
-  const moonLongitude = liveChart?.transits.find(row => row.name === "Moon")?.longitude ?? liveChart?.movingBodies.find(row => row.name === "Moon")?.longitude ?? 0;
-  return <div className="min-h-screen bg-transparent text-slate-100 selection:bg-cyan-300/20"><ObservatorySoundscape /><div className="mx-auto min-h-screen w-full max-w-[460px] bg-[linear-gradient(180deg,rgba(3,5,12,.06),rgba(3,5,12,.56)_62%,rgba(3,5,12,.82)),url('/assets/firmament-starfield.png')] bg-cover bg-fixed bg-top pb-24 shadow-2xl shadow-black/60"><header className="flex items-center justify-between px-5 pb-4 pt-7"><div><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.24em] text-cyan-300"><span className="h-px w-5 bg-cyan-300" /> Bible Believers Astrology</div><h1 className="mt-2 font-serif text-3xl leading-none text-white">The living sky</h1></div><Link href="/" className="rounded-full border border-white/10 bg-black/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-[.12em] text-slate-300">Exit prototype</Link></header>{screen === "home" ? <main className="space-y-6 px-5"><section className="rounded-[2rem] border border-cyan-200/15 bg-black/25 p-5 backdrop-blur-sm"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-cyan-300">Tonight · local sky</p><h2 className="mt-2 max-w-[240px] font-serif text-4xl leading-[.95] text-white">See the sky in layers.</h2><p className="mt-4 text-sm leading-6 text-slate-400">A visual astrology instrument for the natal foundation, the question moment, and the whole-sky frame.</p></div><div className="rounded-2xl border border-cyan-200/20 bg-cyan-100/[.06] p-3"><Compass className="h-5 w-5 text-cyan-200" /></div></div><button type="button" onClick={() => setScreen("orrery")} className="mt-6 flex w-full items-center justify-between rounded-2xl border border-cyan-200/25 bg-cyan-200/[.10] px-4 py-4 text-left text-sm font-semibold text-cyan-50 transition hover:bg-cyan-200/[.16]"><span>Open three-layer orrery</span><ChevronRight className="h-4 w-4" /></button></section>{liveChart ? <LiveTransitFeed chart={liveChart} onRefresh={refreshLiveSky} refreshing={liveTransit.isPending} /> : <section className="rounded-3xl border border-violet-200/15 bg-black/30 p-5 text-sm text-slate-400">Loading the live God View sky…</section>}<section className="grid grid-cols-2 gap-3"><Link href="/horary" className="rounded-2xl border border-violet-200/15 bg-violet-200/[.07] p-4"><Sparkles className="h-5 w-5 text-violet-200"/><div className="mt-5 text-sm font-semibold text-white">Ask Horary</div><div className="mt-1 text-xs leading-5 text-slate-500">Cast a question sky</div></Link><button type="button" onClick={() => document.getElementById("overlay-map")?.scrollIntoView({ behavior: "smooth" })} className="rounded-2xl border border-amber-200/15 bg-amber-200/[.06] p-4 text-left"><Layers3 className="h-5 w-5 text-amber-200"/><div className="mt-5 text-sm font-semibold text-white">Explore maps</div><div className="mt-1 text-xs leading-5 text-slate-500">Mansions, Manazil, Decans</div></button></section><OverlayMap moonLongitude={moonLongitude} /></main> : <main className="space-y-5 px-5"><button type="button" onClick={() => setScreen("home")} className="text-xs font-semibold uppercase tracking-[.16em] text-cyan-300">← Back to Sky Home</button><div><div className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-300">Instrument view</div><h2 className="mt-1 font-serif text-3xl text-white">Three-layer orrery</h2><p className="mt-2 text-sm leading-6 text-slate-400">Tap a layer to change the coordinate frame. The colors stay consistent across every map.</p></div><ThreeLayerOrrery /></main>}<nav className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-[460px] -translate-x-1/2 justify-around border-t border-white/10 bg-[#070b15]/95 px-2 py-2 backdrop-blur-xl">{nav.map(item => { const Icon = item.icon; const selected = item.key === screen || (item.key === "maps" && screen === "home"); return <button key={item.key} type="button" onClick={() => (item.key === "orrery" ? setScreen("orrery") : item.key === "home" || item.key === "maps" ? setScreen("home") : undefined)} className={`flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-semibold ${selected ? "text-cyan-200" : "text-slate-500"}`}><Icon className="h-4 w-4"/><span>{item.label}</span></button>; })}</nav></div></div>;
+  const [screen, setScreen] = useState<"home" | "orrery" | "maps" | "guide">(
+    "home"
+  );
+  const [skyMode, setSkyMode] = useState<"personal" | "god">("personal");
+  const [profile, setProfile] = useState(DEFAULT_PROFILE);
+  const [locationInput, setLocationInput] = useState(DEFAULT_PROFILE.location);
+  const [guideQuestion, setGuideQuestion] = useState(
+    "Who am I beneath the surface, and how does the current sky interact with my core patterns?"
+  );
+  const [activeChart, setActiveChart] = useState<ChartResult | null>(null);
+
+  const geo = trpc.hybrid.geocode.useQuery(
+    { query: locationInput },
+    { enabled: false, retry: false }
+  );
+  const calculateMutation = trpc.hybrid.calculate.useMutation({
+    onSuccess: setActiveChart,
+  });
+
+  const loadSky = (mode = skyMode, nextProfile = profile) => {
+    const now = new Date();
+    const transitDate = now.toISOString().slice(0, 10);
+    const transitTime = now.toISOString().slice(11, 16);
+
+    if (mode === "god") {
+      calculateMutation.mutate({
+        location: "God View",
+        latitude: 0,
+        longitude: 0,
+        timezone: "UTC",
+        date: "",
+        time: "",
+        transitLocation: "God View",
+        transitLatitude: 0,
+        transitLongitude: 0,
+        transitTimezone: "UTC",
+        transitDate,
+        transitTime,
+        worldview: "god",
+        readingScope: "transit",
+        birthTimeKnown: false,
+      });
+    } else {
+      calculateMutation.mutate({
+        ...nextProfile,
+        transitLocation: nextProfile.location,
+        transitLatitude: nextProfile.latitude,
+        transitLongitude: nextProfile.longitude,
+        transitTimezone: nextProfile.timezone,
+        transitDate,
+        transitTime,
+        worldview: "agent-vs-god",
+        readingScope: "combined",
+        birthTimeKnown: Boolean(nextProfile.time),
+      });
+    }
+  };
+
+  useEffect(() => {
+    loadSky("personal", DEFAULT_PROFILE);
+    const id = window.setInterval(() => loadSky(skyMode, profile), 5 * 60 * 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const resolveAndLoadPersonalSky = async () => {
+    let next = { ...profile };
+    if (locationInput.trim() && locationInput !== profile.location) {
+      const res = await geo.refetch();
+      if (res.data) {
+        next = {
+          ...next,
+          location: res.data.label,
+          latitude: res.data.latitude,
+          longitude: res.data.longitude,
+          timezone: res.data.timezone,
+        };
+        setProfile(next);
+      }
+    }
+    setSkyMode("personal");
+    loadSky("personal", next);
+  };
+
+  const moonLongitude =
+    activeChart?.transits.find(row => row.name === "Moon")?.longitude ??
+    activeChart?.movingBodies.find(row => row.name === "Moon")?.longitude ??
+    0;
+
+  const nav = [
+    { key: "home" as const, label: "Living Sky", icon: Stars },
+    { key: "orrery" as const, label: "Three-Layer Orrery", icon: Orbit },
+    { key: "maps" as const, label: "Celestial Atlas", icon: Map },
+    { key: "guide" as const, label: "Guide & Self-Knowledge", icon: BookOpen },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#07090e] text-slate-100 selection:bg-cyan-400/25">
+      <ObservatorySoundscape />
+
+      {/* 3-Zone Top Bar Contract */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-800/90 bg-[#07090e]/95 px-5 py-3.5 backdrop-blur-md md:px-10">
+        <Link
+          href="/"
+          className="font-serif text-lg font-semibold tracking-tight text-white"
+        >
+          Bible Believers Astrology
+        </Link>
+
+        <nav
+          className="hidden items-center gap-6 text-sm font-medium text-slate-400 md:flex"
+          aria-label="Sky observatory views"
+        >
+          {nav.map(item => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setScreen(item.key)}
+              className={`whitespace-nowrap border-b-2 py-1 transition-colors ${
+                screen === item.key
+                  ? "border-cyan-400 text-white"
+                  : "border-transparent text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setScreen("guide")}
+            className="whitespace-nowrap rounded-lg bg-cyan-400 px-3.5 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-300"
+          >
+            Open Guide & Patterns
+          </button>
+          <Link
+            href="/"
+            className="whitespace-nowrap rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:text-white"
+          >
+            Chart Studio
+          </Link>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-[1440px] space-y-8 px-4 pb-24 pt-6 sm:px-6 md:px-10 md:pb-16">
+        {/* Observatory Calibration & Personal Profile Bar */}
+        <section className="rounded-2xl border border-slate-800 bg-[#0b101b] p-5 sm:p-6">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <span className="font-semibold text-cyan-300">
+                  THE FIRMAMENT · Know Yourself Through the Patterns
+                </span>
+                <span>·</span>
+                <span className="font-mono tabular-nums text-slate-300">
+                  {activeChart
+                    ? `${activeChart.input.location || "God View"} · JD ${activeChart.julianDay.toFixed(4)}`
+                    : "Calibrating Ephemeris…"}
+                </span>
+              </div>
+              <h1 className="mt-2 max-w-2xl font-serif text-3xl text-white sm:text-4xl">
+                The Living Sky & Self-Knowledge Observatory
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+                Inspect your natal foundation, present transit sky, and the
+                universal God View side by side—then open the{" "}
+                <strong className="text-slate-200">
+                  All About You · Pattern Intelligence
+                </strong>{" "}
+                and <strong className="text-slate-200">Master Guide</strong>{" "}
+                built directly around your chart.
+              </p>
+            </div>
+
+            {/* Frame Switcher + Quick Birth Profile Controls */}
+            <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-800 bg-[#070b14] p-4 sm:min-w-[420px]">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex gap-1 rounded-lg border border-slate-800 bg-[#0b101b] p-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSkyMode("personal");
+                      loadSky("personal", profile);
+                    }}
+                    className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                      skyMode === "personal"
+                        ? "bg-cyan-400 text-slate-950"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Personal Natal + Transit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSkyMode("god");
+                      loadSky("god", profile);
+                    }}
+                    className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                      skyMode === "god"
+                        ? "bg-cyan-400 text-slate-950"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Universal God View Only
+                  </button>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadSky(skyMode, profile)}
+                  disabled={calculateMutation.isPending}
+                  className="border-slate-700 bg-slate-900 text-xs text-slate-200 hover:bg-slate-800"
+                >
+                  {calculateMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </div>
+
+              {skyMode === "personal" && (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_130px_96px_auto]">
+                  <Input
+                    value={locationInput}
+                    onChange={e => setLocationInput(e.target.value)}
+                    placeholder="Birth city (e.g. Dallas, TX)"
+                    className="h-9 border-slate-800 bg-[#0b101b] text-xs text-slate-100"
+                  />
+                  <Input
+                    type="date"
+                    value={profile.date}
+                    onChange={e =>
+                      setProfile(p => ({ ...p, date: e.target.value }))
+                    }
+                    className="h-9 border-slate-800 bg-[#0b101b] font-mono text-xs text-slate-100"
+                  />
+                  <Input
+                    type="time"
+                    value={profile.time}
+                    onChange={e =>
+                      setProfile(p => ({ ...p, time: e.target.value }))
+                    }
+                    className="h-9 border-slate-800 bg-[#0b101b] font-mono text-xs text-slate-100"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={resolveAndLoadPersonalSky}
+                    disabled={calculateMutation.isPending || geo.isFetching}
+                    className="h-9 whitespace-nowrap bg-violet-500 px-3 text-xs font-semibold text-white hover:bg-violet-400"
+                  >
+                    <MapPin className="mr-1 h-3.5 w-3.5" />
+                    Update
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* VIEW 1: LIVING SKY OVERVIEW (Orrery + Atlas + Quick Access to Guide) */}
+        {screen === "home" && (
+          <div className="space-y-8">
+            {/* Quick Action Cards */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => setScreen("orrery")}
+                className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-[#0b101b] p-5 text-left transition hover:border-cyan-400/50"
+              >
+                <div>
+                  <div className="text-xs font-semibold text-cyan-300">
+                    01. Coordinate Instrument
+                  </div>
+                  <h3 className="mt-1 font-serif text-2xl text-white">
+                    Three-Layer Orrery
+                  </h3>
+                  <p className="mt-2 text-xs leading-5 text-slate-400">
+                    Compare your inner Natal horizon, middle Transit ring, and
+                    outer Universal God View with 5° aspect chords and Royal
+                    Star locks.
+                  </p>
+                </div>
+                <div className="mt-4 flex items-center text-xs font-semibold text-cyan-300">
+                  <span>Open full instrument</span>
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setScreen("maps")}
+                className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-[#0b101b] p-5 text-left transition hover:border-amber-400/50"
+              >
+                <div>
+                  <div className="text-xs font-semibold text-amber-300">
+                    02. Multi-Tradition Atlas
+                  </div>
+                  <h3 className="mt-1 font-serif text-2xl text-white">
+                    360° Celestial Overlay Maps
+                  </h3>
+                  <p className="mt-2 text-xs leading-5 text-slate-400">
+                    Track the Moon and planets across all 27 Vedic Nakshatras,
+                    28 Arabic Manazil, 36 Hellenistic Decans, and 12 Tropical
+                    Signs simultaneously.
+                  </p>
+                </div>
+                <div className="mt-4 flex items-center text-xs font-semibold text-amber-300">
+                  <span>Inspect 4-band atlas</span>
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setScreen("guide")}
+                className="flex flex-col justify-between rounded-2xl border border-cyan-400/35 bg-gradient-to-br from-cyan-950/35 via-[#0b101b] to-violet-950/30 p-5 text-left transition hover:border-cyan-300"
+              >
+                <div>
+                  <div className="text-xs font-semibold text-emerald-300">
+                    03. All About You · Who Am I?
+                  </div>
+                  <h3 className="mt-1 font-serif text-2xl text-white">
+                    Pattern Intelligence & Guide
+                  </h3>
+                  <p className="mt-2 text-xs leading-5 text-slate-300">
+                    Explore your 16 Self-Knowledge Dimensions, 7-channel
+                    Behavioral Patterns, Simulation Lab, and personal Master
+                    Interpreter chapters.
+                  </p>
+                </div>
+                <div className="mt-4 flex items-center text-xs font-semibold text-cyan-200">
+                  <span>Open Guide & Pattern Matrix</span>
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </div>
+              </button>
+            </div>
+
+            {/* Embedded Three-Layer Orrery */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-cyan-300">
+                    Live Astronomical Instrument
+                  </div>
+                  <h2 className="mt-1 font-serif text-2xl text-white sm:text-3xl">
+                    Three-Layer Coordinate Orrery
+                  </h2>
+                </div>
+              </div>
+              <ThreeLayerOrrery chart={activeChart} />
+            </section>
+
+            {/* Synchronized 4-Band Overlay Map */}
+            <OverlayMap moonLongitude={moonLongitude} chart={activeChart} />
+
+            {/* Live Transit Feed */}
+            {activeChart && (
+              <LiveTransitFeed
+                chart={activeChart}
+                onRefresh={() => loadSky(skyMode, profile)}
+                refreshing={calculateMutation.isPending}
+              />
+            )}
+
+            {/* Direct Preview of All About You / Pattern Intelligence */}
+            {activeChart && (
+              <section id="sky-pattern-intelligence" className="space-y-4 pt-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-cyan-300">
+                      Connected Pattern Recognition Backbone
+                    </div>
+                    <h2 className="mt-1 font-serif text-2xl text-white sm:text-3xl">
+                      All About You · Pattern Intelligence & Master Guide
+                    </h2>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => setScreen("guide")}
+                    className="bg-cyan-400 text-xs font-semibold text-slate-950 hover:bg-cyan-300"
+                  >
+                    Open Full Reading & Guide View
+                  </Button>
+                </div>
+                <BehavioralIntelligencePanel
+                  chart={activeChart}
+                  mode={skyMode === "god" ? "transit" : "combined"}
+                  question={guideQuestion}
+                  onSelectPrompt={prompt => {
+                    setGuideQuestion(prompt);
+                    setScreen("guide");
+                  }}
+                />
+              </section>
+            )}
+          </div>
+        )}
+
+        {/* VIEW 2: DEDICATED THREE-LAYER ORRERY & CHART WHEEL */}
+        {screen === "orrery" && (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-cyan-300">
+                  Instrument View
+                </div>
+                <h2 className="mt-1 font-serif text-3xl text-white">
+                  Three-Layer Orrery & Full Chart Wheel
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Switch between the Universal God View, Present Transit sky,
+                  and Personal Natal horizon.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setScreen("guide")}
+                className="border-cyan-400/40 bg-cyan-950/30 text-xs text-cyan-100 hover:bg-cyan-950/50"
+              >
+                Interpret These Positions in Guide →
+              </Button>
+            </div>
+
+            <ThreeLayerOrrery chart={activeChart} />
+
+            {activeChart && <ChartWheel chart={activeChart} />}
+          </div>
+        )}
+
+        {/* VIEW 3: DEDICATED CELESTIAL ATLAS & OVERLAY MAPS */}
+        {screen === "maps" && (
+          <div className="space-y-8">
+            <OverlayMap moonLongitude={moonLongitude} chart={activeChart} />
+            {activeChart && (
+              <LiveTransitFeed
+                chart={activeChart}
+                onRefresh={() => loadSky(skyMode, profile)}
+                refreshing={calculateMutation.isPending}
+              />
+            )}
+          </div>
+        )}
+
+        {/* VIEW 4: GUIDE & ALL ABOUT YOU / PATTERN INTELLIGENCE */}
+        {screen === "guide" && (
+          <div className="space-y-8">
+            {activeChart ? (
+              <>
+                <InterpretationPanel
+                  key={`${JSON.stringify(activeChart.input)}:${activeChart.transitDate}:${skyMode}`}
+                  chart={activeChart}
+                  initialMode={skyMode === "god" ? "transit" : "combined"}
+                  initialQuestion={guideQuestion}
+                />
+              </>
+            ) : (
+              <div className="rounded-2xl border border-slate-800 bg-[#0b101b] p-8 text-center text-sm text-slate-400">
+                Calculating ephemeris and pattern intelligence for your guide…
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Mobile Bottom Navigation Bar (<= 15% viewport height) */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-30 flex justify-around border-t border-slate-800 bg-[#07090e]/95 px-2 py-2 backdrop-blur-xl md:hidden"
+        aria-label="Mobile sky navigation"
+      >
+        {nav.map(item => {
+          const Icon = item.icon;
+          const selected = screen === item.key;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setScreen(item.key)}
+              className={`flex min-w-[68px] flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition ${
+                selected ? "text-cyan-300" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="whitespace-nowrap">{item.label.split(" ")[0]}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
 }
