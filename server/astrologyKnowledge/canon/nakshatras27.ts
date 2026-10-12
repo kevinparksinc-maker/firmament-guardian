@@ -125,11 +125,27 @@ export const NAKSHATRA_CANON_RECORDS: NakshatraCanonRecord[] = NAKSHATRAS.map((n
   };
 });
 
-export function getNakshatraCanonByLongitude(longitude: number): {
+export function getNakshatraCanonByLongitude(
+  longitude: number,
+  options?: {
+    coordinateMode?: "firmament-tropical-hybrid" | "classical-sidereal-lahiri" | "classical-sidereal-raman";
+    utcIso?: string;
+  }
+): {
   nakshatra: NakshatraCanonRecord;
   pada: NakshatraPadaRecord;
+  coordinateModeUsed: "firmament-tropical-hybrid" | "classical-sidereal-lahiri" | "classical-sidereal-raman";
+  effectiveLongitude: number;
 } {
-  const L = normalizeLongitude(longitude);
+  const mode = options?.coordinateMode ?? "firmament-tropical-hybrid";
+  let offset = 0;
+  if (mode !== "firmament-tropical-hybrid") {
+    const year = options?.utcIso ? new Date(options.utcIso).getUTCFullYear() : 2000;
+    const effectiveYear = Number.isFinite(year) ? year : 2000;
+    const lahiri = 23.856 + (effectiveYear - 2000) * 0.01397;
+    offset = mode === "classical-sidereal-raman" ? lahiri - 1.44 : lahiri;
+  }
+  const L = normalizeLongitude(longitude - offset);
   const idx = Math.floor(L / NAK_SPAN) % 27;
   const nakshatra = NAKSHATRA_CANON_RECORDS[idx];
   const within = L - idx * NAK_SPAN;
@@ -137,5 +153,7 @@ export function getNakshatraCanonByLongitude(longitude: number): {
   return {
     nakshatra,
     pada: nakshatra.padas[padaIdx],
+    coordinateModeUsed: mode,
+    effectiveLongitude: Number(L.toFixed(4)),
   };
 }

@@ -1,5 +1,7 @@
 import "dotenv/config";
 import express from "express";
+import fs from "fs";
+import path from "path";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -79,6 +81,18 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.post("/api/background-music", express.raw({ type: "*/*", limit: "80mb" }), (req, res) => {
+    try {
+      const targetDir = path.resolve(process.cwd(), "client", "public", "assets");
+      fs.mkdirSync(targetDir, { recursive: true });
+      const targetPath = path.join(targetDir, "firmament-inner-peace-528hz.mp3");
+      fs.writeFileSync(targetPath, req.body);
+      res.json({ ok: true, path: "/assets/firmament-inner-peace-528hz.mp3" });
+    } catch (error) {
+      console.error("Failed to save background music", error);
+      res.status(500).json({ error: "Failed to save background music" });
+    }
+  });
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   // tRPC API

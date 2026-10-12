@@ -1186,9 +1186,20 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
   },
 };
 
+export const MODERN_PSYCHOLOGICAL_PROVENANCE = {
+  tradition: "modern-psychological" as const,
+  sourceTitle:
+    "Firmament Human Reality & Psychological Synthesis Layer (distinguished from classical/medieval doctrine)",
+  authorOrEra: "20th–21st Century Depth & Humanistic Synthesis",
+  epistemicCategory: "MODERN_SYNTHESIS" as const,
+  notes:
+    "Psychological needs, healthy expressions, defensive strategies, and shadow expressions belong to the modern human-reality translation layer and are never attributed as claims of ancient Hellenistic, Vedic, or medieval Arabic texts.",
+};
+
 /**
  * Deterministically synthesizes any Planet + Sign combination using the local
- * Firmament Canon records so the AI never has to rediscover basic sign placement doctrine.
+ * Firmament Canon records so the AI never has to rediscover basic sign placement doctrine,
+ * while explicitly separating [TRADITION] dignity/rulership doctrine from [MODERN_SYNTHESIS] psychological dynamics.
  */
 export function synthesizePlanetInSign(planetName: string, signName: string): string {
   const planet = PLANET_CANON_RECORDS[planetName];
@@ -1224,5 +1235,5 @@ export function synthesizePlanetInSign(planetName: string, signName: string): st
     );
   }
 
-  return `${planetName} in ${signName} (${sign.modality} ${sign.element}, ruled by ${sign.domicileLord}): ${planetName} is ${dignityParts.join(" and ")}. Psychological dynamic: ${planet.psychologicalFunctions.coreNeed} is pursued through ${sign.psychologicalTheme.charAt(0).toLowerCase() + sign.psychologicalTheme.slice(1)} Healthy expression: ${planet.psychologicalFunctions.healthyExpression}. Defensive risk under pressure: ${planet.psychologicalFunctions.defensiveStrategy}.`;
+  return `[TRADITION] ${planetName} in ${signName} (${sign.modality} ${sign.element}, domicile lord ${sign.domicileLord}): ${planetName} is ${dignityParts.join(" and ")}. [MODERN_SYNTHESIS · Human Reality Layer] Psychological dynamic: ${planet.psychologicalFunctions.coreNeed} is pursued through ${sign.psychologicalTheme.charAt(0).toLowerCase() + sign.psychologicalTheme.slice(1)} Healthy expression: ${planet.psychologicalFunctions.healthyExpression}. Defensive risk under pressure: ${planet.psychologicalFunctions.defensiveStrategy}.`;
 }

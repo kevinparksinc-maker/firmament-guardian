@@ -4,12 +4,28 @@ import type { Tradition } from "../types";
  * Epistemic separation required by Firmament architecture:
  * - FACT: Externally verifiable astronomical, mathematical, or historical fact.
  * - TRADITION: A historical astrological teaching, rule, or correspondence attributed to a specific tradition/source.
+ * - SCHOOL_VARIANT: A specific school/author variant where historical authorities diverge (e.g. Dorothean vs Ptolemaic, Lahiri vs Tropical Hybrid, Abu Ma'shar vs Al-Qabisi).
  * - FIRMAMENT_CANON: A deterministic rule, coordinate lock, or interpretive synthesis explicitly adopted by Firmament.
+ * - MODERN_SYNTHESIS: Contemporary psychological, somatic, or human-reality synthesis clearly distinguished from historical doctrine.
  */
-export type EpistemicCategory = "FACT" | "TRADITION" | "FIRMAMENT_CANON";
+export type EpistemicCategory =
+  | "FACT"
+  | "TRADITION"
+  | "SCHOOL_VARIANT"
+  | "FIRMAMENT_CANON"
+  | "MODERN_SYNTHESIS";
+
+export type HistoricalLineage =
+  | Tradition
+  | "hellenistic"
+  | "babylonian"
+  | "hermetic"
+  | "medieval"
+  | "persian"
+  | "modern-psychological";
 
 export type ProvenanceRecord = {
-  tradition: Tradition | "hellenistic" | "babylonian" | "hermetic" | "medieval";
+  tradition: HistoricalLineage;
   sourceTitle: string;
   authorOrEra?: string;
   epistemicCategory: EpistemicCategory;
@@ -41,6 +57,7 @@ export type PlanetCanonRecord = {
     healthyExpression: string;
     defensiveStrategy: string;
     shadowExpression: string;
+    provenance?: ProvenanceRecord;
   };
   rulerships: {
     domiciles: string[];
@@ -250,6 +267,188 @@ export type DetectedTraditionalMechanism = {
   statement: string;
   epistemicCategory: EpistemicCategory;
   sourceTitle: string;
+  provenanceTradition?: Tradition;
+  historicalLineage?: HistoricalLineage;
+  confidence?: "high" | "moderate" | "low" | "reference-only";
+};
+
+export type DispositorChainNode = {
+  planet: string;
+  sign: string;
+  domicileLord: string;
+  exaltationLord: string | null;
+  termLordEgyptian?: string;
+  termLordPtolemaic?: string;
+  chainToFinalDispositor: string[];
+  finalDispositor: string | null;
+  inMutualReceptionLoop: boolean;
+  loopMembers: string[];
+  receptionWithLord: "domicile-self" | "mutual-reception" | "aspect-with-reception" | "aversion-to-lord" | "unreceived-aspect";
+  conditionVsDeliveryNote: string;
+};
+
+export type WesternTimingActivationRecord = {
+  techniqueId:
+    | "annual-profection"
+    | "zodiacal-releasing"
+    | "primary-directions"
+    | "solar-return"
+    | "secondary-progressions";
+  name: string;
+  eraClassification: "hellenistic-medieval" | "modern-secondary";
+  calculatedOrDoctrineStatus: "calculated-active" | "doctrine-only";
+  activeSignOrPeriod?: string;
+  timeLordOrActivatedBody?: string;
+  activatedHouse?: number;
+  natalPromiseExplanation: string;
+  interactionWithNatalChart: string;
+  provenance: ProvenanceRecord;
+};
+
+export type VedicAyanamsaMode = "firmament-tropical-hybrid" | "classical-sidereal-lahiri" | "classical-sidereal-raman";
+
+export type VedicVargaDoctrineRecord = {
+  code: "D1" | "D2" | "D3" | "D4" | "D7" | "D9" | "D10" | "D12" | "D16" | "D20" | "D24" | "D27" | "D30" | "D60";
+  sanskritName: string;
+  divisionCount: number;
+  primaryDomain: string;
+  whenToConsult: string;
+  evaluationRule: string;
+  relationToD1Rashi: string;
+  provenance: ProvenanceRecord;
+};
+
+export type VedicYogaCanonRecord = {
+  id: string;
+  name: string;
+  category: "raja-yoga" | "dhana-yoga" | "pancha-mahapurusha" | "lunar-solar-yoga" | "nabhasa-or-special" | "arista-or-cancellation";
+  formationRule: string;
+  requiredConditions: string[];
+  exceptionsAndBhanga: string[];
+  classicalMeaning: string;
+  humanRealityManifestation: string;
+  provenance: ProvenanceRecord;
+};
+
+export type DetectedVedicYoga = {
+  yogaId: string;
+  name: string;
+  category: VedicYogaCanonRecord["category"];
+  involvedBodies: string[];
+  housesInvolved: number[];
+  status: "formed-strong" | "formed-modified" | "cancelled-or-bhanga";
+  classicalExplanation: string;
+  cancellationOrModificationNote: string;
+  humanRealitySynthesis: string;
+  coordinateFrame: VedicAyanamsaMode;
+  provenance: ProvenanceRecord;
+};
+
+export type VedicStrengthAndPanchangaSummary = {
+  coordinateMode: VedicAyanamsaMode;
+  ayanamsaDegreesApplied: number;
+  panchanga: {
+    tithi: { index: number; name: string; paksha: "Shukla (Waxing)" | "Krishna (Waning)"; ruler: string; meaning: string };
+    vara: { name: string; ruler: string; meaning: string };
+    yoga: { index: number; name: string; meaning: string };
+    karana: { name: string; meaning: string };
+  };
+  charaKarakas: Array<{
+    karaka: "Atmakaraka (AK)" | "Amatyakaraka (AmK)" | "Bhratrikaraka (BK)" | "Matrikaraka (MK)" | "Putrakaraka (PK)" | "Gnatikaraka (GK)" | "Darakaraka (DK)";
+    planet: string;
+    degreeInSign: number;
+    signification: string;
+  }>;
+  arudhaLagnaview: {
+    alSign: string;
+    alHouseFromLagna: number;
+    ulUpapadaSign: string;
+    interpretation: string;
+  };
+  vimshottariDasha: {
+    birthNakshatra: string;
+    startingMahadashaLord: string;
+    balanceAtBirthYears: number;
+    currentActiveMahadasha?: string;
+    currentActiveAntardasha?: string;
+    interpretation: string;
+  };
+  navamshaD9Placements: Array<{
+    body: string;
+    d1Sign: string;
+    d9Sign: string;
+    isVargottama: boolean;
+    d9Ruler: string;
+    synthesis: string;
+  }>;
+  detectedYogas: DetectedVedicYoga[];
+};
+
+export type MedievalFirdariaPeriod = {
+  planet: string;
+  yearsSpan: number;
+  startAge: number;
+  endAge: number;
+  subPeriods: Array<{ planet: string; startAge: number; endAge: number }>;
+};
+
+export type ArabicPersianTraditionSummary = {
+  sect: "day" | "night" | "god-view-unsected";
+  firdariaSystem: {
+    variantUsed: "Abu Ma'shar / Alcabitius Standard" | "Nocturnal Node Variant";
+    currentMajorLord?: string;
+    currentSubLord?: string;
+    activeAge?: number;
+    explanation: string;
+    provenance: ProvenanceRecord;
+  };
+  almutenFiguris: {
+    winnerPlanet: string;
+    scores: Record<string, number>;
+    explanation: string;
+    provenance: ProvenanceRecord;
+  };
+  extendedLots: Array<{
+    lot: LotCanonRecord;
+    longitude: number;
+    display: string;
+    sign: string;
+    house: number;
+    lord: string;
+    lordHouse: number;
+    houseInterpretation: string;
+    variantNote?: string;
+  }>;
+  branchDoctrines: {
+    nativities: string;
+    elections: string;
+    interrogations: string;
+    mundaneIngressesAndConjunctions: string;
+  };
+};
+
+export type RelationalHouseChainSynthesis = {
+  house: number;
+  houseTopic: string;
+  signOnCusp: string;
+  ruler: string;
+  rulerSign: string;
+  rulerHouse: number;
+  inherentDignityVsDelivery: string;
+  incomingAspectsToRuler: Array<{
+    fromPlanet: string;
+    aspect: string;
+    orb: number;
+    applying: boolean;
+    effect: "strengthens" | "obstructs" | "disciplines-and-redirects" | "supports-with-reception" | "pressures-without-reception";
+    receptionNote: string;
+  }>;
+  timingActivationStatus: string;
+  humanRealityManifestation: string;
+  supportedConclusions: string[];
+  contradictionsOrQualifications: string[];
+  uncertainties: string[];
+  workedChainSummary: string;
 };
 
 export type ChartCanonDossier = {
@@ -265,5 +464,10 @@ export type ChartCanonDossier = {
     house: number;
     houseInterpretation: string;
   }>;
+  dispositorChains?: DispositorChainNode[];
+  westernTimingActivations?: WesternTimingActivationRecord[];
+  vedicJyotishSystem?: VedicStrengthAndPanchangaSummary;
+  arabicPersianSystem?: ArabicPersianTraditionSummary;
+  relationalChains?: RelationalHouseChainSynthesis[];
   formattedSummaryForInterpreter: string;
 };

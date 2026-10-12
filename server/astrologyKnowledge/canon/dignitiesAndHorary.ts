@@ -627,6 +627,13 @@ export function detectHoraryAndTraditionalMechanisms(
 
   const pairAspects: DetectedPairAspect[] = [];
 
+  const mapMechanismTradition = (
+    id: HoraryMechanismRecord["id"]
+  ): "western" | "arabic" => {
+    const lineage = HORARY_MECHANISM_RECORDS[id].provenance.tradition;
+    return lineage === "hellenistic" ? "western" : "arabic";
+  };
+
   for (let i = 0; i < classicalBodies.length; i += 1) {
     for (let j = i + 1; j < classicalBodies.length; j += 1) {
       const a = classicalBodies[i];
@@ -667,14 +674,19 @@ export function detectHoraryAndTraditionalMechanisms(
             timeToExact,
           });
 
+          const mechId = applying ? "applying-aspect" : "separating-aspect";
           const doctrine = TRADITIONAL_ASPECT_DOCTRINE[aspectName];
+          const confidence: "high" | "moderate" = orb <= 2.5 ? "high" : "moderate";
           mechanisms.push({
-            mechanismId: applying ? "applying-aspect" : "separating-aspect",
+            mechanismId: mechId,
             title: `${fast.name} ${applying ? "Applying" : "Separating"} ${aspectName} ${slow.name} (${orb.toFixed(2)}°)`,
             involvedBodies: [fast.name, slow.name],
             statement: `${fast.name} is ${applying ? "applying to" : "separating from"} a ${aspectName} with ${slow.name} at ${orb.toFixed(2)}° orb (${doctrine?.planetaryNature ?? "classical ray"}). ${applying ? "Applying aspects indicate an active, developing dynamic pressing toward culmination." : "Separating aspects indicate an already-formed imprint or prior experience informing the present."}`,
             epistemicCategory: "TRADITION",
-            sourceTitle: HORARY_MECHANISM_RECORDS[applying ? "applying-aspect" : "separating-aspect"].provenance.sourceTitle,
+            sourceTitle: HORARY_MECHANISM_RECORDS[mechId].provenance.sourceTitle,
+            provenanceTradition: mapMechanismTradition(mechId),
+            historicalLineage: HORARY_MECHANISM_RECORDS[mechId].provenance.tradition,
+            confidence,
           });
 
           // Check Refranation (applying aspect where one body is retrograde)
@@ -687,6 +699,9 @@ export function detectHoraryAndTraditionalMechanisms(
               statement: `${fast.name} and ${slow.name} are within ${orb.toFixed(2)}° of a ${aspectName}, while ${retroBody} is retrograde—indicating second thoughts, internal review, or holding back before full external commitment.`,
               epistemicCategory: "TRADITION",
               sourceTitle: HORARY_MECHANISM_RECORDS.refranation.provenance.sourceTitle,
+              provenanceTradition: mapMechanismTradition("refranation"),
+              historicalLineage: HORARY_MECHANISM_RECORDS.refranation.provenance.tradition,
+              confidence,
             });
           }
         }
@@ -726,6 +741,9 @@ export function detectHoraryAndTraditionalMechanisms(
           statement: `${a.name} in ${signA} and ${b.name} in ${signB} are in Mutual Reception by ${bRulerOfA}/${aRulerOfB}: each planet hosts and backs up the other, providing cooperative resilience and a constructive outlet under pressure.`,
           epistemicCategory: "TRADITION",
           sourceTitle: HORARY_MECHANISM_RECORDS["mutual-reception"].provenance.sourceTitle,
+          provenanceTradition: mapMechanismTradition("mutual-reception"),
+          historicalLineage: HORARY_MECHANISM_RECORDS["mutual-reception"].provenance.tradition,
+          confidence: "high",
         });
       }
     }
@@ -749,6 +767,9 @@ export function detectHoraryAndTraditionalMechanisms(
             statement: `${fast.name} separates from ${sep.aspect} ${sep.slow.name} (${sep.orb}°) and immediately applies to ${app.aspect} ${app.slow.name} (${app.orb}°), translating light and bridging those two planetary spheres.`,
             epistemicCategory: "TRADITION",
             sourceTitle: HORARY_MECHANISM_RECORDS["translation-of-light"].provenance.sourceTitle,
+            provenanceTradition: mapMechanismTradition("translation-of-light"),
+            historicalLineage: HORARY_MECHANISM_RECORDS["translation-of-light"].provenance.tradition,
+            confidence: sep.orb <= 3 && app.orb <= 3 ? "high" : "moderate",
           });
         }
       }
@@ -778,6 +799,9 @@ export function detectHoraryAndTraditionalMechanisms(
               statement: `Both ${first.name} and ${second.name} apply to slower ${slow.name}, which collects their light and unifies their separate agendas under ${slow.name}'s authority.`,
               epistemicCategory: "TRADITION",
               sourceTitle: HORARY_MECHANISM_RECORDS["collection-of-light"].provenance.sourceTitle,
+              provenanceTradition: mapMechanismTradition("collection-of-light"),
+              historicalLineage: HORARY_MECHANISM_RECORDS["collection-of-light"].provenance.tradition,
+              confidence: incoming[i].orb <= 3 && incoming[j].orb <= 3 ? "high" : "moderate",
             });
           }
         }
@@ -805,6 +829,9 @@ export function detectHoraryAndTraditionalMechanisms(
           statement: `While ${delayed} is applying to ${target.name} (${later.aspect}, ${later.orb}°), ${interrupter} perfects its ${earlier.aspect} to ${target.name} first (${earlier.orb}°), introducing a competing priority or test before ${delayed}'s agenda completes.`,
           epistemicCategory: "TRADITION",
           sourceTitle: HORARY_MECHANISM_RECORDS.prohibition.provenance.sourceTitle,
+          provenanceTradition: mapMechanismTradition("prohibition"),
+          historicalLineage: HORARY_MECHANISM_RECORDS.prohibition.provenance.tradition,
+          confidence: earlier.orb <= 3 ? "high" : "moderate",
         });
       }
     }
@@ -821,6 +848,9 @@ export function detectHoraryAndTraditionalMechanisms(
         statement: `${row.name} is Cazimi in the heart of the Sun (${cond.solarDistanceDeg}°), extraordinarily fortified in clarity and authority.`,
         epistemicCategory: "TRADITION",
         sourceTitle: HORARY_MECHANISM_RECORDS.cazimi.provenance.sourceTitle,
+        provenanceTradition: mapMechanismTradition("cazimi"),
+        historicalLineage: HORARY_MECHANISM_RECORDS.cazimi.provenance.tradition,
+        confidence: "high",
       });
     } else if (cond.solarCondition === "combust") {
       mechanisms.push({
@@ -830,6 +860,9 @@ export function detectHoraryAndTraditionalMechanisms(
         statement: `${row.name} is Combust within ${cond.solarDistanceDeg}° of the Sun: its significations operate privately, under intense solar pressure, or require conscious separation from ego/authority pressure.`,
         epistemicCategory: "TRADITION",
         sourceTitle: HORARY_MECHANISM_RECORDS.combustion.provenance.sourceTitle,
+        provenanceTradition: mapMechanismTradition("combustion"),
+        historicalLineage: HORARY_MECHANISM_RECORDS.combustion.provenance.tradition,
+        confidence: (cond.solarDistanceDeg ?? 8) <= 4 ? "high" : "moderate",
       });
     } else if (cond.solarCondition === "under-the-beams") {
       mechanisms.push({
@@ -839,6 +872,9 @@ export function detectHoraryAndTraditionalMechanisms(
         statement: `${row.name} is Under the Sun's Beams (${cond.solarDistanceDeg}° from the Sun), working behind the scenes or in private preparation.`,
         epistemicCategory: "TRADITION",
         sourceTitle: HORARY_MECHANISM_RECORDS["under-the-beams"].provenance.sourceTitle,
+        provenanceTradition: mapMechanismTradition("under-the-beams"),
+        historicalLineage: HORARY_MECHANISM_RECORDS["under-the-beams"].provenance.tradition,
+        confidence: "moderate",
       });
     }
 
@@ -850,6 +886,9 @@ export function detectHoraryAndTraditionalMechanisms(
         statement: `${row.name} is Retrograde at ${row.display} (House ${row.house}): turns ${row.name}'s function inward toward reflection, revision, and self-reliance rather than automatic outward consensus.`,
         epistemicCategory: "TRADITION",
         sourceTitle: HORARY_MECHANISM_RECORDS["retrograde-condition"].provenance.sourceTitle,
+        provenanceTradition: mapMechanismTradition("retrograde-condition"),
+        historicalLineage: HORARY_MECHANISM_RECORDS["retrograde-condition"].provenance.tradition,
+        confidence: "high",
       });
     }
   }

@@ -1,6 +1,7 @@
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type { ChartResult, ChartRow } from "../../astronomy";
 import type { EvidenceItem, SourceTrace } from "../types";
+import { evaluateArabicPersianTradition } from "./arabicPersianCanon";
 import { getDecanCanonByLongitude } from "./decans36";
 import {
   detectHoraryAndTraditionalMechanisms,
@@ -18,7 +19,17 @@ import {
   SIGN_CANON_RECORDS,
   synthesizePlanetInSign,
 } from "./planetsAndSigns";
-import type { ChartCanonDossier, RetrievedPlacementDossier } from "./types";
+import type {
+  ChartCanonDossier,
+  RetrievedPlacementDossier,
+  VedicAyanamsaMode,
+} from "./types";
+import { evaluateVedicJyotishSystem } from "./vedicJyotishCanon";
+import {
+  buildDispositorChains,
+  buildRelationalHouseChains,
+  evaluateWesternTimingActivations,
+} from "./westernRelationalAndTiming";
 
 export function retrievePlacementDossier(
   row: ChartRow,
@@ -70,7 +81,8 @@ export function retrievePlacementDossier(
 }
 
 export function retrieveChartCanonDossier(
-  chart: ChartResult
+  chart: ChartResult,
+  options?: { vedicCoordinateMode?: VedicAyanamsaMode }
 ): ChartCanonDossier {
   const sunRow = chart.movingBodies.find(b => b.name === "Sun");
   const isDayChart = sunRow ? sunRow.house >= 7 && sunRow.house <= 12 : true;
@@ -105,6 +117,21 @@ export function retrieveChartCanonDossier(
     isDayChart
   );
   const arabicLotsSummary = calculateChartHermeticLots(chart, isDayChart);
+  const dispositorChains = buildDispositorChains(chart, isDayChart);
+  const westernTimingActivations = evaluateWesternTimingActivations(
+    chart,
+    isDayChart
+  );
+  const vedicJyotishSystem = evaluateVedicJyotishSystem(
+    chart,
+    options?.vedicCoordinateMode ?? "firmament-tropical-hybrid"
+  );
+  const arabicPersianSystem = evaluateArabicPersianTradition(chart, isDayChart);
+  const relationalChains = buildRelationalHouseChains(
+    chart,
+    isDayChart,
+    westernTimingActivations
+  );
 
   const lines: string[] = [
     "=== LOCAL FIRMAMENT CANON & TRADITIONAL DOCTRINE DOSSIER (DETERMINISTICALLY RETRIEVED) ===",
@@ -147,6 +174,34 @@ export function retrieveChartCanonDossier(
     }
   }
 
+  if (dispositorChains.length > 0) {
+    lines.push(
+      "",
+      "--- DISPOSITOR CHAINS & INHERENT DIGNITY VS. HOUSE DELIVERY ---"
+    );
+    for (const d of dispositorChains) {
+      lines.push(
+        `• ${d.planet} in ${d.sign} → Domicile Lord: ${d.domicileLord} (Chain: ${d.chainToFinalDispositor.join(" → ")}${d.finalDispositor ? ` [Final Dispositor: ${d.finalDispositor}]` : d.inMutualReceptionLoop ? ` [Mutual Reception Loop: ${d.loopMembers.join(" ↔ ")}]` : ""}): ${d.conditionVsDeliveryNote}`
+      );
+    }
+  }
+
+  if (relationalChains.length > 0) {
+    lines.push(
+      "",
+      "--- RELATIONAL INTERPRETATION LAYER (HOUSE LORD + PLACEMENT + ASPECTS + RECEPTION + TIMING + HUMAN REALITY) ---"
+    );
+    for (const rc of relationalChains) {
+      lines.push(`• ${rc.workedChainSummary}`);
+      lines.push(`  - ${rc.humanRealityManifestation}`);
+      if (rc.contradictionsOrQualifications.length > 0) {
+        lines.push(
+          `  - [Qualifications & Tensions] ${rc.contradictionsOrQualifications.join(" | ")}`
+        );
+      }
+    }
+  }
+
   if (detectedMechanisms.length > 0) {
     lines.push(
       "",
@@ -154,7 +209,46 @@ export function retrieveChartCanonDossier(
     );
     for (const m of detectedMechanisms) {
       lines.push(
-        `• [${m.mechanismId.toUpperCase()} · ${m.epistemicCategory}] ${m.title}: ${m.statement} (Source: ${m.sourceTitle})`
+        `• [${m.mechanismId.toUpperCase()} · ${m.epistemicCategory} · Lineage: ${m.historicalLineage ?? "traditional"}] ${m.title}: ${m.statement} (Source: ${m.sourceTitle})`
+      );
+    }
+  }
+
+  if (westernTimingActivations.length > 0) {
+    lines.push("", "--- WESTERN TIMING & ACTIVATION DOCTRINE ---");
+    for (const wt of westernTimingActivations) {
+      lines.push(
+        `• [${wt.name} · ${wt.calculatedOrDoctrineStatus}] ${wt.natalPromiseExplanation} ${wt.interactionWithNatalChart}`
+      );
+    }
+  }
+
+  if (vedicJyotishSystem) {
+    lines.push(
+      "",
+      `--- VEDIC JYOTISH INTERPRETIVE SYSTEM (Coordinate Frame: ${vedicJyotishSystem.coordinateMode}, Ayanamsa Offset: ${vedicJyotishSystem.ayanamsaDegreesApplied}°) ---`,
+      `• [Panchanga] Tithi: ${vedicJyotishSystem.panchanga.tithi.name} (${vedicJyotishSystem.panchanga.tithi.paksha}, Lord: ${vedicJyotishSystem.panchanga.tithi.ruler}) | Vara: ${vedicJyotishSystem.panchanga.vara.name} | Nitya Yoga: ${vedicJyotishSystem.panchanga.yoga.name} | Karana: ${vedicJyotishSystem.panchanga.karana.name}`,
+      `• [Vimshottari Dasha] ${vedicJyotishSystem.vimshottariDasha.interpretation}`,
+      `• [Jaimini Chara Karakas] ${vedicJyotishSystem.charaKarakas.map(k => `${k.karaka}: ${k.planet} (${k.degreeInSign}°)`).join(" | ")}`,
+      `• [Arudha Padas] ${vedicJyotishSystem.arudhaLagnaview.interpretation}`
+    );
+    for (const y of vedicJyotishSystem.detectedYogas) {
+      lines.push(
+        `• [Vedic Yoga: ${y.name} (${y.status})] ${y.classicalExplanation} ${y.cancellationOrModificationNote} ${y.humanRealitySynthesis}`
+      );
+    }
+  }
+
+  if (arabicPersianSystem) {
+    lines.push(
+      "",
+      "--- MEDIEVAL ARABIC & PERSIAN TRADITION (FIRDARIA, ALMUTEN FIGURIS, SIHAM LOTS & 4 BRANCHES) ---",
+      `• ${arabicPersianSystem.firdariaSystem.explanation}`,
+      `• ${arabicPersianSystem.almutenFiguris.explanation}`
+    );
+    for (const el of arabicPersianSystem.extendedLots) {
+      lines.push(
+        `• ${el.lot.name} at ${el.display} (House ${el.house}, Lord: ${el.lord} in House ${el.lordHouse}): ${el.houseInterpretation}${el.variantNote ? ` [${el.variantNote}]` : ""}`
       );
     }
   }
@@ -174,6 +268,11 @@ export function retrieveChartCanonDossier(
     placements,
     detectedMechanisms,
     arabicLotsSummary,
+    dispositorChains,
+    westernTimingActivations,
+    vedicJyotishSystem,
+    arabicPersianSystem,
+    relationalChains,
     formattedSummaryForInterpreter: lines.join("\n"),
   };
 }
@@ -186,7 +285,8 @@ export function canonDossierToEvidenceItems(
     tradition: EvidenceItem["tradition"],
     technique: string,
     sourceTitle: string,
-    ruleId: string
+    ruleId: string,
+    confidence: SourceTrace["confidence"] = "high"
   ): SourceTrace => ({
     sourceId: "firmament-canon-knowledge",
     tradition,
@@ -194,7 +294,7 @@ export function canonDossierToEvidenceItems(
     sourceTitle,
     retrievedAt: now,
     ruleId,
-    confidence: "high",
+    confidence,
   });
 
   const items: EvidenceItem[] = [];
@@ -228,15 +328,22 @@ export function canonDossierToEvidenceItems(
         "firmament",
         "canon-placement-dossier",
         "Firmament Structured Traditional Knowledge Canon",
-        "firmament-canon-dossier"
+        "firmament-canon-dossier",
+        "high"
       ),
     });
   }
 
   for (const m of dossier.detectedMechanisms) {
+    // Preserve actual historical provenance rather than hardcoding "arabic" or "high" confidence
+    const mappedTradition: EvidenceItem["tradition"] =
+      m.provenanceTradition ??
+      (m.historicalLineage === "hellenistic" ? "western" : "arabic");
+    const mappedConfidence: SourceTrace["confidence"] = m.confidence ?? "high";
+
     items.push({
       id: `canon-mechanism-${m.mechanismId}-${m.involvedBodies.join("-").toLowerCase()}`,
-      tradition: "arabic",
+      tradition: mappedTradition,
       category: "deterministic-rule",
       technique: m.mechanismId,
       subject: m.involvedBodies.join("-"),
@@ -259,14 +366,97 @@ export function canonDossierToEvidenceItems(
             )
           ? "pressured"
           : "mixed",
-      strength: 0.85,
+      strength: mappedConfidence === "high" ? 0.88 : 0.72,
       ruleId: "firmament-traditional-mechanisms",
       sourceId: "firmament-canon-knowledge",
       sourceTrace: makeTrace(
-        "arabic",
+        mappedTradition,
         m.mechanismId,
         m.sourceTitle,
-        "firmament-traditional-mechanisms"
+        "firmament-traditional-mechanisms",
+        mappedConfidence
+      ),
+    });
+  }
+
+  for (const rc of dossier.relationalChains ?? []) {
+    items.push({
+      id: `canon-relational-house-${rc.house}`,
+      tradition: "western",
+      category: "deterministic-rule",
+      technique: "relational-house-chain",
+      subject: `house-${rc.house}-${rc.ruler.toLowerCase()}`,
+      statement: `${rc.workedChainSummary} ${rc.humanRealityManifestation}`,
+      concepts: [
+        `house-${rc.house}`,
+        rc.ruler.toLowerCase(),
+        "relational-chain",
+      ],
+      polarity:
+        rc.contradictionsOrQualifications.length > 0 ? "mixed" : "supportive",
+      strength: 0.9,
+      ruleId: "firmament-relational-chain",
+      sourceId: "firmament-canon-knowledge",
+      sourceTrace: makeTrace(
+        "western",
+        "relational-house-chain",
+        "Dorotheus of Sidon; Vettius Valens; Firmament Relational Engine",
+        "firmament-relational-chain",
+        rc.uncertainties.length > 0 ? "moderate" : "high"
+      ),
+    });
+  }
+
+  for (const yoga of dossier.vedicJyotishSystem?.detectedYogas ?? []) {
+    items.push({
+      id: `canon-vedic-yoga-${yoga.yogaId}`,
+      tradition: "vedic",
+      category: "deterministic-rule",
+      technique: "vedic-yoga",
+      subject: yoga.name,
+      statement: `[TRADITION · Jyotish Yoga (${yoga.coordinateFrame})] ${yoga.name}: ${yoga.classicalExplanation} ${yoga.cancellationOrModificationNote} ${yoga.humanRealitySynthesis}`,
+      concepts: [
+        "vedic-yoga",
+        yoga.yogaId,
+        ...yoga.involvedBodies.map(b => b.toLowerCase()),
+      ],
+      polarity: yoga.status === "formed-strong" ? "supportive" : "mixed",
+      strength: yoga.status === "formed-strong" ? 0.88 : 0.74,
+      ruleId: "firmament-vedic-yogas",
+      sourceId: "firmament-canon-knowledge",
+      sourceTrace: makeTrace(
+        "vedic",
+        "vedic-yoga",
+        yoga.provenance.sourceTitle,
+        "firmament-vedic-yogas",
+        yoga.status === "formed-strong" ? "high" : "moderate"
+      ),
+    });
+  }
+
+  if (dossier.arabicPersianSystem) {
+    items.push({
+      id: "canon-arabic-firdaria-almuten",
+      tradition: "arabic",
+      category: "deterministic-rule",
+      technique: "firdaria-and-almuten",
+      subject: dossier.arabicPersianSystem.almutenFiguris.winnerPlanet,
+      statement: `${dossier.arabicPersianSystem.firdariaSystem.explanation} ${dossier.arabicPersianSystem.almutenFiguris.explanation}`,
+      concepts: [
+        "firdaria",
+        "almuten-figuris",
+        dossier.arabicPersianSystem.almutenFiguris.winnerPlanet.toLowerCase(),
+      ],
+      polarity: "supportive",
+      strength: 0.85,
+      ruleId: "firmament-arabic-persian-tradition",
+      sourceId: "firmament-canon-knowledge",
+      sourceTrace: makeTrace(
+        "arabic",
+        "firdaria-and-almuten",
+        "Abu Ma'shar, Great Introduction; Ibn Ezra; Guido Bonatti",
+        "firmament-arabic-persian-tradition",
+        dossier.sect === "god-view-unsected" ? "moderate" : "high"
       ),
     });
   }

@@ -253,8 +253,21 @@ describe("astrology knowledge gateway", () => {
     expect(sunPlacement?.nakshatraRecord?.name).toBeDefined();
     expect(sunPlacement?.activePada?.pada).toBeGreaterThanOrEqual(1);
     expect(packet.canonDossier.arabicLotsSummary.length).toBeGreaterThanOrEqual(2);
+    expect(packet.canonDossier.dispositorChains?.length).toBeGreaterThan(0);
+    expect(packet.canonDossier.westernTimingActivations?.length).toBeGreaterThanOrEqual(5);
+    expect(packet.canonDossier.vedicJyotishSystem).toBeDefined();
+    expect(packet.canonDossier.vedicJyotishSystem?.panchanga.tithi.name).toBeDefined();
+    expect(packet.canonDossier.vedicJyotishSystem?.charaKarakas.length).toBeGreaterThan(0);
+    expect(packet.canonDossier.arabicPersianSystem).toBeDefined();
+    expect(packet.canonDossier.arabicPersianSystem?.almutenFiguris.winnerPlanet).toBeDefined();
+    expect(packet.canonDossier.relationalChains?.length).toBeGreaterThanOrEqual(4);
+    // Verify Modern Psychological synthesis is explicitly attributed rather than conflated with ancient texts
+    expect(sunPlacement?.planetInSignSynthesis).toContain("[MODERN_SYNTHESIS");
     expect(formatEvidencePacket(packet)).toContain(
       "LOCAL FIRMAMENT CANON & TRADITIONAL DOCTRINE DOSSIER"
+    );
+    expect(formatEvidencePacket(packet)).toContain(
+      "RELATIONAL INTERPRETATION LAYER"
     );
   });
 });
