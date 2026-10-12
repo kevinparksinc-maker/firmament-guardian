@@ -25,6 +25,7 @@ import { WelcomeHost } from "@/components/WelcomeHost";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { AccountControl } from "@/components/AccountControl";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
+import { ChartOverview } from "@/components/ChartOverview";
 import {
   HoverCard,
   HoverCardContent,
@@ -301,6 +302,7 @@ export default function Home() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState<"blueprint" | "synastry" | "weather" | "podcast" | "social">("blueprint");
+  const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
   const { isSovereign, openPaywall } = useSovereignTier();
   const [activeProfile, setActiveProfile] = useState<UserProfileData | null>(() => {
     try {
@@ -816,6 +818,11 @@ export default function Home() {
 
         {result && (
           <>
+            <ChartOverview
+              chart={result}
+              view={readingView}
+              onViewChange={setReadingView}
+            />
             {/* First Screen Hero: Big AI Master Interpreter Chatbox with RAG */}
             <div id="master-interpreter-section">
               <WelcomeHost
@@ -1342,7 +1349,7 @@ export default function Home() {
                   onRefresh={refreshLiveTransit}
                   refreshing={calculate.isPending}
                 />
-                <details className="group rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                <details open={readingView === "evidence"} className="group rounded-2xl border border-white/10 bg-white/[0.025] p-4">
                   <summary className="cursor-pointer list-none text-sm font-semibold text-slate-200 marker:hidden">
                     <span className="mr-2 text-cyan-300">＋</span>Detailed
                     placements and fixed stars{" "}

@@ -87,11 +87,20 @@ describe("horary astrology", () => {
     expect(messages[1].content).toContain(result.chart.querentRuler);
     expect(messages[1].content).toContain(result.chart.subjectRuler);
     expect(messages[1].content).toContain(result.chart.topicRuler);
-    expect(messages[1].content).toContain("Significator roles:");
-    expect(messages[1].content).toContain("GOD VIEW / GEOCENTRIC EVIDENCE SET");
-    expect(messages[1].content).toContain("TRADITIONAL LOTS / ARABIC PARTS");
-    expect(messages[1].content).toContain("LUNAR MANSION / MANZIL / DECAN CONTEXT");
-    expect(messages[1].content).toContain("complete calculated evidence");
+    expect(messages[1].content).toContain("Roles:");
+    expect(messages[1].content).toContain("LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED");
+    expect(messages[1].content).toContain("This is the compact judgment evidence");
+    expect(result.chart.canonEvidenceText).toContain("Condition:");
+  });
+
+  it("returns a deterministic core judgment when optional language synthesis fails", async () => {
+    mocked.invokeLLM.mockRejectedValueOnce(new Error("provider unavailable"));
+
+    const result = await openHoraryQuestion(sampleInput);
+
+    expect(result.reading).toContain("## Judgment");
+    expect(result.reading).toContain("INSUFFICIENT TESTIMONY");
+    expect(result.reading).toContain("deterministic chart");
   });
 
   it("adds a person natal layer while keeping transit and God View at the question moment", async () => {
@@ -125,7 +134,7 @@ describe("horary astrology", () => {
 
     const messages = mocked.invokeLLM.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
     expect(messages.filter(message => message.role === "user" && message.content === question)).toHaveLength(1);
-    expect(messages.some(message => message.content.includes("Original complete horary evidence"))).toBe(true);
+    expect(messages.some(message => message.content.includes("Original compact horary evidence"))).toBe(true);
     expect(messages.some(message => message.content.includes("Will the hypothetical applicant accept the new role?"))).toBe(true);
     expect(messages[0].content).toContain("Keep the original chart and question fixed");
   });
