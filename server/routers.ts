@@ -18,6 +18,7 @@ import {
   diagnoseAstrologyEvidence,
   evaluateBehavioralIntelligence,
 } from "./astrologyKnowledge";
+import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
 
 const chartInput = z.object({
   location: z.string(),
@@ -145,9 +146,13 @@ export const appRouter = router({
             )
             .default([]),
           question: z.string().min(1),
+          chart: z.any().optional(),
+          mode: z.enum(["natal", "transit", "combined"]).optional(),
         })
       )
-      .mutation(({ input }) => askHost(input.history, input.question)),
+      .mutation(({ input }) =>
+        askHost(input.history, input.question, input.chart, input.mode)
+      ),
     generate: publicProcedure
       .input(
         chartResultInput.extend({
@@ -231,6 +236,90 @@ export const appRouter = router({
       .mutation(({ input }) =>
         horaryFollowUp(input.chart, input.history, input.question)
       ),
+  }),
+  social: router({
+    listLovedOnes: publicProcedure.query(async ({ ctx }) => {
+      const openId = ctx.user?.openId;
+      return db.listLovedOnes(openId);
+    }),
+    saveLovedOne: publicProcedure
+      .input(
+        z.object({
+          id: z.number().optional(),
+          name: z.string().trim().min(1).max(100),
+          relationship: z.enum([
+            "child",
+            "partner",
+            "parent",
+            "sibling",
+            "friend",
+            "mentor",
+            "colleague",
+          ]),
+          location: z.string().trim().min(2),
+          latitude: z.number(),
+          longitude: z.number(),
+          timezone: z.string(),
+          date: z.string(),
+          time: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const openId = ctx.user?.openId || "guest";
+        return db.upsertLovedOne(openId, input as any);
+      }),
+    deleteLovedOne: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const openId = ctx.user?.openId || "guest";
+        return db.deleteLovedOne(openId, input.id);
+      }),
+    checkInStatus: publicProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          relationship: z.enum([
+            "child",
+            "partner",
+            "parent",
+            "sibling",
+            "friend",
+            "mentor",
+            "colleague",
+          ]),
+          location: z.string(),
+          latitude: z.number(),
+          longitude: z.number(),
+          timezone: z.string(),
+          date: z.string(),
+          time: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const chart = await calculateChart({
+          location: input.location,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          timezone: input.timezone,
+          date: input.date,
+          time: input.time || "12:00",
+          worldview: "agent",
+          readingScope: "combined",
+        });
+        const status = evaluateLovedOneCheckIn(chart, input.name, input.relationship);
+        return { chart, status };
+      }),
+    systemIntersect: publicProcedure
+      .input(
+        z.object({
+          userChart: z.any(),
+          targetChart: z.any(),
+        })
+      )
+      .mutation(({ input }) => {
+        return analyzeSystemIntersect(input.userChart, input.targetChart);
+      }),
   }),
 });
 export type AppRouter = typeof appRouter;

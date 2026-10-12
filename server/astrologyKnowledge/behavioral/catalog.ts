@@ -59,6 +59,7 @@ export type BehavioralPatternDefinition = {
     planetsInSigns?: Array<[string, string]>;
     aspectPairs?: Array<[string, string]>;
     houses?: number[];
+    signs?: string[];
     description: string;
   };
   developmentalTrajectory: {

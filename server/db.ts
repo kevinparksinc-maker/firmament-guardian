@@ -162,3 +162,78 @@ export async function listSavedReadings(openId: string) {
   if (!db) return mockReadings.filter(r => r.openId === openId);
   return db.select().from(savedReadings).where(eq(savedReadings.openId, openId)).orderBy(desc(savedReadings.updatedAt));
 }
+
+// ==========================================
+// Pinned Loved Ones & Social Network Matrix
+// ==========================================
+import type { LovedOneRecord, LovedOneInput } from "../shared/social";
+
+let nextLovedOneId = 1;
+const mockLovedOnes: Array<LovedOneRecord> = [
+  {
+    id: nextLovedOneId++,
+    openId: "global-default",
+    name: "Amaree",
+    relationship: "child",
+    location: "Dallas, Texas, USA",
+    latitude: 32.7767,
+    longitude: -96.797,
+    timezone: "America/Chicago",
+    date: "2012-05-18",
+    time: "14:24",
+    notes: "Son · Sensitive Taurus Sun & Aries Moon · Provide grounding peace and celebrate his independence.",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export async function listLovedOnes(openId?: string): Promise<LovedOneRecord[]> {
+  if (!openId) return [...mockLovedOnes];
+  const userItems = mockLovedOnes.filter(l => l.openId === openId);
+  if (userItems.length === 0) {
+    return mockLovedOnes.map(l => ({ ...l, openId }));
+  }
+  return userItems;
+}
+
+export async function upsertLovedOne(openId: string, input: LovedOneInput): Promise<LovedOneRecord> {
+  const now = new Date().toISOString();
+  if (input.id) {
+    const idx = mockLovedOnes.findIndex(l => l.id === input.id);
+    if (idx !== -1) {
+      mockLovedOnes[idx] = {
+        ...mockLovedOnes[idx],
+        ...input,
+        updatedAt: now,
+      };
+      return mockLovedOnes[idx];
+    }
+  }
+  const newRecord: LovedOneRecord = {
+    id: nextLovedOneId++,
+    openId,
+    name: input.name,
+    relationship: input.relationship,
+    location: input.location,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    timezone: input.timezone,
+    date: input.date,
+    time: input.time,
+    notes: input.notes,
+    createdAt: now,
+    updatedAt: now,
+  };
+  mockLovedOnes.unshift(newRecord);
+  return newRecord;
+}
+
+export async function deleteLovedOne(openId: string, id: number): Promise<boolean> {
+  const idx = mockLovedOnes.findIndex(l => l.id === id);
+  if (idx !== -1) {
+    mockLovedOnes.splice(idx, 1);
+    return true;
+  }
+  return false;
+}
+

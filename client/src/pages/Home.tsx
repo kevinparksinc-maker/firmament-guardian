@@ -30,6 +30,29 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { CosmicShareCard } from "@/components/CosmicShareCard";
+import { SocialLovedOnesMatrix } from "@/components/SocialLovedOnesMatrix";
+import { SynastryMatrixTab } from "@/components/SynastryMatrixTab";
+import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
+import { AudioPodcastBriefing } from "@/components/AudioPodcastBriefing";
+import { useSovereignTier, SovereignTeaserLock } from "@/components/SovereignTierModal";
+import {
+  Share2,
+  Users,
+  Heart,
+  Calendar,
+  Headphones,
+  Crown,
+  Layers,
+  Sparkles as SparklesIcon,
+  User,
+} from "lucide-react";
+import {
+  NatalProfileBuilder,
+  ActiveProfileBar,
+  type UserProfileData,
+  SAMPLE_PROFILE,
+} from "@/components/NatalProfileBuilder";
 import type { ChartResult } from "../../../server/astronomy";
 import type { Worldview } from "../../../server/astrologyCore";
 import { formatInZone } from "../../../shared/time";
@@ -275,6 +298,30 @@ export default function Home() {
   const [readingQuestion, setReadingQuestion] = useState("");
   const [readingMode, setReadingMode] = useState<ReadingMode>("combined");
   const [showHelp, setShowHelp] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(null);
+  const [mainTab, setMainTab] = useState<"blueprint" | "synastry" | "weather" | "podcast" | "social">("blueprint");
+  const { isSovereign, openPaywall } = useSovereignTier();
+  const [activeProfile, setActiveProfile] = useState<UserProfileData | null>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("algorithms_cosmos_profile");
+        if (saved) return JSON.parse(saved);
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  const handleAskMasterInterpreter = (question: string) => {
+    setInterpreterPrompt(question);
+    document.getElementById("master-interpreter-section")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
   const [showMap, setShowMap] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= 640
   );
@@ -462,6 +509,84 @@ export default function Home() {
     const id = window.setInterval(refreshLiveTransit, 5 * 60 * 1000);
     return () => window.clearInterval(id);
   }, [result, readingMode, worldview, form]);
+  const handleSaveProfile = async (newProfile: UserProfileData) => {
+    setActiveProfile(newProfile);
+    try {
+      localStorage.setItem("algorithms_cosmos_profile", JSON.stringify(newProfile));
+    } catch {
+      // ignore
+    }
+    const nextForm = {
+      location: newProfile.location,
+      latitude: newProfile.latitude,
+      longitude: newProfile.longitude,
+      timezone: newProfile.timezone,
+      date: newProfile.date,
+      time: newProfile.time,
+      transitLocation: newProfile.transitLocation || newProfile.location,
+      transitLatitude: newProfile.transitLatitude || newProfile.latitude,
+      transitLongitude: newProfile.transitLongitude || newProfile.longitude,
+      transitTimezone: newProfile.transitTimezone || newProfile.timezone,
+      transitDate: "",
+      transitTime: "",
+    };
+    setForm(nextForm);
+    setLocationQuery(newProfile.location);
+    setTransitLocationQuery(nextForm.transitLocation);
+    await calculateChart(worldview, readingMode, nextForm);
+    setIsProfileModalOpen(false);
+  };
+
+  const handleClearProfile = () => {
+    try {
+      localStorage.removeItem("algorithms_cosmos_profile");
+    } catch {
+      // ignore
+    }
+    setActiveProfile(null);
+    setResult(null);
+    setForm(emptyForm);
+    setLocationQuery("");
+    setTransitLocationQuery("");
+    setIsProfileModalOpen(false);
+  };
+
+  const handleLoadSampleChart = () => {
+    const sample = SAMPLE_PROFILE;
+    setActiveProfile(sample);
+    try {
+      localStorage.setItem("algorithms_cosmos_profile", JSON.stringify(sample));
+    } catch {
+      // ignore
+    }
+    setForm(exampleChart);
+    setLocationQuery(exampleChart.location);
+    setTransitLocationQuery(exampleChart.transitLocation);
+    void calculateChart(worldview, readingMode, exampleChart);
+  };
+
+  useEffect(() => {
+    if (activeProfile && !result && !calculate.isPending) {
+      const nextForm = {
+        location: activeProfile.location,
+        latitude: activeProfile.latitude,
+        longitude: activeProfile.longitude,
+        timezone: activeProfile.timezone,
+        date: activeProfile.date,
+        time: activeProfile.time,
+        transitLocation: activeProfile.transitLocation || activeProfile.location,
+        transitLatitude: activeProfile.transitLatitude || activeProfile.latitude,
+        transitLongitude: activeProfile.transitLongitude || activeProfile.longitude,
+        transitTimezone: activeProfile.transitTimezone || activeProfile.timezone,
+        transitDate: "",
+        transitTime: "",
+      };
+      setForm(nextForm);
+      setLocationQuery(activeProfile.location);
+      setTransitLocationQuery(nextForm.transitLocation);
+      void calculateChart(worldview, readingMode, nextForm);
+    }
+  }, []);
   const summary = useMemo(
     () =>
       result
@@ -486,36 +611,18 @@ export default function Home() {
       <ObservatorySoundscape />
       <button
         type="button"
-        onClick={() => setShowHelp(true)}
-        className="fixed bottom-4 left-4 z-30 rounded-full border border-cyan-200/25 bg-slate-950/90 px-3 py-2 text-xs font-semibold text-cyan-100 shadow-lg shadow-black/30 backdrop-blur-xl hover:bg-slate-900"
-        aria-haspopup="dialog"
+        onClick={() => {
+          document.getElementById("master-interpreter-section")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }}
+        className="fixed bottom-4 left-4 z-30 flex items-center gap-2 rounded-full border border-cyan-200/30 bg-slate-950/90 px-3.5 py-2 text-xs font-semibold text-cyan-100 shadow-xl shadow-cyan-950/40 backdrop-blur-xl hover:bg-slate-900 hover:border-cyan-300"
+        aria-label="Jump to AI Master Interpreter"
       >
-        Help
+        <Sparkles className="h-3.5 w-3.5 text-cyan-300 animate-pulse" />
+        <span>AI Master Interpreter</span>
       </button>
-      {showHelp && (
-        <div
-          className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-3 sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Bible Believers Astrology help"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) setShowHelp(false);
-          }}
-        >
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto">
-            <div className="mb-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowHelp(false)}
-                className="rounded-full border border-white/15 bg-slate-950 px-3 py-1 text-xs text-slate-300 hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-            <WelcomeHost />
-          </div>
-        </div>
-      )}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-32 -top-32 h-[32rem] w-[32rem] rounded-full bg-violet-700/15 blur-3xl" />
         <div className="absolute right-[-12rem] top-1/3 h-[30rem] w-[30rem] rounded-full bg-cyan-500/10 blur-3xl" />
@@ -525,26 +632,92 @@ export default function Home() {
         <header className="mb-8 flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="mb-4 flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-violet-300">
-              <span className="h-px w-8 bg-violet-300" /> Bible Believers
-              Astrology
+              <span className="h-px w-8 bg-violet-300" /> Algorithms of the Cosmos
             </div>
             <h1 className="max-w-3xl font-serif text-3xl leading-[1.12] tracking-tight text-white md:text-5xl">
-              Believe your Eyes
+              The Algorithms of the Cosmos
             </h1>
-            <p className="mt-3 max-w-3xl font-serif text-3xl leading-[1.12] tracking-tight text-white md:text-5xl">
-              As Above, So Below.
+            <p className="mt-3 max-w-3xl font-serif text-2xl leading-[1.18] tracking-tight text-cyan-200/90 md:text-4xl">
+              The cosmic code of algorithms—and how they made a perfect YOU.
             </p>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-cyan-100/90 sm:text-base">
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
               <strong className="font-semibold text-cyan-300">
-                THE FIRMAMENT: Know Yourself Through the Patterns.
+                Decode Your Celestial Blueprint.
               </strong>{" "}
-              Built for the person who genuinely wants to ask{" "}
-              <em>“Who am I, really?”</em>—translating ancient astrological
-              tradition, deterministic sky calculation, and 16-system pattern
-              convergence into personal self-understanding.
+              Built for the seeker asking <em>“Who am I, really?”</em>—translating
+              deterministic orbital mechanics, ancient astrological traditions, and
+              16-system algorithmic convergence into the unique, perfect code of who
+              you are.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+            {activeProfile ? (
+              <button
+                type="button"
+                onClick={() => setIsProfileModalOpen(true)}
+                className="rounded-full border border-cyan-400/40 bg-cyan-400/15 px-3 py-2 font-semibold text-cyan-200 transition hover:bg-cyan-400/25 flex items-center gap-1.5 shadow-sm"
+              >
+                <Compass className="h-3.5 w-3.5 text-cyan-300" />
+                <span>Profile: {activeProfile.name}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsProfileModalOpen(true)}
+                className="rounded-full border border-cyan-400 bg-cyan-500/20 px-3.5 py-2 font-bold text-cyan-100 transition hover:bg-cyan-500/30 flex items-center gap-1.5 animate-pulse shadow-md shadow-cyan-500/20"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+                <span>+ Build Natal Profile</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => openPaywall("The Sovereign Tier · Inner Sanctum")}
+              className={`rounded-full border px-3.5 py-2 font-semibold transition flex items-center gap-1.5 shadow-sm ${
+                isSovereign
+                  ? "border-amber-300/50 bg-amber-400/20 text-amber-200 shadow-amber-950/20"
+                  : "border-amber-400/40 bg-gradient-to-r from-amber-400/15 to-amber-500/10 text-amber-300 hover:bg-amber-400/25"
+              }`}
+            >
+              <Crown className="h-3.5 w-3.5 text-amber-300" />
+              <span>{isSovereign ? "Sovereign Active" : "Inner Sanctum"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMainTab("synastry");
+                document.getElementById("main-cosmos-tabs")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }}
+              className="rounded-full border border-rose-400/30 bg-rose-400/10 px-3 py-2 font-semibold text-rose-200 transition hover:bg-rose-400/20 flex items-center gap-1.5"
+            >
+              <Heart className="h-3.5 w-3.5 text-rose-300" />
+              <span>Synastry</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMainTab("social");
+                document.getElementById("main-cosmos-tabs")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }}
+              className="rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-2 font-semibold text-violet-200 transition hover:bg-violet-400/20 flex items-center gap-1.5"
+            >
+              <Users className="h-3.5 w-3.5 text-violet-300" />
+              <span>Loved Ones</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowShareModal(true)}
+              className="rounded-full border border-cyan-200/30 bg-cyan-100/10 px-3 py-2 font-semibold text-cyan-100 transition hover:bg-cyan-100/20 flex items-center gap-1.5"
+            >
+              <Share2 className="h-3.5 w-3.5 text-cyan-300" />
+              <span>Share Card</span>
+            </button>
             <Link
               href="/sky"
               className="rounded-full border border-cyan-200/30 bg-cyan-100/10 px-3 py-2 font-semibold text-cyan-100 transition hover:bg-cyan-100/15"
@@ -566,6 +739,168 @@ export default function Home() {
             <AccountControl />
           </div>
         </header>
+
+        {/* Active Profile Ribbon if profile is already loaded */}
+        {activeProfile && result && (
+          <ActiveProfileBar
+            profile={activeProfile}
+            chart={result}
+            onEditProfile={() => setIsProfileModalOpen(true)}
+            onSwitchProfile={handleClearProfile}
+          />
+        )}
+
+        {/* Core Natal Profile Building Gate - First Page Requirement */}
+        {!result && (
+          <>
+            <NatalProfileBuilder
+              mode="inline-gate"
+              currentProfile={activeProfile}
+              onSaveProfile={handleSaveProfile}
+              onLoadSample={handleLoadSampleChart}
+              isCalculating={calculate.isPending}
+            />
+
+            {/* Unlocking Teaser: What profound insights will unlock */}
+            <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md">
+                <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
+                  <Layers className="h-4 w-4" />
+                  <span>16-System Convergence</span>
+                </div>
+                <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+                  Swiss Ephemeris degrees mapped into 27 Vedic Nakshatras & padas, 28 Arabic Manazil, and 36 Decans.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md">
+                <div className="flex items-center gap-2 text-xs font-semibold text-rose-300">
+                  <Heart className="h-4 w-4" />
+                  <span>Synastry & Chemistry Hub</span>
+                </div>
+                <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+                  Compare dual-chart orbital mechanics with loved ones, house overlays, and friction aspects.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
+                  <Calendar className="h-4 w-4" />
+                  <span>30/90-Day Cosmic Weather</span>
+                </div>
+                <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+                  Track exact transiting planetary hits against your natal houses, retrograde stations, and ingress points.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md">
+                <div className="flex items-center gap-2 text-xs font-semibold text-violet-300">
+                  <Sparkles className="h-4 w-4" />
+                  <span>AI Master Interpreter</span>
+                </div>
+                <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+                  Conversational RAG agent grounded strictly in your exact celestial coordinates—zero generic fluff.
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Modal for editing profile anytime */}
+        <NatalProfileBuilder
+          mode="dialog"
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          currentProfile={activeProfile}
+          onSaveProfile={handleSaveProfile}
+          onLoadSample={handleLoadSampleChart}
+          isCalculating={calculate.isPending}
+        />
+
+        {result && (
+          <>
+            {/* First Screen Hero: Big AI Master Interpreter Chatbox with RAG */}
+            <div id="master-interpreter-section">
+              <WelcomeHost
+                chart={result}
+                readingMode={readingMode}
+                onLoadSampleChart={handleLoadSampleChart}
+                onOpenProfileBuilder={() => setIsProfileModalOpen(true)}
+                externalPrompt={interpreterPrompt}
+                onClearExternalPrompt={() => setInterpreterPrompt(null)}
+              />
+            </div>
+
+            {/* Primary Cosmos Navigation Tabs */}
+            <div id="main-cosmos-tabs" className="mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
+          <button
+            type="button"
+            onClick={() => setMainTab("blueprint")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
+              mainTab === "blueprint"
+                ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-950/30"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Layers className="h-4 w-4" />
+            <span>1. Celestial Blueprint & Transits</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab("synastry")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
+              mainTab === "synastry"
+                ? "bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-lg shadow-rose-950/30"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Heart className="h-4 w-4 text-rose-300" />
+            <span>2. Synastry & Chemistry Hub</span>
+            <span className="rounded-full bg-rose-400/20 px-1.5 py-0.2 text-[10px] text-rose-200">
+              Women&apos;s Favorite
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab("weather")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
+              mainTab === "weather"
+                ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-950/30"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Calendar className="h-4 w-4 text-cyan-300" />
+            <span>3. 30/90-Day Cosmic Weather</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab("podcast")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
+              mainTab === "podcast"
+                ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/30"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Headphones className="h-4 w-4 text-purple-300" />
+            <span>4. Daily Audio Podcast</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab("social")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
+              mainTab === "social"
+                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-950/30"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Users className="h-4 w-4 text-violet-300" />
+            <span>5. Loved Ones Social Matrix</span>
+          </button>
+        </div>
+
+        {mainTab === "blueprint" && (
+          <>
         <Card className="mb-8 border-cyan-200/15 bg-gradient-to-br from-cyan-100/[0.08] via-white/[0.035] to-violet-200/[0.06] text-slate-100 shadow-2xl shadow-cyan-950/20">
           <CardContent className="p-4 sm:p-6">
             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -574,7 +909,7 @@ export default function Home() {
                   Step 1 · Choose your reading
                 </div>
                 <h2 className="mt-2 font-serif text-2xl text-white sm:text-3xl">
-                  What do you want Bible Believers Astrology to read?
+                  What do you want The Algorithms of the Cosmos to read?
                 </h2>
               </div>
               <p className="max-w-md text-xs leading-5 text-slate-400">
@@ -915,6 +1250,15 @@ export default function Home() {
                     <Button
                       type="button"
                       variant="outline"
+                      onClick={() => setShowShareModal(true)}
+                      className="h-9 border-cyan-300/40 bg-gradient-to-r from-cyan-400/15 to-violet-400/15 px-3 text-cyan-200 hover:bg-cyan-400/25 gap-1.5"
+                    >
+                      <Share2 className="h-3.5 w-3.5 text-cyan-300" />
+                      <span>Export Share Card</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={saveCurrentChart}
                       disabled={saveChart.isPending}
                       className="h-9 border-cyan-200/25 bg-cyan-100/10 px-3 text-cyan-100 hover:bg-cyan-100/20"
@@ -1120,6 +1464,13 @@ export default function Home() {
                       </CardContent>
                     </Card>
                   </div>
+                  <div className="mt-4">
+                    <SovereignTeaserLock
+                      title="Medieval Arabic Lots & Ptolemaic Essential Dignities"
+                      description="Calculate the exact Part of Fortune, Part of Spirit, Lot of Eros, and planetary essential dignity scores (domicile, exaltation, triplicity, bounds, faces) according to traditional Hellenistic and Persian canons."
+                      featureKey="arabic-lots"
+                    />
+                  </div>
                 </details>
               </>
             ) : (
@@ -1245,7 +1596,59 @@ export default function Home() {
             )}
           </section>
         </div>
+
+        {/* Social Matrix & Loved Ones Intersect System */}
+        <div id="social-loved-ones-section" className="mt-12 pt-8 border-t border-white/10">
+          <SocialLovedOnesMatrix
+            userChart={result}
+            onAskMasterInterpreter={handleAskMasterInterpreter}
+          />
+        </div>
+          </>
+        )}
+
+        {/* 2. Synastry & Chemistry Hub Tab */}
+        {mainTab === "synastry" && (
+          <SynastryMatrixTab
+            userChart={result}
+            onAskMasterInterpreter={handleAskMasterInterpreter}
+            onOpenShareModal={() => setShowShareModal(true)}
+          />
+        )}
+
+        {/* 3. 30/90-Day Cosmic Weather Tab */}
+        {mainTab === "weather" && (
+          <TransitWeatherTimeline
+            chart={result}
+            onAskMasterInterpreter={handleAskMasterInterpreter}
+          />
+        )}
+
+        {/* 4. Daily Audio Podcast Tab */}
+        {mainTab === "podcast" && (
+          <AudioPodcastBriefing
+            chart={result}
+            onAskMasterInterpreter={handleAskMasterInterpreter}
+          />
+        )}
+
+        {/* 5. Loved Ones Social Matrix Tab */}
+        {mainTab === "social" && (
+          <SocialLovedOnesMatrix
+            userChart={result}
+            onAskMasterInterpreter={handleAskMasterInterpreter}
+          />
+        )}
+          </>
+        )}
       </main>
+
+      {/* 1-Tap Cosmic Share Card & Social Export Modal */}
+      <CosmicShareCard
+        open={showShareModal}
+        onOpenChange={setShowShareModal}
+        chart={result}
+      />
     </div>
   );
 }
