@@ -51,7 +51,7 @@ function getReadingCacheKey(chart: ChartResult, mode: ReadingMode): string {
   const loc = chart.input.location || "god-view";
   const date = chart.input.date || "live";
   const time = chart.input.time || "none";
-  return `firmament-reading-v2:${loc}:${date}:${time}:${chart.worldview}:${mode}`;
+  return `firmament-reading-v3:${loc}:${date}:${time}:${chart.worldview}:${mode}`;
 }
 
 function loadCachedReading(
