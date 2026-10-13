@@ -45,7 +45,7 @@ function subperiods(start:number,end:number,lord:(typeof ORDER)[number]){
 }
 function activePeriod<T extends {start:number;end:number}>(items:T[],now:number){return items.find(item=>now>=item.start&&now<item.end);}
 function dashaEvidence(chart:ChartResult,ayanamsa:number,moon:number):EvidenceItem[]{
- if(chart.momentPrecision==="date-only-reference"||chart.input.birthTimeKnown===false) return [{
+ if(chart.input.birthTimeKnown===false||!chart.input.time||!chart.input.timezone) return [{
   id:"vedic-dasha-time-uncertain",tradition:"vedic",category:"uncertainty",technique:"dasha",subject:"Vimshottari Dasha",
   statement:"Vimshottari periods were not asserted because birth time is date-only or marked unknown. The Moon's sidereal position and Dasha balance can change within the day; provide a verified birth time for an exact timeline.",
   concepts:["dasha","birth-time-uncertain"],polarity:"neutral",strength:0,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:TRACE("dasha","vedic-dasha-architecture"),
