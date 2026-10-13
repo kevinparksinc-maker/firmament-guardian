@@ -350,7 +350,7 @@ export function canonDossierToEvidenceItems(
     const k = p.planetInHouseKnowledge;
     if (!k) continue;
     const sourceId = "legacy-planet-in-house-interpretations";
-    const bodySlug = p.body.toLowerCase().replace(/\\s+/g, "-");
+    const bodySlug = p.body.toLowerCase().replace(/\s+/g, "-");
     items.push({
       id: `canon-planet-in-house-${bodySlug}-house-${p.displayedHouse}`,
       tradition: k.tradition,
