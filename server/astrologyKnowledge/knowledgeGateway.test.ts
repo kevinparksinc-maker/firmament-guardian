@@ -5,6 +5,7 @@ import {
 } from "./evidencePacket";
 import { planKnowledge } from "./planner";
 import { canonDossierToEvidenceItems, retrieveChartCanonDossier } from "./canon";
+import { PLANET_IN_HOUSE, getPlanetInHouseKnowledge } from "./canon/planetInHouseInterpretations";
 import { ASTROLOGY_RULES, ASTROLOGY_SOURCES } from "./registry";
 import { resolveRelationships } from "./resolver";
 import type { ChartResult } from "../astronomy";
@@ -311,6 +312,23 @@ describe("astrology knowledge gateway", () => {
           item.tradition === "vedic"
       )
     ).toBe(true);
+  });
+
+  it("contains all 144 unique planet-house records with safe provenance labels", () => {
+    expect(PLANET_IN_HOUSE).toHaveLength(144);
+    const uniqueKeys = new Set(
+      PLANET_IN_HOUSE.map(record => `${record.planet.toLowerCase()}:${record.house}`)
+    );
+    expect(uniqueKeys.size).toBe(144);
+    for (const planet of [
+      "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus",
+      "Saturn", "Rahu", "Ketu", "Uranus", "Neptune", "Pluto",
+    ]) {
+      expect(PLANET_IN_HOUSE.filter(record => record.planet === planet)).toHaveLength(12);
+    }
+    expect(getPlanetInHouseKnowledge("pluto", 12)?.epistemicStatus).toBe("modern-synthesis");
+    expect(getPlanetInHouseKnowledge("moon", 8)?.epistemicStatus).toBe("tradition-attributed-unverified");
+    expect(getPlanetInHouseKnowledge("Moon", 13)).toBeNull();
   });
 
 });
