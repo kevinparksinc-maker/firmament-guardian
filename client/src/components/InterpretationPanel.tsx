@@ -19,6 +19,7 @@ import { AIChatBox, type Message } from "@/components/AIChatBox";
 import { AudioReader } from "@/components/AudioReader";
 import { BehavioralIntelligencePanel } from "@/components/BehavioralIntelligencePanel";
 import type { ChartResult } from "../../../server/astronomy";
+import type { AstrologyEvidencePacket } from "../../../server/astrologyKnowledge/types";
 import { startLogin } from "@/const";
 
 type ReadingMode = "natal" | "transit" | "combined";
@@ -34,6 +35,7 @@ type Chapter = {
 };
 type Interpretation = {
   intelligence: string;
+  evidencePacket?: AstrologyEvidencePacket;
   analysis?: string;
   reading: string;
   generatedAt: string;
@@ -563,6 +565,43 @@ export function InterpretationPanel({
           }
         }}
       />
+      {interpretation?.evidencePacket?.vedicEvidence && (
+        <Card className="mx-auto max-w-5xl border-cyan-200/15 bg-slate-950/70 text-slate-100">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-serif text-xl">
+              <Compass className="h-5 w-5 text-cyan-300" />
+              Vedic Timing & Strength Layers
+            </CardTitle>
+            <p className="text-sm leading-6 text-slate-400">
+              Dasha describes the traditional timing period; Ashtakavarga reports sign-strength bindu scores. They remain separate evidence layers.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(["dasha", "ashtakavarga"] as const).map(technique => {
+              const items = interpretation.evidencePacket?.vedicEvidence.filter(item => item.technique === technique) ?? [];
+              return (
+                <section key={technique} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold text-cyan-100">
+                      {technique === "dasha" ? "Vimshottari Dasha" : "Ashtakavarga (BAV / SAV)"}
+                    </h3>
+                    <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-slate-300">
+                      {items.some(item => item.category === "calculated-fact") ? "Calculated" : "Unavailable / needs input"}
+                    </span>
+                  </div>
+                  {items.length ? items.map(item => (
+                    <p key={item.id} className="whitespace-pre-wrap text-sm leading-6 text-slate-300">
+                      {item.statement}
+                    </p>
+                  )) : (
+                    <p className="text-sm text-slate-400">No evidence was returned for this layer.</p>
+                  )}
+                </section>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
       {!interpretation && (
         <div className="mx-auto max-w-5xl">
           <Button
