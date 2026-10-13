@@ -28,6 +28,8 @@ export function planKnowledge(
     "pattern-recognition",
     "behavioral-pattern",
     "life-event-signature",
+    "dasha",
+    "ashtakavarga",
   ]);
   const reasons: string[] = [
     "Genesis is a mandatory core evidence layer: Astro Engine, Pattern Engine, and Yoga Detector execute and are reviewed before question-specific prioritization.",
@@ -104,7 +106,7 @@ export function planKnowledge(
     techniques.add("dasha");
     techniques.add("planetary-hours");
     reasons.push(
-      "Timing language or a transit reading requests current activation; unavailable timing families remain explicitly marked incomplete."
+      "Timing language or a transit reading requests current activation; Dasha is also evaluated as a natal timing layer when birth-time precision permits."
     );
   }
   if (reasons.length === 2)
