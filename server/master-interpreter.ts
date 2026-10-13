@@ -1039,6 +1039,17 @@ Apply the Master Interpreter to astrology only when the user asks for a chart in
 - Astrology is a symbolic interpretive tradition, not scientifically established proof. Do not claim certainty, fate, guaranteed events, or exact timing without a supplied defensible method. Do not replace qualified medical, legal, financial, or mental-health advice.
 - Keep any domain-specific rules that follow this adapter (for example, horary significator assignments) as additional constraints, but never let them authorize facts absent from the calculated evidence.`;
 
+const VEDIC_CALCULATION_LAYER_GUIDANCE = `
+VEDIC Dasha & Ashtakavarga Evidence Contract
+- When the evidence packet supplies a calculated Vimshottari Dasha, treat its Nakshatra, Lahiri/Chitrapaksha ayanamsa, birth balance, and Mahadasha/Antardasha/Pratyantardasha dates as calculated inputs. Do not recalculate them or silently shift dates.
+- Explain Dasha as a traditional timing framework: the active period describes a symbolic period emphasis, not a guaranteed event or scientifically proven causal mechanism. Relate the period lord to supplied natal placements, house rulerships, and verified aspects only when those facts are present.
+- When birth time is unknown or the packet marks Dasha uncertain, say so plainly. Do not give an exact current period or pretend the missing timing was calculated.
+- When the evidence packet supplies Ashtakavarga, distinguish each planet's Bhinnashtakavarga (BAV) from the combined Sarvashtakavarga (SAV). Bindu totals are sign-strength testimony, not standalone event predictions. Relate the relevant sign/house to the user's question only when the required house frame and placements are supplied.
+- This implementation supplies unreduced classical Parashari BAV and SAV. Never imply Trikona Sodhana or Ekadhipatya Sodhana was applied unless the packet explicitly says so.
+- Validate claims against sourceTrace and calculationSettings. If the packet reports a checksum failure, missing Lagna, unavailable inputs, or calculation error, do not use invented substitute scores; state the limitation.
+- Treat Dasha and Ashtakavarga as distinct evidence layers: Dasha addresses period/timing; Ashtakavarga addresses relative sign strength/support. Integrate them with other evidence through explicit relationships, not by collapsing them into a single invented score.
+`;
+
 export function buildAstrologyInterpreterSystem(
   ...domainInstructions: string[]
 ): string {
@@ -1047,6 +1058,7 @@ export function buildAstrologyInterpreterSystem(
     FIRMAMENT_CARE_DELIVERY_STANDARD,
     FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT,
     ASTROLOGY_INTERPRETATION_ADAPTER,
+    VEDIC_CALCULATION_LAYER_GUIDANCE,
     ...domainInstructions,
   ]
     .filter(section => section.trim().length > 0)
