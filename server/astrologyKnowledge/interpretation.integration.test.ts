@@ -105,6 +105,8 @@ describe("interpretation.generate knowledge gateway integration", () => {
       expect.arrayContaining(["7th-house", "7th-lord", "D9"])
     );
     expect(result.intelligence).toContain("ASTROLOGY EVIDENCE PACKET");
+    expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "dasha")).toBe(true);
+    expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "ashtakavarga")).toBe(true);
     const userPrompts = mocked.invokeLLM.mock.calls.map(call =>
       String(
         call[0].messages.find(
@@ -119,6 +121,7 @@ describe("interpretation.generate knowledge gateway integration", () => {
           prompt.includes("Why do relationships")
       )
     ).toBe(true);
+    expect(userPrompts.some(prompt => prompt.includes("[vedic/dasha]") && prompt.includes("[vedic/ashtakavarga]"))).toBe(true);
 
     await generateChapter(
       chart,
