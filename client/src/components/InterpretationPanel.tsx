@@ -649,22 +649,41 @@ export function InterpretationPanel({
             </div>
           </div>
 
-          {/* Executive Opening Synthesis (Always Visible Immediately) */}
+          {/* Executive Opening Synthesis (Always Visible Immediately) - Life Storytelling Mode */}
           {interpretation.reading && (
-            <Card className="overflow-hidden border-cyan-300/25 bg-gradient-to-br from-cyan-950/35 via-[#0b101b] to-violet-950/25 text-slate-100 shadow-xl">
-              <CardHeader className="border-b border-white/10 px-5 py-4 sm:px-7">
-                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
-                  Executive Chart Synthesis · All About You
+            <Card className="overflow-hidden border-cyan-300/35 bg-gradient-to-br from-cyan-950/45 via-[#0a0f1d] to-violet-950/35 text-slate-100 shadow-2xl shadow-cyan-950/30">
+              <CardHeader className="border-b border-cyan-300/15 bg-slate-950/60 px-5 py-4 sm:px-7">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/40 bg-cyan-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-cyan-200">
+                      <Sparkles className="h-3 w-3 text-cyan-300 animate-pulse" />
+                      Life Storytelling Mode Active
+                    </span>
+                    <span className="hidden sm:inline-flex rounded-full border border-violet-400/30 bg-violet-400/10 px-2.5 py-1 text-[11px] font-medium text-violet-200">
+                      Childhood Roots → Adulthood Mastery (2026)
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono text-cyan-300/80">
+                    Comprehensive Narrative Flow
+                  </span>
                 </div>
-                <CardTitle className="mt-1 font-serif text-2xl text-white">
-                  Core Pattern Overview
+                <CardTitle className="mt-2 font-serif text-2xl text-white sm:text-3xl">
+                  The Master Life Story · Your Core Blueprint
                 </CardTitle>
+                <p className="mt-1 text-xs text-slate-300">
+                  A continuous biographical narrative tracing your formative childhood roots, core strengths, active tensions, and 2026 everyday real-world navigation.
+                </p>
               </CardHeader>
               <CardContent className={`space-y-4 px-5 py-6 sm:px-8 ${prose}`}>
-                <AudioReader
-                  text={interpretation.reading}
-                  label="Listen to Core Pattern Overview"
-                />
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-slate-300">
+                  <AudioReader
+                    text={interpretation.reading}
+                    label="Listen to Complete Life Story"
+                  />
+                  <span className="text-[11px] text-cyan-200/80 font-mono">
+                    Translated for Modern 2026 Living
+                  </span>
+                </div>
                 <Streamdown>{interpretation.reading}</Streamdown>
               </CardContent>
             </Card>

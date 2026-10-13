@@ -19,6 +19,10 @@ import {
   evaluateBehavioralIntelligence,
 } from "./astrologyKnowledge";
 import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
+import { invokeLLM } from "./_core/llm";
+import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
+
 
 const chartInput = z.object({
   location: z.string(),
@@ -319,6 +323,193 @@ export const appRouter = router({
       )
       .mutation(({ input }) => {
         return analyzeSystemIntersect(input.userChart, input.targetChart);
+      }),
+  }),
+  ai: router({
+    answerChartQuestion: publicProcedure
+      .input(
+        z.object({
+          question: z.string().min(1),
+          natalPlacements: z.string().optional(),
+          transitPlacements: z.string().optional(),
+          context: z.string().optional(),
+          gender: z.enum(["male", "female", "other"]).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const prompt = `You are the Master Interpreter in LIFE STORYTELLING MODE for Bible Believers Astrology.
+The user is asking: "${input.question}".
+Natal context: ${input.natalPlacements || "Calculated Natal Horizon"}
+Transit context: ${input.transitPlacements || "Current transit moment"}
+Tone: ${input.gender === "male" ? "Active, grounded practical tone" : input.gender === "female" ? "Receptive, healing, and resonant tone" : "Balanced, objective elder guide"}
+
+CRITICAL RULES:
+1. Speak in a continuous, flowing biographical life story narrative—never produce 1-liner summaries or formulaic bullet checklists.
+2. Ground your answer in their life arc: how formative childhood roots, early trials, and adulthood consolidation shape this exact topic.
+3. Translate all astrological symbolism into concrete, observable real-world 2026 living (career, relationships, digital boundaries, personal sovereignty).
+4. Give compassionate, grounded, and empowering guidance.`;
+
+        const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
+        const response = await invokeLLM({
+          model,
+          messages: [
+            { role: "system", content: buildAstrologyInterpreterSystem(prompt) },
+            { role: "user", content: input.question },
+          ],
+          maxTokens: 2500,
+        });
+        return String(response.choices[0]?.message?.content ?? "I could not complete that reading right now.");
+      }),
+
+    askTransitQuestion: publicProcedure
+      .input(
+        z.object({
+          question: z.string().min(1),
+          transitPlacements: z.string(),
+          transitDate: z.string().optional(),
+          transitTime: z.string().optional(),
+          transitLocation: z.string().optional(),
+          conversationHistory: z.array(z.any()).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const prompt = `You are the Master Interpreter in LIFE STORYTELLING MODE answering transit questions.
+The user is asking: "${input.question}".
+Current transit sky: ${input.transitPlacements} at ${input.transitLocation || "Observatory"} on ${input.transitDate || "today"}.
+Speak in a generous, flowing narrative connecting this present celestial moment to their ongoing life story in real-world 2026 terms. Absolutely no dismissive 1-liners.`;
+        const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
+        const historyMessages = (input.conversationHistory || []).map((m: any) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        }));
+        const response = await invokeLLM({
+          model,
+          messages: [
+            { role: "system", content: buildAstrologyInterpreterSystem(prompt) },
+            ...historyMessages,
+            { role: "user", content: input.question },
+          ],
+          maxTokens: 2200,
+        });
+        return { answer: String(response.choices[0]?.message?.content ?? "Unable to read transits right now.") };
+      }),
+
+    generateSoulmatePrediction: publicProcedure
+      .input(
+        z.object({
+          natalPlacements: z.string(),
+          gender: z.enum(["male", "female", "other"]).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const prompt = `You are the Master Interpreter evaluating synastry and soulmate connection.
+Placements: ${input.natalPlacements}
+Gender: ${input.gender || "other"}
+Analyze their 7th house, Venus, Moon, and descendant aspects to describe their cosmic soulmate connection in deep, evocative 2026 relational terms. Return a JSON with:
+{
+  "soulmatePrediction": "A multi-paragraph flowing description of their soulmate's energy, demeanor, values, how they meet, and mutual dynamic",
+  "descriptors": ["3-5 vivid adjectives/traits"]
+}`;
+        const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
+        const response = await invokeLLM({
+          model,
+          messages: [{ role: "system", content: prompt }, { role: "user", content: "Generate soulmate prediction." }],
+          maxTokens: 2000,
+          responseFormat: { type: "json_object" },
+        });
+        try {
+          const content = String(response.choices[0]?.message?.content ?? "{}");
+          const parsed = JSON.parse(content);
+          return {
+            soulmatePrediction: parsed.soulmatePrediction || "A profound partner who mirrors your deep loyalty, integrity, and quiet strength.",
+            descriptors: Array.isArray(parsed.descriptors) ? parsed.descriptors : ["Grounding", "Loyal", "Intuitive", "Sovereign"],
+          };
+        } catch {
+          return {
+            soulmatePrediction: "Your cosmic soulmate is someone whose steady presence offers complete psychological safety—matching your fierce loyalty and honoring your need for sacred space.",
+            descriptors: ["Loyal", "Grounded", "Perceptive", "Steadfast"],
+          };
+        }
+      }),
+
+    generateSynastryBreakdown: publicProcedure
+      .input(
+        z.object({
+          natalPlacements: z.string(),
+          soulmatePlacements: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const prompt = `Analyze synastry between:
+Person 1: ${input.natalPlacements}
+Person 2: ${input.soulmatePlacements}
+Generate a rich, deeply insightful relationship compatibility breakdown in JSON format with:
+{
+  "interpretation": "A flowing, comprehensive synthesis of this relationship's potential and spiritual purpose",
+  "aspectGroups": [
+    {
+      "type": "harmonious",
+      "aspects": [
+        { "planet1": "Sun", "planet2": "Moon", "aspect": "Trine", "orb": 1.5, "interpretation": "Deep natural understanding and intuitive emotional harmony." }
+      ]
+    },
+    {
+      "type": "challenging",
+      "aspects": [
+        { "planet1": "Mars", "planet2": "Saturn", "aspect": "Square", "orb": 2.1, "interpretation": "Patience and timing require conscious communication." }
+      ]
+    }
+  ]
+}`;
+        const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
+        const response = await invokeLLM({
+          model,
+          messages: [{ role: "system", content: prompt }, { role: "user", content: "Analyze synastry." }],
+          maxTokens: 2500,
+          responseFormat: { type: "json_object" },
+        });
+        try {
+          const content = String(response.choices[0]?.message?.content ?? "{}");
+          const parsed = JSON.parse(content);
+          return {
+            interpretation: parsed.interpretation || "A powerful synastry dynamic rooted in complementary strengths and mutual growth.",
+            aspectGroups: Array.isArray(parsed.aspectGroups) ? parsed.aspectGroups : [],
+          };
+        } catch {
+          return {
+            interpretation: "This celestial pairing unites complementary strengths, balancing individual sovereignty with unshakeable mutual dedication.",
+            aspectGroups: [
+              {
+                type: "harmonious",
+                aspects: [
+                  { planet1: "Sun", planet2: "Moon", aspect: "Trine", orb: 1.8, interpretation: "Mutual intuitive ease and natural respect for each other's emotional rhythms." }
+                ]
+              }
+            ],
+          };
+        }
+      }),
+
+    genesisReading: publicProcedure
+      .input(
+        chartResultInput.extend({
+          question: z.string().default(""),
+          focusArea: z.enum(["career", "relationships", "health", "finance", "spirituality", "general", "creativity", "home"]).default("general"),
+        })
+      )
+      .mutation(({ input }) => {
+        const pipeline = runGenesisPatternPipeline(input.chart);
+        return generateReading(
+          pipeline.analysis,
+          {
+            question: input.question,
+            focusArea: input.focusArea,
+            preferredTone: "direct",
+          },
+          input.chart.input?.location || "Observatory",
+          input.chart.input?.time || "12:00",
+          input.chart.input?.date || new Date().toISOString().split("T")[0]
+        );
       }),
   }),
 });

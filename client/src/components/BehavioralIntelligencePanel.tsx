@@ -419,10 +419,15 @@ export function BehavioralIntelligencePanel({
                         </button>
                       )}
                     </div>
-                    <h4 className="mt-1 font-serif text-lg text-white">
-                      {item.question}
-                    </h4>
-                    <p className="mt-2 text-xs leading-6 text-slate-300">
+                    <div className="mt-1 flex items-center justify-between">
+                      <h4 className="font-serif text-lg text-white">
+                        {item.question}
+                      </h4>
+                      <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-medium text-cyan-200">
+                        2026 Living
+                      </span>
+                    </div>
+                    <p className="mt-2.5 text-xs sm:text-[13px] leading-6 text-slate-200">
                       {item.synthesis}
                     </p>
                   </div>

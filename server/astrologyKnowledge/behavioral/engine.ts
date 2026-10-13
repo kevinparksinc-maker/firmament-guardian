@@ -968,8 +968,8 @@ export function evaluateBehavioralIntelligence(
       id: "who-you-are",
       question: "Who you are",
       synthesis: primaryBehavior
-        ? `${primaryBehavior.languagePrefix} ${primaryBehavior.definition} At your core, your identity is shaped by ${primaryBehavior.name.toLowerCase()}, operating through ${primaryBehavior.consciousExpression.toLowerCase()}`
-        : "Your core identity organizes around self-directed purpose and personal integrity.",
+        ? `In real-world 2026 terms, your core identity operates like an anchor in an era of superficial noise. Shaped by your ${sunRow ? `Sun in ${sunRow.display} (House ${sunRow.house})` : "Sun"} and ${ascRow ? `Ascendant at ${ascRow.display}` : "horizon"}, you do not chase fleeting trends, crowded social circles, or hollow external validation. Instead, your life story centers around building an unshakeable inner compass and cultivating a select circle of high-trust allies bound by shared purpose. You are the person people turn to when they need authentic substance, deep discernment, and someone who refuses to compromise core integrity.`
+        : "In 2026 reality, your core identity organizes around self-directed sovereignty, personal integrity, and building enduring substance rather than performing for crowds.",
       astrologicalProof: [
         sunRow ? `Sun at ${sunRow.display} (House ${sunRow.house})` : "",
         ascRow ? `Ascendant at ${ascRow.display}` : "",
@@ -980,8 +980,8 @@ export function evaluateBehavioralIntelligence(
       id: "how-you-think",
       question: "How you think",
       synthesis: thinkBehavior
-        ? `Your mind processes reality through ${thinkBehavior.name.toLowerCase()}: ${thinkBehavior.internalExpression}`
-        : "You evaluate information by looking for underlying structure, motive, and practical consequence.",
+        ? `Your cognitive processing is not mere linear information retrieval—it is holographic, intuitive pattern recognition. Anchored by your ${mercRow ? `Mercury in ${mercRow.display} (House ${mercRow.house})` : "Mercury"}, your mind reads between the lines, detecting hidden motives, subtle emotional currents, and structural inconsistencies before others even register them. In today's digital workplace and information-saturated landscape, this enables you to cut straight through corporate buzzwords, spot strategic risks, and synthesize deep connections that purely analytical thinkers miss.`
+        : "Your mind operates as an intuitive filter, rapidly evaluating information for underlying truth, hidden motives, and practical long-term consequences.",
       astrologicalProof: [
         mercRow ? `Mercury at ${mercRow.display} (House ${mercRow.house})` : "",
         ...(thinkBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
@@ -991,8 +991,8 @@ export function evaluateBehavioralIntelligence(
       id: "how-you-feel",
       question: "How you feel",
       synthesis: emoBehavior
-        ? `Emotionally, ${emoBehavior.internalExpression} On the outside, ${emoBehavior.externalExpression.toLowerCase()}`
-        : "Your emotional life runs deeper and more privately than what you immediately show the room.",
+        ? `Beneath your composed exterior lies a rich, continuous emotional radar scanning for safety, sincerity, and resonance. Guided by your ${moonRow ? `Moon in ${moonRow.display} (House ${moonRow.house})` : "Moon"}${moonRow?.overlay?.nakshatra ? ` and Lunar Nakshatra ${moonRow.overlay.nakshatra}` : ""}, you experience life at high emotional fidelity. You require genuine psychological safety to open up; when environments feel chaotic or performative, your natural rhythm is to quietly withdraw into your private sanctuary to recalibrate before re-engaging with the world.`
+        : "Your emotional world runs with immense depth and quiet loyalty. You process feelings privately, needing a safe, trusted sanctuary to decompress from modern overstimulation.",
       astrologicalProof: [
         moonRow ? `Moon at ${moonRow.display} (House ${moonRow.house})` : "",
         moonRow?.overlay?.nakshatra ? `Lunar Nakshatra: ${moonRow.overlay.nakshatra}` : "",
@@ -1003,8 +1003,8 @@ export function evaluateBehavioralIntelligence(
       id: "what-motivates-you",
       question: "What motivates you",
       synthesis: primaryBehavior
-        ? `Your deepest engine is driven by ${primaryBehavior.motivationPatterns.join(", ")}${secondaryBehavior && secondaryBehavior.id !== primaryBehavior.id ? `, reinforced by ${secondaryBehavior.motivationPatterns.slice(0, 2).join(" and ")}` : ""}.`
-        : "You are motivated by agency, competence, and meaningful impact.",
+        ? `You are fundamentally motivated by personal sovereignty, craft mastery, and creating something that outlasts the moment. Energized by your ${marsRow ? `Mars at ${marsRow.display} (House ${marsRow.house})` : "Mars"} and ${chart.northNode ? `North Node in House ${chart.northNode.house}` : "purpose axis"}, you are driven by ${primaryBehavior.motivationPatterns.join(", ")}. In modern work and creative life, vanity metrics and empty status leave you cold; you thrive only when you have genuine agency over your schedule and can see tangible, meaningful fruit from your labor.`
+        : "You are propelled by agency, competence, and building something enduring that you can stand behind with complete pride.",
       astrologicalProof: [
         marsRow ? `Mars at ${marsRow.display} (House ${marsRow.house})` : "",
         chart.northNode ? `North Node at ${chart.northNode.display} (House ${chart.northNode.house})` : "",
@@ -1014,8 +1014,8 @@ export function evaluateBehavioralIntelligence(
       id: "how-you-respond-to-pressure",
       question: "How you respond to pressure",
       synthesis: primaryBehavior
-        ? `Under pressure, your nervous system defaults to a "${primaryBehavior.responseStyle}" posture: ${primaryBehavior.automaticExpression}`
-        : "Under pressure, you tighten focus and rely on self-command before trusting external support.",
+        ? `When high-stakes pressure hits in modern life, your nervous system adopts a composed "${primaryBehavior.responseStyle}" posture. Rather than panicking or seeking superficial comfort, you tighten your perimeter, take command of the variables you can control, and carry the weight internally. The 2026 trap to watch for is hyper-independence—convincing yourself that you must solve everything alone and refusing to let trusted partners or colleagues support you.`
+        : "Under pressure, you consolidate internally, relying on self-command and quiet discipline before letting anyone see the strain.",
       astrologicalProof: [
         saturnRow ? `Saturn at ${saturnRow.display} (House ${saturnRow.house})` : "",
         ...(primaryBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
@@ -1025,8 +1025,8 @@ export function evaluateBehavioralIntelligence(
       id: "what-strengthens-you",
       question: "What strengthens you",
       synthesis: primaryBehavior
-        ? `You are strongest when leaning into your constructive capacity: ${primaryBehavior.constructiveExpression}`
-        : "Clear standards, honest expectations, and room to master your craft strengthen you.",
+        ? `Your vitality and confidence peak when you lean into your constructive capacity: ${primaryBehavior.constructiveExpression}. You gain immense power from rigorous craft competence, protected blocks of deep work free from messaging pings, and reciprocal relationships where mutual loyalty is proven through consistent actions rather than sweet promises.`
+        : "Clear personal standards, honest expectations, regular periods of solitude, and room to master your craft strengthen your core.",
       astrologicalProof: [
         jupRow ? `Jupiter at ${jupRow.display} (House ${jupRow.house})` : "",
         ...(primaryBehavior?.supportingEvidence.slice(0, 1).map(e => e.detail) ?? []),
@@ -1036,8 +1036,8 @@ export function evaluateBehavioralIntelligence(
       id: "what-weakens-you",
       question: "What weakens you",
       synthesis: secondaryBehavior
-        ? `Your energy drains when pulled into ${secondaryBehavior.shadowExpression.toLowerCase()}`
-        : "Chronic ambiguity, unspoken agendas, and carrying unshared emotional weight erode your vitality.",
+        ? `Your life force drains rapidly when you are trapped in environments riddled with passive-aggression, chronic ambiguity, or performative politics. Slipping into ${secondaryBehavior.shadowExpression.toLowerCase()} erodes your peace. In 2026, forcing yourself to stay in shallow social dynamics or over-functioning to compensate for others' lack of accountability creates severe mental and emotional fatigue.`
+        : "Chronic ambiguity, unspoken expectations, carrying unshared emotional weight, and entertaining shallow connections drain your vital energy.",
       astrologicalProof: [
         saturnRow ? `Saturn in House ${saturnRow.house} (${saturnRow.display})` : "",
         ...(secondaryBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
@@ -1047,8 +1047,8 @@ export function evaluateBehavioralIntelligence(
       id: "what-triggers-you",
       question: "What triggers you",
       synthesis: primaryBehavior
-        ? `Your sharpest activation points are ${primaryBehavior.triggerPatterns.join(", ")}${emoBehavior && emoBehavior.id !== primaryBehavior.id ? `, along with ${emoBehavior.triggerPatterns.slice(0, 2).join(" and ")}` : ""}.`
-        : "Being cornered, micromanaged, or having your loyalty taken for granted triggers immediate defense.",
+        ? `Your sharpest emotional activation points occur when boundaries are violated, loyalty is taken for granted, or someone attempts to micromanage your movements: ${primaryBehavior.triggerPatterns.join(", ")}. Because you invest genuine loyalty when committed, hypocrisy or betrayal cuts deep, prompting an immediate defensive wall. Recognizing this activation gives you the power to respond with cool, deliberate authority instead of reactive withdrawal.`
+        : "Being cornered, having your integrity questioned, or seeing loyalty treated as disposable triggers an immediate, visceral defense.",
       astrologicalProof: [
         ...(primaryBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
       ].filter(Boolean),
@@ -1057,8 +1057,8 @@ export function evaluateBehavioralIntelligence(
       id: "how-you-protect-yourself",
       question: "How you protect yourself",
       synthesis: emoBehavior
-        ? `When you sense vulnerability, you compensate through ${emoBehavior.compensationPattern.toLowerCase()}`
-        : "You protect yourself by staying composed, self-reliant, and selective about who sees your unguarded state.",
+        ? `When vulnerability feels dangerous, you instinctively protect yourself through ${emoBehavior.compensationPattern.toLowerCase()}. You present a polite, impenetrable exterior, withhold your deeper feelings, and step back until you can re-evaluate the landscape. While this keeps you safe from bad actors, your real-world developmental task is remembering that safe, high-trust partners need to see behind the armor to truly love you.`
+        : "You protect your peace by becoming composed, self-reliant, and highly selective about who is allowed into your inner circle.",
       astrologicalProof: [
         moonRow ? `Moon in House ${moonRow.house} (${moonRow.display})` : "",
         saturnRow ? `Saturn at ${saturnRow.display}` : "",
@@ -1068,8 +1068,8 @@ export function evaluateBehavioralIntelligence(
       id: "how-you-relate-to-others",
       question: "How you relate to other people",
       synthesis: relBehavior
-        ? `In relationships, ${relBehavior.externalExpression} Internally, ${relBehavior.internalExpression.toLowerCase()}`
-        : "You value loyalty and depth over surface social performance, testing whether people match their words with action.",
+        ? `In relationships, you are an all-in or all-out presence. You have no patience for casual networking or surface-level small talk that never ventures past polite pleasantries. In both love and close friendships, you look for emotional courage, reciprocity, and demonstrated loyalty over time. When someone earns your trust, your loyalty is steadfast, protective, and genuinely transformative.`
+        : "You prioritize depth and authentic character over social popularity, carefully observing whether people match their words with consistent action.",
       astrologicalProof: [
         venusRow ? `Venus at ${venusRow.display} (House ${venusRow.house})` : "",
         chart.descendant ? `Descendant at ${chart.descendant.display}` : "",
@@ -1080,8 +1080,8 @@ export function evaluateBehavioralIntelligence(
       id: "where-you-self-sabotage",
       question: "Where you self-sabotage",
       synthesis: primaryBehavior
-        ? `When fear or pride takes the wheel, ${primaryBehavior.shadowExpression.toLowerCase()}—often trading long-term connection or peace for short-term control.`
-        : "Over-carrying responsibility alone or waiting for total certainty before acting can stall your momentum.",
+        ? `Your signature trap is over-analyzing worst-case scenarios and holding back until you have 100% certainty: ${primaryBehavior.shadowExpression.toLowerCase()}. In relationships and bold career leaps, this can manifest as quiet withdrawal or waiting for others to read your mind, inadvertently creating the very distance or stagnation you were trying to prevent. Speaking your needs directly and early is your greatest antidote to self-sabotage.`
+        : "Over-carrying responsibility in silence and demanding complete certainty before acting are the habits that stall your momentum.",
       astrologicalProof: [
         chart.southNode ? `South Node at ${chart.southNode.display} (House ${chart.southNode.house})` : "",
         ...(primaryBehavior?.supportingEvidence.slice(0, 2).map(e => e.detail) ?? []),
@@ -1091,8 +1091,8 @@ export function evaluateBehavioralIntelligence(
       id: "what-patterns-repeat",
       question: "What patterns repeat",
       synthesis: primaryBehavior
-        ? `The recurring loop to watch is: ${primaryBehavior.repeatingCycle}`
-        : "A cycle of intense commitment followed by quiet withdrawal when expectations go unspoken.",
+        ? `The recurring chapter in your life story is an oscillation between intense, wholehearted commitment and sudden burnout retreat: ${primaryBehavior.repeatingCycle}. You pour yourself into a project or partnership, shoulder the bulk of the responsibility, and eventually reach a breaking point where you must withdraw to heal. Learning to pace yourself and set boundaries early allows you to break this loop and sustain long-term joy.`
+        : "A recurring cycle of carrying too much alone until exhaustion demands a hard reset. Pacing and healthy delegation break this cycle.",
       astrologicalProof: topBehaviors
         .slice(0, 3)
         .map(b => `${b.name} (${b.confidenceLabel})`),
@@ -1101,10 +1101,10 @@ export function evaluateBehavioralIntelligence(
       id: "what-contradictions-exist",
       question: "What contradictions exist within you",
       synthesis: activeContradictions[0]
-        ? activeContradictions[0].synthesis
+        ? `Your primary internal paradox is: ${activeContradictions[0].synthesis}. In 2026 daily reality, this feels like an intense tug-of-war between needing fierce independence and craving deep, bonded intimacy. You want someone who truly sees your soul, yet you panic at the thought of losing your autonomy. Embracing both needs simultaneously—rather than choosing one at the expense of the other—is your path to peace.`
         : polarityAxes[0]
-          ? polarityAxes[0].synthesis
-          : "You hold a Simultaneous need for fierce independence and deep, unshakeable loyalty.",
+          ? `You hold a living tension: ${polarityAxes[0].synthesis}. One side pushes for visible accomplishment and self-command, while the other demands emotional sanctuary and inward replenishment.`
+          : "You hold a simultaneous need for fierce personal autonomy and profound, loyal connection with a trusted counterpart.",
       astrologicalProof: activeContradictions[0]
         ? [
             ...activeContradictions[0].leftEvidence.slice(0, 2),
@@ -1121,16 +1121,16 @@ export function evaluateBehavioralIntelligence(
       id: "what-life-themes-recur",
       question: "What kinds of life themes recur",
       synthesis: activeLifeEvents[0]
-        ? `${activeLifeEvents[0].name} (${activeLifeEvents[0].temporalState}): ${activeLifeEvents[0].definition}`
-        : "Recurring chapters of structural rebuilding, self-redefinition, and earning authority through lived trial.",
+        ? `Your life story is marked by chapters of deliberate reinvention and shedding outgrown structures: ${activeLifeEvents[0].name} (${activeLifeEvents[0].temporalState}). Every few years, you hit an evolutionary crossroads where comfortable but stagnant situations must be released. You possess a rare resilience for rebuilding from the ground up, emerging from each crucible with greater authority and clarity.`
+        : "Chapters of structural rebuilding, testing your inner fortitude, and shedding outgrown arrangements to make way for authentic purpose.",
       astrologicalProof: activeLifeEvents[0]?.supportingEvidence.slice(0, 3) ?? [],
     },
     {
       id: "how-patterns-develop",
       question: "How those patterns develop over time",
       synthesis: primaryBehavior
-        ? `Early life: ${primaryBehavior.developmentalTrajectory.early} → Developing stage: ${primaryBehavior.developmentalTrajectory.developing}`
-        : "What begins as an instinctive defense gradually becomes a conscious skill as you learn where your real boundaries lie.",
+        ? `Across the arc of your life, this pattern matures through distinct evolutionary stages. In early chapters: ${primaryBehavior.developmentalTrajectory.early}. As you navigate real-world challenges: ${primaryBehavior.developmentalTrajectory.developing}. What initially felt like an isolating burden gradually transforms into your sharpest intuitive asset.`
+        : "What starts in youth as an instinctual defense mechanism gradually matures into conscious discernment and emotional resilience through lived experience.",
       astrologicalProof: [
         saturnRow ? `Saturn maturation in House ${saturnRow.house}` : "",
         chart.northNode ? `North Node direction in House ${chart.northNode.house}` : "",
@@ -1140,8 +1140,8 @@ export function evaluateBehavioralIntelligence(
       id: "conscious-integration",
       question: "What those patterns become when consciously integrated",
       synthesis: primaryBehavior
-        ? `At full maturity: ${primaryBehavior.developmentalTrajectory.mature}`
-        : "Your protective instincts transform into grounded wisdom, steady discernment, and the ability to love and build without losing yourself.",
+        ? `At full maturity, your core blueprint crystallizes into grounded mastery: ${primaryBehavior.developmentalTrajectory.mature}. You become a sanctuary of calm wisdom and unshakeable authority in an increasingly chaotic world—capable of loving deeply without losing your sovereignty, and building enduring work that genuinely matters.`
+        : "When integrated, your protective walls dissolve into clear, healthy boundaries. You lead with calm authority, love without fear of losing yourself, and navigate life with deep peace.",
       astrologicalProof: [
         primaryBehavior ? `Integrated ${primaryBehavior.name}` : "",
         activeLifeEvents[0] ? activeLifeEvents[0].developmentalMeaning : "",
