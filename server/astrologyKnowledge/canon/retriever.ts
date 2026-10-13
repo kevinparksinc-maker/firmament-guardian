@@ -14,6 +14,7 @@ import {
 import { HOUSE_CANON_RECORDS, synthesizePlanetInHouse } from "./housesAndFrames";
 import { getManzilCanonByLongitude } from "./manazil28";
 import { getNakshatraCanonByLongitude } from "./nakshatras27";
+import { getPlanetInHouseKnowledge } from "./planetInHouseInterpretations";
 import {
   PLANET_CANON_RECORDS,
   SIGN_CANON_RECORDS,
@@ -45,6 +46,7 @@ export function retrievePlacementDossier(
   const planetInSignSynthesis = synthesizePlanetInSign(row.name, sign);
   const { houseSynthesis: planetInHouseSynthesis, godToAgentNote } =
     synthesizePlanetInHouse(row.name, row.house, row.godHouse, row.agentHouse);
+  const planetInHouseKnowledge = getPlanetInHouseKnowledge(row.name, row.house);
 
   const dignityAndCondition = evaluatePlacementDignityAndCondition(
     row,
@@ -70,6 +72,7 @@ export function retrievePlacementDossier(
     planetInSignSynthesis,
     houseDoctrine,
     planetInHouseSynthesis,
+    planetInHouseKnowledge,
     godToAgentNote,
     dignityAndCondition,
     decanRecord,
@@ -147,6 +150,15 @@ export function retrieveChartCanonDossier(
     lines.push(`  - [Sign & Dignity] ${p.planetInSignSynthesis}`);
     lines.push(`  - [Condition & Bounds] ${p.dignityAndCondition.conditionSummary} | ${p.dignityAndCondition.sectAlignment}`);
     lines.push(`  - [House Doctrine] ${p.planetInHouseSynthesis}`);
+    if (p.planetInHouseKnowledge) {
+      const k = p.planetInHouseKnowledge;
+      lines.push(`  - [Planet-in-House Library · ${k.epistemicStatus}] Domain: ${k.domain}. ${k.core}`);
+      lines.push(`    Career: ${k.career} Relationships: ${k.relationships}`);
+      lines.push(`    Challenge: ${k.challenge} Gift: ${k.gift}`);
+      lines.push(`    Vedic/qualification note: ${k.vedic}`);
+      lines.push(`    Source status: ${k.sourceCaveat}`);
+      lines.push(`    Interpretive boundary: ${k.interpretiveGuardrail}`);
+    }
     if (p.godToAgentNote) {
       lines.push(`  - [God→Agent Frame Translation] ${p.godToAgentNote}`);
     }
@@ -331,6 +343,41 @@ export function canonDossierToEvidenceItems(
         "firmament-canon-dossier",
         "high"
       ),
+    });
+  }
+
+  for (const p of dossier.placements) {
+    const k = p.planetInHouseKnowledge;
+    if (!k) continue;
+    const sourceId = "legacy-planet-in-house-interpretations";
+    const bodySlug = p.body.toLowerCase().replace(/\\s+/g, "-");
+    items.push({
+      id: `canon-planet-in-house-${bodySlug}-house-${p.displayedHouse}`,
+      tradition: k.tradition,
+      category: "source-correspondence",
+      technique: "planet-in-house-interpretation",
+      subject: `${k.planet} in House ${k.house}`,
+      statement: `[${k.epistemicStatus}] ${k.planet} in House ${k.house} — Domain: ${k.domain}. Core: ${k.core} Career: ${k.career} Relationships: ${k.relationships} Challenge: ${k.challenge} Gift: ${k.gift} Vedic/qualification note: ${k.vedic} Source status: ${k.sourceCaveat} Interpretive boundary: ${k.interpretiveGuardrail}`,
+      concepts: [
+        k.planet.toLowerCase(),
+        `house-${k.house}`,
+        "planet-in-house",
+        k.domain.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      ],
+      polarity: "mixed",
+      strength: 0.68,
+      ruleId: k.ruleId,
+      sourceId,
+      sourceTrace: {
+        ...makeTrace(
+          k.tradition,
+          "planet-in-house-interpretation",
+          k.sourceTitle,
+          k.ruleId,
+          "reference-only"
+        ),
+        sourceId,
+      },
     });
   }
 
