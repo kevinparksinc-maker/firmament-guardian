@@ -349,7 +349,7 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
     technique: "dasha",
     subject: "timing",
     kind: "deterministic-rule",
-    sourceId: "tvam-jyotish",
+    sourceId: "local-vedic-rules",
     status: "implemented",
     statement:
       "Vimshottari Mahadasha, Antardasha, and Pratyantardasha are calculated from the natal Moon using Swiss Ephemeris Lahiri/Chitrapaksha ayanamsa; date-only or unknown birth times are explicitly marked uncertain.",
