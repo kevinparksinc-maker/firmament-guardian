@@ -53,6 +53,10 @@ describe("horary astrology", () => {
     expect(chart.evidenceText).toContain("traditional layer now calculates configured Lots");
     expect(chart.traditional.lots).toHaveLength(4);
     expect(chart.traditional.dignities.length).toBeGreaterThan(0);
+    expect(typeof chart.traditional.moonStatus.voidOfCourse).toBe("boolean");
+    expect(["LEANING YES", "LEANING NO", "MIXED / CONDITIONAL", "INSUFFICIENT TESTIMONY"]).toContain(chart.traditional.judgment.verdict);
+    expect(chart.traditional.judgment.testimonies.length).toBeGreaterThan(0);
+    expect(chart.evidenceText).toContain("PERFECTION / INTERRUPTION TESTIMONY");
     expect(chart.traditional.overlays.some(row => row.nakshatra && row.manzil && row.decan)).toBe(true);
   });
 
@@ -65,6 +69,18 @@ describe("horary astrology", () => {
     expect(chart.topicRuler).toBe(chart.houses[3].ruler);
     expect(chart.evidenceText).toContain("another person (House 7)");
     expect(chart.evidenceText).toContain("actual chart house 4");
+  });
+
+  it("uses the child's turned house when the question names the querent's child", async () => {
+    const chart = await calculateHoraryChart({
+      ...sampleInput,
+      subject: "other",
+      question: "Will my child get into college?",
+      topicHouse: 9,
+    });
+    expect(chart.subjectHouse).toBe(5);
+    expect(chart.subjectRuler).toBe(chart.houses[4].ruler);
+    expect(chart.actualTopicHouse).toBe(1); // 9th from the 5th
   });
 
   it("sends calculated astrology evidence and the translated clarity standard to the existing LLM adapter", async () => {
@@ -90,6 +106,8 @@ describe("horary astrology", () => {
     expect(messages[1].content).toContain("Roles:");
     expect(messages[1].content).toContain("LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED");
     expect(messages[1].content).toContain("This is the compact judgment evidence");
+    expect(messages[1].content).toContain("FULL TECHNICAL EVIDENCE");
+    expect(messages[1].content).toContain("TRADITIONAL MOON STATUS");
     expect(result.chart.canonEvidenceText).toContain("Condition:");
   });
 
