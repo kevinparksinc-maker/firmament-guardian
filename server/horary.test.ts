@@ -4,6 +4,7 @@ const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
 vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
 
 import { calculateHoraryChart, horaryFollowUp, openHoraryQuestion, type HoraryInput } from "./horary";
+import { calculateTraditionalHorary } from "./horaryTraditional";
 
 const sampleInput: HoraryInput = {
   question: "Will the hypothetical applicant accept the new role?",
@@ -21,6 +22,39 @@ beforeEach(() => {
   mocked.invokeLLM.mockReset();
   mocked.invokeLLM.mockResolvedValue({
     choices: [{ message: { role: "assistant", content: "A detailed, evidence-led horary reading for the synthetic test question." } }],
+  });
+});
+
+describe("traditional Horary doctrine", () => {
+  it("records reception from the host planet to the guest occupying its dignity", () => {
+    const signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+    const rulers = ["Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"];
+    const houses = signs.map((sign, i) => ({ house: i + 1, longitude: i * 30, sign, ruler: rulers[i] }));
+    const placements = [
+      { name: "Sun", longitude: 120, house: 5, speed: 0.95, sign: "Leo" },
+      { name: "Moon", longitude: 100, house: 4, speed: 13, sign: "Cancer" },
+      { name: "Mercury", longitude: 70, house: 3, speed: 1, sign: "Gemini" },
+      { name: "Venus", longitude: 10, house: 1, speed: 1.2, sign: "Aries" },
+      { name: "Mars", longitude: 40, house: 2, speed: 0.5, sign: "Taurus" },
+      { name: "Jupiter", longitude: 250, house: 9, speed: 0.08, sign: "Sagittarius" },
+      { name: "Saturn", longitude: 280, house: 10, speed: 0.03, sign: "Capricorn" },
+    ];
+    const evidence = calculateTraditionalHorary({
+      ascendant: { name: "Ascendant", longitude: 0, house: 1 },
+      houses,
+      placements,
+      querentRuler: "Mars",
+      subjectRuler: "Mars",
+      topicRuler: "Venus",
+      questionRuler: "Mars",
+    });
+    expect(evidence.receptions).toContainEqual(expect.objectContaining({
+      from: "Mars",
+      to: "Venus",
+      by: "domicile",
+      mutual: true,
+      description: "Mars receives Venus by domicile; the reception is mutual.",
+    }));
   });
 });
 
