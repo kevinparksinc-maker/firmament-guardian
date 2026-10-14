@@ -65,6 +65,26 @@ function futureAspectTime(a: PlacementLike, b: PlacementLike, orbLimit = 180) {
   if (!next || next.orb > orbLimit) return null;
   return next;
 }
+function isApplying(a: PlacementLike, b: PlacementLike) {
+  const relative = lon(b.longitude - a.longitude);
+  const targets = [0, 60, 90, 120, 180, 240, 270, 300];
+  const nearest = targets.map(target => {
+    const delta = ((relative - target + 540) % 360) - 180;
+    return { delta, orb: Math.abs(delta) };
+  }).sort((x, y) => x.orb - y.orb)[0];
+  const relativeSpeed = (b.speed ?? 0) - (a.speed ?? 0);
+  return Math.abs(relativeSpeed) > 0.00001 && nearest.delta * relativeSpeed < 0;
+}
+function isSeparating(a: PlacementLike, b: PlacementLike) {
+  const relative = lon(b.longitude - a.longitude);
+  const targets = [0, 60, 90, 120, 180, 240, 270, 300];
+  const nearest = targets.map(target => {
+    const delta = ((relative - target + 540) % 360) - 180;
+    return { delta, orb: Math.abs(delta) };
+  }).sort((x, y) => x.orb - y.orb)[0];
+  const relativeSpeed = (b.speed ?? 0) - (a.speed ?? 0);
+  return Math.abs(relativeSpeed) > 0.00001 && nearest.delta * relativeSpeed > 0;
+}
 function aspectDistance(a: number, b: number) {
   const d = lon(b - a);
   return Math.min(d, 360 - d);
@@ -119,7 +139,7 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
     const nextApplications = input.placements
       .filter(p => p.name !== "Moon" && ["Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"].includes(p.name))
       .map(p => {
-        const next = futureAspectTime(moon, p, 180);
+        const next = isApplying(moon, p) ? futureAspectTime(moon, p, 180) : null;
         return next && next.days <= boundaryDays
           ? { planet: p.name, aspect: next.aspect, orb: Number(next.orb.toFixed(2)), daysToPerfection: Number(next.days.toFixed(3)) }
           : null;
@@ -137,20 +157,20 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
   const q = input.placements.find(p => p.name === input.questionRuler);
   const matter = input.placements.find(p => p.name === input.topicRuler);
   if (q && matter && q.name !== matter.name) {
-    const direct = futureAspectTime(q, matter);
+    const direct = isApplying(q, matter) ? futureAspectTime(q, matter, 180) : null;
     if (direct) {
       const easy = ["conjunction", "sextile", "trine"].includes(direct.aspect);
       perfection.push({ type: "direct", planets: [q.name, matter.name], aspect: direct.aspect, strength: easy ? "supportive" : "difficult", description: `The primary significators have a future ${direct.aspect} perfection in approximately ${direct.days.toFixed(2)} days; ${easy ? "this supports contact or development, subject to condition and reception" : "this indicates contact through strain, conflict, or a costly adjustment"}.` });
       for (const third of planets.filter(p => p.name !== q.name && p.name !== matter.name)) {
         const toQ = futureAspectTime(third, q);
         const toMatter = futureAspectTime(third, matter);
-        if (toQ && toMatter && toQ.days < direct.days && toMatter.days < direct.days && (third.speed ?? 0) < Math.min(q.speed ?? 0, matter.speed ?? 0)) {
+        if (toQ && toMatter && isApplying(q, third) && isApplying(matter, third) && toQ.days < direct.days && toMatter.days < direct.days && Math.abs(third.speed ?? 0) < Math.min(Math.abs(q.speed ?? 0), Math.abs(matter.speed ?? 0))) {
           perfection.push({ type: "collection", planets: [q.name, third.name, matter.name], strength: "supportive", description: `${third.name} may collect the light of both significators before their direct perfection; check the planet's condition and reception before treating this as assistance.` });
         }
       }
       for (const third of planets.filter(p => p.name !== q.name && p.name !== matter.name)) {
         const firstContact = futureAspectTime(third, q);
-        if (firstContact && firstContact.days < direct.days) {
+        if (firstContact && isApplying(third, q) && firstContact.days < direct.days) {
           perfection.push({ type: "prohibition", planets: [q.name, third.name, matter.name], aspect: firstContact.aspect, strength: "difficult", description: `${third.name} perfects a contact with ${q.name} before the principal significators meet, a possible prohibition requiring judgment of the intervening planet and its reception.` });
           break;
         }
@@ -160,29 +180,42 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
     for (const third of planets.filter(p => p.name !== q.name && p.name !== matter.name)) {
       const dQ = traditionalAspectName(third.longitude, q.longitude);
       const dM = traditionalAspectName(third.longitude, matter.longitude);
-      const separatingFromQ = dQ.orb <= 5 && ((third.speed ?? 0) - (q.speed ?? 0)) * (lon(q.longitude - third.longitude) < 180 ? 1 : -1) < 0;
-      const applyingToMatter = futureAspectTime(third, matter);
+      const separatingFromQ = dQ.orb <= 5 && isSeparating(third, q) && Math.abs(third.speed ?? 0) > Math.abs(q.speed ?? 0) && Math.abs(third.speed ?? 0) > Math.abs(matter.speed ?? 0);
+      const applyingToMatter = isApplying(third, matter) ? futureAspectTime(third, matter, 180) : null;
       if (separatingFromQ && applyingToMatter) {
         perfection.push({ type: "translation", planets: [q.name, third.name, matter.name], aspect: applyingToMatter.aspect, strength: "supportive", description: `${third.name} appears to carry light from ${q.name} toward ${matter.name}; confirm the actual separating/applying sequence and receptions before relying on this testimony.` });
         break;
       }
-      const separatingFromMatter = dM.orb <= 5 && ((third.speed ?? 0) - (matter.speed ?? 0)) * (lon(matter.longitude - third.longitude) < 180 ? 1 : -1) < 0;
-      const applyingToQ = futureAspectTime(third, q);
+      const separatingFromMatter = dM.orb <= 5 && isSeparating(third, matter) && Math.abs(third.speed ?? 0) > Math.abs(matter.speed ?? 0) && Math.abs(third.speed ?? 0) > Math.abs(q.speed ?? 0);
+      const applyingToQ = isApplying(third, q) ? futureAspectTime(third, q, 180) : null;
       if (separatingFromMatter && applyingToQ) {
         perfection.push({ type: "translation", planets: [matter.name, third.name, q.name], aspect: applyingToQ.aspect, strength: "supportive", description: `${third.name} appears to carry light from ${matter.name} toward ${q.name}; confirm the actual separating/applying sequence and receptions before relying on this testimony.` });
         break;
       }
     }
   }
-  for (const rec of receptions.filter(r => [input.questionRuler, input.topicRuler].includes(r.from) && [input.questionRuler, input.topicRuler].includes(r.to))) {
-    perfection.push({ type: "direct", planets: [rec.from, rec.to], strength: rec.mutual ? "supportive" : "mixed", description: rec.description });
-  }
-  const score = perfection.reduce((sum, p) => sum + (p.type === "prohibition" ? -2 : p.type === "direct" ? (p.strength === "supportive" ? 2 : p.strength === "difficult" ? -1 : 0) : p.strength === "supportive" ? 1 : 0), 0)
-    + (moonStatus.voidOfCourse ? (["Taurus", "Cancer", "Sagittarius", "Pisces"].includes(moonStatus.sign) ? -0.5 : -1.5) : 0);
-  const hasPerfection = perfection.some(p => ["direct", "translation", "collection"].includes(p.type));
-  const verdict: TraditionalJudgment["verdict"] = !hasPerfection && moonStatus.voidOfCourse ? "LEANING NO"
-    : !hasPerfection ? "INSUFFICIENT TESTIMONY"
-    : score >= 2 ? "LEANING YES" : score <= -2 ? "LEANING NO" : "MIXED / CONDITIONAL";
-  const judgment: TraditionalJudgment = { verdict, score, testimonies: perfection.map(p => p.description).concat(moonStatus.explanation), explanation: `Provisional synthesis: ${verdict}. This combines perfection, reception, interruption testimony, and the Moon's course; it remains subject to the full question context and significator condition.` };
+  const keyReceptions = receptions.filter(r => [input.questionRuler, input.topicRuler].includes(r.from) && [input.questionRuler, input.topicRuler].includes(r.to));
+  const direct = perfection.find(p => p.type === "direct" && p.planets.includes(input.questionRuler) && p.planets.includes(input.topicRuler));
+  const translation = perfection.some(p => p.type === "translation");
+  const collection = perfection.some(p => p.type === "collection");
+  const prohibition = perfection.some(p => p.type === "prohibition");
+  const hasPerfection = Boolean(direct || translation || collection);
+  const receptionSupports = keyReceptions.length > 0;
+  const moonMitigated = ["Taurus", "Cancer", "Sagittarius", "Pisces"].includes(moonStatus.sign);
+  // Hierarchical synthesis: perfection establishes connection; reception describes willingness/ability;
+  // prohibition can interrupt it; VOC modifies momentum. Reception alone is not perfection.
+  let verdict: TraditionalJudgment["verdict"];
+  if (prohibition && !translation && !collection) verdict = "LEANING NO";
+  else if (translation || collection) verdict = prohibition ? "MIXED / CONDITIONAL" : "LEANING YES";
+  else if (direct) {
+    if (direct.strength === "supportive" && receptionSupports) verdict = "LEANING YES";
+    else if (direct.strength === "supportive") verdict = "MIXED / CONDITIONAL";
+    else verdict = receptionSupports ? "MIXED / CONDITIONAL" : "LEANING NO";
+  } else if (moonStatus.voidOfCourse && !moonMitigated) verdict = "LEANING NO";
+  else verdict = "INSUFFICIENT TESTIMONY";
+  if (moonStatus.voidOfCourse && moonMitigated && !direct && !translation && !collection) verdict = "INSUFFICIENT TESTIMONY";
+  const score = (direct ? (direct.strength === "supportive" ? 2 : -1) : 0) + (translation || collection ? 1 : 0) + (receptionSupports ? 1 : 0) - (prohibition ? 2 : 0) - (moonStatus.voidOfCourse ? (moonMitigated ? 0.5 : 1.5) : 0);
+  const testimonyText = perfection.map(p => p.description).concat(keyReceptions.map(r => r.description), moonStatus.explanation);
+  const judgment: TraditionalJudgment = { verdict, score, testimonies: testimonyText, explanation: `Provisional synthesis: ${verdict}. Direct or mediated perfection is judged first; reception modifies how readily the matter can proceed; prohibition can block it; and the Moon's course modifies momentum. A void Moon is testimony, not an automatic veto. This is a configured traditional-rule synthesis, not a substitute for reviewing the full chart and question.` };
   return { lots, dignities, receptions, fixedStars, radicality, timing, overlays, moonStatus, perfection, judgment };
 }
