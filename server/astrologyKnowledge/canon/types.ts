@@ -1,4 +1,5 @@
 import type { Tradition } from "../types";
+import type { PlanetInHouseKnowledgeRecord } from "./planetInHouseInterpretations";
 
 /**
  * Epistemic separation required by Firmament architecture:
@@ -236,6 +237,8 @@ export type RetrievedPlacementDossier = {
   planetInSignSynthesis: string;
   houseDoctrine?: HouseCanonRecord;
   planetInHouseSynthesis: string;
+  /** Expanded legacy placement interpretation, with explicit provenance and usage caveats. */
+  planetInHouseKnowledge?: PlanetInHouseKnowledgeRecord | null;
   godToAgentNote?: string;
   dignityAndCondition: {
     essentialDignities: string[];
