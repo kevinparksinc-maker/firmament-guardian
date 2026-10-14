@@ -15,6 +15,8 @@ export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude"
   question: string;
   subject: "querent" | "other";
   topicHouse: number;
+  /** House of the person asked about, counted from the querent. */
+  subjectHouse?: number;
   natal?: Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time">;
 };
 
@@ -80,6 +82,18 @@ const ASPECT_TARGETS: Array<[number, HoraryAspect["aspect"]]> = [
 ];
 const ASPECT_ORB_DEGREES = 5;
 
+function inferSubjectHouse(input: HoraryInput) {
+  if (input.subject === "querent") return 1;
+  if (input.subjectHouse && Number.isInteger(input.subjectHouse) && input.subjectHouse >= 1 && input.subjectHouse <= 12) return input.subjectHouse;
+  const q = input.question.toLowerCase();
+  if (/\b(my|our)\s+(child|son|daughter|kid)\b|\b(child|son|daughter)\s+of\s+mine\b/.test(q)) return 5;
+  if (/\b(my|our)\s+(brother|sister|sibling)\b/.test(q)) return 3;
+  if (/\b(my|our)\s+(mother|mum|mom|father|dad|parent)\b/.test(q)) return /\b(father|dad)\b/.test(q) ? 10 : 4;
+  if (/\b(my|our)\s+(boss|manager|employer)\b/.test(q)) return 10;
+  if (/\b(my|our)\s+(friend|group|team)\b/.test(q)) return 11;
+  if (/\b(my|our)\s+(partner|spouse|husband|wife|boyfriend|girlfriend)\b/.test(q)) return 7;
+  return 7;
+}
 function signOf(longitude: number) {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
 }
@@ -190,7 +204,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   if (!topic) throw new Error("Choose a valid topic house before casting the horary chart.");
 
   const querentRuler = houses[0].ruler;
-  const subjectHouse = input.subject === "querent" ? 1 : 7;
+  const subjectHouse = inferSubjectHouse(input);
   const subjectRuler = houses[subjectHouse - 1].ruler;
   const actualTopicHouse = ((subjectHouse - 1 + input.topicHouse - 1) % 12) + 1;
   const topicRuler = houses[actualTopicHouse - 1].ruler;
@@ -326,7 +340,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     transitQuestionEvidence,
     `Radicality / considerations before judgment: status ${traditional.radicality.status}; ${traditional.radicality.explanation}${traditional.radicality.considerations.length ? `\n- ${traditional.radicality.considerations.join("\n- ")}` : ""}`,
     `Configured traditional support: ${traditional.receptions.length ? traditional.receptions.map(row => row.description).join("; ") : "No configured reception found."}`,
-    "This is the compact judgment evidence. Do not recalculate from raw positions. The complete technical appendix remains available separately in the chart interface if the reader asks for it.",
+    "This is the compact judgment evidence. The complete technical appendix follows, including dignity/debility, Lots, receptions, timing, fixed stars, lunar mansion/Manzil/Decan/Nakshatra overlays, and the Moon/perfection testimony. Use all supplied layers in clear English, keeping traditional horary significators and perfection as the primary judgment, with natal and transit charts as context.",
   ].join("\n\n");
 
   return {
@@ -385,16 +399,11 @@ function deterministicHoraryReading(chart: HoraryChart) {
       (aspect.first === chart.querentRuler && aspect.second === chart.topicRuler) ||
       (aspect.first === chart.topicRuler && aspect.second === chart.querentRuler)
   );
-  const supportive = directAspect && ["conjunction", "sextile", "trine"].includes(directAspect.aspect);
-  const difficult = directAspect && ["square", "opposition"].includes(directAspect.aspect);
-  const judgment = supportive
-    ? directAspect?.phase === "applying" ? "LEANING YES" : "MIXED / CONDITIONAL"
-    : difficult
-      ? "MIXED / CONDITIONAL"
-      : "INSUFFICIENT TESTIMONY";
+  const judgment = chart.traditional.judgment.verdict;
   const aspectSentence = directAspect
     ? `${directAspect.first} ${directAspect.aspect} ${directAspect.second} with a ${directAspect.orb}° orb (${directAspect.phase}).`
     : "The supplied significators do not form a configured major aspect within the 5° orb.";
+  const traditionalSummary = chart.traditional.judgment.testimonies.join(" ");
   const complication = chart.traditional.radicality.considerations.length
     ? chart.traditional.radicality.considerations.join(" ")
     : directAspect?.phase === "separating"
@@ -441,7 +450,7 @@ export async function openHoraryQuestion(input: HoraryInput) {
   const coreReading = deterministicHoraryReading(chart);
   const reading = await answer([
     { role: "system", content: HORARY_SYSTEM },
-    { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. The first visible sections must be exactly: “What I hear beneath your question,” “What this means for you,” then “Judgment,” before “The astrological picture.”\n\n${chart.judgmentEvidenceText}\n\nGive the complete, human-centered horary judgment now.` },
+    { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. The first visible sections must be exactly: “What I hear beneath your question,” “What this means for you,” then “Judgment,” before “The astrological picture.”\n\n${chart.judgmentEvidenceText}\n\nFULL TECHNICAL EVIDENCE (all configured layers):\n${chart.evidenceText}\n\nGive the complete, human-centered horary judgment now.` },
   ], 3200).catch(() => coreReading);
   return { chart, reading };
 }
