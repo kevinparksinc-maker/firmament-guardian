@@ -53,7 +53,7 @@ function dashaEvidence(chart:ChartResult,ayanamsa:number,moon:number):EvidenceIt
  const birth=dayNumber(new Date(chart.utc)); const size=360/27; const starIndex=Math.floor(moon/size); const progressed=moon-starIndex*size;
  const firstLord=ORDER[starIndex%9]; const balance=(size-progressed)/size*YEARS[firstLord]; const elapsed=YEARS[firstLord]-balance;
  let cursor=birth-elapsed*365.25; const timeline:Array<{lord:(typeof ORDER)[number];start:number;end:number}>=[];
- for(let i=0;i<9;i++){const lord=ORDER[(ORDER.indexOf(firstLord)+i)%9];const end=cursor+YEARS[lord]*365.25;timeline.push({lord,start:cursor,end});cursor=end;}
+ for(let i=0;i<18;i++){const lord=ORDER[(ORDER.indexOf(firstLord)+i)%9];const end=cursor+YEARS[lord]*365.25;timeline.push({lord,start:cursor,end});cursor=end;}
  const now=dayNumber(new Date()); const active=activePeriod(timeline,now); const details=[
   "Lahiri sidereal Moon "+moon.toFixed(4)+"°; ayanamsa "+ayanamsa.toFixed(4)+"°.",
   "Birth Nakshatra "+NAKSHATRAS[starIndex]+"; starting Mahadasha "+firstLord+".",
@@ -65,7 +65,7 @@ function dashaEvidence(chart:ChartResult,ayanamsa:number,moon:number):EvidenceIt
   if(ad) details.push("Current Antardasha: "+active.lord+"/"+ad.lord+" ("+dateLabel(ad.start)+"–"+dateLabel(ad.end)+").");
   if(ad&&pd) details.push("Current Pratyantardasha: "+active.lord+"/"+ad.lord+"/"+pd.lord+" ("+dateLabel(pd.start)+"–"+dateLabel(pd.end)+").");
   const next=timeline.find(item=>item.start>now);if(next)details.push("Next Mahadasha: "+next.lord+", beginning "+dateLabel(next.start)+".");
- } else details.push("Current date falls outside the first nine Mahadashas generated; no current period is claimed.");
+ } else details.push("Current date falls outside the two full 120-year Vimshottari cycles generated; no current period is claimed.");
  return [{id:"vedic-vimshottari-dasha",tradition:"vedic",category:"calculated-fact",technique:"dasha",subject:"Vimshottari Dasha",statement:details.join(" "),concepts:["dasha","vimshottari",NAKSHATRAS[starIndex].toLowerCase(),firstLord.toLowerCase()],polarity:"neutral",strength:1,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("dasha","vedic-dasha-architecture"),calculationSettings:{ayanamsa:"Lahiri/Chitrapaksha",ayanamsaDegrees:Number(ayanamsa.toFixed(6)),siderealMoonDegrees:Number(moon.toFixed(6)),birthNakshatra:NAKSHATRAS[starIndex],yearLengthDays:365.25,subperiods:"proportional 120-year Vimshottari cycle"}}}];
 }
 function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,ayanamsa:number):EvidenceItem[]{
