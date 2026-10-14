@@ -397,10 +397,11 @@ async function answer(messages: Message[], maxTokens = 6000) {
 }
 
 function deterministicHoraryReading(chart: HoraryChart) {
+  const primaryRuler = chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler;
   const directAspect = chart.relevantAspects.find(
     aspect =>
-      (aspect.first === chart.querentRuler && aspect.second === chart.topicRuler) ||
-      (aspect.first === chart.topicRuler && aspect.second === chart.querentRuler)
+      (aspect.first === primaryRuler && aspect.second === chart.topicRuler) ||
+      (aspect.first === chart.topicRuler && aspect.second === primaryRuler)
   );
   const judgment = chart.traditional.judgment.verdict;
   const aspectSentence = directAspect
