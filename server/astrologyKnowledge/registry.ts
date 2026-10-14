@@ -138,6 +138,8 @@ export const ASTROLOGY_SOURCES: AstrologySource[] = [
       "nakshatra",
       "drishti",
       "varga-architecture",
+      "vimshottari-dasha",
+      "ashtakavarga-bav-sav",
     ],
   },
   {
@@ -331,15 +333,26 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
       "D2, D3, D9, and D10 contracts are reserved; chart-specific varga calculation is not yet enabled.",
   },
   {
+    id: "vedic-ashtakavarga-classical",
+    tradition: "vedic",
+    technique: "ashtakavarga",
+    subject: "sign-strength",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "implemented",
+    statement:
+      "Classical Parashari Bhinnashtakavarga and unreduced Sarvashtakavarga are calculated from Lahiri sidereal D1 positions, with per-planet and 337-total checksums; Trikona and Ekadhipatya reductions are not included.",
+  },
+  {
     id: "vedic-dasha-architecture",
     tradition: "vedic",
     technique: "dasha",
     subject: "timing",
     kind: "deterministic-rule",
-    sourceId: "tvam-jyotish",
-    status: "incomplete",
+    sourceId: "local-vedic-rules",
+    status: "implemented",
     statement:
-      "Dasha retrieval is reference-only until a verified ayanamsa, birth-time, and Vimshottari implementation is supplied.",
+      "Vimshottari Mahadasha, Antardasha, and Pratyantardasha are calculated from the natal Moon using Swiss Ephemeris Lahiri/Chitrapaksha ayanamsa; date-only or unknown birth times are explicitly marked uncertain.",
   },
   {
     id: "arabic-day-sect",

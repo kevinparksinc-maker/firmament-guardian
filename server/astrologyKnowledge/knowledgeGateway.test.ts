@@ -156,7 +156,11 @@ describe("astrology knowledge gateway", () => {
     expect(
       ASTROLOGY_RULES.find(rule => rule.id === "vedic-dasha-architecture")
         ?.status
-    ).toBe("incomplete");
+    ).toBe("implemented");
+    expect(
+      ASTROLOGY_RULES.find(rule => rule.id === "vedic-ashtakavarga-classical")
+        ?.status
+    ).toBe("implemented");
   });
 
   it("distinguishes evidence convergence from contradiction", () => {

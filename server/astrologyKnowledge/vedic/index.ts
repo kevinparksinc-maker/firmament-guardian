@@ -6,6 +6,7 @@ import {
 } from "../../../shared/hybrid";
 import { sourceById } from "../registry";
 import type { EvidenceItem, KnowledgePlan, SourceTrace } from "../types";
+import { resolveVedicTimingAndAshtakavarga } from "./timingAndAshtakavarga";
 
 const RULERS: Record<string, string> = {
   Aries: "Mars",
@@ -174,25 +175,8 @@ export function resolveVedicEvidence(
       sourceId: "local-vedic-rules",
       sourceTrace: VEDIC_TRACE("varga", "vedic-varga-architecture"),
     });
-  if (plan.includeTiming)
-    evidence.push({
-      id: "vedic-dasha-status",
-      tradition: "vedic",
-      category: "uncertainty",
-      technique: "dasha",
-      subject: "timing",
-      statement:
-        "Dasha timing is not calculated because no verified ayanamsa and dasha implementation is enabled.",
-      concepts: ["dasha", "incomplete"],
-      polarity: "neutral",
-      strength: 0,
-      ruleId: "vedic-dasha-architecture",
-      sourceId: "tvam-jyotish",
-      sourceTrace: VEDIC_TRACE(
-        "dasha",
-        "vedic-dasha-architecture",
-        "tvam-jyotish"
-      ),
-    });
+  // Advanced Vedic timing and strength are calculated in one auditable layer.
+  // The layer emits explicit uncertainty evidence when required birth data is missing.
+  evidence.push(...resolveVedicTimingAndAshtakavarga(chart));
   return evidence;
 }

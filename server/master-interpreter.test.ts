@@ -6,7 +6,7 @@ vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
 import { askHost } from "./host";
 import { followUp, generateChapter } from "./interpretation";
 import type { ChartResult } from "./astronomy";
-import { ASTROLOGY_INTERPRETATION_ADAPTER, MASTER_INTERPRETER_PROMPT } from "./master-interpreter";
+import { ASTROLOGY_INTERPRETATION_ADAPTER, MASTER_INTERPRETER_PROMPT, buildAstrologyInterpreterSystem } from "./master-interpreter";
 
 const chart = {
   input: { location: "Synthetic Test City", date: "1990-01-01", time: "12:00", timezone: "UTC" },
@@ -43,6 +43,8 @@ describe("Master Interpreter prompt coverage", () => {
     expect(MASTER_INTERPRETER_PROMPT).toContain("UNDERSTANDING IS THE RESULT.");
     expect(MASTER_INTERPRETER_PROMPT).not.toContain("The next thing I'd build");
     expect(ASTROLOGY_INTERPRETATION_ADAPTER).toContain("calculation engine and the supplied chart evidence are the sole source of chart facts");
+    expect(buildAstrologyInterpreterSystem()).toContain("VEDIC Dasha & Ashtakavarga Evidence Contract");
+    expect(buildAstrologyInterpreterSystem()).toContain("Never imply Trikona Sodhana or Ekadhipatya Sodhana was applied");
   });
 
   it("writes chapters from a distilled prompt, the evidence sheet, and the reading plan", async () => {
