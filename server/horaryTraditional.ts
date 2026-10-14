@@ -1,4 +1,5 @@
 import { FIXED_STARS, normalizeLongitude, overlay, ZODIAC_SIGNS } from "../shared/hybrid";
+import type { Lookahead, UpcomingAspectName } from "./horaryLookahead";
 
 type PlacementLike = { name: string; longitude: number; house: number; retrograde?: boolean; speed?: number; sign?: string };
 type HouseLike = { house: number; longitude: number; sign: string; ruler: string };
@@ -65,6 +66,28 @@ function futureAspectTime(a: PlacementLike, b: PlacementLike, orbLimit = 180) {
   if (!next || next.orb > orbLimit) return null;
   return next;
 }
+function exactFutureAspectTime(a: PlacementLike, b: PlacementLike, lookahead?: Lookahead, referenceUtc?: string) {
+  if (!lookahead || !referenceUtc) return null;
+  const start = Date.parse(referenceUtc);
+  if (!Number.isFinite(start)) return null;
+  const aspectTargets: Record<UpcomingAspectName, number> = {
+    conjunction: 0, sextile: 60, square: 90, trine: 120, opposition: 180,
+  };
+  const match = lookahead.upcomingAspects
+    .filter(event =>
+      ((event.first === a.name && event.second === b.name) || (event.first === b.name && event.second === a.name)) &&
+      Date.parse(event.exactAtUtc) > start
+    )
+    .map(event => ({
+      days: (Date.parse(event.exactAtUtc) - start) / 86_400_000,
+      aspect: event.aspect,
+      target: aspectTargets[event.aspect],
+      orb: Math.abs(distance(a.longitude, b.longitude) - aspectTargets[event.aspect]),
+    }))
+    .sort((left, right) => left.days - right.days)[0];
+  return match ?? null;
+}
+
 function isApplying(a: PlacementLike, b: PlacementLike) {
   const relative = lon(b.longitude - a.longitude);
   const targets = [0, 60, 90, 120, 180, 240, 270, 300];
@@ -101,7 +124,7 @@ function traditionalAspectName(a: number, b: number) {
 }
 
 
-export function calculateTraditionalHorary(input: { ascendant: PlacementLike; houses: HouseLike[]; placements: PlacementLike[]; topicRuler: string; subjectRuler: string; querentRuler: string; questionRuler: string }): TraditionalHoraryEvidence {
+export function calculateTraditionalHorary(input: { ascendant: PlacementLike; houses: HouseLike[]; placements: PlacementLike[]; topicRuler: string; subjectRuler: string; querentRuler: string; questionRuler: string; lookahead?: Lookahead; referenceUtc?: string }): TraditionalHoraryEvidence {
   const sun = input.placements.find(p => p.name === "Sun")!; const moon = input.placements.find(p => p.name === "Moon")!; const day = sun.house >= 7 && sun.house <= 12;
   const lotDefs: Array<[TraditionalLot["name"], number, number, string, string]> = [
     ["Fortune", day ? input.ascendant.longitude : input.ascendant.longitude, day ? moon.longitude : sun.longitude, day ? sun.name : moon.name, "material circumstances, body, and what comes through the world's conditions"],
@@ -139,7 +162,7 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
     const nextApplications = input.placements
       .filter(p => p.name !== "Moon" && ["Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"].includes(p.name))
       .map(p => {
-        const next = isApplying(moon, p) ? futureAspectTime(moon, p, 180) : null;
+        const next = exactFutureAspectTime(moon, p, input.lookahead, input.referenceUtc);
         return next && next.days <= boundaryDays
           ? { planet: p.name, aspect: next.aspect, orb: Number(next.orb.toFixed(2)), daysToPerfection: Number(next.days.toFixed(3)) }
           : null;
@@ -157,20 +180,20 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
   const q = input.placements.find(p => p.name === input.questionRuler);
   const matter = input.placements.find(p => p.name === input.topicRuler);
   if (q && matter && q.name !== matter.name) {
-    const direct = isApplying(q, matter) ? futureAspectTime(q, matter, 180) : null;
+    const direct = exactFutureAspectTime(q, matter, input.lookahead, input.referenceUtc);
     if (direct) {
       const easy = ["conjunction", "sextile", "trine"].includes(direct.aspect);
       perfection.push({ type: "direct", planets: [q.name, matter.name], aspect: direct.aspect, strength: easy ? "supportive" : "difficult", description: `The primary significators have a future ${direct.aspect} perfection in approximately ${direct.days.toFixed(2)} days; ${easy ? "this supports contact or development, subject to condition and reception" : "this indicates contact through strain, conflict, or a costly adjustment"}.` });
       for (const third of planets.filter(p => p.name !== q.name && p.name !== matter.name)) {
-        const toQ = futureAspectTime(third, q);
-        const toMatter = futureAspectTime(third, matter);
-        if (toQ && toMatter && isApplying(q, third) && isApplying(matter, third) && toQ.days < direct.days && toMatter.days < direct.days && Math.abs(third.speed ?? 0) < Math.min(Math.abs(q.speed ?? 0), Math.abs(matter.speed ?? 0))) {
+        const toQ = exactFutureAspectTime(third, q, input.lookahead, input.referenceUtc);
+        const toMatter = exactFutureAspectTime(third, matter, input.lookahead, input.referenceUtc);
+        if (toQ && toMatter && toQ.days < direct.days && toMatter.days < direct.days && Math.abs(third.speed ?? 0) < Math.min(Math.abs(q.speed ?? 0), Math.abs(matter.speed ?? 0))) {
           perfection.push({ type: "collection", planets: [q.name, third.name, matter.name], strength: "supportive", description: `${third.name} may collect the light of both significators before their direct perfection; check the planet's condition and reception before treating this as assistance.` });
         }
       }
       for (const third of planets.filter(p => p.name !== q.name && p.name !== matter.name)) {
-        const firstContact = futureAspectTime(third, q);
-        if (firstContact && isApplying(third, q) && firstContact.days < direct.days) {
+        const firstContact = exactFutureAspectTime(third, q, input.lookahead, input.referenceUtc);
+        if (firstContact && firstContact.days < direct.days) {
           perfection.push({ type: "prohibition", planets: [q.name, third.name, matter.name], aspect: firstContact.aspect, strength: "difficult", description: `${third.name} perfects a contact with ${q.name} before the principal significators meet, a possible prohibition requiring judgment of the intervening planet and its reception.` });
           break;
         }
@@ -181,13 +204,13 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
       const dQ = traditionalAspectName(third.longitude, q.longitude);
       const dM = traditionalAspectName(third.longitude, matter.longitude);
       const separatingFromQ = dQ.orb <= 5 && isSeparating(third, q) && Math.abs(third.speed ?? 0) > Math.abs(q.speed ?? 0) && Math.abs(third.speed ?? 0) > Math.abs(matter.speed ?? 0);
-      const applyingToMatter = isApplying(third, matter) ? futureAspectTime(third, matter, 180) : null;
+      const applyingToMatter = exactFutureAspectTime(third, matter, input.lookahead, input.referenceUtc);
       if (separatingFromQ && applyingToMatter) {
         perfection.push({ type: "translation", planets: [q.name, third.name, matter.name], aspect: applyingToMatter.aspect, strength: "supportive", description: `${third.name} appears to carry light from ${q.name} toward ${matter.name}; confirm the actual separating/applying sequence and receptions before relying on this testimony.` });
         break;
       }
       const separatingFromMatter = dM.orb <= 5 && isSeparating(third, matter) && Math.abs(third.speed ?? 0) > Math.abs(matter.speed ?? 0) && Math.abs(third.speed ?? 0) > Math.abs(q.speed ?? 0);
-      const applyingToQ = isApplying(third, q) ? futureAspectTime(third, q, 180) : null;
+      const applyingToQ = exactFutureAspectTime(third, q, input.lookahead, input.referenceUtc);
       if (separatingFromMatter && applyingToQ) {
         perfection.push({ type: "translation", planets: [matter.name, third.name, q.name], aspect: applyingToQ.aspect, strength: "supportive", description: `${third.name} appears to carry light from ${matter.name} toward ${q.name}; confirm the actual separating/applying sequence and receptions before relying on this testimony.` });
         break;
