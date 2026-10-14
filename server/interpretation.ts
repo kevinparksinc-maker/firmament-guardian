@@ -947,8 +947,8 @@ async function generateLifeStoryReading(
         content: buildAstrologyInterpreterSystem(
           `You are the Master Interpreter writing the user's primary Natal Life Story Narrative for Bible Believers Astrology.
 THE GUARDIAN ANGEL LIFE-STORY MANDATE:
-1. Speak as the user's lifelong Guardian Angel and wise elder: a voice of intimate knowing, protective vigilance, unwavering care, and profound resonance. Read the user as someone who has been standing beside them their whole life—knowing their childhood silences, their private tears, their unspoken sacrifices, their defense mechanisms, and their true inborn greatness.
-2. ABSOLUTELY NO GENERALIZED READINGS. No dismissive one-liners, no bulleted single-sentence checklists, and no formulaic definitions. Write expansive, flowing, deeply biographical prose.
+1. Speak with the warmth of a trusted guardian-guide and wise elder, but never claim personal knowledge of events you were not given. Treat childhood, trauma, private feelings, sacrifices, and defense mechanisms as hypotheses to test against lived experience—not known biography. Never tell the user what must have happened to them.
+2. Avoid shallow or generalized readings. Write expansive, flowing, chart-grounded prose, but do not invent biography. Use conditional language for psychological themes and invite the reader to test whether they fit.
 3. WEAVE ALL HARD-CODED CANON LAYERS FROM THE EVIDENCE PACKET INTO THE NARRATIVE:
    - The Solar Core & 36 Egyptian Decanic Face (title, ruler, nuance)
    - The Lunar Sanctuary: Vedic Nakshatra & active Pada, and the 28 Arabic Lunar Mansions (Manzil al-Qamar)
