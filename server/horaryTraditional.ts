@@ -81,7 +81,7 @@ function traditionalAspectName(a: number, b: number) {
 }
 
 
-export function calculateTraditionalHorary(input: { ascendant: PlacementLike; houses: HouseLike[]; placements: PlacementLike[]; topicRuler: string; subjectRuler: string; querentRuler: string }): TraditionalHoraryEvidence {
+export function calculateTraditionalHorary(input: { ascendant: PlacementLike; houses: HouseLike[]; placements: PlacementLike[]; topicRuler: string; subjectRuler: string; querentRuler: string; questionRuler: string }): TraditionalHoraryEvidence {
   const sun = input.placements.find(p => p.name === "Sun")!; const moon = input.placements.find(p => p.name === "Moon")!; const day = sun.house >= 7 && sun.house <= 12;
   const lotDefs: Array<[TraditionalLot["name"], number, number, string, string]> = [
     ["Fortune", day ? input.ascendant.longitude : input.ascendant.longitude, day ? moon.longitude : sun.longitude, day ? sun.name : moon.name, "material circumstances, body, and what comes through the world's conditions"],
@@ -134,7 +134,7 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
   })();
 
   const perfection: PerfectionTestimony[] = [];
-  const q = input.placements.find(p => p.name === input.querentRuler);
+  const q = input.placements.find(p => p.name === input.questionRuler);
   const matter = input.placements.find(p => p.name === input.topicRuler);
   if (q && matter && q.name !== matter.name) {
     const direct = futureAspectTime(q, matter);
@@ -174,7 +174,7 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
       }
     }
   }
-  for (const rec of receptions.filter(r => [input.querentRuler, input.topicRuler].includes(r.from) && [input.querentRuler, input.topicRuler].includes(r.to))) {
+  for (const rec of receptions.filter(r => [input.questionRuler, input.topicRuler].includes(r.from) && [input.questionRuler, input.topicRuler].includes(r.to))) {
     perfection.push({ type: "direct", planets: [rec.from, rec.to], strength: rec.mutual ? "supportive" : "mixed", description: rec.description });
   }
   const score = perfection.reduce((sum, p) => sum + (p.type === "prohibition" ? -2 : p.type === "direct" ? (p.strength === "supportive" ? 2 : p.strength === "difficult" ? -1 : 0) : p.strength === "supportive" ? 1 : 0), 0)
