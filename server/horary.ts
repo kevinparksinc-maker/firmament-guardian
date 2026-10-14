@@ -467,9 +467,9 @@ export async function horaryFollowUp(
 ) {
   return answer([
     { role: "system", content: `${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.` },
-    { role: "user", content: `Original compact horary evidence:\n\n${chart.judgmentEvidenceText}` },
+    { role: "user", content: `Original horary judgment evidence:\n\n${chart.judgmentEvidenceText}\n\nFull configured chart and canon evidence:\n\n${chart.evidenceText}` },
     ...withCurrentQuestion(history, question, 12),
   ], 1800).catch(() =>
-    `The core chart remains fixed for this follow-up. The deterministic evidence shows ${chart.querentRuler} as the querent ruler, ${chart.topicRuler} as the matter ruler, and the Moon at ${chart.moon.display} in House ${chart.moon.house}. The configured chart testimony should be read as ${chart.relevantAspects.length ? "a qualified pattern requiring the specific aspect evidence above" : "insufficient testimony for a stronger conclusion"}. The optional language-synthesis service did not return within its time budget, so no new claim is being added beyond the calculated evidence.`,
+    `The core chart remains fixed for this follow-up. The deterministic judgment is ${chart.traditional.judgment.verdict}. The relevant significators are ${chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler} and ${chart.topicRuler}; Moon status: ${chart.traditional.moonStatus.explanation} The optional language-synthesis service did not return within its time budget, so no new claim is being added beyond the calculated evidence.`,
   );
 }
