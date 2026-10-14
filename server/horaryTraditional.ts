@@ -47,7 +47,7 @@ function rulerAt(longitude: number, day: boolean) {
   return { domicile: DOMICILE[s], exaltation: EXALTATION[s], triplicity: TRIPLICITIES[element][day ? "day" : "night"], term, face: FACES[Math.min(35, Math.floor(lon(longitude) / 10))] };
 }
 function addMod(a: number, b: number, c: number) { return lon(a + b - c); }
-function futureAspectTime(a: PlacementLike, b: PlacementLike, orbLimit = 5) {
+function futureAspectTime(a: PlacementLike, b: PlacementLike, orbLimit = 180) {
   const aspects: Array<[number, string]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"], [240, "trine"], [270, "square"], [300, "sextile"]];
   const relative = lon(b.longitude - a.longitude);
   const relativeSpeed = (b.speed ?? 0) - (a.speed ?? 0);
