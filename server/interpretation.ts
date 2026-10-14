@@ -477,8 +477,9 @@ function validatePlan(
       if (hit) out.add(hit);
       else if (typeof entry === "string") {
         const semanticHit = resolveSemanticEvidence(entry, semantic);
-        out.add(semanticHit ?? entry.trim());
-      } else out.add(String(entry));
+        if (semanticHit) out.add(semanticHit);
+      }
+      // Unknown evidence is not a chart fact: never carry it into the validated plan.
     }
     return Array.from(out);
   };
