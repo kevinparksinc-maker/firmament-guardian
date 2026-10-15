@@ -10,6 +10,7 @@ import { SovereignTierProvider } from "./components/SovereignTierModal";
 // Route-level splitting: the large sky map and horary engine UI do not block the home screen.
 const Home = lazy(() => import("./pages/Home"));
 const HoraryPage = lazy(() => import("./pages/HoraryPage"));
+const ZodiacHoraryPage = lazy(() => import("./pages/ZodiacHoraryPage"));
 const History = lazy(() => import("./pages/History"));
 const SkyHomePrototype = lazy(() => import("./pages/SkyHomePrototype"));
 
@@ -20,6 +21,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/sky"} component={SkyHomePrototype} />
       <Route path={"/horary"} component={HoraryPage} />
+      <Route path={"/zodiac-readings"} component={ZodiacHoraryPage} />
       <Route path={"/history"} component={History} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

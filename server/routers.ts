@@ -13,6 +13,8 @@ import {
 } from "./interpretation";
 import { askHost } from "./host";
 import { horaryFollowUp, openHoraryQuestion, type HoraryChart } from "./horary";
+import { getZodiacSignReading } from "./zodiacHorary";
+import { ZODIAC_SIGNS } from "../shared/hybrid";
 import { horaryFollowUpHistorySchema } from "./horary-input";
 import {
   diagnoseAstrologyEvidence,
@@ -267,6 +269,18 @@ export const appRouter = router({
       .mutation(({ input }) =>
         horaryFollowUp(input.chart, input.history, input.question)
       ),
+  }),
+  zodiacHorary: router({
+    // Separate from traditional Horary: the selected sign's classical ruler
+    // anchors Agent House 1 while God View retains 0° Aries.
+    read: publicProcedure
+      .input(z.object({
+        sign: z.enum(ZODIAC_SIGNS),
+        date: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
+        time: z.string().regex(/^\\d{2}:\\d{2}$/),
+        question: z.string().trim().max(700).optional(),
+      }))
+      .mutation(({ input }) => getZodiacSignReading(input)),
   }),
   social: router({
     listLovedOnes: protectedProcedure.query(({ ctx }) => db.listLovedOnes(ctx.user.openId)),
