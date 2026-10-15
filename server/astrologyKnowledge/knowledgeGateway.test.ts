@@ -4,6 +4,8 @@ import {
   formatEvidencePacket,
 } from "./evidencePacket";
 import { planKnowledge } from "./planner";
+import { canonDossierToEvidenceItems, retrieveChartCanonDossier } from "./canon";
+import { PLANET_IN_HOUSE, getPlanetInHouseKnowledge } from "./canon/planetInHouseInterpretations";
 import { ASTROLOGY_RULES, ASTROLOGY_SOURCES } from "./registry";
 import { resolveRelationships } from "./resolver";
 import type { ChartResult } from "../astronomy";
@@ -274,4 +276,63 @@ describe("astrology knowledge gateway", () => {
       "RELATIONAL INTERPRETATION LAYER"
     );
   });
+  it("retrieves expanded planet-in-house knowledge with provenance into the canon dossier and evidence packet", () => {
+    const dossier = retrieveChartCanonDossier(chart);
+    const moonPlacement = dossier.placements.find(
+      placement => placement.body === "Moon" && placement.displayedHouse === 8
+    );
+    const plutoPlacement = dossier.placements.find(
+      placement => placement.body === "Pluto" && placement.displayedHouse === 12
+    );
+
+    expect(moonPlacement?.planetInHouseKnowledge?.epistemicStatus).toBe(
+      "tradition-attributed-unverified"
+    );
+    expect(moonPlacement?.planetInHouseKnowledge?.sourceCaveat).toContain(
+      "no record-level citation"
+    );
+    expect(plutoPlacement?.planetInHouseKnowledge?.epistemicStatus).toBe(
+      "modern-synthesis"
+    );
+    expect(plutoPlacement?.planetInHouseKnowledge?.sourceCaveat).toContain(
+      "modern astrological synthesis"
+    );
+    expect(dossier.formattedSummaryForInterpreter).toContain(
+      "[Planet-in-House Library · modern-synthesis]"
+    );
+
+    const placementEvidence = canonDossierToEvidenceItems(dossier).filter(
+      item => item.technique === "planet-in-house-interpretation"
+    );
+    expect(
+      placementEvidence.some(
+        item => item.subject === "Pluto in House 12" &&
+          item.sourceTrace.confidence === "reference-only"
+      )
+    ).toBe(true);
+    expect(
+      placementEvidence.some(
+        item => item.subject === "Moon in House 8" &&
+          item.tradition === "vedic"
+      )
+    ).toBe(true);
+  });
+
+  it("contains all 144 unique planet-house records with safe provenance labels", () => {
+    expect(PLANET_IN_HOUSE).toHaveLength(144);
+    const uniqueKeys = new Set(
+      PLANET_IN_HOUSE.map(record => `${record.planet.toLowerCase()}:${record.house}`)
+    );
+    expect(uniqueKeys.size).toBe(144);
+    for (const planet of [
+      "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus",
+      "Saturn", "Rahu", "Ketu", "Uranus", "Neptune", "Pluto",
+    ]) {
+      expect(PLANET_IN_HOUSE.filter(record => record.planet === planet)).toHaveLength(12);
+    }
+    expect(getPlanetInHouseKnowledge("pluto", 12)?.epistemicStatus).toBe("modern-synthesis");
+    expect(getPlanetInHouseKnowledge("moon", 8)?.epistemicStatus).toBe("tradition-attributed-unverified");
+    expect(getPlanetInHouseKnowledge("Moon", 13)).toBeNull();
+  });
+
 });
