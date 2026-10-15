@@ -8,5 +8,6 @@ export * from "./nakshatras27";
 export * from "./fixedStarsAndLots";
 export * from "./westernRelationalAndTiming";
 export * from "./vedicJyotishCanon";
+export * from "./planetInHouseInterpretations";
 export * from "./arabicPersianCanon";
 export * from "./retriever";
