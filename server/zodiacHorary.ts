@@ -10,17 +10,11 @@
 import { calculateChart, type ChartResult } from "./astronomy";
 import { agentHouseFor, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship } from "./astrologyCore";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
+import { SIGN_RULERS, SIGN_SYMBOLS, type ZodiacSign } from "../shared/zodiacSigns";
 import { invokeLLM } from "./_core/llm";
 import { FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
 
-export type ZodiacSign = (typeof ZODIAC_SIGNS)[number];
 export type SignReadingInput = { sign: ZodiacSign; date: string; time: string; question?: string };
-export const SIGN_RULERS: Record<ZodiacSign, string> = {
-  Aries: "Mars", Taurus: "Venus", Gemini: "Mercury", Cancer: "Moon",
-  Leo: "Sun", Virgo: "Mercury", Libra: "Venus", Scorpio: "Mars",
-  Sagittarius: "Jupiter", Capricorn: "Saturn", Aquarius: "Saturn", Pisces: "Jupiter",
-};
-export const SIGN_SYMBOLS = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"] as const;
 export const ASC_SIDE_HOUSES = [1, 2, 3, 6, 10, 11] as const;
 export const DSC_SIDE_HOUSES = [4, 5, 7, 8, 9, 12] as const;
 
