@@ -387,10 +387,16 @@ function responseText(content: string | Array<{ type: string; text?: string }> |
 
 async function answer(messages: Message[], maxTokens = 6000) {
   const responsePromise = invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens });
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error("Horary language synthesis exceeded its 30-second time budget.")), 30_000)
-  );
-  const response = await Promise.race([responsePromise, timeoutPromise]);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("Horary language synthesis exceeded its 30-second time budget.")), 30_000);
+  });
+  let response: Awaited<typeof responsePromise>;
+  try {
+    response = await Promise.race([responsePromise, timeoutPromise]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
   const text = responseText(response.choices?.[0]?.message?.content);
   if (!text.trim()) throw new Error("The horary interpreter returned no readable answer. Please try again.");
   return text;
