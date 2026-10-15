@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { calculateChart } from "./astronomy";
 import { resolveVedicEvidence } from "./astrologyKnowledge/vedic";
-import { overlay } from "../shared/hybrid";
+import { overlay, FIXED_STARS } from "../shared/hybrid";
+import { equalHouseCusps, godHouseFor, agentHouseFor } from "./astrologyCore";
 import { calculateArabicLots } from "./utils/arabicLots";
 import { detectWesternAspects } from "./utils/patternMatcher";
 import { analyzeGenesisPatterns } from "./patterns/genesisEngine";
@@ -58,6 +59,19 @@ describe("deterministic astrology rule fixtures", () => {
     expect(overlay(13.333334)).toMatchObject({ nakshatra: "Bharani", pada: 1 });
     expect(overlay(12.857142)).toMatchObject({ manzil: "Al-Sharatain" });
     expect(overlay(12.857143)).toMatchObject({ manzil: "Al-Butain" });
+  });
+
+  it("keeps permanent equal-sector architecture across the circular boundary", () => {
+    expect(equalHouseCusps(350)).toEqual([350, 20, 50, 80, 110, 140, 170, 200, 230, 260, 290, 320]);
+    expect(godHouseFor(0)).toBe(1);
+    expect(godHouseFor(359.999)).toBe(12);
+    expect(agentHouseFor(20, 350)).toBe(2);
+    expect(overlay(360)).toMatchObject(overlay(0));
+    expect(overlay(0).decan).toBe("Mars (Aries 1st)");
+    expect(overlay(10).decan).toBe("Sun (Aries 2nd)");
+    expect(overlay(360 / 27).nakshatra).toBe("Bharani");
+    expect(overlay(360 / 28).manzil).toBe("Al-Butain");
+    expect(FIXED_STARS.find(star => star[0] === "Hamal")?.[1]).toBe(12.9333);
   });
 
   it("matches sect-sensitive Fortune, Spirit, and Eros lots", () => {
