@@ -30,7 +30,14 @@ export function CelestialCommandShell({children}:{children:ReactNode}) {
             const route=href.split("?")[0].split("#")[0];
             const query=href.includes("?tab=")?href.split("?tab=")[1].split("#")[0]:null;
             const active = path===route && (query ? tab===query : !tab);
-            return <Link href={href} key={href} aria-current={active?"page":undefined}>
+            return <Link href={href} key={href} aria-current={active?"page":undefined} onClick={event=>{
+              if(path==="/" && query){
+                event.preventDefault();
+                window.history.replaceState({}, "", href);
+                window.dispatchEvent(new CustomEvent("fg:select-tab",{detail:{tab:query}}));
+                document.getElementById("main-cosmos-tabs")?.scrollIntoView({behavior:"smooth",block:"start"});
+              }
+            }}>
               <Icon size={17} aria-hidden="true"/><span>{name}</span>
             </Link>;
           })}
