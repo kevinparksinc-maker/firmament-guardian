@@ -259,7 +259,7 @@ export const appRouter = router({
     followUp: publicProcedure
       .input(
         z.object({
-          chart: chartPayload,
+          chart: horaryPayload,
           history: horaryFollowUpHistorySchema,
           question: z.string().trim().min(1).max(2000),
         })
