@@ -243,11 +243,8 @@ export const appRouter = router({
       ),
   }),
   social: router({
-    listLovedOnes: publicProcedure.query(async ({ ctx }) => {
-      const openId = ctx.user?.openId;
-      return db.listLovedOnes(openId);
-    }),
-    saveLovedOne: publicProcedure
+    listLovedOnes: protectedProcedure.query(({ ctx }) => db.listLovedOnes(ctx.user.openId)),
+    saveLovedOne: protectedProcedure
       .input(
         z.object({
           id: z.number().optional(),
@@ -271,13 +268,13 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const openId = ctx.user?.openId || "guest";
+        const openId = ctx.user.openId;
         return db.upsertLovedOne(openId, input as any);
       }),
-    deleteLovedOne: publicProcedure
+    deleteLovedOne: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
-        const openId = ctx.user?.openId || "guest";
+        const openId = ctx.user.openId;
         return db.deleteLovedOne(openId, input.id);
       }),
     checkInStatus: publicProcedure
