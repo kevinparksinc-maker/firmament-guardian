@@ -1,9 +1,8 @@
 FROM node:22-bookworm-slim
 WORKDIR /app
 RUN npm install --global pnpm@10.18.0
-COPY package.json ./
-# No lockfile or workspace manifest is committed in this repository yet.
-RUN pnpm install --no-frozen-lockfile
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 

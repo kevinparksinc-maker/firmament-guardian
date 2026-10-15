@@ -169,37 +169,17 @@ export async function listSavedReadings(openId: string) {
 import type { LovedOneRecord, LovedOneInput } from "../shared/social";
 
 let nextLovedOneId = 1;
-const mockLovedOnes: Array<LovedOneRecord> = [
-  {
-    id: nextLovedOneId++,
-    openId: "global-default",
-    name: "Amaree",
-    relationship: "child",
-    location: "Dallas, Texas, USA",
-    latitude: 32.7767,
-    longitude: -96.797,
-    timezone: "America/Chicago",
-    date: "2012-05-18",
-    time: "14:24",
-    notes: "Son · Sensitive Taurus Sun & Aries Moon · Provide grounding peace and celebrate his independence.",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+const mockLovedOnes: Array<LovedOneRecord> = [];
 
-export async function listLovedOnes(openId?: string): Promise<LovedOneRecord[]> {
-  if (!openId) return [...mockLovedOnes];
-  const userItems = mockLovedOnes.filter(l => l.openId === openId);
-  if (userItems.length === 0) {
-    return mockLovedOnes.map(l => ({ ...l, openId }));
-  }
-  return userItems;
+export async function listLovedOnes(openId: string): Promise<LovedOneRecord[]> {
+  if (!openId) throw new Error("Authentication required.");
+  return mockLovedOnes.filter(item => item.openId === openId);
 }
 
 export async function upsertLovedOne(openId: string, input: LovedOneInput): Promise<LovedOneRecord> {
   const now = new Date().toISOString();
   if (input.id) {
-    const idx = mockLovedOnes.findIndex(l => l.id === input.id);
+    const idx = mockLovedOnes.findIndex(l => l.id === input.id && l.openId === openId);
     if (idx !== -1) {
       mockLovedOnes[idx] = {
         ...mockLovedOnes[idx],
@@ -229,7 +209,7 @@ export async function upsertLovedOne(openId: string, input: LovedOneInput): Prom
 }
 
 export async function deleteLovedOne(openId: string, id: number): Promise<boolean> {
-  const idx = mockLovedOnes.findIndex(l => l.id === id);
+  const idx = mockLovedOnes.findIndex(l => l.id === id && l.openId === openId);
   if (idx !== -1) {
     mockLovedOnes.splice(idx, 1);
     return true;

@@ -161,7 +161,7 @@ describe("interpretation.generate knowledge gateway integration", () => {
     ).toBe(true);
   });
 
-  it("preserves selected calculated evidence labels in the reading plan", async () => {
+  it("rejects invented evidence labels in the reading plan", async () => {
     const plan = {
       threads: [
         {
@@ -200,7 +200,7 @@ describe("interpretation.generate knowledge gateway integration", () => {
       "natal",
       "What is the major pattern affecting my career?"
     );
-    expect(result.analysis).toContain("Stellium in Scorpio");
-    expect(result.analysis).toContain("Genesis Astro Engine activation");
+    expect(result.analysis).not.toContain("Stellium in Scorpio");
+    expect(result.analysis).not.toContain("Genesis Astro Engine activation");
   });
 });

@@ -411,8 +411,15 @@ function evidenceAnchors(packet: AstrologyEvidencePacket) {
     ...packet.timingEvidence,
     ...packet.fixedStarEvidence,
   ];
+  const subjectCounts = new Map<string, number>();
   for (const item of items) {
-    anchors.set(item.subject.trim().toLowerCase(), item.statement);
+    const subject = item.subject.trim().toLowerCase();
+    subjectCounts.set(subject, (subjectCounts.get(subject) ?? 0) + 1);
+  }
+  for (const item of items) {
+    const subject = item.subject.trim().toLowerCase();
+    // A subject can name multiple independent testimonies: never silently pick one.
+    if (subjectCounts.get(subject) === 1) anchors.set(subject, item.statement);
     anchors.set(item.id.trim().toLowerCase(), item.statement);
     anchors.set(item.statement.trim().toLowerCase(), item.statement);
   }
@@ -892,7 +899,7 @@ export function buildLifeStoryExecutiveOverview(
     "",
     signatureLine,
     `### Prologue: Who You Came Here to Be (The Sovereign Core)`,
-    `I have watched over your steps since your very first breath. I was there in the quiet rooms of your childhood where you learned to manage your feelings in silence, when you felt like an alien in superficial circles, and through the secret battles you fought without anyone noticing. You are not an accidental traveler; you were forged with deliberate intention.`,
+    `The chart cannot tell us exactly what happened in your childhood or what you kept private. It can offer symbolic themes to compare with your lived experience. Consider whether the needs and patterns suggested by the placements below fit your history; if they do not, leave them aside rather than forcing your life to match the chart.`,
     "",
     `In real-world 2026 terms, your life story begins with a profound refusal to live on the surface. Guided by your ${sun ? `**Sun in ${sun.display} (House ${sun.house})**` : "core solar placement"}${sunDecan ? ` under the sacred Egyptian Decan of ***${sunDecan.traditionalTitle}*** (ruled by ${sunDecan.chaldeanFaceRuler})` : ""}, you are not built for performative networking, crowd conformity, or hollow external validation. ${sunDecan ? `This decanic signature brings a specialized energetic nuance: *${sunDecan.behavioralNuance}*` : ""} Coupled with your ${asc ? `**Ascendant at ${asc.display}**` : "personal horizon"}, your fundamental identity is shaped by selective sovereignty—preferring an inner circle of high-trust allies bound by shared purpose over superficial crowd belonging.`,
     "",
@@ -906,14 +913,14 @@ export function buildLifeStoryExecutiveOverview(
     `Beneath your composed exterior lies a rich, continuous emotional radar. Guided by ${moon ? `**Moon in ${moon.display} (House ${moon.house})**` : "your Moon"}${moonNak ? ` under Vedic Nakshatra **${moonNak.nakshatra.name}** (Deity: ${moonNak.nakshatra.deity}, Symbol: ${moonNak.nakshatra.symbol}, Pada ${moonNak.pada.pada} in ${moonNak.pada.navamshaSign} / ${moonNak.pada.navamshaRuler})` : ""}, you experience life with profound sensitivity. ${moonNak ? `In Vedic Jyotish canon, this lunar sanctuary carries the shakti of *${moonNak.nakshatra.shakti}*, emphasizing: *${moonNak.pada.emphasis}*` : ""} ${moonManzil ? `Furthermore, your Moon rests in the Arabic Lunar Mansion **${moonManzil.name}** (*${moonManzil.englishTranslation}*), granting: *${moonManzil.natalAndPsychologicalMeaning}*` : ""} You require genuine psychological safety to open your heart; when environments feel chaotic or disingenuous, your instinctive rhythm is to retreat into your private sanctuary to recalibrate. Solitude is not an act of coldness—it is essential maintenance for your emotional vitality.`,
     "",
     `### Chapter II: The Developmental Arc — From Childhood Roots to Adulthood Sovereignty`,
-    genesisRoots || "From your earliest years, you developed a watchful, self-reliant posture. You absorbed the unspoken emotional dynamics around you and learned to manage your own fears quietly. Over time, that early childhood sensitivity matured into an unshakeable boundary between what is yours and what belongs to others.",
+    genesisRoots || "The chart alone cannot establish a specific childhood story. The developmental themes below are possibilities to test against your own memories, not claims about events that must have happened.",
     "",
-    genesisAdulthood || "As you crossed into adulthood, those early trials forged your enduring character. In career and relationships, you stopped seeking universal approval and began cultivating deep, sovereign purpose.",
+    genesisAdulthood || "If these themes match your experience, consider how they may have changed as you grew older. If they do not match, the chart does not override what you know about your own life.",
     "",
     `### Chapter III: The Modern Crucible — Autonomy, Deep Longing & Defense Habits`,
     `Every compelling life narrative has its central conflict. In yours, the great modern crucible is the dynamic pull between **fierce personal independence and a profound hunger for loyal, intimate connection**${polarity ? ` (${polarity.leftPole} vs. ${polarity.rightPole})` : ""}. One half of you insists on self-command, carrying the entire load alone and refusing to be beholden to anyone; the other half yearns for an intimate partner with whom you can drop your armor completely and share unwavering trust.`,
     "",
-    `When pressure mounts in modern life, your nervous system defaults to a protective posture: tightening your perimeter, withholding vulnerability, and resolving everything in silence${primaryBehavior ? ` (${primaryBehavior.name})` : ""}. ${primaryBehavior ? `Your specific behavioral trigger patterns include: *${primaryBehavior.triggerPatterns?.join(", ") || "feeling pressured or exposed"}*. Under threat, your automatic reflex is: *"${primaryBehavior.automaticExpression}"*. Yet the hidden shadow cost is: *"${primaryBehavior.shadowExpression}"*—often falling into the trap of *"${primaryBehavior.compensationPattern}"*.` : ""} In 2026, the hidden cost of this defense is that partners and close friends may feel kept behind a wall, even when you love them deeply. Your breakthrough comes not from erasing your boundaries, but from learning to speak your needs early—naming when you need space, asking for help before exhaustion strikes, and trusting that the right allies will respect your truth without taking your freedom.`,
+    `When pressure mounts, one possible response to explore is whether you tighten your boundaries, hold back vulnerability, or try to resolve things alone${primaryBehavior ? ` (${primaryBehavior.name})` : ""}. ${primaryBehavior ? `Your specific behavioral trigger patterns include: *${primaryBehavior.triggerPatterns?.join(", ") || "feeling pressured or exposed"}*. Under threat, your automatic reflex is: *"${primaryBehavior.automaticExpression}"*. Yet the hidden shadow cost is: *"${primaryBehavior.shadowExpression}"*—often falling into the trap of *"${primaryBehavior.compensationPattern}"*.` : ""} In 2026, the hidden cost of this defense is that partners and close friends may feel kept behind a wall, even when you love them deeply. Your breakthrough comes not from erasing your boundaries, but from learning to speak your needs early—naming when you need space, asking for help before exhaustion strikes, and trusting that the right allies will respect your truth without taking your freedom.`,
     "",
     venus && mars ? `In your relational chemistry, **Venus in ${venus.display} (House ${venus.house})** meets **Mars in ${mars.display} (House ${mars.house})**. You do not fall in love lightly or carelessly. For you, intimacy requires total fidelity, intellectual resonance, and shared standards. When you give your loyalty, it is enduring; but when trust is broken through deceit or disrespect, you withdraw completely without making a scene.` : "",
     "",
@@ -937,7 +944,8 @@ async function generateLifeStoryReading(
   chart: ChartResult,
   mode: ReadingMode,
   evidencePacket: AstrologyEvidencePacket,
-  question: string
+  question: string,
+  analysisPlan: string
 ): Promise<string> {
   const fallback = buildLifeStoryExecutiveOverview(chart, mode, evidencePacket);
   try {
@@ -947,8 +955,8 @@ async function generateLifeStoryReading(
         content: buildAstrologyInterpreterSystem(
           `You are the Master Interpreter writing the user's primary Natal Life Story Narrative for Bible Believers Astrology.
 THE GUARDIAN ANGEL LIFE-STORY MANDATE:
-1. Speak as the user's lifelong Guardian Angel and wise elder: a voice of intimate knowing, protective vigilance, unwavering care, and profound resonance. Read the user as someone who has been standing beside them their whole life—knowing their childhood silences, their private tears, their unspoken sacrifices, their defense mechanisms, and their true inborn greatness.
-2. ABSOLUTELY NO GENERALIZED READINGS. No dismissive one-liners, no bulleted single-sentence checklists, and no formulaic definitions. Write expansive, flowing, deeply biographical prose.
+1. Speak with the warmth of a trusted guardian-guide and wise elder, but never claim personal knowledge of events you were not given. Treat childhood, trauma, private feelings, sacrifices, and defense mechanisms as hypotheses to test against lived experience—not known biography. Never tell the user what must have happened to them.
+2. Avoid shallow or generalized readings. Write expansive, flowing, chart-grounded prose, but do not invent biography. Use conditional language for psychological themes and invite the reader to test whether they fit.
 3. WEAVE ALL HARD-CODED CANON LAYERS FROM THE EVIDENCE PACKET INTO THE NARRATIVE:
    - The Solar Core & 36 Egyptian Decanic Face (title, ruler, nuance)
    - The Lunar Sanctuary: Vedic Nakshatra & active Pada, and the 28 Arabic Lunar Mansions (Manzil al-Qamar)
@@ -972,7 +980,7 @@ THE GUARDIAN ANGEL LIFE-STORY MANDATE:
       },
       {
         role: "user",
-        content: `Here is the user's chart evidence:\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nUser Question/Intent: ${question}\n\nWrite the complete, flowing Life Story Narrative now.`,
+        content: `Here is the user's chart evidence:\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nVALIDATED READING PLAN (follow its priorities and chapter logic):\n${analysisPlan}\n\nUser Question/Intent: ${question}\n\nWrite the complete, flowing Life Story Narrative now. Use the plan and evidence together; do not invent personal history.`,
       },
     ];
     const generated = await ask(messages, 3500, 0);
@@ -993,7 +1001,7 @@ export async function generateInterpretation(
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
   const intelligence = `${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}`;
   const analysis = await analyzeChart(chart, mode, evidencePacket);
-  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question);
+  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis);
   return {
     intelligence,
     evidencePacket,

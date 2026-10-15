@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { calculateChart, geocodeLocation } from "./astronomy";
+import { calculateChart, geocodeLocation, type ChartResult } from "./astronomy";
 import {
   followUp,
   generateChapter,
@@ -12,7 +12,7 @@ import {
   READING_CHAPTERS,
 } from "./interpretation";
 import { askHost } from "./host";
-import { horaryFollowUp, openHoraryQuestion } from "./horary";
+import { horaryFollowUp, openHoraryQuestion, type HoraryChart } from "./horary";
 import { horaryFollowUpHistorySchema } from "./horary-input";
 import {
   diagnoseAstrologyEvidence,
@@ -42,7 +42,32 @@ const chartInput = z.object({
   birthTimeKnown: z.boolean().optional(),
   elevation: z.number().optional(),
 });
-const chartResultInput = z.object({ chart: z.any() });
+const chartRowPayload = z.object({
+  name: z.string().min(1).max(100),
+  longitude: z.number().finite(),
+  display: z.string().max(100),
+  house: z.number().int().min(1).max(12),
+}).passthrough();
+const chartPayloadShape = z.object({
+  input: z.object({ location: z.string().max(240), date: z.string(), time: z.string() }).passthrough(),
+  utc: z.string().min(1).max(60),
+  julianDay: z.number().finite(),
+  movingBodies: z.array(chartRowPayload).min(1).max(50),
+  frozenStars: z.array(chartRowPayload).max(100),
+  transits: z.array(chartRowPayload).max(80),
+  houses: z.array(z.number().finite()).length(12),
+}).passthrough();
+/** Validate browser-returned calculated charts before trusting client-provided chart facts. */
+const chartPayload = z.custom<ChartResult>(value => chartPayloadShape.safeParse(value).success, "Invalid calculated chart payload");
+const horaryPayloadShape = z.object({
+  question: z.string().min(1).max(1000),
+  askedAt: z.string().min(1).max(60),
+  placements: z.array(chartRowPayload).min(1).max(50),
+  houses: z.array(z.object({ house: z.number().int().min(1).max(12), longitude: z.number().finite() }).passthrough()).length(12),
+  traditional: z.object({ judgment: z.object({ verdict: z.string() }).passthrough() }).passthrough(),
+}).passthrough();
+const horaryPayload = z.custom<HoraryChart>(value => horaryPayloadShape.safeParse(value).success, "Invalid Horary chart payload");
+const chartResultInput = z.object({ chart: chartPayload });
 const placeInput = z.object({
   location: z.string().trim().min(2).max(240),
   latitude: z.number().min(-90).max(90),
@@ -55,6 +80,7 @@ const horaryQuestionInput = placeInput.extend({
   question: z.string().trim().min(10).max(1000),
   subject: z.enum(["querent", "other"]),
   topicHouse: z.number().int().min(1).max(12),
+  subjectHouse: z.number().int().min(1).max(12).optional(),
   natal: placeInput.optional(),
 });
 export const appRouter = router({
@@ -145,12 +171,13 @@ export const appRouter = router({
             .array(
               z.object({
                 role: z.enum(["user", "assistant"]),
-                content: z.string(),
+                content: z.string().max(12000),
               })
             )
+            .max(40)
             .default([]),
-          question: z.string().min(1),
-          chart: z.any().optional(),
+          question: z.string().min(1).max(2000),
+          chart: chartPayload.optional(),
           mode: z.enum(["natal", "transit", "combined"]).optional(),
         })
       )
@@ -175,7 +202,7 @@ export const appRouter = router({
     chapter: publicProcedure
       .input(
         z.object({
-          chart: z.any(),
+          chart: chartPayload,
           mode: z.enum(["natal", "transit", "combined"]),
           intelligence: z.string(),
           chapterId: z.enum(
@@ -200,7 +227,7 @@ export const appRouter = router({
     followUp: publicProcedure
       .input(
         z.object({
-          chart: z.any(),
+          chart: chartPayload,
           interpretation: z.object({
             intelligence: z.string(),
             reading: z.string(),
@@ -232,7 +259,7 @@ export const appRouter = router({
     followUp: publicProcedure
       .input(
         z.object({
-          chart: z.any(),
+          chart: horaryPayload,
           history: horaryFollowUpHistorySchema,
           question: z.string().trim().min(1).max(2000),
         })
@@ -242,11 +269,8 @@ export const appRouter = router({
       ),
   }),
   social: router({
-    listLovedOnes: publicProcedure.query(async ({ ctx }) => {
-      const openId = ctx.user?.openId;
-      return db.listLovedOnes(openId);
-    }),
-    saveLovedOne: publicProcedure
+    listLovedOnes: protectedProcedure.query(({ ctx }) => db.listLovedOnes(ctx.user.openId)),
+    saveLovedOne: protectedProcedure
       .input(
         z.object({
           id: z.number().optional(),
@@ -270,13 +294,13 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const openId = ctx.user?.openId || "guest";
+        const openId = ctx.user.openId;
         return db.upsertLovedOne(openId, input as any);
       }),
-    deleteLovedOne: publicProcedure
+    deleteLovedOne: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
-        const openId = ctx.user?.openId || "guest";
+        const openId = ctx.user.openId;
         return db.deleteLovedOne(openId, input.id);
       }),
     checkInStatus: publicProcedure
@@ -317,8 +341,8 @@ export const appRouter = router({
     systemIntersect: publicProcedure
       .input(
         z.object({
-          userChart: z.any(),
-          targetChart: z.any(),
+          userChart: chartPayload,
+          targetChart: chartPayload,
         })
       )
       .mutation(({ input }) => {
@@ -369,7 +393,7 @@ CRITICAL RULES:
           transitDate: z.string().optional(),
           transitTime: z.string().optional(),
           transitLocation: z.string().optional(),
-          conversationHistory: z.array(z.any()).optional(),
+          conversationHistory: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(12000) })).max(40).optional(),
         })
       )
       .mutation(async ({ input }) => {

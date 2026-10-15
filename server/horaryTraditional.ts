@@ -1,4 +1,5 @@
 import { FIXED_STARS, normalizeLongitude, overlay, ZODIAC_SIGNS } from "../shared/hybrid";
+import type { Lookahead, UpcomingAspectName } from "./horaryLookahead";
 
 type PlacementLike = { name: string; longitude: number; house: number; retrograde?: boolean; speed?: number; sign?: string };
 type HouseLike = { house: number; longitude: number; sign: string; ruler: string };
@@ -17,7 +18,10 @@ export type Reception = { from: string; to: string; by: "domicile" | "exaltation
 export type FixedStarTestimony = { star: string; planet: string; orb: number; nature: string; meaning: string };
 export type Radicality = { status: "radical" | "caution"; considerations: string[]; explanation: string };
 export type TraditionalTiming = { from: string; to: string; aspect: string; degreesToPerfection: number; estimatedUnits: string; method: string };
-export type TraditionalHoraryEvidence = { lots: TraditionalLot[]; dignities: DignityScore[]; receptions: Reception[]; fixedStars: FixedStarTestimony[]; radicality: Radicality; timing: TraditionalTiming[]; overlays: Array<{ body: string; display: string; nakshatra: string; pada: number; manzil: string; decan: string }> };
+export type MoonStatus = { voidOfCourse: boolean; sign: string; nextApplications: Array<{ planet: string; aspect: string; orb: number; daysToPerfection: number }>; explanation: string };
+export type PerfectionTestimony = { type: "direct" | "translation" | "collection" | "prohibition"; planets: string[]; aspect?: string; strength: "supportive" | "difficult" | "mixed"; description: string };
+export type TraditionalJudgment = { verdict: "LEANING YES" | "LEANING NO" | "MIXED / CONDITIONAL" | "INSUFFICIENT TESTIMONY"; score: number; testimonies: string[]; explanation: string };
+export type TraditionalHoraryEvidence = { lots: TraditionalLot[]; dignities: DignityScore[]; receptions: Reception[]; fixedStars: FixedStarTestimony[]; radicality: Radicality; timing: TraditionalTiming[]; overlays: Array<{ body: string; display: string; nakshatra: string; pada: number; manzil: string; decan: string }>; moonStatus: MoonStatus; perfection: PerfectionTestimony[]; judgment: TraditionalJudgment };
 
 const DOMICILE: Record<string, string> = { Aries: "Mars", Taurus: "Venus", Gemini: "Mercury", Cancer: "Moon", Leo: "Sun", Virgo: "Mercury", Libra: "Venus", Scorpio: "Mars", Sagittarius: "Jupiter", Capricorn: "Saturn", Aquarius: "Saturn", Pisces: "Jupiter" };
 const EXALTATION: Record<string, string> = { Aries: "Sun", Taurus: "Moon", Cancer: "Jupiter", Virgo: "Mercury", Libra: "Saturn", Capricorn: "Mars", Pisces: "Venus" };
@@ -44,8 +48,83 @@ function rulerAt(longitude: number, day: boolean) {
   return { domicile: DOMICILE[s], exaltation: EXALTATION[s], triplicity: TRIPLICITIES[element][day ? "day" : "night"], term, face: FACES[Math.min(35, Math.floor(lon(longitude) / 10))] };
 }
 function addMod(a: number, b: number, c: number) { return lon(a + b - c); }
+function futureAspectTime(a: PlacementLike, b: PlacementLike, orbLimit = 180) {
+  const aspects: Array<[number, string]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"], [240, "trine"], [270, "square"], [300, "sextile"]];
+  const relative = lon(b.longitude - a.longitude);
+  const relativeSpeed = (b.speed ?? 0) - (a.speed ?? 0);
+  if (Math.abs(relativeSpeed) < 0.00001) return null;
+  const candidates: Array<{ days: number; aspect: string; orb: number; target: number }> = [];
+  for (const [target, aspect] of aspects) {
+    const orb = Math.abs(((relative - target + 540) % 360) - 180);
+    for (let k = -2; k <= 2; k++) {
+      const days = (target + 360 * k - relative) / relativeSpeed;
+      if (days > 0.0001 && days < 365) candidates.push({ days, aspect, orb, target });
+    }
+  }
+  candidates.sort((x, y) => x.days - y.days);
+  const next = candidates[0];
+  if (!next || next.orb > orbLimit) return null;
+  return next;
+}
+function exactFutureAspectTime(a: PlacementLike, b: PlacementLike, lookahead?: Lookahead, referenceUtc?: string) {
+  if (!lookahead || !referenceUtc) return null;
+  const start = Date.parse(referenceUtc);
+  if (!Number.isFinite(start)) return null;
+  const aspectTargets: Record<UpcomingAspectName, number> = {
+    conjunction: 0, sextile: 60, square: 90, trine: 120, opposition: 180,
+  };
+  const match = lookahead.upcomingAspects
+    .filter(event =>
+      ((event.first === a.name && event.second === b.name) || (event.first === b.name && event.second === a.name)) &&
+      Date.parse(event.exactAtUtc) > start
+    )
+    .map(event => ({
+      days: (Date.parse(event.exactAtUtc) - start) / 86_400_000,
+      aspect: event.aspect,
+      target: aspectTargets[event.aspect],
+      orb: Math.abs(distance(a.longitude, b.longitude) - aspectTargets[event.aspect]),
+    }))
+    .sort((left, right) => left.days - right.days)[0];
+  return match ?? null;
+}
 
-export function calculateTraditionalHorary(input: { ascendant: PlacementLike; houses: HouseLike[]; placements: PlacementLike[]; topicRuler: string; subjectRuler: string; querentRuler: string }): TraditionalHoraryEvidence {
+function isApplying(a: PlacementLike, b: PlacementLike) {
+  const relative = lon(b.longitude - a.longitude);
+  const targets = [0, 60, 90, 120, 180, 240, 270, 300];
+  const nearest = targets.map(target => {
+    const delta = ((relative - target + 540) % 360) - 180;
+    return { delta, orb: Math.abs(delta) };
+  }).sort((x, y) => x.orb - y.orb)[0];
+  const relativeSpeed = (b.speed ?? 0) - (a.speed ?? 0);
+  return Math.abs(relativeSpeed) > 0.00001 && nearest.delta * relativeSpeed < 0;
+}
+function isSeparating(a: PlacementLike, b: PlacementLike) {
+  const relative = lon(b.longitude - a.longitude);
+  const targets = [0, 60, 90, 120, 180, 240, 270, 300];
+  const nearest = targets.map(target => {
+    const delta = ((relative - target + 540) % 360) - 180;
+    return { delta, orb: Math.abs(delta) };
+  }).sort((x, y) => x.orb - y.orb)[0];
+  const relativeSpeed = (b.speed ?? 0) - (a.speed ?? 0);
+  return Math.abs(relativeSpeed) > 0.00001 && nearest.delta * relativeSpeed > 0;
+}
+function aspectDistance(a: number, b: number) {
+  const d = lon(b - a);
+  return Math.min(d, 360 - d);
+}
+function signBoundaryDays(p: PlacementLike) {
+  const speed = p.speed ?? 0;
+  if (speed <= 0) return Infinity;
+  return (30 - (lon(p.longitude) % 30)) / speed;
+}
+function traditionalAspectName(a: number, b: number) {
+  const sep = aspectDistance(a, b);
+  const list: Array<[number, string]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
+  return list.map(([angle, name]) => ({ name, orb: Math.abs(sep - angle) })).sort((x, y) => x.orb - y.orb)[0];
+}
+
+
+export function calculateTraditionalHorary(input: { ascendant: PlacementLike; houses: HouseLike[]; placements: PlacementLike[]; topicRuler: string; subjectRuler: string; querentRuler: string; questionRuler: string; lookahead?: Lookahead; referenceUtc?: string }): TraditionalHoraryEvidence {
   const sun = input.placements.find(p => p.name === "Sun")!; const moon = input.placements.find(p => p.name === "Moon")!; const day = sun.house >= 7 && sun.house <= 12;
   const lotDefs: Array<[TraditionalLot["name"], number, number, string, string]> = [
     ["Fortune", day ? input.ascendant.longitude : input.ascendant.longitude, day ? moon.longitude : sun.longitude, day ? sun.name : moon.name, "material circumstances, body, and what comes through the world's conditions"],
@@ -70,10 +149,96 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
     return { planet: p.name, sign: s, house: p.house, essential, essentialScore, accidental, accidentalScore, debilities };
   });
   const receptions: Reception[] = []; const planets = dignities.map(d => input.placements.find(p => p.name === d.planet)!).filter(Boolean);
-  for (const from of planets) for (const to of planets) if (from.name !== to.name) { const r = rulerAt(from.longitude, day); const by = r.domicile === to.name ? "domicile" : r.exaltation === to.name ? "exaltation" : r.triplicity === to.name ? "triplicity" : r.term === to.name ? "term" : r.face === to.name ? "face" : null; if (by) { const reverse = rulerAt(to.longitude, day); const mutual = reverse.domicile === from.name || reverse.exaltation === from.name || reverse.triplicity === from.name || reverse.term === from.name || reverse.face === from.name; receptions.push({ from: from.name, to: to.name, by, mutual, description: `${from.name} receives ${to.name} by ${by}${mutual ? "; the reception is mutual" : ""}.` }); } }
+  for (const guest of planets) for (const host of planets) if (guest.name !== host.name) { const r = rulerAt(guest.longitude, day); const by = r.domicile === host.name ? "domicile" : r.exaltation === host.name ? "exaltation" : r.triplicity === host.name ? "triplicity" : r.term === host.name ? "term" : r.face === host.name ? "face" : null; if (by) { const reverse = rulerAt(host.longitude, day); const mutual = reverse.domicile === guest.name || reverse.exaltation === guest.name || reverse.triplicity === guest.name || reverse.term === guest.name || reverse.face === guest.name; receptions.push({ from: host.name, to: guest.name, by, mutual, description: `${host.name} receives ${guest.name} by ${by}${mutual ? "; the reception is mutual" : ""}.` }); } }
   const fixedStars: FixedStarTestimony[] = []; for (const p of [...planets, input.ascendant]) for (const [star, starLon] of FIXED_STARS) { const orb = distance(p.longitude, starLon); if (orb <= 1) fixedStars.push({ star, planet: p.name, orb: Number(orb.toFixed(2)), nature: STAR_NATURE[star] ?? "traditional fixed-star nature", meaning: STAR_MEANING[star] ?? "a fixed-star emphasis requiring contextual interpretation" }); }
   const considerations: string[] = []; const ascDeg = lon(input.ascendant.longitude) % 30; if (ascDeg < 3) considerations.push("Ascendant is in the first 3° of its sign; the matter may be newly forming."); if (ascDeg > 27) considerations.push("Ascendant is in the last 3° of its sign; the matter may be near a change of condition."); if (input.placements.find(p => p.name === "Moon")?.house === 7) considerations.push("Moon is in the 7th house; the astrologer/reader relationship deserves care."); if (input.placements.find(p => p.name === "Saturn")?.house === 7) considerations.push("Saturn is in the 7th house; traditional horary practice treats this as a caution, not an automatic refusal."); if (input.placements.find(p => p.name === "Moon")?.speed === 0) considerations.push("Moon speed is unavailable; void-of-course status was not asserted."); const radicality: Radicality = { status: considerations.length ? "caution" : "radical", considerations, explanation: considerations.length ? "These are traditional considerations before judgment. They qualify confidence; they do not automatically invalidate the chart." : "No configured traditional caution was triggered. This is not a claim that every traditional radicality doctrine has been exhausted." };
   const timing: TraditionalTiming[] = []; const key = new Set([input.querentRuler, input.subjectRuler, input.topicRuler, "Moon"]); const aspectTargets: Array<[number, string]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]]; for (const a of planets) for (const b of planets) if (a.name < b.name && key.has(a.name) && key.has(b.name)) { const sep = distance(a.longitude, b.longitude); const best = aspectTargets.map(([target, aspect]) => ({ target, aspect, orb: Math.abs(sep - target) })).sort((x, y) => x.orb - y.orb)[0]; const relativeSpeed = Math.abs((a.speed ?? 0) - (b.speed ?? 0)); if (best.orb <= 5 && relativeSpeed > 0 && (a.speed ?? 0) * (b.speed ?? 0) !== 0) { const degrees = Number(best.orb.toFixed(2)); const signMode = ["Aries", "Cancer", "Libra", "Capricorn"].includes(sign(a.longitude)) ? "cardinal" : ["Taurus", "Leo", "Scorpio", "Aquarius"].includes(sign(a.longitude)) ? "fixed" : "mutable"; timing.push({ from: a.name, to: b.name, aspect: best.aspect, degreesToPerfection: degrees, estimatedUnits: `${degrees} ${signMode === "cardinal" ? "short" : signMode === "fixed" ? "long" : "variable"} time units (traditional estimate; not a guaranteed event date)`, method: `Applying/separating perfection estimate using current orb, relative speed, sign modality (${signMode}), and house condition.` }); } }
   const overlays = [...planets, input.ascendant].map(p => { const o = overlay(p.longitude); return { body: p.name, display: display(p.longitude), ...o }; });
-  return { lots, dignities, receptions, fixedStars, radicality, timing, overlays };
+
+  // Horary judgment uses exact future contact order, not a single current aspect.
+  const moonStatus: MoonStatus = (() => {
+    const moon = input.placements.find(p => p.name === "Moon")!;
+    const boundaryDays = signBoundaryDays(moon);
+    const nextApplications = input.placements
+      .filter(p => p.name !== "Moon" && ["Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"].includes(p.name))
+      .map(p => {
+        const next = exactFutureAspectTime(moon, p, input.lookahead, input.referenceUtc);
+        return next && next.days <= boundaryDays
+          ? { planet: p.name, aspect: next.aspect, orb: Number(next.orb.toFixed(2)), daysToPerfection: Number(next.days.toFixed(3)) }
+          : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => a.daysToPerfection - b.daysToPerfection);
+    const voidOfCourse = nextApplications.length === 0;
+    const mitigation = ["Taurus", "Cancer", "Sagittarius", "Pisces"].includes(sign(moon.longitude));
+    return { voidOfCourse, sign: sign(moon.longitude), nextApplications, explanation: voidOfCourse
+      ? `Moon is void of course: no exact major aspect to a classical planet is projected before sign change.${mitigation ? " Traditional dignity-based mitigation applies in this sign; treat VOC as softened testimony, not an automatic denial." : " Treat this as testimony for delay, drift, or lack of development—not an automatic verdict."}`
+      : `Moon next applies to ${nextApplications[0].planet} by ${nextApplications[0].aspect} in about ${nextApplications[0].daysToPerfection} days before leaving ${sign(moon.longitude)}.` };
+  })();
+
+  const perfection: PerfectionTestimony[] = [];
+  const q = input.placements.find(p => p.name === input.questionRuler);
+  const matter = input.placements.find(p => p.name === input.topicRuler);
+  if (q && matter && q.name !== matter.name) {
+    const direct = exactFutureAspectTime(q, matter, input.lookahead, input.referenceUtc);
+    if (direct) {
+      const easy = ["conjunction", "sextile", "trine"].includes(direct.aspect);
+      perfection.push({ type: "direct", planets: [q.name, matter.name], aspect: direct.aspect, strength: easy ? "supportive" : "difficult", description: `The primary significators have a future ${direct.aspect} perfection in approximately ${direct.days.toFixed(2)} days; ${easy ? "this supports contact or development, subject to condition and reception" : "this indicates contact through strain, conflict, or a costly adjustment"}.` });
+      for (const third of planets.filter(p => p.name !== q.name && p.name !== matter.name)) {
+        const toQ = exactFutureAspectTime(third, q, input.lookahead, input.referenceUtc);
+        const toMatter = exactFutureAspectTime(third, matter, input.lookahead, input.referenceUtc);
+        if (toQ && toMatter && toQ.days < direct.days && toMatter.days < direct.days && Math.abs(third.speed ?? 0) < Math.min(Math.abs(q.speed ?? 0), Math.abs(matter.speed ?? 0))) {
+          perfection.push({ type: "collection", planets: [q.name, third.name, matter.name], strength: "supportive", description: `${third.name} may collect the light of both significators before their direct perfection; check the planet's condition and reception before treating this as assistance.` });
+        }
+      }
+      for (const third of planets.filter(p => p.name !== q.name && p.name !== matter.name)) {
+        const firstContact = exactFutureAspectTime(third, q, input.lookahead, input.referenceUtc);
+        if (firstContact && firstContact.days < direct.days) {
+          perfection.push({ type: "prohibition", planets: [q.name, third.name, matter.name], aspect: firstContact.aspect, strength: "difficult", description: `${third.name} perfects a contact with ${q.name} before the principal significators meet, a possible prohibition requiring judgment of the intervening planet and its reception.` });
+          break;
+        }
+      }
+    }
+    // Translation: a faster third planet has just separated from one significator and applies to the other.
+    for (const third of planets.filter(p => p.name !== q.name && p.name !== matter.name)) {
+      const dQ = traditionalAspectName(third.longitude, q.longitude);
+      const dM = traditionalAspectName(third.longitude, matter.longitude);
+      const separatingFromQ = dQ.orb <= 5 && isSeparating(third, q) && Math.abs(third.speed ?? 0) > Math.abs(q.speed ?? 0) && Math.abs(third.speed ?? 0) > Math.abs(matter.speed ?? 0);
+      const applyingToMatter = exactFutureAspectTime(third, matter, input.lookahead, input.referenceUtc);
+      if (separatingFromQ && applyingToMatter) {
+        perfection.push({ type: "translation", planets: [q.name, third.name, matter.name], aspect: applyingToMatter.aspect, strength: "supportive", description: `${third.name} appears to carry light from ${q.name} toward ${matter.name}; confirm the actual separating/applying sequence and receptions before relying on this testimony.` });
+        break;
+      }
+      const separatingFromMatter = dM.orb <= 5 && isSeparating(third, matter) && Math.abs(third.speed ?? 0) > Math.abs(matter.speed ?? 0) && Math.abs(third.speed ?? 0) > Math.abs(q.speed ?? 0);
+      const applyingToQ = exactFutureAspectTime(third, q, input.lookahead, input.referenceUtc);
+      if (separatingFromMatter && applyingToQ) {
+        perfection.push({ type: "translation", planets: [matter.name, third.name, q.name], aspect: applyingToQ.aspect, strength: "supportive", description: `${third.name} appears to carry light from ${matter.name} toward ${q.name}; confirm the actual separating/applying sequence and receptions before relying on this testimony.` });
+        break;
+      }
+    }
+  }
+  const keyReceptions = receptions.filter(r => [input.questionRuler, input.topicRuler].includes(r.from) && [input.questionRuler, input.topicRuler].includes(r.to));
+  const direct = perfection.find(p => p.type === "direct" && p.planets.includes(input.questionRuler) && p.planets.includes(input.topicRuler));
+  const translation = perfection.some(p => p.type === "translation");
+  const collection = perfection.some(p => p.type === "collection");
+  const prohibition = perfection.some(p => p.type === "prohibition");
+  const hasPerfection = Boolean(direct || translation || collection);
+  const receptionSupports = keyReceptions.length > 0;
+  const moonMitigated = ["Taurus", "Cancer", "Sagittarius", "Pisces"].includes(moonStatus.sign);
+  // Hierarchical synthesis: perfection establishes connection; reception describes willingness/ability;
+  // prohibition can interrupt it; VOC modifies momentum. Reception alone is not perfection.
+  let verdict: TraditionalJudgment["verdict"];
+  if (prohibition && !translation && !collection) verdict = "LEANING NO";
+  else if (translation || collection) verdict = prohibition ? "MIXED / CONDITIONAL" : "LEANING YES";
+  else if (direct) {
+    if (direct.strength === "supportive" && receptionSupports) verdict = "LEANING YES";
+    else if (direct.strength === "supportive") verdict = "MIXED / CONDITIONAL";
+    else verdict = receptionSupports ? "MIXED / CONDITIONAL" : "LEANING NO";
+  } else if (moonStatus.voidOfCourse && !moonMitigated) verdict = "LEANING NO";
+  else verdict = "INSUFFICIENT TESTIMONY";
+  if (moonStatus.voidOfCourse && moonMitigated && !direct && !translation && !collection) verdict = "INSUFFICIENT TESTIMONY";
+  const score = (direct ? (direct.strength === "supportive" ? 2 : -1) : 0) + (translation || collection ? 1 : 0) + (receptionSupports ? 1 : 0) - (prohibition ? 2 : 0) - (moonStatus.voidOfCourse ? (moonMitigated ? 0.5 : 1.5) : 0);
+  const testimonyText = perfection.map(p => p.description).concat(keyReceptions.map(r => r.description), moonStatus.explanation);
+  const judgment: TraditionalJudgment = { verdict, score, testimonies: testimonyText, explanation: `Provisional synthesis: ${verdict}. Direct or mediated perfection is judged first; reception modifies how readily the matter can proceed; prohibition can block it; and the Moon's course modifies momentum. A void Moon is testimony, not an automatic veto. This is a configured traditional-rule synthesis, not a substitute for reviewing the full chart and question.` };
+  return { lots, dignities, receptions, fixedStars, radicality, timing, overlays, moonStatus, perfection, judgment };
 }

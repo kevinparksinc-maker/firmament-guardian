@@ -15,6 +15,8 @@ export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude"
   question: string;
   subject: "querent" | "other";
   topicHouse: number;
+  /** House of the person asked about, counted from the querent. */
+  subjectHouse?: number;
   natal?: Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time">;
 };
 
@@ -80,6 +82,18 @@ const ASPECT_TARGETS: Array<[number, HoraryAspect["aspect"]]> = [
 ];
 const ASPECT_ORB_DEGREES = 5;
 
+function inferSubjectHouse(input: HoraryInput) {
+  if (input.subject === "querent") return 1;
+  if (input.subjectHouse && Number.isInteger(input.subjectHouse) && input.subjectHouse >= 1 && input.subjectHouse <= 12) return input.subjectHouse;
+  const q = input.question.toLowerCase();
+  if (/\b(my|our)\s+(child|son|daughter|kid)\b|\b(child|son|daughter)\s+of\s+mine\b/.test(q)) return 5;
+  if (/\b(my|our)\s+(brother|sister|sibling)\b/.test(q)) return 3;
+  if (/\b(my|our)\s+(mother|mum|mom|father|dad|parent)\b/.test(q)) return /\b(father|dad)\b/.test(q) ? 10 : 4;
+  if (/\b(my|our)\s+(boss|manager|employer)\b/.test(q)) return 10;
+  if (/\b(my|our)\s+(friend|group|team)\b/.test(q)) return 11;
+  if (/\b(my|our)\s+(partner|spouse|husband|wife|boyfriend|girlfriend)\b/.test(q)) return 7;
+  return 7;
+}
 function signOf(longitude: number) {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
 }
@@ -190,7 +204,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   if (!topic) throw new Error("Choose a valid topic house before casting the horary chart.");
 
   const querentRuler = houses[0].ruler;
-  const subjectHouse = input.subject === "querent" ? 1 : 7;
+  const subjectHouse = inferSubjectHouse(input);
   const subjectRuler = houses[subjectHouse - 1].ruler;
   const actualTopicHouse = ((subjectHouse - 1 + input.topicHouse - 1) % 12) + 1;
   const topicRuler = houses[actualTopicHouse - 1].ruler;
@@ -258,7 +272,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   const stationLines = lookahead.stations.length
     ? lookahead.stations.map(row => `- ${row.planet} turns ${row.turns} on ${row.atLocal}`).join("\n")
     : "- No planet changes direction in the window.";
-  const traditional = calculateTraditionalHorary({ ascendant: { name: "Ascendant", longitude: ascendant.longitude, house: 1 }, houses, placements, topicRuler, subjectRuler, querentRuler });
+  const traditional = calculateTraditionalHorary({ ascendant: { name: "Ascendant", longitude: ascendant.longitude, house: 1 }, houses, placements, topicRuler, subjectRuler, querentRuler, questionRuler: input.subject === "querent" ? querentRuler : subjectRuler, lookahead, referenceUtc: askedAt });
   const lotLines = traditional.lots.map(lot => `- ${lot.name}: ${lot.display}; house ${lot.house}; ${lot.formula}; ${lot.meaning}`).join("\n");
   const dignityLines = traditional.dignities.map(row => `- ${row.planet}: ${row.sign}, house ${row.house}; essential ${row.essential.length ? row.essential.join(", ") : "none"} (${row.essentialScore}); accidental ${row.accidental.join(", ")} (${row.accidentalScore}); debilities ${row.debilities.length ? row.debilities.join(", ") : "none"}`).join("\n");
   const receptionLines = traditional.receptions.length ? traditional.receptions.map(row => `- ${row.description}`).join("\n") : "- No configured reception found among the classical planets.";
@@ -291,7 +305,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Ascendant: ${ascendant.display} (${ascendantSign}); querent's primary ruler: ${querentRuler}.`,
     `Person asked about: ${input.subject === "querent" ? "the querent (House 1)" : "another person (House 7)"}; that person's ruler: ${subjectRuler}.`,
     `Topic house: house ${input.topicHouse} counted from the person asked about is actual chart house ${actualTopicHouse}; cusp sign ${houses[actualTopicHouse - 1].sign}; topic ruler ${topicRuler}.`,
-    `Significator roles: querent = House 1 ruler ${querentRuler}; person asked about = House ${subjectHouse} ruler ${subjectRuler}; matter = actual chart House ${actualTopicHouse} ruler ${topicRuler}. Do not interchange these roles.`,
+    `Significator roles: querent = House 1 ruler ${querentRuler}; person asked about = House ${subjectHouse} ruler ${subjectRuler}; matter = actual chart House ${actualTopicHouse} ruler ${topicRuler}. Traditional judgment compares ${input.subject === "querent" ? `the querent ruler ${querentRuler}` : `the subject ruler ${subjectRuler}`} with matter ruler ${topicRuler}; retain the querent ruler as context. Do not interchange these roles.`,
     `Moon: ${moon.display}, ${moon.sign}, house ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
     `Traditional planetary placements:\n${placementLines}`,
     `House cusps and traditional rulers:\n${houseLines}`,
@@ -302,7 +316,10 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Planetary stations in the next ${lookahead.windowDays} days (date indicates when the planet changes apparent direction, not an event prediction):\n${stationLines}`,
     `TRADITIONAL LOTS / ARABIC PARTS (calculated formulas; interpret in context):\n${lotLines}`,
     `ESSENTIAL AND ACCIDENTAL DIGNITY / DEBILITY (traditional scoring aid, not a standalone judgment):\n${dignityLines}`,
-    `RECEPTION / MUTUAL RECEPTION:\n${receptionLines}`,
+    `RECEPTION / MUTUAL RECEPTION (host receives guest):\n${receptionLines}`,
+    `TRADITIONAL MOON STATUS: ${traditional.moonStatus.explanation}${traditional.moonStatus.nextApplications.length ? `\nNext applications: ${traditional.moonStatus.nextApplications.map(a => `${a.planet} ${a.aspect} in ${a.daysToPerfection} days`).join("; ")}` : ""}`,
+    `PERFECTION / INTERRUPTION TESTIMONY:\n${traditional.perfection.length ? traditional.perfection.map(p => `- ${p.type.toUpperCase()} (${p.strength}): ${p.description}`).join("\n") : "- No configured direct perfection, translation, collection, or prohibition testimony was found."}`,
+    `PROVISIONAL TRADITIONAL JUDGMENT: ${traditional.judgment.verdict}; score ${traditional.judgment.score}. ${traditional.judgment.explanation}`,
     `FIXED-STAR TESTIMONY (conjunctions within 1° only):\n${starLines}`,
     `RADICALITY / CONSIDERATIONS BEFORE JUDGMENT: status ${traditional.radicality.status}; ${traditional.radicality.explanation}\n${traditional.radicality.considerations.length ? traditional.radicality.considerations.map(row => `- ${row}`).join("\n") : "- No configured caution was triggered."}`,
     `TRADITIONAL EVENT-TIMING AID (degrees to perfection and modality estimate; not a guaranteed event date):\n${timingLines}`,
@@ -317,7 +334,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Question: ${input.question}`,
     `Question asked at: ${askedAt} UTC (${input.date} ${input.time} local; ${input.timezone})`,
     `Question topic: ${topic.label}; the selected relative House ${input.topicHouse} is actual chart House ${actualTopicHouse}.`,
-    `Roles: querent = House 1 ruler ${querentRuler}; person asked about = House ${subjectHouse} ruler ${subjectRuler}; matter = actual House ${actualTopicHouse} ruler ${topicRuler}. Keep these roles separate.`,
+    `Roles: querent = House 1 ruler ${querentRuler}; person asked about = House ${subjectHouse} ruler ${subjectRuler}; matter = actual House ${actualTopicHouse} ruler ${topicRuler}. Traditional judgment compares ${input.subject === "querent" ? querentRuler : subjectRuler} with ${topicRuler}; keep the roles separate.`,
     `Ascendant: ${ascendant.display}; Moon: ${moon.display}, ${moon.sign}, House ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
     `Core placements:\n${corePlacementLines}`,
     `Relevant major aspects supplied by the calculator (maximum 5° orb):\n${aspectLines}`,
@@ -326,7 +343,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     transitQuestionEvidence,
     `Radicality / considerations before judgment: status ${traditional.radicality.status}; ${traditional.radicality.explanation}${traditional.radicality.considerations.length ? `\n- ${traditional.radicality.considerations.join("\n- ")}` : ""}`,
     `Configured traditional support: ${traditional.receptions.length ? traditional.receptions.map(row => row.description).join("; ") : "No configured reception found."}`,
-    "This is the compact judgment evidence. Do not recalculate from raw positions. The complete technical appendix remains available separately in the chart interface if the reader asks for it.",
+    "This is the compact judgment evidence. The complete technical appendix follows, including dignity/debility, Lots, receptions, timing, fixed stars, lunar mansion/Manzil/Decan/Nakshatra overlays, and the Moon/perfection testimony. Use all supplied layers in clear English, keeping traditional horary significators and perfection as the primary judgment, with natal and transit charts as context.",
   ].join("\n\n");
 
   return {
@@ -369,32 +386,38 @@ function responseText(content: string | Array<{ type: string; text?: string }> |
 }
 
 async function answer(messages: Message[], maxTokens = 6000) {
-  const responsePromise = invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens });
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error("Horary language synthesis exceeded its 30-second time budget.")), 30_000)
-  );
-  const response = await Promise.race([responsePromise, timeoutPromise]);
+  const controller = new AbortController();
+  const responsePromise = invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens, signal: controller.signal });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort(new Error("Horary synthesis deadline exceeded."));
+      reject(new Error("Horary language synthesis exceeded its 30-second time budget."));
+    }, 30_000);
+  });
+  let response: Awaited<typeof responsePromise>;
+  try {
+    response = await Promise.race([responsePromise, timeoutPromise]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
   const text = responseText(response.choices?.[0]?.message?.content);
   if (!text.trim()) throw new Error("The horary interpreter returned no readable answer. Please try again.");
   return text;
 }
 
 function deterministicHoraryReading(chart: HoraryChart) {
+  const primaryRuler = chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler;
   const directAspect = chart.relevantAspects.find(
     aspect =>
-      (aspect.first === chart.querentRuler && aspect.second === chart.topicRuler) ||
-      (aspect.first === chart.topicRuler && aspect.second === chart.querentRuler)
+      (aspect.first === primaryRuler && aspect.second === chart.topicRuler) ||
+      (aspect.first === chart.topicRuler && aspect.second === primaryRuler)
   );
-  const supportive = directAspect && ["conjunction", "sextile", "trine"].includes(directAspect.aspect);
-  const difficult = directAspect && ["square", "opposition"].includes(directAspect.aspect);
-  const judgment = supportive
-    ? directAspect?.phase === "applying" ? "LEANING YES" : "MIXED / CONDITIONAL"
-    : difficult
-      ? "MIXED / CONDITIONAL"
-      : "INSUFFICIENT TESTIMONY";
+  const judgment = chart.traditional.judgment.verdict;
   const aspectSentence = directAspect
     ? `${directAspect.first} ${directAspect.aspect} ${directAspect.second} with a ${directAspect.orb}° orb (${directAspect.phase}).`
     : "The supplied significators do not form a configured major aspect within the 5° orb.";
+  const traditionalSummary = chart.traditional.judgment.testimonies.join(" ");
   const complication = chart.traditional.radicality.considerations.length
     ? chart.traditional.radicality.considerations.join(" ")
     : directAspect?.phase === "separating"
@@ -413,13 +436,14 @@ function deterministicHoraryReading(chart: HoraryChart) {
     `You are asking: “${chart.question}” The chart is being used to examine that specific matter at the place and moment you supplied.`,
     "",
     "## What this means for you",
-    `The question is assigned to ${chart.topicLabel}, with ${chart.querentRuler} representing the querent and ${chart.topicRuler} representing the matter. The deterministic Firmament canon supplies the condition and house meaning for those significators; the result should be read as guidance, not certainty.`,
+    `The question is assigned to ${chart.topicLabel}, with ${chart.querentRuler} representing the querent, ${chart.subjectRuler} representing the person in question, and ${chart.topicRuler} representing the matter. The traditional judgment compares ${chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler} with the matter ruler; the other layers refine, rather than replace, that judgment.`,
     "",
     "## Judgment",
     `**${judgment}** — this is the calibrated category supported by the configured horary testimony.`,
     "",
     "## The astrological picture",
     aspectSentence,
+    `Traditional testimony: ${traditionalSummary}`,
     `The Moon is ${chart.moon.display}, ${chart.moon.sign}, in House ${chart.moon.house}. ${chart.canonEvidenceText.split("\n").slice(0, 6).join(" ")}`,
     natalSummary,
     transitSummary.length
@@ -441,7 +465,7 @@ export async function openHoraryQuestion(input: HoraryInput) {
   const coreReading = deterministicHoraryReading(chart);
   const reading = await answer([
     { role: "system", content: HORARY_SYSTEM },
-    { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. The first visible sections must be exactly: “What I hear beneath your question,” “What this means for you,” then “Judgment,” before “The astrological picture.”\n\n${chart.judgmentEvidenceText}\n\nGive the complete, human-centered horary judgment now.` },
+    { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. The first visible sections must be exactly: “What I hear beneath your question,” “What this means for you,” then “Judgment,” before “The astrological picture.”\n\n${chart.judgmentEvidenceText}\n\nFULL TECHNICAL EVIDENCE (all configured layers):\n${chart.evidenceText}\n\nGive the complete, human-centered horary judgment now.` },
   ], 3200).catch(() => coreReading);
   return { chart, reading };
 }
@@ -453,9 +477,9 @@ export async function horaryFollowUp(
 ) {
   return answer([
     { role: "system", content: `${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.` },
-    { role: "user", content: `Original compact horary evidence:\n\n${chart.judgmentEvidenceText}` },
+    { role: "user", content: `Original horary judgment evidence:\n\n${chart.judgmentEvidenceText}\n\nFull configured chart and canon evidence:\n\n${chart.evidenceText}` },
     ...withCurrentQuestion(history, question, 12),
   ], 1800).catch(() =>
-    `The core chart remains fixed for this follow-up. The deterministic evidence shows ${chart.querentRuler} as the querent ruler, ${chart.topicRuler} as the matter ruler, and the Moon at ${chart.moon.display} in House ${chart.moon.house}. The configured chart testimony should be read as ${chart.relevantAspects.length ? "a qualified pattern requiring the specific aspect evidence above" : "insufficient testimony for a stronger conclusion"}. The optional language-synthesis service did not return within its time budget, so no new claim is being added beyond the calculated evidence.`,
+    `The core chart remains fixed for this follow-up. The deterministic judgment is ${chart.traditional.judgment.verdict}. The relevant significators are ${chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler} and ${chart.topicRuler}; Moon status: ${chart.traditional.moonStatus.explanation} The optional language-synthesis service did not return within its time budget, so no new claim is being added beyond the calculated evidence.`,
   );
 }

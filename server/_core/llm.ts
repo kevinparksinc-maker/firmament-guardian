@@ -68,6 +68,7 @@ export type InvokeParams = {
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
   model?: string;
+  signal?: AbortSignal;
   thinking?: Record<string, unknown>;
   reasoning?: Record<string, unknown>;
 };
@@ -267,6 +268,7 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": ENV.anthropicApiKey, "anthropic-version": "2023-06-01" },
     body: JSON.stringify(body),
+    signal: params.signal,
   });
   if (!response.ok) {
     const errorText = await response.text();
@@ -299,6 +301,7 @@ async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
         method: "POST",
         headers,
         body: JSON.stringify({ model, messages, ...requestOptions }),
+        signal: params.signal,
       });
       if (!response.ok) {
         const errorText = await response.text();
@@ -373,8 +376,20 @@ const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
 type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
 
-const sleep = (ms: number) =>
-  new Promise<void>(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number, signal?: AbortSignal | null) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason ?? new Error("LLM request aborted."));
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      reject(signal?.reason ?? new Error("LLM request aborted."));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 
 const parseRetryAfter = (value: string | null): number | undefined => {
   if (!value) return undefined;
@@ -406,13 +421,17 @@ const fetchWithBackoff = async (
 
   for (let attempt = 0; attempt <= RETRY_MAX_RETRIES; attempt++) {
     try {
+      if (init.signal?.aborted) throw init.signal.reason ?? new Error("LLM request aborted.");
       const controller = new AbortController();
+      const onAbort = () => controller.abort(init.signal?.reason);
+      init.signal?.addEventListener("abort", onAbort, { once: true });
       const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS);
       let response: Response;
       try {
         response = await fetch(url, { ...init, signal: controller.signal });
       } finally {
         clearTimeout(timeout);
+        init.signal?.removeEventListener("abort", onAbort);
       }
       if (response.ok || attempt === RETRY_MAX_RETRIES) {
         return response;
@@ -429,14 +448,14 @@ const fetchWithBackoff = async (
       console.warn(
         `LLM request retry ${attempt + 1}/${RETRY_MAX_RETRIES} after status ${response.status}`
       );
-      await sleep(computeBackoffDelay(attempt, retryAfterMs));
+      await sleep(computeBackoffDelay(attempt, retryAfterMs), init.signal);
     } catch (error) {
       lastError = error;
-      if (attempt === RETRY_MAX_RETRIES) throw error;
+      if (init.signal?.aborted || attempt === RETRY_MAX_RETRIES) throw error;
       console.warn(
         `LLM request retry ${attempt + 1}/${RETRY_MAX_RETRIES} after network error`
       );
-      await sleep(computeBackoffDelay(attempt));
+      await sleep(computeBackoffDelay(attempt), init.signal);
     }
   }
 
@@ -570,6 +589,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       authorization: `Bearer ${ENV.forgeApiKey}`,
     },
     body: JSON.stringify(payload),
+    signal: params.signal,
   });
 
   if (!response.ok) {
