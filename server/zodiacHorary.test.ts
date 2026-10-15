@@ -65,5 +65,8 @@ describe("ruler-anchored zodiac celestial engine", () => {
     expect(gemini.anchorLongitude).toBe(virgo.anchorLongitude);
     expect(gemini.agentHouses).toEqual(virgo.agentHouses);
     expect(gemini.sign).not.toBe(virgo.sign);
+    expect(gemini.signTerritory.from).toBe(60);
+    expect(virgo.signTerritory.from).toBe(150);
+    expect(gemini.signTerritory.themes).not.toBe(virgo.signTerritory.themes);
   });
 });
