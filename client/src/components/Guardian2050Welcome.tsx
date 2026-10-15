@@ -7,6 +7,7 @@ type Portal = { href: string; eyebrow: string; title: string; summary: string; i
 const portals: Portal[] = [
   { href: "#chart-setup", eyebrow: "01 / YOUR FOUNDATION", title: "Cast a natal chart", summary: "Begin with your birth details. See the moving sky against the permanently fixed firmament.", icon: Stars, label: "Open chart setup" },
   { href: "/horary", eyebrow: "02 / A LIVING QUESTION", title: "Ask a Horary question", summary: "Explore the heavens at the exact moment of your question, including rulers and testimony.", icon: MoonStar, label: "Open Horary" },
+  { href: "/zodiac-readings", eyebrow: "NEW / THE TWELVE CELESTIAL GATES", title: "Your sign’s celestial reading", summary: "Each sign’s ruling planet becomes Agent House 1, while God View stays fixed. Explore the same calculated sky through twelve distinct house perspectives.", icon: Sparkles, label: "Open zodiac sign readings" },
   { href: "/sky", eyebrow: "03 / THE CELESTIAL MAP", title: "Explore the Firmament", summary: "Examine tropical planets, fixed stellar territories, and the 27 / 28 / 36 overlays.", icon: Orbit, label: "Explore celestial map" },
   { href: "/history", eyebrow: "04 / YOUR LIBRARY", title: "Return to your readings", summary: "Revisit previous chart work and reflect on what you have learned.", icon: BookOpenText, label: "Open history" },
 ];
@@ -23,7 +24,7 @@ export function Guardian2050Welcome() {
   return <section className="fg2050" aria-label="Firmament Guardian celestial observatory">
     <nav className="fg2050-topbar" aria-label="Guardian primary navigation">
       <a href="/" className="fg2050-brand"><span className="fg2050-brandmark"><Orbit size={21}/></span><span><b>FIRMAMENT</b><small>GUARDIAN · CELESTIAL WISDOM</small></span></a>
-      <div className="fg2050-toplinks"><a href="#chart-setup">Natal</a><a href="/horary">Horary</a><a href="/sky">Celestial Map</a><a href="/history">Library</a></div>
+      <div className="fg2050-toplinks"><a href="#chart-setup">Natal</a><a href="/horary">Horary</a><a href="/zodiac-readings">12 Signs</a><a href="/sky">Celestial Map</a><a href="/history">Library</a></div>
       <span className="fg2050-model-tag"><i/> FIXED STELLAR FRAME</span>
     </nav>
     <div className="fg2050-lead">
