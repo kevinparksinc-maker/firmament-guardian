@@ -47,6 +47,14 @@ describe("Vedic Dasha and Ashtakavarga calculation layer", () => {
     });
   });
 
+  it("covers later-life dates without dropping the current Dasha", () => {
+    const old = { ...chart, utc: "1886-11-20T16:06:00.000Z" } as ChartResult;
+    const evidence = resolveVedicTimingAndAshtakavarga(old);
+    const dasha = evidence.find(item => item.technique === "dasha");
+    expect(dasha?.category).toBe("calculated-fact");
+    expect(dasha?.statement).toContain("Current Mahadasha:");
+  });
+
   it("refuses exact Dasha timing when birth time is unknown", () => {
     const uncertain = {
       ...chart,
