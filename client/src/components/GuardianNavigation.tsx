@@ -17,9 +17,6 @@ export function GuardianNavigation() {
 
   useEffect(() => { setOpen(false); }, [location]);
 
-  // Home already includes the full-width celestial landing navigation.
-  if (location === "/") return null;
-
   return (
     <header className="guardian-global-nav">
       <nav className="guardian-global-nav-inner" aria-label="Firmament Guardian main navigation">
