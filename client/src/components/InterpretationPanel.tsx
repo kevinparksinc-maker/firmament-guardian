@@ -18,6 +18,7 @@ import { trpc } from "@/lib/trpc";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
 import { AudioReader } from "@/components/AudioReader";
 import { BehavioralIntelligencePanel } from "@/components/BehavioralIntelligencePanel";
+import { Interpreter2050 } from "@/components/Interpreter2050";
 import type { ChartResult } from "../../../server/astronomy";
 import type { AstrologyEvidencePacket } from "../../../server/astrologyKnowledge/types";
 import { startLogin } from "@/const";
@@ -565,6 +566,7 @@ export function InterpretationPanel({
           }
         }}
       />
+      <Interpreter2050 packet={interpretation?.evidencePacket} hasReading={Boolean(interpretation?.reading)} />
       {interpretation?.evidencePacket?.vedicEvidence && (
         <Card className="mx-auto max-w-5xl border-cyan-200/15 bg-slate-950/70 text-slate-100">
           <CardHeader>
@@ -688,6 +690,7 @@ export function InterpretationPanel({
             </div>
           </div>
 
+          <div id="fg2050-human-reading" className="scroll-mt-8" />
           {/* Executive Opening Synthesis (Always Visible Immediately) - Life Storytelling Mode */}
           {interpretation.reading && (
             <Card className="overflow-hidden border-cyan-300/35 bg-gradient-to-br from-cyan-950/45 via-[#0a0f1d] to-violet-950/35 text-slate-100 shadow-2xl shadow-cyan-950/30">
