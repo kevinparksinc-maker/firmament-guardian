@@ -18,8 +18,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { MapView } from "@/components/Map";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
-import { SkyObservatoryWheel } from "@/components/SkyObservatoryWheel";
-import { ChartWheel } from "@/components/ChartWheel";
+import { AdvancedChartInstruments } from "@/components/AdvancedChartInstruments";
 import { LiveTransitFeed } from "@/components/LiveTransitFeed";
 import { WelcomeHost } from "@/components/WelcomeHost";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
@@ -632,7 +631,7 @@ export default function Home() {
         <div className="absolute right-[-12rem] top-1/3 h-[30rem] w-[30rem] rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)] [background-size:64px_64px]" />
       </div>
-      <main className="relative z-10 mx-auto max-w-[1480px] px-5 py-6 md:px-10 md:py-10">
+      <main className="guardian-home-main relative z-10 mx-auto max-w-[1480px] px-5 py-6 md:px-10 md:py-10">
         <Guardian2050Welcome />
         <header className="mb-8 flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-end md:justify-between">
           <div>
@@ -1306,11 +1305,7 @@ export default function Home() {
                   </CardContent>
                 </Card>
                 <ChartObservatory2050 chart={result} />
-                <details className="group overflow-hidden rounded-2xl border border-amber-200/20 bg-gradient-to-r from-amber-100/[0.045] to-cyan-100/[0.025] p-4 sm:p-6">
-                  <summary className="cursor-pointer text-sm font-semibold text-amber-100">Open the advanced chart instruments — traditional wheel, aspects, dignities, and complete technical overlays</summary>
-                  <p className="mt-3 mb-5 text-xs leading-6 text-slate-400">The original full observatory and interactive chart wheel remain available for detailed research. Their calculation data has not been changed.</p>
-                  <div className="space-y-6"><SkyObservatoryWheel chart={result} /><ChartWheel chart={result} /></div>
-                </details>
+                <AdvancedChartInstruments chart={result} />
                 {result.worldview === "god" && (
                   <div className="rounded-2xl border border-violet-300/25 bg-violet-950/20 p-5 text-sm text-slate-200">
                     <div className="text-xs font-semibold uppercase tracking-wider text-violet-300">
