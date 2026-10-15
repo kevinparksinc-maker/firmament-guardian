@@ -1647,7 +1647,7 @@ export default function Home() {
           /></>
         )}
 
-        {/* 4. Daily Audio Podcast Tab */
+        {/* 4. Daily Audio Podcast Tab */}
         {mainTab === "podcast" && (
           <><div className="fg-module-banner"><p className="fg-module-eyebrow">04 / THE CELESTIAL VOICE</p><h2 className="fg-module-title">Listen to your observatory.</h2><p className="fg-module-desc">Your same evidence-first astrology becomes an audio-friendly reading without losing God View, Agent View, or the relationship between them.</p></div>
           <AudioPodcastBriefing
@@ -1656,7 +1656,7 @@ export default function Home() {
           /></>
         )}
 
-        {/* 5. Loved Ones Social Matrix Tab */
+        {/* 5. Loved Ones Social Matrix Tab */}
         {mainTab === "social" && (
           <><div className="fg-module-banner"><p className="fg-module-eyebrow">05 / THE CELESTIAL CONNECTIONS</p><h2 className="fg-module-title">The people in your orbit.</h2><p className="fg-module-desc">Consider two independent birth charts and the actual geometric connections between them. Respect individual privacy and keep symbolic readings distinct from verified human behavior.</p></div>
           <SocialLovedOnesMatrix
