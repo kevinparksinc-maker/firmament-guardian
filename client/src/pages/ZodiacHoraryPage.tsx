@@ -4,7 +4,7 @@ import { Compass, Eye, MoonStar, Orbit, Sparkles, ArrowLeft, Loader2, ShieldChec
 import { Streamdown } from "streamdown";
 import { trpc } from "@/lib/trpc";
 import { ZODIAC_SIGNS, formatLongitude } from "../../../shared/hybrid";
-import { SIGN_RULERS, SIGN_SYMBOLS, type ZodiacSign } from "../../../server/zodiacHorary";
+import { SIGN_RULERS, SIGN_SYMBOLS, type ZodiacSign } from "../../../shared/zodiacSigns";
 import "./ZodiacHoraryPage.css";
 
 function todayUtc() {
