@@ -27,6 +27,7 @@ import { AccountControl } from "@/components/AccountControl";
 import { Guardian2050Welcome } from "@/components/Guardian2050Welcome";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
 import { ChartOverview } from "@/components/ChartOverview";
+import { ChartObservatory2050 } from "@/components/ChartObservatory2050";
 import {
   HoverCard,
   HoverCardContent,
@@ -1304,8 +1305,12 @@ export default function Home() {
                     </a>
                   </CardContent>
                 </Card>
-                <SkyObservatoryWheel chart={result} />
-                <ChartWheel chart={result} />
+                <ChartObservatory2050 chart={result} />
+                <details className="group overflow-hidden rounded-2xl border border-amber-200/20 bg-gradient-to-r from-amber-100/[0.045] to-cyan-100/[0.025] p-4 sm:p-6">
+                  <summary className="cursor-pointer text-sm font-semibold text-amber-100">Open the advanced chart instruments — traditional wheel, aspects, dignities, and complete technical overlays</summary>
+                  <p className="mt-3 mb-5 text-xs leading-6 text-slate-400">The original full observatory and interactive chart wheel remain available for detailed research. Their calculation data has not been changed.</p>
+                  <div className="space-y-6"><SkyObservatoryWheel chart={result} /><ChartWheel chart={result} /></div>
+                </details>
                 {result.worldview === "god" && (
                   <div className="rounded-2xl border border-violet-300/25 bg-violet-950/20 p-5 text-sm text-slate-200">
                     <div className="text-xs font-semibold uppercase tracking-wider text-violet-300">
