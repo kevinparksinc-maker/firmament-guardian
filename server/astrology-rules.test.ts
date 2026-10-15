@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateChart } from "./astronomy";
+import { calculateChart, aspectBetween } from "./astronomy";
 import { resolveVedicEvidence } from "./astrologyKnowledge/vedic";
 import { overlay, FIXED_STARS } from "../shared/hybrid";
 import { equalHouseCusps, godHouseFor, agentHouseFor } from "./astrologyCore";
@@ -48,6 +48,12 @@ describe("deterministic astrology rule fixtures", () => {
     expect(detectWesternAspects(placements(10, 15))).toHaveLength(1);
     expect(detectWesternAspects(placements(10, 15.01))).toHaveLength(0);
     expect(detectWesternAspects(placements(359, 4))).toHaveLength(1);
+  });
+
+  it("enforces the same five-degree orb for transit contact geometry", () => {
+    expect(aspectBetween(10, 15)?.aspect).toBe("conjunction");
+    expect(aspectBetween(10, 15.01)).toBeNull();
+    expect(aspectBetween(359, 4)?.aspect).toBe("conjunction");
   });
 
   it("keeps Nakshatra, pada, and Manzil boundary geometry deterministic", () => {
