@@ -195,7 +195,7 @@ describe("horary astrology", () => {
     const result = await openHoraryQuestion(sampleInput);
 
     expect(result.reading).toContain("## Judgment");
-    expect(result.reading).toContain("INSUFFICIENT TESTIMONY");
+    expect(result.reading).toContain(result.chart.traditional.judgment.verdict);
     expect(result.reading).toContain("deterministic chart");
   });
 
@@ -230,7 +230,7 @@ describe("horary astrology", () => {
 
     const messages = mocked.invokeLLM.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
     expect(messages.filter(message => message.role === "user" && message.content === question)).toHaveLength(1);
-    expect(messages.some(message => message.content.includes("Original compact horary evidence"))).toBe(true);
+    expect(messages.some(message => message.content.includes("Original horary judgment evidence"))).toBe(true);
     expect(messages.some(message => message.content.includes("Will the hypothetical applicant accept the new role?"))).toBe(true);
     expect(messages[0].content).toContain("Keep the original chart and question fixed");
   });
