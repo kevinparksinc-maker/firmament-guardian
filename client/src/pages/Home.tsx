@@ -302,7 +302,20 @@ export default function Home() {
   const [showHelp, setShowHelp] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(null);
-  const [mainTab, setMainTab] = useState<"blueprint" | "synastry" | "weather" | "podcast" | "social">("blueprint");
+  type ObservatoryTab = "blueprint" | "synastry" | "weather" | "podcast" | "social";
+  const parseTab = (): ObservatoryTab => {
+    const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
+    return tab === "synastry" || tab === "weather" || tab === "podcast" || tab === "social" ? tab : "blueprint";
+  };
+  const [mainTab, setMainTab] = useState<ObservatoryTab>(parseTab);
+  useEffect(() => {
+    const onSelect = (event: Event) => {
+      const tab = (event as CustomEvent<{ tab: ObservatoryTab }>).detail?.tab;
+      if (["blueprint","synastry","weather","podcast","social"].includes(tab)) setMainTab(tab);
+    };
+    window.addEventListener("fg:select-tab", onSelect);
+    return () => window.removeEventListener("fg:select-tab", onSelect);
+  }, []);
   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
   const { isSovereign, openPaywall } = useSovereignTier();
   const [activeProfile, setActiveProfile] = useState<UserProfileData | null>(() => {
@@ -838,7 +851,7 @@ export default function Home() {
             </div>
 
             {/* Primary Cosmos Navigation Tabs */}
-            <div id="main-cosmos-tabs" className="mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
+            <div id="main-cosmos-tabs" className="fg-celestial-tabs mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
           <button
             type="button"
             onClick={() => setMainTab("blueprint")}
