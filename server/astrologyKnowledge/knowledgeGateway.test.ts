@@ -289,7 +289,7 @@ describe("astrology knowledge gateway", () => {
       "tradition-attributed-unverified"
     );
     expect(moonPlacement?.planetInHouseKnowledge?.sourceCaveat).toContain(
-      "no record-level citation"
+      "does not cite a specific passage"
     );
     expect(plutoPlacement?.planetInHouseKnowledge?.epistemicStatus).toBe(
       "modern-synthesis"
