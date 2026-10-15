@@ -411,8 +411,15 @@ function evidenceAnchors(packet: AstrologyEvidencePacket) {
     ...packet.timingEvidence,
     ...packet.fixedStarEvidence,
   ];
+  const subjectCounts = new Map<string, number>();
   for (const item of items) {
-    anchors.set(item.subject.trim().toLowerCase(), item.statement);
+    const subject = item.subject.trim().toLowerCase();
+    subjectCounts.set(subject, (subjectCounts.get(subject) ?? 0) + 1);
+  }
+  for (const item of items) {
+    const subject = item.subject.trim().toLowerCase();
+    // A subject can name multiple independent testimonies: never silently pick one.
+    if (subjectCounts.get(subject) === 1) anchors.set(subject, item.statement);
     anchors.set(item.id.trim().toLowerCase(), item.statement);
     anchors.set(item.statement.trim().toLowerCase(), item.statement);
   }
