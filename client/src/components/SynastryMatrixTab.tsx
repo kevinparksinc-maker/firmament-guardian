@@ -311,10 +311,10 @@ export function SynastryMatrixTab({
               </span>
             </div>
             <h2 className="font-serif text-3xl font-bold text-white tracking-tight">
-              The Cosmic Duo Architecture
+              The Celestial Relationship Observatory
             </h2>
             <p className="max-w-2xl text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Overlay your exact natal coordinates onto your partner, date, friend, or family member. Compute the deterministic geometry of mutual attraction, emotional vulnerability, communication flow, and long-term stability.
+              Overlay your exact natal coordinates onto your partner, date, friend, or family member. Calculate the actual planetary contacts and house placements of two people. The symbolic readings suggest possible dynamics; they do not determine personal compatibility or establish anyone's feelings.
             </p>
           </div>
 
@@ -486,7 +486,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-rose-300">
-                    <Flame className="h-3.5 w-3.5" /> Romantic & Magnetic Spark
+                    <Flame className="h-3.5 w-3.5" /> Romantic aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.romantic}%</span>
                 </div>
@@ -501,7 +501,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-cyan-300">
-                    <Shield className="h-3.5 w-3.5" /> Emotional Safety & Vulnerability
+                    <Shield className="h-3.5 w-3.5" /> Emotional aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.emotional}%</span>
                 </div>
@@ -516,7 +516,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-purple-300">
-                    <Brain className="h-3.5 w-3.5" /> Intellectual Synergy & Wit
+                    <Brain className="h-3.5 w-3.5" /> Intellectual aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.intellectual}%</span>
                 </div>
@@ -531,7 +531,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-emerald-300">
-                    <Anchor className="h-3.5 w-3.5" /> Long-Term Anchor & Stability
+                    <Anchor className="h-3.5 w-3.5" /> Stability aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.stability}%</span>
                 </div>
@@ -546,7 +546,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-amber-300">
-                    <Sparkles className="h-3.5 w-3.5" /> Soul Growth & Evolutionary Catalyst
+                    <Sparkles className="h-3.5 w-3.5" /> Growth aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.soulGrowth}%</span>
                 </div>
@@ -623,10 +623,10 @@ export function SynastryMatrixTab({
                 {expandedPlaybook === "communication" && (
                   <div className="p-3.5 pt-0 text-xs text-slate-300 space-y-2 border-t border-cyan-300/15 leading-relaxed">
                     <p>
-                      <strong>Your Style:</strong> You synthesize information rapidly and look for actionable solutions. You want immediate clarity.
+                      <strong>Your Style:</strong> {aspects.filter(a => a.planetA === "Mercury" || a.planetB === "Mercury").map(a => a.planetA + " " + a.aspect + " " + a.planetB + " (" + a.orb + "°)").slice(0,5).join("; ") || "No Mercury cross-aspects were found within the 5° orb."}
                     </p>
                     <p>
-                      <strong>Their Reception:</strong> They need emotional validation before they can engage with the logic. If you jump straight to solving without acknowledging their feeling, they experience it as dismissal.
+                      <strong>Their Reception:</strong> The Mercury and Moon connections are symbolic conversation and emotional-style prompts, not evidence of how either person actually thinks or feels. Ask each other what support means in practice.
                     </p>
                     <p className="rounded-lg bg-cyan-400/10 p-2 text-cyan-200 font-medium">
                       💡 <strong>Golden Rule:</strong> Spend 3 minutes validating their emotional reality before offering a tactical fix.
@@ -657,7 +657,7 @@ export function SynastryMatrixTab({
                 {expandedPlaybook === "conflict" && (
                   <div className="p-3.5 pt-0 text-xs text-slate-300 space-y-2 border-t border-rose-300/15 leading-relaxed">
                     <p>
-                      <strong>Trigger Point:</strong> When stress spikes, your instinct is to withdraw or analyze, while their instinct is to push for immediate reassurance. This creates a pursuer-distancer cycle.
+                      <strong>Trigger Point:</strong> {aspects.filter(a => a.type === "tension").slice(0,5).map(a => a.planetA + " " + a.aspect + " " + a.planetB + " (" + a.orb + "°)").join("; ") || "There are no close tension aspects in the configured 5° scope."} These symbolic contacts do not establish anyone's actual reaction patterns.
                     </p>
                     <p className="rounded-lg bg-rose-400/10 p-2 text-rose-200 font-medium">
                       🛡️ <strong>De-escalation Script:</strong> Say: <em>&ldquo;I am completely on your team and not leaving. My system needs 20 minutes to reset so I can give you my best presence, and then we will finish this together.&rdquo;</em>
@@ -688,7 +688,7 @@ export function SynastryMatrixTab({
                 {expandedPlaybook === "superpower" && (
                   <div className="p-3.5 pt-0 text-xs text-slate-300 space-y-2 border-t border-amber-300/15 leading-relaxed">
                     <p>
-                      When aligned, this combination creates extraordinary manifestation momentum. You provide the strategic architecture and discernment; they inject infectious enthusiasm, creative vision, and social magnetism.
+                      {aspects.filter(a => a.type === "harmony").slice(0,5).map(a => a.planetA + " " + a.aspect + " " + a.planetB + " (" + a.orb + "°)").join("; ") || "No close harmony aspects appear in the configured 5° scope."} Use any supportive themes to discuss strengths you can verify together, not to assume either person's traits.
                     </p>
                   </div>
                 )}
