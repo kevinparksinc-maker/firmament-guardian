@@ -1,3 +1,5 @@
+import { lazy, Suspense } from "react";
+import { GuardianNavigation } from "./components/GuardianNavigation";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -5,10 +7,11 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SovereignTierProvider } from "./components/SovereignTierModal";
-import Home from "./pages/Home";
-import HoraryPage from "./pages/HoraryPage";
-import History from "./pages/History";
-import SkyHomePrototype from "./pages/SkyHomePrototype";
+// Route-level splitting: the large sky map and horary engine UI do not block the home screen.
+const Home = lazy(() => import("./pages/Home"));
+const HoraryPage = lazy(() => import("./pages/HoraryPage"));
+const History = lazy(() => import("./pages/History"));
+const SkyHomePrototype = lazy(() => import("./pages/SkyHomePrototype"));
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -40,7 +43,10 @@ function App() {
         <TooltipProvider>
           <SovereignTierProvider>
             <Toaster />
-            <Router />
+            <GuardianNavigation />
+            <Suspense fallback={<main role="status" className="flex min-h-[55vh] items-center justify-center px-6 text-center text-sm text-cyan-100"><div className="rounded-2xl border border-cyan-200/20 bg-slate-950/70 px-6 py-5" aria-live="polite">Opening your celestial observatory…</div></main>}>
+              <Router />
+            </Suspense>
           </SovereignTierProvider>
         </TooltipProvider>
       </ThemeProvider>

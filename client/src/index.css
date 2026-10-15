@@ -63,30 +63,30 @@ button, input, textarea, a { transition: transform 180ms var(--ease-out), border
 button:active { transform: scale(.97); }
 *:focus-visible { outline: 2px solid rgb(103 232 249); outline-offset: 3px; }
 
-main.relative { max-width: 1680px; padding-top: 3rem; }
-main.relative > header { position: relative; padding: 2rem 0 2.25rem; border-bottom-color: rgba(148, 163, 184, .16); }
-main.relative > header::before { content: ''; position: absolute; right: 5%; top: -5rem; width: 18rem; height: 18rem; border: 1px solid rgba(103,232,249,.12); border-radius: 999px; box-shadow: 0 0 90px rgba(103,232,249,.08), inset 0 0 40px rgba(167,139,250,.05); pointer-events: none; }
-main.relative > header::after { content: ''; position: absolute; left: 0; bottom: -1px; width: 260px; height: 1px; background: linear-gradient(90deg, #67e8f9, #a78bfa 52%, transparent); box-shadow: 0 0 16px rgba(103,232,249,.5); }
-main.relative > header h1 { max-width: 800px; font-size: clamp(3.2rem, 7vw, 6.8rem); line-height: .92; letter-spacing: -.06em; text-wrap: balance; text-shadow: 0 0 50px rgba(129, 140, 248, .22); }
-main.relative > header p { color: rgba(203, 213, 225, .78); max-width: 610px; }
-main.relative .text-slate-400 { color: rgba(203, 213, 225, .76); }
-main.relative > header .text-xs.uppercase { color: #67e8f9; font-weight: 700; letter-spacing: .34em; }
-main.relative > header .text-xs.uppercase span { background: #67e8f9; box-shadow: 0 0 14px rgba(103,232,249,.8); }
+main.guardian-home-main { max-width: 1680px; padding-top: 3rem; }
+main.guardian-home-main > header { position: relative; padding: 2rem 0 2.25rem; border-bottom-color: rgba(148, 163, 184, .16); }
+main.guardian-home-main > header::before { content: ''; position: absolute; right: 5%; top: -5rem; width: 18rem; height: 18rem; border: 1px solid rgba(103,232,249,.12); border-radius: 999px; box-shadow: 0 0 90px rgba(103,232,249,.08), inset 0 0 40px rgba(167,139,250,.05); pointer-events: none; }
+main.guardian-home-main > header::after { content: ''; position: absolute; left: 0; bottom: -1px; width: 260px; height: 1px; background: linear-gradient(90deg, #67e8f9, #a78bfa 52%, transparent); box-shadow: 0 0 16px rgba(103,232,249,.5); }
+main.guardian-home-main > header h1 { max-width: 800px; font-size: clamp(3.2rem, 7vw, 6.8rem); line-height: .92; letter-spacing: -.06em; text-wrap: balance; text-shadow: 0 0 50px rgba(129, 140, 248, .22); }
+main.guardian-home-main > header p { color: rgba(203, 213, 225, .78); max-width: 610px; }
+main.guardian-home-main .text-slate-400 { color: rgba(203, 213, 225, .76); }
+main.guardian-home-main > header .text-xs.uppercase { color: #67e8f9; font-weight: 700; letter-spacing: .34em; }
+main.guardian-home-main > header .text-xs.uppercase span { background: #67e8f9; box-shadow: 0 0 14px rgba(103,232,249,.8); }
 
-main.relative .rounded-xl, main.relative .rounded-2xl, main.relative .rounded-3xl { box-shadow: 0 24px 70px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.045); }
-main.relative aside > div:first-child, main.relative aside > div:nth-child(2), main.relative section > div > div.rounded-xl, main.relative section > div > div.rounded-2xl, main.relative section > div > div.rounded-3xl { backdrop-filter: blur(18px); }
-main.relative aside > div:first-child { border-color: rgba(103,232,249,.18); background: linear-gradient(145deg, rgba(18,26,48,.9), rgba(9,13,28,.76)); box-shadow: 0 28px 80px rgba(0,0,0,.34), 0 0 0 1px rgba(255,255,255,.025) inset; }
-main.relative aside > div:nth-child(2) { border-color: rgba(167,139,250,.2); background: linear-gradient(145deg, rgba(26,25,53,.7), rgba(10,15,31,.75)); }
-main.relative input, main.relative textarea { border-color: rgba(148,163,184,.18) !important; background: rgba(3,7,18,.5) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
-main.relative input:hover, main.relative input:focus, main.relative textarea:hover, main.relative textarea:focus { border-color: rgba(103,232,249,.6) !important; box-shadow: 0 0 0 3px rgba(103,232,249,.08), 0 0 22px rgba(103,232,249,.08); }
-main.relative button.bg-violet-500 { background: linear-gradient(105deg, #7657f6, #9b70ff 48%, #38cbd2) !important; border: 1px solid rgba(255,255,255,.22); box-shadow: 0 13px 30px rgba(93,76,230,.32), inset 0 1px 0 rgba(255,255,255,.24); font-weight: 800; letter-spacing: .01em; }
-main.relative button.bg-violet-500:hover { box-shadow: 0 16px 36px rgba(93,76,230,.48), 0 0 24px rgba(56,203,210,.18); filter: saturate(1.15) brightness(1.08); transform: translateY(-1px); }
-main.relative section > .grid:first-child > div { border-color: rgba(148,163,184,.14); background: linear-gradient(145deg, rgba(21,28,50,.75), rgba(8,12,25,.68)); }
-main.relative section > .grid:first-child > div:hover { border-color: rgba(103,232,249,.28); transform: translateY(-2px); }
-main.relative section > div > div.rounded-2xl:not(.overflow-hidden) { border-color: rgba(103,232,249,.16); background: radial-gradient(circle at 50% 42%, rgba(44,169,192,.09), transparent 33%), linear-gradient(145deg, rgba(14,28,47,.72), rgba(8,12,25,.66)); }
-main.relative table thead { background: linear-gradient(90deg, rgba(103,232,249,.07), rgba(167,139,250,.06)); }
-main.relative table tbody tr { transition: background-color 180ms ease; }
-main.relative table tbody tr:hover { background: linear-gradient(90deg, rgba(103,232,249,.07), rgba(167,139,250,.04)); }
+main.guardian-home-main .rounded-xl, main.guardian-home-main .rounded-2xl, main.guardian-home-main .rounded-3xl { box-shadow: 0 24px 70px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.045); }
+main.guardian-home-main aside > div:first-child, main.guardian-home-main aside > div:nth-child(2), main.guardian-home-main section > div > div.rounded-xl, main.guardian-home-main section > div > div.rounded-2xl, main.guardian-home-main section > div > div.rounded-3xl { backdrop-filter: blur(18px); }
+main.guardian-home-main aside > div:first-child { border-color: rgba(103,232,249,.18); background: linear-gradient(145deg, rgba(18,26,48,.9), rgba(9,13,28,.76)); box-shadow: 0 28px 80px rgba(0,0,0,.34), 0 0 0 1px rgba(255,255,255,.025) inset; }
+main.guardian-home-main aside > div:nth-child(2) { border-color: rgba(167,139,250,.2); background: linear-gradient(145deg, rgba(26,25,53,.7), rgba(10,15,31,.75)); }
+main.guardian-home-main input, main.guardian-home-main textarea { border-color: rgba(148,163,184,.18) !important; background: rgba(3,7,18,.5) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
+main.guardian-home-main input:hover, main.guardian-home-main input:focus, main.guardian-home-main textarea:hover, main.guardian-home-main textarea:focus { border-color: rgba(103,232,249,.6) !important; box-shadow: 0 0 0 3px rgba(103,232,249,.08), 0 0 22px rgba(103,232,249,.08); }
+main.guardian-home-main button.bg-violet-500 { background: linear-gradient(105deg, #7657f6, #9b70ff 48%, #38cbd2) !important; border: 1px solid rgba(255,255,255,.22); box-shadow: 0 13px 30px rgba(93,76,230,.32), inset 0 1px 0 rgba(255,255,255,.24); font-weight: 800; letter-spacing: .01em; }
+main.guardian-home-main button.bg-violet-500:hover { box-shadow: 0 16px 36px rgba(93,76,230,.48), 0 0 24px rgba(56,203,210,.18); filter: saturate(1.15) brightness(1.08); transform: translateY(-1px); }
+main.guardian-home-main section > .grid:first-child > div { border-color: rgba(148,163,184,.14); background: linear-gradient(145deg, rgba(21,28,50,.75), rgba(8,12,25,.68)); }
+main.guardian-home-main section > .grid:first-child > div:hover { border-color: rgba(103,232,249,.28); transform: translateY(-2px); }
+main.guardian-home-main section > div > div.rounded-2xl:not(.overflow-hidden) { border-color: rgba(103,232,249,.16); background: radial-gradient(circle at 50% 42%, rgba(44,169,192,.09), transparent 33%), linear-gradient(145deg, rgba(14,28,47,.72), rgba(8,12,25,.66)); }
+main.guardian-home-main table thead { background: linear-gradient(90deg, rgba(103,232,249,.07), rgba(167,139,250,.06)); }
+main.guardian-home-main table tbody tr { transition: background-color 180ms ease; }
+main.guardian-home-main table tbody tr:hover { background: linear-gradient(90deg, rgba(103,232,249,.07), rgba(167,139,250,.04)); }
 
 .firmament-host { position: relative; isolation: isolate; }
 .firmament-host::before { content: ''; position: absolute; inset: 1px; z-index: -1; border-radius: inherit; background: linear-gradient(110deg, rgba(103,232,249,.16), transparent 30%, rgba(167,139,250,.13) 72%, transparent); opacity: .8; pointer-events: none; }
@@ -98,11 +98,46 @@ main.relative table tbody tr:hover { background: linear-gradient(90deg, rgba(103
 .chart-wheel-shell svg text { user-select: none; }
 
 @media (max-width: 768px) {
-  main.relative { padding-top: 1.25rem; }
-  main.relative > header { padding-top: 1rem; }
-  main.relative > header h1 { font-size: clamp(2.8rem, 14vw, 4.8rem); }
-  main.relative > header::before { right: -7rem; top: 2rem; opacity: .45; }
+  main.guardian-home-main { padding-top: 1.25rem; }
+  main.guardian-home-main > header { padding-top: 1rem; }
+  main.guardian-home-main > header h1 { font-size: clamp(2.8rem, 14vw, 4.8rem); }
+  main.guardian-home-main > header::before { right: -7rem; top: 2rem; opacity: .45; }
   .chart-wheel-shell { border-radius: 1.25rem; padding: .75rem; }
   .chart-wheel-shell > div > aside { order: 2; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+/* Guardian 2050 completion: consistent readable touch targets and responsive media */
+:root{
+  --guardian-gold:#e9d09e;
+  --guardian-cyan:#a4e5f0;
+  --guardian-ivory:#f4f2ec;
+  --guardian-muted:#b3c4d4;
+  --guardian-surface:#0d172b;
+}
+html{scroll-padding-top:1.25rem}
+body{overflow-wrap:break-word}
+svg[role="img"]{max-width:100%}
+.guardian-advanced-tools{content-visibility:auto;contain-intrinsic-size:auto 130px}
+@media(hover:none) and (pointer:coarse){
+  .guardian-home-main button,.guardian-global-nav button,.guardian-global-nav a{touch-action:manipulation}
+  .fg2050 .fg2050-portal{transform:none!important}
+}
+@media(max-width:767px){
+  body{background-attachment:scroll}
+  body::after{opacity:.10}
+  main.guardian-home-main{padding-top:1rem}
+  main.guardian-home-main > header h1{font-size:clamp(2.2rem,10vw,3.8rem);line-height:1.08}
+  .guardian-home-main input,.guardian-home-main select,.guardian-home-main textarea{font-size:16px;max-width:100%}
+  .fg2050 .fg2050-horizon-badges{letter-spacing:.07em}
+  .cg2050 .cg2050-frame-caption{font-size:10px;line-height:1.6}
+  .hc2050 .hc2050-stepbar button{min-height:48px}
+  .im2050 .im2050-tabs button{min-height:52px}
+}
+@media(prefers-reduced-transparency:reduce){
+  .guardian-global-nav,.fg2050-topbar{backdrop-filter:none}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .guardian-home-main .animate-pulse,.hc2050 .animate-pulse{animation:none!important}
+}

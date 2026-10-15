@@ -1,0 +1,14 @@
+.guardian-global-nav{position:relative;z-index:40;border-bottom:1px solid rgba(226,201,149,.22);background:rgba(6,13,28,.92);backdrop-filter:blur(18px);color:#e9f2fa}
+.guardian-global-nav-inner{max-width:1500px;min-height:72px;margin:auto;padding:0 clamp(16px,4vw,44px);display:flex;justify-content:space-between;align-items:center;gap:20px}
+.guardian-global-brand{display:flex;gap:12px;align-items:center;text-decoration:none;color:#f0d59f}
+.guardian-global-brand>svg{border:1px solid rgba(236,207,152,.46);width:42px;height:42px;padding:10px;border-radius:50%;background:rgba(238,210,158,.09)}
+.guardian-global-brand strong{display:block;font-size:12px;letter-spacing:.18em;line-height:1.5}
+.guardian-global-brand small{display:block;font-size:9px;letter-spacing:.12em;color:#91bbd0;margin-top:2px}
+.guardian-global-desktop-links{display:flex;gap:6px;align-items:center}
+.guardian-global-desktop-links a,.guardian-global-mobile-links a{display:flex;align-items:center;gap:9px;min-height:44px;color:#b8ccdd;text-decoration:none;font-size:12px;font-weight:750;padding:0 15px;border-radius:10px;border:1px solid transparent}
+.guardian-global-desktop-links a:hover,.guardian-global-mobile-links a:hover{border-color:rgba(155,225,237,.3);color:#effaff;background:rgba(145,200,231,.08)}
+.guardian-global-desktop-links a.active,.guardian-global-mobile-links a.active{border-color:rgba(227,198,143,.42);background:rgba(227,198,143,.12);color:#f8e0b6}
+.guardian-global-menu-toggle{display:none;align-items:center;justify-content:center;gap:8px;color:#e7e0d1;background:rgba(245,223,177,.08);border:1px solid rgba(227,204,162,.33);border-radius:10px;padding:0 13px;min-height:44px;font-size:12px}
+.guardian-global-mobile-links{display:none}
+@media(max-width:720px){.guardian-global-nav-inner{min-height:65px}.guardian-global-desktop-links{display:none}.guardian-global-menu-toggle{display:flex}.guardian-global-mobile-links{display:grid;gap:5px;padding:10px 16px 17px;border-top:1px solid rgba(208,218,238,.17);background:rgba(5,11,25,.98)}.guardian-global-mobile-links a{font-size:14px;padding:0 16px}}
+@media(max-width:370px){.guardian-global-brand small{font-size:8px;letter-spacing:.07em}.guardian-global-brand strong{font-size:11px}}
