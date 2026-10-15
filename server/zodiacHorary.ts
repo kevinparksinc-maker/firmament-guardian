@@ -40,6 +40,7 @@ export type ZodiacSignEvidence = {
   anchorDisplay: string; date: string; time: string; utc: string; question?: string;
   model: "ruler-exact-longitude"; reference: "geocentric-UTC";
   agentHouses: number[]; godHouses: number[];
+  signTerritory: { from: number; to: number; planets: string[]; themes: string };
   placements: ZodiacPlacement[]; aspects: ZodiacAspect[];
   agent: { asc: SideSummary; dsc: SideSummary };
   god: { asc: SideSummary; dsc: SideSummary };
@@ -47,6 +48,14 @@ export type ZodiacSignEvidence = {
 };
 export type ZodiacSignReading = { evidence: ZodiacSignEvidence; reading: string; generatedBy: "master-interpreter" | "deterministic" };
 
+const SIGN_THEMES: Record<ZodiacSign, string> = {
+  Aries: "initiative and courage", Taurus: "resources, values and stability",
+  Gemini: "communication and exchange", Cancer: "home and care",
+  Leo: "creative expression and visibility", Virgo: "discernment and practical refinement",
+  Libra: "partnership and diplomacy", Scorpio: "trust and transformation",
+  Sagittarius: "exploration and belief", Capricorn: "responsibility and endurance",
+  Aquarius: "community and originality", Pisces: "compassion and imagination",
+};
 const targets: Array<{ degrees: number; label: string; tone: Tone }> = [
   { degrees: 0, label: "conjunction", tone: "flow" },
   { degrees: 60, label: "sextile", tone: "flow" },
@@ -87,6 +96,8 @@ export function createRulerAnchoredEvidence(
         relationship: "frameRelationship" in both ? both.frameRelationship : undefined, overlay: row.overlay, fixedStarContacts,
       };
     });
+  const signStart = ZODIAC_SIGNS.indexOf(sign) * 30;
+  const signTerritory = { from: signStart, to: signStart + 30, planets: placements.filter(row => row.longitude >= signStart && row.longitude < signStart + 30).map(row => row.name), themes: SIGN_THEMES[sign] };
   const aspects: ZodiacAspect[] = [];
   for (let i = 0; i < placements.length; i++) {
     for (let j = i + 1; j < placements.length; j++) {
@@ -119,6 +130,7 @@ export function createRulerAnchoredEvidence(
   const god = { asc: sideSummary("god", ASC_SIDE_HOUSES, "Fixed God View ASC territory"), dsc: sideSummary("god", DSC_SIDE_HOUSES, "Fixed God View DSC territory") };
   const evidenceText = [
     `Sign: ${sign}; traditional ruler: ${ruler}; reference moment: ${sky.utc}; user question: ${question || "General sign themes"}.`,
+    `SIGN-SPECIFIC TERRITORY: ${sign} occupies ${signTerritory.from}°–${signTerritory.to}° of the fixed zodiac. Its traditional themes: ${signTerritory.themes}. Planets in that sign: ${signTerritory.planets.join(", ") || "none"}. Signs sharing a ruler have identical ruler-anchored house grids, but different sign territories.`,
     `AGENT VIEW: House 1 begins at the exact geocentric longitude of ${ruler}: ${formatLongitude(anchorLongitude)} (${anchorLongitude.toFixed(4)}°). These are conceptual ruler-anchored equal houses, NOT physical local-horizon houses.`,
     `GOD VIEW: Fixed 0° Aries = House 1, 30° sectors, independent of selected sign or selected ruler.`,
     `Every planet and all houses evaluated with the same 5° aspect orb. Conjunction, sextile, trine are labeled flow; square, opposition are labeled friction. These are symbolic descriptors, not probabilistic forecasts. Conjunctions can be difficult depending on context.`,
@@ -132,7 +144,7 @@ export function createRulerAnchoredEvidence(
     sign, symbol: SIGN_SYMBOLS[ZODIAC_SIGNS.indexOf(sign)], ruler, anchorLongitude,
     anchorDisplay: formatLongitude(anchorLongitude), date, time, utc: sky.utc, question,
     model: "ruler-exact-longitude", reference: "geocentric-UTC",
-    agentHouses, godHouses, placements, aspects, agent, god, evidenceText,
+    agentHouses, godHouses, signTerritory, placements, aspects, agent, god, evidenceText,
   };
 }
 
@@ -143,6 +155,8 @@ function deterministicReading(e: ZodiacSignEvidence) {
   return [
     `## ${e.sign}: what the sky emphasizes`,
     `Your sign's classical ruler, ${e.ruler}, stands at ${e.anchorDisplay}. For this sign-centered reading, that exact point becomes the beginning of Agent House 1. This is a symbolic perspective, not a birth Ascendant or a traditional Horary verdict.`,
+    `## The selected sign territory`,
+    `${e.sign} traditionally emphasizes ${e.signTerritory.themes}. Its permanent zodiac sector contains ${e.signTerritory.planets.join(", ") || "no moving planets"} at this moment. This sign-based distinction remains visible even when two signs share a planetary ruler.`,
     `## How your ruling planet is involved`,
     `${e.ruler} is in God View House ${ruler.godHouse} and Agent View House 1 by construction. Its current major contacts: ${contacts}. Where these planets meet, their symbolic themes can be considered together; challenging contacts point toward areas needing more effort or negotiation.`,
     `## Where energy flows, and where it meets resistance`,
