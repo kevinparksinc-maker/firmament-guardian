@@ -102,10 +102,10 @@ function topocentricMoonLongitude(jd: number, longitude: number, latitude: numbe
 function planetaryTopocentric(planet: number, locationAvailable: boolean) {
   return locationAvailable && planet === 1;
 }
-function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number } | null {
+export function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number } | null {
   // angularDistance correctly wraps across 0°/360° (for example, 359° and 1° are 2° apart).
   const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
-  const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= 3 ? best : null;
+  const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= 5 ? best : null;
 }
 function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope, transit = false) {
   const date = transit ? input.transitDate : input.date;
