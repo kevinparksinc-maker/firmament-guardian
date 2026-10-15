@@ -386,10 +386,14 @@ function responseText(content: string | Array<{ type: string; text?: string }> |
 }
 
 async function answer(messages: Message[], maxTokens = 6000) {
-  const responsePromise = invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens });
+  const controller = new AbortController();
+  const responsePromise = invokeLLM({ model: "claude-sonnet-4-6", messages, maxTokens, signal: controller.signal });
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error("Horary language synthesis exceeded its 30-second time budget.")), 30_000);
+    timer = setTimeout(() => {
+      controller.abort(new Error("Horary synthesis deadline exceeded."));
+      reject(new Error("Horary language synthesis exceeded its 30-second time budget."));
+    }, 30_000);
   });
   let response: Awaited<typeof responsePromise>;
   try {
