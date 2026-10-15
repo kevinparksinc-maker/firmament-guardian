@@ -6,7 +6,7 @@ const dallas = { location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -
 
 describe("aspect wraparound", () => {
   it("finds every transit-to-natal contact, including pairs that cross 0°/360°", async () => {
-    const right = (a: number, b: number) => { let d = Math.abs(a - b) % 360; if (d > 180) d = 360 - d; return [0, 60, 90, 120, 180].some(t => Math.abs(d - t) <= 3); };
+    const right = (a: number, b: number) => { let d = Math.abs(a - b) % 360; if (d > 180) d = 360 - d; return [0, 60, 90, 120, 180].some(t => Math.abs(d - t) <= 5); };
     let truth = 0, found = 0;
     for (let i = 0; i < 365; i += 5) {
       const transitDate = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10);
