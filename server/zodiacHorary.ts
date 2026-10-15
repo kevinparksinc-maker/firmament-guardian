@@ -8,7 +8,7 @@
  * horary perfection verdict.
  */
 import { calculateChart, type ChartResult } from "./astronomy";
-import { agentHouseFor, dualPlacement, equalHouseCusps, godHouseFor } from "./astrologyCore";
+import { agentHouseFor, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship } from "./astrologyCore";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
 import { invokeLLM } from "./_core/llm";
 import { FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
@@ -33,7 +33,7 @@ export type ZodiacAspect = {
 export type ZodiacPlacement = {
   name: string; longitude: number; display: string; retrograde: boolean;
   speed: number; godHouse: number; agentHouse: number;
-  relationship: ReturnType<typeof dualPlacement>["frameRelationship"];
+  relationship?: FrameRelationship;
   overlay: ChartResult["movingBodies"][number]["overlay"];
   fixedStarContacts: Array<{ name: string; orb: number }>;
 };
@@ -90,7 +90,7 @@ export function createRulerAnchoredEvidence(
         name: row.name, longitude: normalizeLongitude(row.longitude), display: formatLongitude(row.longitude),
         speed: row.speed ?? 0, retrograde: Boolean(row.retrograde),
         godHouse: godHouseFor(row.longitude), agentHouse: agentHouseFor(row.longitude, anchorLongitude),
-        relationship: both.frameRelationship, overlay: row.overlay, fixedStarContacts,
+        relationship: "frameRelationship" in both ? both.frameRelationship : undefined, overlay: row.overlay, fixedStarContacts,
       };
     });
   const aspects: ZodiacAspect[] = [];
