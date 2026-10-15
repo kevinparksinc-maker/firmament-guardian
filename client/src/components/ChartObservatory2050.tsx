@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Compass, Eye, Layers3, Orbit, Sparkles, Star, ChevronDown, BookOpen } from "lucide-react";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
-import { FIXED_STARS, NAKSHATRAS, MANAZIL, DECANS, formatLongitude, normalizeLongitude } from "../../../shared/hybrid";
+import { FIXED_STARS, formatLongitude, normalizeLongitude } from "../../../shared/hybrid";
 import "./ChartObservatory2050.css";
 
 type Frame = "god" | "agent";
@@ -24,7 +24,6 @@ export function ChartObservatory2050({chart}:{chart:ChartResult}){
  const selectedStar=useMemo(()=>selectedRow?FIXED_STARS.map(([name,lon])=>({name,lon,separation:starDistance(selectedRow.longitude,lon)})).sort((a,b)=>a.separation-b.separation)[0]:undefined,[selectedRow]);
  const frames=[{value:"god" as const,label:"God View",meaning:"The permanent celestial sector grid",icon:Eye},{value:"agent" as const,label:"Agent View",meaning:"The local Ascendant and equal houses",icon:Compass}];
  const ringCount=layer==="nakshatra"?27:layer==="manzil"?28:layer==="decan"?36:12;
- const sectorLabels=layer==="nakshatra"?NAKSHATRAS:layer==="manzil"?MANAZIL:layer==="decan"?DECANS:signs;
  const sector=selectedRow?layer==="nakshatra"?Math.floor(normalizeLongitude(selectedRow.longitude)/(360/27)):layer==="manzil"?Math.floor(normalizeLongitude(selectedRow.longitude)/(360/28)):layer==="decan"?Math.floor(normalizeLongitude(selectedRow.longitude)/10):Math.floor(normalizeLongitude(selectedRow.longitude)/30):0;
  const overlayText=selectedRow?layer==="nakshatra"?`${selectedRow.overlay.nakshatra} · Pada ${selectedRow.overlay.pada}`:layer==="manzil"?selectedRow.overlay.manzil:layer==="decan"?selectedRow.overlay.decan:selectedStar?`${selectedStar.name} · ${selectedStar.separation.toFixed(2)}° separation`:"No star catalog contact":"";
  const frameDesc=frame==="god"?"Fixed Aries-zero collective houses. The frozen stellar archive and territory lines never drift.":"Observer-centered 30° equal houses, beginning from the chart's local Ascendant. Tropical planetary longitudes are unchanged.";
