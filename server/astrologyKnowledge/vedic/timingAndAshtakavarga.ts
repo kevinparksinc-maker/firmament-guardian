@@ -1,5 +1,5 @@
 import type { ChartResult } from "../../astronomy";
-import { normalizeLongitude, ZODIAC_SIGNS, overlay } from "../../../shared/hybrid";
+import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type { EvidenceItem, SourceTrace } from "../types";
 
 const ORDER = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"] as const;
@@ -26,7 +26,7 @@ const TRACE = (technique: string, ruleId: string): SourceTrace => ({
  retrievedAt:new Date().toISOString(), ruleId, confidence:"high",
  calculationSettings:{ayanamsa:"Firmament fixed tropical grid",ephemeris:"Swiss Ephemeris Moshier",yearLengthDays:365.25},
 });
-function sidereal(longitude:number,jd:number) {
+function fixedFirmamentPosition(longitude:number) {
  if (!Number.isFinite(longitude)) throw new Error("Invalid tropical longitude.");
  return {longitude:normalizeLongitude(longitude),ayanamsa:0};
 }
@@ -84,7 +84,7 @@ export function resolveVedicTimingAndAshtakavarga(chart:ChartResult):EvidenceIte
  let moonSidereal:{longitude:number;ayanamsa:number};
  try {
   const moon=chart.movingBodies.find(row=>row.name==="Moon");if(!moon)throw new Error("Natal Moon is missing.");
-  moonSidereal=sidereal(moon.longitude,chart.julianDay);
+  moonSidereal=fixedFirmamentPosition(moon.longitude);
   dasha=dashaEvidence(chart,moonSidereal.ayanamsa,moonSidereal.longitude);
  } catch(error) {
   return [{id:"vedic-dasha-calculation-error",tradition:"vedic",category:"uncertainty",technique:"dasha",subject:"Vimshottari Dasha",statement:"Vimshottari calculation failed safely: "+(error instanceof Error?error.message:String(error))+". No inferred timing is supplied.",concepts:["dasha","calculation-error"],polarity:"neutral",strength:0,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:TRACE("dasha","vedic-dasha-architecture")}];
@@ -92,8 +92,8 @@ export function resolveVedicTimingAndAshtakavarga(chart:ChartResult):EvidenceIte
  const asc=chart.ascendant;
  if(!asc||!Number.isFinite(asc.longitude)) return [...dasha,{id:"vedic-ashtakavarga-no-ascendant",tradition:"vedic",category:"uncertainty",technique:"ashtakavarga",subject:"Ashtakavarga",statement:"Ashtakavarga requires a usable birth Ascendant/Lagna. This chart has no calculated Ascendant, so no BAV/SAV scores are asserted.",concepts:["ashtakavarga","lagna-unavailable"],polarity:"neutral",strength:0,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:TRACE("ashtakavarga","vedic-ashtakavarga-classical")}];
  try {
-  const sidAsc=sidereal(asc.longitude,chart.julianDay);const positions={} as Record<Classical,number>;
-  for(const p of CLASSICAL){const row=chart.movingBodies.find(item=>item.name===p);if(!row)throw new Error("Required classical position "+p+" is missing.");positions[p]=sidereal(row.longitude,chart.julianDay).longitude;}
+  const sidAsc=fixedFirmamentPosition(asc.longitude);const positions={} as Record<Classical,number>;
+  for(const p of CLASSICAL){const row=chart.movingBodies.find(item=>item.name===p);if(!row)throw new Error("Required classical position "+p+" is missing.");positions[p]=fixedFirmamentPosition(row.longitude).longitude;}
   return [...dasha,...ashtakavargaEvidence(positions,sidAsc.longitude,sidAsc.ayanamsa)];
  } catch(error) {
   return [...dasha,{id:"vedic-ashtakavarga-calculation-error",tradition:"vedic",category:"uncertainty",technique:"ashtakavarga",subject:"Ashtakavarga",statement:"Ashtakavarga calculation failed safely: "+(error instanceof Error?error.message:String(error))+". No inferred score is supplied.",concepts:["ashtakavarga","calculation-error"],polarity:"neutral",strength:0,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:TRACE("ashtakavarga","vedic-ashtakavarga-classical")}];
