@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { BookOpenText, Compass, Menu, MoonStar, Orbit, Stars, X } from "lucide-react";
+import { BookOpenText, Compass, Menu, MoonStar, Orbit, Sparkles, Stars, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import "./GuardianNavigation.css";
 
 const routes = [
   { href: "/", label: "Home", Icon: Compass },
   { href: "/horary", label: "Horary", Icon: MoonStar },
+  { href: "/zodiac-readings", label: "12 Sign Readings", Icon: Sparkles },
   { href: "/sky", label: "Celestial Map", Icon: Orbit },
   { href: "/history", label: "Library", Icon: BookOpenText },
 ];
