@@ -24,6 +24,7 @@ import { LiveTransitFeed } from "@/components/LiveTransitFeed";
 import { WelcomeHost } from "@/components/WelcomeHost";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { AccountControl } from "@/components/AccountControl";
+import { Guardian2050Welcome } from "@/components/Guardian2050Welcome";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
 import { ChartOverview } from "@/components/ChartOverview";
 import {
@@ -171,7 +172,7 @@ function TransitContacts({ row }: { row: any }) {
     </div>
   ) : (
     <span className="text-xs text-slate-500">
-      No major natal contact within 3°
+      No major natal contact within 5°
     </span>
   );
 }
@@ -631,6 +632,7 @@ export default function Home() {
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)] [background-size:64px_64px]" />
       </div>
       <main className="relative z-10 mx-auto max-w-[1480px] px-5 py-6 md:px-10 md:py-10">
+        <Guardian2050Welcome />
         <header className="mb-8 flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="mb-4 flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-violet-300">
