@@ -167,7 +167,7 @@ export function calculateTraditionalHorary(input: { ascendant: PlacementLike; ho
           ? { planet: p.name, aspect: next.aspect, orb: Number(next.orb.toFixed(2)), daysToPerfection: Number(next.days.toFixed(3)) }
           : null;
       })
-      .filter((x): x is { planet: string; aspect: string; orb: number; daysToPerfection: number } => Boolean(x))
+      .filter((x): x is NonNullable<typeof x> => x !== null)
       .sort((a, b) => a.daysToPerfection - b.daysToPerfection);
     const voidOfCourse = nextApplications.length === 0;
     const mitigation = ["Taurus", "Cancer", "Sagittarius", "Pisces"].includes(sign(moon.longitude));
