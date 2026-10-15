@@ -13,10 +13,10 @@ export const DECANS = ["Mars (Aries 1st)", "Sun (Aries 2nd)", "Venus (Aries 3rd)
 
 export type Overlay = { nakshatra: string; pada: number; manzil: string; decan: string; nakshatraRuler?: string };
 export function overlay(longitude: number): Overlay {
-  const L = ((longitude % 360) + 360) % 360;
+  const L = normalizeLongitude(longitude);
   const nakSize = 360 / 27;
   const padaSize = nakSize / 4;
   return { nakshatra: NAKSHATRAS[Math.floor(L / nakSize) % 27], pada: Math.floor((L % nakSize) / padaSize) + 1, manzil: MANAZIL[Math.floor(L / (360 / 28)) % 28], decan: DECANS[Math.floor(L / 10) % 36] };
 }
-export function formatLongitude(longitude: number) { const L = ((longitude % 360) + 360) % 360; const sign = ZODIAC_SIGNS[Math.floor(L / 30)]; const deg = L % 30; const d = Math.floor(deg); const m = Math.round((deg - d) * 60); return `${sign} ${String(d).padStart(2, "0")}°${String(m % 60).padStart(2, "0")}′`; }
-export function normalizeLongitude(value: number) { return ((value % 360) + 360) % 360; }
+export function formatLongitude(longitude: number) { const L = normalizeLongitude(longitude); const sign = ZODIAC_SIGNS[Math.floor(L / 30)]; const deg = L % 30; const d = Math.floor(deg); const m = Math.round((deg - d) * 60); return `${sign} ${String(d).padStart(2, "0")}°${String(m % 60).padStart(2, "0")}′`; }
+export function normalizeLongitude(value: number) { const wrapped = value % 360; return wrapped < 0 ? wrapped + 360 : wrapped; }
