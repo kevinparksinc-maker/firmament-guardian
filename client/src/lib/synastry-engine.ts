@@ -42,7 +42,7 @@ export function computeSynastry(chartA:ChartResult|null,chartB:ChartResult|null)
  };
  const romantic=metric(FIELDS.romantic),emotional=metric(FIELDS.emotional),intellectual=metric(FIELDS.intellectual),stability=metric(FIELDS.stability),soulGrowth=metric(FIELDS.soulGrowth);
  const flow=aspects.filter(a=>a.type==="harmony").length,friction=aspects.filter(a=>a.type==="tension").length;
- const all=new Set<string>(Object.values(FIELDS).flatMap(s=>[...s]));
+ const all=new Set<string>(Object.values(FIELDS).flatMap(s=>Array.from(s)));
  const overall=metric(all);
  const archetype=aspects.length===0?"No close aspects in scope":flow>friction?"Flow-forward encounter":friction>flow?"Growth through friction":"Mixed celestial testimony";
  const archetypeSubtitle=aspects.length+" cross-chart contacts within 5° · "+flow+" flow · "+friction+" friction. Indices are aspect balance, not compatibility probabilities.";
