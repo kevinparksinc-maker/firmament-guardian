@@ -42,7 +42,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useSovereignTier, SovereignTeaserLock } from "./SovereignTierModal";
 import type { ChartResult } from "../../../server/astronomy";
-import { computeSynastry, type SynastryAspect, type ChemistryScores } from "@/lib/synastry-engine";
+import { computeSynastry, type SynastryAspect } from "@/lib/synastry-engine";
+import { SynastryDualOrrery } from "./SynastryDualOrrery";
 import type { LovedOneRecord, RelationshipRole } from "../../../shared/social";
 
 interface SynastryMatrixTabProps {
@@ -436,7 +437,14 @@ export function SynastryMatrixTab({
         {userChart && partnerChart && aspects.length === 0 && <p className="mt-3 text-slate-300 text-sm">No major cross-chart contacts were found within 5°. A zero index here means no testimony in scope, not an incompatible partnership.</p>}
       </div>
 
-      {/* Chemistry Radar & Archetype Header */}
+      {userChart && partnerChart && <SynastryDualOrrery
+        first={isSwapped ? partnerChart : userChart}
+        second={isSwapped ? userChart : partnerChart}
+        firstName={isSwapped ? partnerDetails.name : "Your birth chart"}
+        secondName={isSwapped ? "Your birth chart" : partnerDetails.name}
+      />}
+
+      {/* Symbolic cross-aspect balance — never a measure of human compatibility. */}
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Core Archetype & Overall Compatibility */}
         <Card className="lg:col-span-5 border-rose-300/20 bg-gradient-to-b from-rose-950/20 via-black/40 to-black/60 text-slate-100 shadow-xl backdrop-blur-md">
@@ -807,10 +815,10 @@ export function SynastryMatrixTab({
         </CardContent>
       </Card>
 
-      {/* Sovereign Tier Teaser Lock for Deep Esoteric Synastry */}
+      {/* Planned extension: visually explicit, not a calculated composite. */}
       <SovereignTeaserLock
         title="Composite Midpoint Chart & Davison Time-Space Matrix"
-        description="Unlock the single fused celestial third entity born between you two. Reveals the destiny, karmic purpose, and 10-year synastry progression curves."
+        description="Composite midpoint and Davison time-space charts are proposed extensions. This panel is a preview, not a functioning calculation or verified prediction."
         featureKey="composite-synastry"
       />
 
