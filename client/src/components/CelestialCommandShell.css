@@ -35,3 +35,10 @@
 @media(max-width:1100px){.fg-command-layout{grid-template-columns:190px minmax(0,1fr)}.fg-command-side{padding:20px 9px}.fg-command-side a{font-size:11px;padding:12px 9px}}
 @media(max-width:890px){.fg-command-layout{display:block}.fg-command-side{display:none}.fg-command-main{width:100%}}
 @media(prefers-reduced-motion:reduce){.fg-command-shell *{scroll-behavior:auto!important;transition:none!important}}
+
+/* One top bar on all routes: home inherits the same global command header. */
+.fg-command-main .fg2050-topbar{display:none}
+.fg-command-main .fg2050-lead{padding-top:42px}
+.fg-command-main :is(.zh2050,.fg2050,.cg2050,.im2050){font-family:'Manrope','DM Sans',sans-serif}
+.fg-command-main :is(.zh2050 h1,.fg2050 h2,.cg2050 h2,.im2050 h3){font-family:'Playfair Display',Georgia,serif}
+@media(max-width:890px){.fg-command-main .fg2050-lead{padding-top:30px}.fg-command-main #main-cosmos-tabs{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin}.fg-command-main #main-cosmos-tabs button{flex-shrink:0}}
