@@ -1,0 +1,44 @@
+/* Unified Celestial Command Deck: shared design contract for every module. */
+:root{--fg-night:#050b18;--fg-surface:#101b31;--fg-gold:#e9cc91;--fg-aqua:#8ddcea;--fg-ink:#dceaf5;--fg-edge:rgba(206,185,142,.26);--fg-dome:radial-gradient(ellipse at 74% 4%,rgba(47,95,156,.31),transparent 35%),radial-gradient(ellipse at 4% 36%,rgba(78,48,131,.22),transparent 38%),linear-gradient(180deg,#050c1a,#090d1d 60%,#050914)}
+.fg-command-shell{min-height:100vh;background:var(--fg-dome);color:var(--fg-ink);font-family:'Manrope','DM Sans',sans-serif}
+.fg-command-shell:before{content:"";pointer-events:none;position:fixed;inset:0;z-index:0;opacity:.19;background-image:radial-gradient(1px 1px at 10% 12%,#f6edcf 95%,transparent),radial-gradient(1px 1px at 41% 64%,#a4caff 95%,transparent),radial-gradient(1px 1px at 78% 22%,#f6edcf 95%,transparent);background-size:297px 239px,373px 307px,433px 397px}
+.fg-command-shell>header,.fg-command-shell>.fg-command-layout{position:relative;z-index:1}
+.fg-command-layout{display:grid;grid-template-columns:222px minmax(0,1fr);max-width:1920px;margin:auto;min-height:calc(100vh - 72px)}
+.fg-command-side{border-right:1px solid var(--fg-edge);padding:26px 13px;background:linear-gradient(180deg,rgba(5,12,27,.95),rgba(11,16,39,.75));position:sticky;top:0;align-self:start;min-height:calc(100vh - 72px)}
+.fg-command-side-label{font-size:10px;letter-spacing:.2em;color:var(--fg-gold);padding:16px 15px 10px;font-weight:800}
+.fg-command-side a{display:flex;align-items:center;gap:11px;border:1px solid transparent;border-radius:12px;padding:13px 12px;color:#c4d5e5;font-size:12px;line-height:1.35;text-decoration:none;min-height:45px;transition:.2s ease}
+.fg-command-side a svg{flex-shrink:0;color:#a3ddec}
+.fg-command-side a[aria-current=page],.fg-command-side a:hover{color:#fff0c9;background:linear-gradient(90deg,rgba(60,92,163,.35),rgba(37,62,112,.16));border-color:rgba(223,193,132,.38);box-shadow:inset 3px 0 #ecd29c}
+.fg-command-side-note{margin:28px 11px 0;padding:15px;border:1px solid var(--fg-edge);border-radius:14px;background:rgba(216,188,118,.055);color:#9fb9ce;font-size:11px;line-height:1.75}
+.fg-command-side-note strong{display:block;color:var(--fg-gold);margin-bottom:6px;letter-spacing:.08em}
+.fg-command-main{min-width:0;overflow:hidden}
+.fg-command-main h1,.fg-command-main h2,.fg-command-main h3{letter-spacing:-.02em}
+.fg-command-main h1{font-family:'Playfair Display',Georgia,serif}
+.fg-command-main :is(.card,[data-slot=card]){border-color:rgba(191,175,143,.23)}
+.fg-command-main :is(input,textarea,select){max-width:100%}
+.fg-command-main :is(button,a,input,textarea,select):focus-visible{outline:2px solid #e8d09c;outline-offset:3px}
+.fg-module-banner{background:linear-gradient(116deg,rgba(28,49,88,.87),rgba(44,26,74,.62));border:1px solid var(--fg-edge);border-radius:23px;padding:clamp(19px,3vw,33px);margin:0 0 22px;box-shadow:0 20px 65px #0004;position:relative;overflow:hidden}
+.fg-module-banner:after{content:"✦";position:absolute;right:18px;top:-32px;font-size:185px;font-family:Georgia,serif;color:#efd08c09;pointer-events:none}
+.fg-module-eyebrow{font-size:10px;letter-spacing:.2em;font-weight:800;color:var(--fg-gold)}
+.fg-module-title{font:500 clamp(27px,3.2vw,44px)/1.2 'Playfair Display',Georgia,serif;color:#f7f2ea;margin:9px 0}
+.fg-module-desc{font-size:13px;line-height:1.8;color:#bdcee0;max-width:760px}
+.fg-command-main #main-cosmos-tabs{border-color:var(--fg-edge);background:#0c1425e0}
+.fg-command-main #main-cosmos-tabs button{border:1px solid transparent;min-height:43px}
+.fg-command-main #main-cosmos-tabs button:has(.lucide-heart){color:#ebbed5}
+.fg-command-main #main-cosmos-tabs button:hover{border-color:rgba(224,200,149,.35)}
+/* Unified presentation surfaces; individual modules preserve their distinctive functions. */
+.fg-command-main .fg-synastry-deck :is(.rounded-3xl,.rounded-2xl){border-color:rgba(222,200,159,.3)}
+.fg-command-main .fg-synastry-deck>div:first-child{background:linear-gradient(120deg,#1a2444df,#291f3eaf,#071d32dd);border:1px solid rgba(229,192,143,.44);box-shadow:0 20px 76px #0006}
+.fg-command-main .fg-synastry-deck :is(.text-rose-300,.text-rose-200){color:#f0ce9f}
+.fg-command-main .fg-synastry-deck :is(.border-rose-300\/20,.border-rose-300\/25){border-color:rgba(229,192,143,.28)}
+.fg-command-main .fg-synastry-deck button:focus-visible{outline:2px solid #f0d5a3}
+@media(max-width:1100px){.fg-command-layout{grid-template-columns:190px minmax(0,1fr)}.fg-command-side{padding:20px 9px}.fg-command-side a{font-size:11px;padding:12px 9px}}
+@media(max-width:890px){.fg-command-layout{display:block}.fg-command-side{display:none}.fg-command-main{width:100%}}
+@media(prefers-reduced-motion:reduce){.fg-command-shell *{scroll-behavior:auto!important;transition:none!important}}
+
+/* One top bar on all routes: home inherits the same global command header. */
+.fg-command-main .fg2050-topbar{display:none}
+.fg-command-main .fg2050-lead{padding-top:42px}
+.fg-command-main :is(.zh2050,.fg2050,.cg2050,.im2050){font-family:'Manrope','DM Sans',sans-serif}
+.fg-command-main :is(.zh2050 h1,.fg2050 h2,.cg2050 h2,.im2050 h3){font-family:'Playfair Display',Georgia,serif}
+@media(max-width:890px){.fg-command-main .fg2050-lead{padding-top:30px}.fg-command-main #main-cosmos-tabs{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin}.fg-command-main #main-cosmos-tabs button{flex-shrink:0}}

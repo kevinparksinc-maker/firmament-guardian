@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { GuardianNavigation } from "./components/GuardianNavigation";
+import { CelestialCommandShell } from "./components/CelestialCommandShell";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -45,10 +45,11 @@ function App() {
         <TooltipProvider>
           <SovereignTierProvider>
             <Toaster />
-            <GuardianNavigation />
+            <CelestialCommandShell>
             <Suspense fallback={<main role="status" className="flex min-h-[55vh] items-center justify-center px-6 text-center text-sm text-cyan-100"><div className="rounded-2xl border border-cyan-200/20 bg-slate-950/70 px-6 py-5" aria-live="polite">Opening your celestial observatory…</div></main>}>
               <Router />
             </Suspense>
+            </CelestialCommandShell>
           </SovereignTierProvider>
         </TooltipProvider>
       </ThemeProvider>

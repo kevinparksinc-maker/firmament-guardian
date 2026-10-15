@@ -41,7 +41,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useSovereignTier, SovereignTeaserLock } from "./SovereignTierModal";
-import type { ChartResult, ChartRow } from "../../../server/astronomy";
+import type { ChartResult } from "../../../server/astronomy";
+import { computeSynastry, type SynastryAspect } from "@/lib/synastry-engine";
+import { SynastryDualOrrery } from "./SynastryDualOrrery";
 import type { LovedOneRecord, RelationshipRole } from "../../../shared/social";
 
 interface SynastryMatrixTabProps {
@@ -49,28 +51,6 @@ interface SynastryMatrixTabProps {
   onAskMasterInterpreter?: (question: string) => void;
   onOpenShareModal?: () => void;
   className?: string;
-}
-
-interface SynastryAspect {
-  planetA: string;
-  planetB: string;
-  aspect: string;
-  symbol: string;
-  orb: number;
-  type: "harmony" | "tension" | "neutral" | "karmic";
-  title: string;
-  description: string;
-}
-
-interface ChemistryScores {
-  overall: number;
-  archetype: string;
-  archetypeSubtitle: string;
-  romantic: number;
-  emotional: number;
-  intellectual: number;
-  stability: number;
-  soulGrowth: number;
 }
 
 // Popular city presets for fast 1-tap coordinate resolution
@@ -235,6 +215,7 @@ export function SynastryMatrixTab({
 
   // Trigger calculation when partner details change
   React.useEffect(() => {
+    setPartnerChart(null);
     calculatePartnerMutation.mutate(
       {
         location: partnerDetails.location,
@@ -252,7 +233,7 @@ export function SynastryMatrixTab({
         },
       }
     );
-  }, [partnerDetails.date, partnerDetails.time, partnerDetails.location]);
+  }, [partnerDetails.date, partnerDetails.time, partnerDetails.location, partnerDetails.latitude, partnerDetails.longitude, partnerDetails.timezone]);
 
   // Handle partner selection
   const handleSelectPartner = (id: string) => {
@@ -296,226 +277,12 @@ export function SynastryMatrixTab({
     }
   };
 
-  // Compute Synastry Aspects and Chemistry Scores
-  const { aspects, scores, houseOverlays } = useMemo(() => {
-    if (!userChart || !partnerChart) {
-      return {
-        aspects: [] as SynastryAspect[],
-        scores: {
-          overall: 84,
-          archetype: "Electric Catalysts",
-          archetypeSubtitle: "High Creative Flow & Rapid Growth Spark",
-          romantic: 88,
-          emotional: 82,
-          intellectual: 91,
-          stability: 76,
-          soulGrowth: 85,
-        } as ChemistryScores,
-        houseOverlays: [] as Array<{ planet: string; inHouse: number; meaning: string }>,
-      };
-    }
-
-    const chartA = isSwapped ? partnerChart : userChart;
-    const chartB = isSwapped ? userChart : partnerChart;
-
-    const bodiesA = chartA.movingBodies || [];
-    const bodiesB = chartB.movingBodies || [];
-
-    const computedAspects: SynastryAspect[] = [];
-
-    // Helper to calculate angular distance
-    const getDist = (lon1: number, lon2: number) => {
-      const diff = Math.abs(lon1 - lon2) % 360;
-      return diff > 180 ? 360 - diff : diff;
-    };
-
-    let romancePoints = 72;
-    let emotionPoints = 70;
-    let intellectPoints = 75;
-    let stabilityPoints = 68;
-    let growthPoints = 74;
-
-    bodiesA.forEach((pA) => {
-      bodiesB.forEach((pB) => {
-        const dist = getDist(pA.longitude, pB.longitude);
-
-        // Conjunction (0° ± 6°)
-        if (dist <= 6) {
-          const isSunMoon = (pA.name === "Sun" && pB.name === "Moon") || (pA.name === "Moon" && pB.name === "Sun");
-          const isVenusMars = (pA.name === "Venus" && pB.name === "Mars") || (pA.name === "Mars" && pB.name === "Venus");
-          const isSaturn = pA.name === "Saturn" || pB.name === "Saturn";
-
-          if (isSunMoon) {
-            emotionPoints += 14;
-            romancePoints += 12;
-            computedAspects.push({
-              planetA: pA.name,
-              planetB: pB.name,
-              aspect: "Conjunction",
-              symbol: "☌",
-              orb: Number(dist.toFixed(1)),
-              type: "harmony",
-              title: "Sun-Moon Conjunction · Pure Soul Inception",
-              description: "One person's core essence seamlessly nurtures the other's emotional interior. Innate feeling of home.",
-            });
-          } else if (isVenusMars) {
-            romancePoints += 16;
-            computedAspects.push({
-              planetA: pA.name,
-              planetB: pB.name,
-              aspect: "Conjunction",
-              symbol: "☌",
-              orb: Number(dist.toFixed(1)),
-              type: "harmony",
-              title: "Venus-Mars Conjunction · Magnetic Physical Spark",
-              description: "Instant, undeniable physical and aesthetic chemistry. Natural polarity of desire and attraction.",
-            });
-          } else if (isSaturn) {
-            stabilityPoints += 14;
-            computedAspects.push({
-              planetA: pA.name,
-              planetB: pB.name,
-              aspect: "Conjunction",
-              symbol: "☌",
-              orb: Number(dist.toFixed(1)),
-              type: "karmic",
-              title: `${pA.name}-${pB.name} Conjunction · Karmic Bedrock`,
-              description: "Brings serious longevity, dedication, and mutual accountability to the connection.",
-            });
-          }
-        }
-
-        // Trine (120° ± 6°)
-        if (Math.abs(dist - 120) <= 6) {
-          const orb = Math.abs(dist - 120);
-          if (pA.name === "Mercury" || pB.name === "Mercury") {
-            intellectPoints += 10;
-            computedAspects.push({
-              planetA: pA.name,
-              planetB: pB.name,
-              aspect: "Trine",
-              symbol: "△",
-              orb: Number(orb.toFixed(1)),
-              type: "harmony",
-              title: `${pA.name} Trine ${pB.name} · Fluid Telepathy`,
-              description: "You finish each other's sentences and respect each other's reasoning without defensiveness.",
-            });
-          } else if (pA.name === "Venus" || pB.name === "Venus" || pA.name === "Jupiter" || pB.name === "Jupiter") {
-            romancePoints += 8;
-            emotionPoints += 8;
-            computedAspects.push({
-              planetA: pA.name,
-              planetB: pB.name,
-              aspect: "Trine",
-              symbol: "△",
-              orb: Number(orb.toFixed(1)),
-              type: "harmony",
-              title: `${pA.name} Trine ${pB.name} · Generous Grace`,
-              description: "Natural generosity, forgiveness, and mutual appreciation of beauty and shared values.",
-            });
-          }
-        }
-
-        // Square (90° ± 5°) - Tension / Dynamic Growth
-        if (Math.abs(dist - 90) <= 5) {
-          const orb = Math.abs(dist - 90);
-          growthPoints += 8;
-          stabilityPoints -= 4;
-          computedAspects.push({
-            planetA: pA.name,
-            planetB: pB.name,
-            aspect: "Square",
-            symbol: "□",
-            orb: Number(orb.toFixed(1)),
-            type: "tension",
-            title: `${pA.name} Square ${pB.name} · Dynamic Friction`,
-            description: "High creative tension. Can feel like a clash of pacing or priorities, but acts as the engine of mutual transformation.",
-          });
-        }
-
-        // Opposition (180° ± 6°)
-        if (Math.abs(dist - 180) <= 6) {
-          const orb = Math.abs(dist - 180);
-          growthPoints += 6;
-          computedAspects.push({
-            planetA: pA.name,
-            planetB: pB.name,
-            aspect: "Opposition",
-            symbol: "☍",
-            orb: Number(orb.toFixed(1)),
-            type: "karmic",
-            title: `${pA.name} Opposite ${pB.name} · The Mirror Principle`,
-            description: "Each holds the reflection of what the other represses. Highly magnetic, requiring conscious compromise.",
-          });
-        }
-      });
-    });
-
-    // Ensure scores stay within 60-98 range
-    const clamp = (v: number) => Math.min(98, Math.max(58, Math.round(v)));
-    const rom = clamp(romancePoints);
-    const emo = clamp(emotionPoints);
-    const int = clamp(intellectPoints);
-    const sta = clamp(stabilityPoints);
-    const gro = clamp(growthPoints);
-    const overall = clamp((rom * 0.25 + emo * 0.25 + int * 0.2 + sta * 0.15 + gro * 0.15));
-
-    // Dynamic Archetype assignment
-    let archetype = "The Harmonic Anchors";
-    let archetypeSubtitle = "Balanced emotional sanctuary with lasting collaborative stamina";
-    if (rom > 86 && int > 86) {
-      archetype = "Electric Alchemists";
-      archetypeSubtitle = "High creative electricity, relentless wit, and magnetic physical passion";
-    } else if (emo > 88) {
-      archetype = "The Sanctuary Bond";
-      archetypeSubtitle = "Deep psychic emotional safety; intuitive vulnerability without fear";
-    } else if (sta > 88) {
-      archetype = "The Keystone Alliance";
-      archetypeSubtitle = "Unshakeable loyalty, shared empire building, and generational stability";
-    } else if (gro > 85) {
-      archetype = "Cosmic Catalysts";
-      archetypeSubtitle = "Profound soul transformation; each activates the other's hidden potential";
-    }
-
-    // House overlays (where Person A planets fall in Person B houses)
-    const overlays = [
-      {
-        planet: "Your Sun",
-        inHouse: 7,
-        meaning: "Lights up Partner's 7th House of Partnership — you naturally embody their ideal counterpart.",
-      },
-      {
-        planet: "Your Venus",
-        inHouse: 5,
-        meaning: "Lights up Partner's 5th House of Romance & Joy — effortless playfulness, flirtation, and romance.",
-      },
-      {
-        planet: "Your Moon",
-        inHouse: 4,
-        meaning: "Lights up Partner's 4th House of Roots — they feel profound domestic ease and emotional calm around you.",
-      },
-      {
-        planet: "Your Mars",
-        inHouse: 10,
-        meaning: "Lights up Partner's 10th House of Ambition — you actively inspire and push their public career forward.",
-      },
-    ];
-
-    return {
-      aspects: computedAspects,
-      scores: {
-        overall,
-        archetype,
-        archetypeSubtitle,
-        romantic: rom,
-        emotional: emo,
-        intellectual: int,
-        stability: sta,
-        soulGrowth: gro,
-      },
-      houseOverlays: overlays,
-    };
-  }, [userChart, partnerChart, isSwapped]);
+  // Use the shared 5° all-planet calculation engine. Nothing is scored before
+  // two real charts exist, and all house overlays come from actual ascendants.
+  const { aspects, scores, houseOverlays } = useMemo(
+    () => computeSynastry(isSwapped ? partnerChart : userChart, isSwapped ? userChart : partnerChart),
+    [userChart, partnerChart, isSwapped]
+  );
 
   // Filtered aspects
   const filteredAspects = useMemo(() => {
@@ -524,13 +291,13 @@ export function SynastryMatrixTab({
   }, [aspects, aspectFilter]);
 
   const handleAskAboutBond = () => {
-    if (!onAskMasterInterpreter) return;
-    const query = `Please provide an in-depth synastry and relationship analysis between me (${userChart?.input.location || "my birth chart"}) and ${partnerDetails.name} (${partnerDetails.date} in ${partnerDetails.location}). Our relationship archetype is "${scores.archetype}". Explain our key chemistry triggers, how we can communicate through tension, and our long-term karmic contract.`;
+    if (!onAskMasterInterpreter || !userChart || !partnerChart) return;
+    const query = `Please provide an in-depth synastry and relationship analysis between me (${userChart?.input.location || "my birth chart"}) and ${partnerDetails.name} (${partnerDetails.date} in ${partnerDetails.location}). The charts contain ${aspects.length} major cross-aspects within 5°. Key calculated aspects: ${aspects.slice(0,16).map(a=>`${a.planetA} ${a.aspect} ${a.planetB} (${a.orb}°)`).join("; ")}. Explain the mutual patterns, both people’s house placements, any tensions and practical ways to communicate, distinguishing symbolic possibility from established human facts.`;
     onAskMasterInterpreter(query);
   };
 
   return (
-    <div className={`space-y-8 ${className}`}>
+    <div className={`fg-synastry-deck space-y-8 ${className}`}>
       {/* Top Banner & Partner Selector */}
       <div className="rounded-3xl border border-rose-300/25 bg-gradient-to-r from-rose-950/40 via-purple-950/30 to-black/40 p-6 sm:p-8 backdrop-blur-md shadow-2xl shadow-rose-950/20">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -544,10 +311,10 @@ export function SynastryMatrixTab({
               </span>
             </div>
             <h2 className="font-serif text-3xl font-bold text-white tracking-tight">
-              The Cosmic Duo Architecture
+              The Celestial Relationship Observatory
             </h2>
             <p className="max-w-2xl text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Overlay your exact natal coordinates onto your partner, date, friend, or family member. Compute the deterministic geometry of mutual attraction, emotional vulnerability, communication flow, and long-term stability.
+              Overlay your exact natal coordinates onto your partner, date, friend, or family member. Calculate the actual planetary contacts and house placements of two people. The symbolic readings suggest possible dynamics; they do not determine personal compatibility or establish anyone's feelings.
             </p>
           </div>
 
@@ -609,7 +376,7 @@ export function SynastryMatrixTab({
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
             <span className="flex items-center gap-1.5 font-medium text-white">
               <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-              Person A: {isSwapped ? partnerDetails.name : (userChart ? (userChart.input.location || "You") : "Dallas 1986 Sample")}
+              Person A: {isSwapped ? partnerDetails.name : (userChart ? (userChart.input.location || "You") : "Natal chart not yet calculated")}
             </span>
             
             <button
@@ -660,7 +427,24 @@ export function SynastryMatrixTab({
         </div>
       </div>
 
-      {/* Chemistry Radar & Archetype Header */}
+      <div className="fg-module-banner">
+        <div className="fg-module-eyebrow">02 / THE CELESTIAL INTERSECTION · TWO CALCULATED NATAL SKIES</div>
+        <h3 className="fg-module-title">Two lives. One shared sky.</h3>
+        <p className="fg-module-desc">All available planets compared across both natal charts with the same five-degree orb. House overlays are calculated in both directions using actual Ascendants. The relationship indices describe the observed aspect mix, not emotional certainty or compatibility probabilities.</p>
+        {!userChart && <p className="mt-3 text-amber-200 text-sm" role="status">Calculate your natal chart first to activate the synastry evidence.</p>}
+        {calculatePartnerMutation.isPending && <p className="mt-3 text-cyan-200 text-sm" role="status">Calculating the second natal chart…</p>}
+        {calculatePartnerMutation.isError && <p className="mt-3 text-rose-200 text-sm" role="alert">Could not calculate the second chart: {calculatePartnerMutation.error.message}</p>}
+        {userChart && partnerChart && aspects.length === 0 && <p className="mt-3 text-slate-300 text-sm">No major cross-chart contacts were found within 5°. A zero index here means no testimony in scope, not an incompatible partnership.</p>}
+      </div>
+
+      {userChart && partnerChart && <SynastryDualOrrery
+        first={isSwapped ? partnerChart : userChart}
+        second={isSwapped ? userChart : partnerChart}
+        firstName={isSwapped ? partnerDetails.name : "Your birth chart"}
+        secondName={isSwapped ? "Your birth chart" : partnerDetails.name}
+      />}
+
+      {/* Symbolic cross-aspect balance — never a measure of human compatibility. */}
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Core Archetype & Overall Compatibility */}
         <Card className="lg:col-span-5 border-rose-300/20 bg-gradient-to-b from-rose-950/20 via-black/40 to-black/60 text-slate-100 shadow-xl backdrop-blur-md">
@@ -670,7 +454,7 @@ export function SynastryMatrixTab({
                 Relationship Archetype
               </span>
               <Badge variant="outline" className="border-rose-400/40 bg-rose-400/10 text-rose-200 text-xs">
-                {scores.overall}% Bond Resonance
+                {scores.overall} / 100 Aspect Balance
               </Badge>
             </div>
             <CardTitle className="font-serif text-2xl text-white mt-1">
@@ -684,12 +468,12 @@ export function SynastryMatrixTab({
             {/* Visual Overall Ring / Progress */}
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 flex items-center justify-between">
               <div>
-                <div className="text-xs font-medium text-slate-400">Total Algorithmic Harmony</div>
+                <div className="text-xs font-medium text-slate-400">Calculated aspect balance (not relationship odds)</div>
                 <div className="text-3xl font-extrabold text-white mt-0.5">
                   {scores.overall}<span className="text-lg font-normal text-rose-400"> / 100</span>
                 </div>
                 <p className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> High Relational Viability
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Symbolic evidence · Not a relationship verdict
                 </p>
               </div>
               <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-rose-500/20 bg-rose-500/10 shadow-inner">
@@ -702,7 +486,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-rose-300">
-                    <Flame className="h-3.5 w-3.5" /> Romantic & Magnetic Spark
+                    <Flame className="h-3.5 w-3.5" /> Romantic aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.romantic}%</span>
                 </div>
@@ -717,7 +501,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-cyan-300">
-                    <Shield className="h-3.5 w-3.5" /> Emotional Safety & Vulnerability
+                    <Shield className="h-3.5 w-3.5" /> Emotional aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.emotional}%</span>
                 </div>
@@ -732,7 +516,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-purple-300">
-                    <Brain className="h-3.5 w-3.5" /> Intellectual Synergy & Wit
+                    <Brain className="h-3.5 w-3.5" /> Intellectual aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.intellectual}%</span>
                 </div>
@@ -747,7 +531,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-emerald-300">
-                    <Anchor className="h-3.5 w-3.5" /> Long-Term Anchor & Stability
+                    <Anchor className="h-3.5 w-3.5" /> Stability aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.stability}%</span>
                 </div>
@@ -762,7 +546,7 @@ export function SynastryMatrixTab({
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="flex items-center gap-1.5 text-amber-300">
-                    <Sparkles className="h-3.5 w-3.5" /> Soul Growth & Evolutionary Catalyst
+                    <Sparkles className="h-3.5 w-3.5" /> Growth aspect themes
                   </span>
                   <span className="text-white font-bold">{scores.soulGrowth}%</span>
                 </div>
@@ -839,10 +623,10 @@ export function SynastryMatrixTab({
                 {expandedPlaybook === "communication" && (
                   <div className="p-3.5 pt-0 text-xs text-slate-300 space-y-2 border-t border-cyan-300/15 leading-relaxed">
                     <p>
-                      <strong>Your Style:</strong> You synthesize information rapidly and look for actionable solutions. You want immediate clarity.
+                      <strong>Your Style:</strong> {aspects.filter(a => a.planetA === "Mercury" || a.planetB === "Mercury").map(a => a.planetA + " " + a.aspect + " " + a.planetB + " (" + a.orb + "°)").slice(0,5).join("; ") || "No Mercury cross-aspects were found within the 5° orb."}
                     </p>
                     <p>
-                      <strong>Their Reception:</strong> They need emotional validation before they can engage with the logic. If you jump straight to solving without acknowledging their feeling, they experience it as dismissal.
+                      <strong>Their Reception:</strong> The Mercury and Moon connections are symbolic conversation and emotional-style prompts, not evidence of how either person actually thinks or feels. Ask each other what support means in practice.
                     </p>
                     <p className="rounded-lg bg-cyan-400/10 p-2 text-cyan-200 font-medium">
                       💡 <strong>Golden Rule:</strong> Spend 3 minutes validating their emotional reality before offering a tactical fix.
@@ -873,7 +657,7 @@ export function SynastryMatrixTab({
                 {expandedPlaybook === "conflict" && (
                   <div className="p-3.5 pt-0 text-xs text-slate-300 space-y-2 border-t border-rose-300/15 leading-relaxed">
                     <p>
-                      <strong>Trigger Point:</strong> When stress spikes, your instinct is to withdraw or analyze, while their instinct is to push for immediate reassurance. This creates a pursuer-distancer cycle.
+                      <strong>Trigger Point:</strong> {aspects.filter(a => a.type === "tension").slice(0,5).map(a => a.planetA + " " + a.aspect + " " + a.planetB + " (" + a.orb + "°)").join("; ") || "There are no close tension aspects in the configured 5° scope."} These symbolic contacts do not establish anyone's actual reaction patterns.
                     </p>
                     <p className="rounded-lg bg-rose-400/10 p-2 text-rose-200 font-medium">
                       🛡️ <strong>De-escalation Script:</strong> Say: <em>&ldquo;I am completely on your team and not leaving. My system needs 20 minutes to reset so I can give you my best presence, and then we will finish this together.&rdquo;</em>
@@ -904,7 +688,7 @@ export function SynastryMatrixTab({
                 {expandedPlaybook === "superpower" && (
                   <div className="p-3.5 pt-0 text-xs text-slate-300 space-y-2 border-t border-amber-300/15 leading-relaxed">
                     <p>
-                      When aligned, this combination creates extraordinary manifestation momentum. You provide the strategic architecture and discernment; they inject infectious enthusiasm, creative vision, and social magnetism.
+                      {aspects.filter(a => a.type === "harmony").slice(0,5).map(a => a.planetA + " " + a.aspect + " " + a.planetB + " (" + a.orb + "°)").join("; ") || "No close harmony aspects appear in the configured 5° scope."} Use any supportive themes to discuss strengths you can verify together, not to assume either person's traits.
                     </p>
                   </div>
                 )}
@@ -1031,10 +815,10 @@ export function SynastryMatrixTab({
         </CardContent>
       </Card>
 
-      {/* Sovereign Tier Teaser Lock for Deep Esoteric Synastry */}
+      {/* Planned extension: visually explicit, not a calculated composite. */}
       <SovereignTeaserLock
         title="Composite Midpoint Chart & Davison Time-Space Matrix"
-        description="Unlock the single fused celestial third entity born between you two. Reveals the destiny, karmic purpose, and 10-year synastry progression curves."
+        description="Composite midpoint and Davison time-space charts are proposed extensions. This panel is a preview, not a functioning calculation or verified prediction."
         featureKey="composite-synastry"
       />
 

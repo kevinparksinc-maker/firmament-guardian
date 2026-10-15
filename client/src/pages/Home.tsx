@@ -302,7 +302,20 @@ export default function Home() {
   const [showHelp, setShowHelp] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(null);
-  const [mainTab, setMainTab] = useState<"blueprint" | "synastry" | "weather" | "podcast" | "social">("blueprint");
+  type ObservatoryTab = "blueprint" | "synastry" | "weather" | "podcast" | "social";
+  const parseTab = (): ObservatoryTab => {
+    const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
+    return tab === "synastry" || tab === "weather" || tab === "podcast" || tab === "social" ? tab : "blueprint";
+  };
+  const [mainTab, setMainTab] = useState<ObservatoryTab>(parseTab);
+  useEffect(() => {
+    const onSelect = (event: Event) => {
+      const tab = (event as CustomEvent<{ tab: ObservatoryTab }>).detail?.tab;
+      if (["blueprint","synastry","weather","podcast","social"].includes(tab)) setMainTab(tab);
+    };
+    window.addEventListener("fg:select-tab", onSelect);
+    return () => window.removeEventListener("fg:select-tab", onSelect);
+  }, []);
   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
   const { isSovereign, openPaywall } = useSovereignTier();
   const [activeProfile, setActiveProfile] = useState<UserProfileData | null>(() => {
@@ -838,7 +851,7 @@ export default function Home() {
             </div>
 
             {/* Primary Cosmos Navigation Tabs */}
-            <div id="main-cosmos-tabs" className="mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
+            <div id="main-cosmos-tabs" className="fg-celestial-tabs mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
           <button
             type="button"
             onClick={() => setMainTab("blueprint")}
@@ -1627,26 +1640,29 @@ export default function Home() {
 
         {/* 3. 30/90-Day Cosmic Weather Tab */}
         {mainTab === "weather" && (
+          <><div className="fg-module-banner"><p className="fg-module-eyebrow">03 / THE CELESTIAL WEATHER STATION</p><h2 className="fg-module-title">The sky in motion.</h2><p className="fg-module-desc">Follow calculated planetary movements through the same fixed-stellar and local chart framework. Current testimony and future sky positions remain distinct from guaranteed life events.</p></div>
           <TransitWeatherTimeline
             chart={result}
             onAskMasterInterpreter={handleAskMasterInterpreter}
-          />
+          /></>
         )}
 
         {/* 4. Daily Audio Podcast Tab */}
         {mainTab === "podcast" && (
+          <><div className="fg-module-banner"><p className="fg-module-eyebrow">04 / THE CELESTIAL VOICE</p><h2 className="fg-module-title">Listen to your observatory.</h2><p className="fg-module-desc">Your same evidence-first astrology becomes an audio-friendly reading without losing God View, Agent View, or the relationship between them.</p></div>
           <AudioPodcastBriefing
             chart={result}
             onAskMasterInterpreter={handleAskMasterInterpreter}
-          />
+          /></>
         )}
 
         {/* 5. Loved Ones Social Matrix Tab */}
         {mainTab === "social" && (
+          <><div className="fg-module-banner"><p className="fg-module-eyebrow">05 / THE CELESTIAL CONNECTIONS</p><h2 className="fg-module-title">The people in your orbit.</h2><p className="fg-module-desc">Consider two independent birth charts and the actual geometric connections between them. Respect individual privacy and keep symbolic readings distinct from verified human behavior.</p></div>
           <SocialLovedOnesMatrix
             userChart={result}
             onAskMasterInterpreter={handleAskMasterInterpreter}
-          />
+          /></>
         )}
           </>
         )}
