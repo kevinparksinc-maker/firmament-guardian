@@ -225,6 +225,7 @@ export type HoraryMechanismRecord = {
 };
 
 export type RetrievedPlacementDossier = {
+  chineseMansion?: { index: number; name: string; hanzi: string; guardian: string; rightAscension: number; degreeInMansion: number; source: string };
   body: string;
   display: string;
   longitude: number;
