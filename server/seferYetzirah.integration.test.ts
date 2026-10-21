@@ -15,5 +15,9 @@ describe("Sefer Yetzirah / Four Worlds evidence integration",()=>{
   expect(items.find(i=>i.id==="sy-natal-double-saturn")?.statement).toContain("symbolic quality");
   expect(items.find(i=>i.id==="sy-four-worlds")?.statement).toContain("distinct from Sefer Yetzirah");
   expect(items.every(i=>i.sourceTrace.sourceUrl?.startsWith("https://"))).toBe(true);
+  const transitItems=seferYetzirahEvidence(chart,"transit");
+  expect(transitItems.filter(i=>i.technique==="sefer-yetzirah-simples")).toHaveLength(chart.transits.length);
+  expect(transitItems.some(i=>i.id==="sy-transit-simple-sun")).toBe(chart.transits.some(r=>r.name==="Sun"));
+  expect(transitItems.every(i=>i.id.startsWith("sy-transit-"))).toBe(true);
  });
 });
