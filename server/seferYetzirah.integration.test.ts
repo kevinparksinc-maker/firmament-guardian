@@ -12,7 +12,7 @@ describe("Sefer Yetzirah / Four Worlds evidence integration",()=>{
   const chart=await calculateChart({location:"Dallas, Texas, USA",latitude:32.7767,longitude:-96.797,timezone:"America/Chicago",date:"1986-11-20",time:"10:06",worldview:"agent",readingScope:"natal"});
   const items=seferYetzirahEvidence(chart);
   expect(items.filter(i=>i.technique==="sefer-yetzirah-simples")).toHaveLength(chart.movingBodies.length);
-  expect(items.find(i=>i.id==="sy-double-Saturn".toLowerCase())?.statement).toContain("symbolic quality");
+  expect(items.find(i=>i.id==="sy-natal-double-saturn")?.statement).toContain("symbolic quality");
   expect(items.find(i=>i.id==="sy-four-worlds")?.statement).toContain("distinct from Sefer Yetzirah");
   expect(items.every(i=>i.sourceTrace.sourceUrl?.startsWith("https://"))).toBe(true);
  });
