@@ -649,10 +649,10 @@ export default function Home() {
         <header className="mb-8 flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="mb-4 flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-violet-300">
-              <span className="h-px w-8 bg-violet-300" /> Algorithms of the Cosmos
+              <span className="h-px w-8 bg-violet-300" /> 12 Gates of the Firmament
             </div>
             <h1 className="max-w-3xl font-serif text-3xl leading-[1.12] tracking-tight text-white md:text-5xl">
-              The Algorithms of the Cosmos
+              12 Gates of the Firmament
             </h1>
             <p className="mt-3 max-w-3xl font-serif text-2xl leading-[1.18] tracking-tight text-cyan-200/90 md:text-4xl">
               The cosmic code of algorithms—and how they made a perfect YOU.
@@ -931,7 +931,7 @@ export default function Home() {
                   Step 1 · Choose your reading
                 </div>
                 <h2 className="mt-2 font-serif text-2xl text-white sm:text-3xl">
-                  What do you want The Algorithms of the Cosmos to read?
+                  What do you want 12 Gates of the Firmament to read?
                 </h2>
               </div>
               <p className="max-w-md text-xs leading-5 text-slate-400">
