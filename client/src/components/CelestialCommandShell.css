@@ -42,3 +42,79 @@
 .fg-command-main :is(.zh2050,.fg2050,.cg2050,.im2050){font-family:'Manrope','DM Sans',sans-serif}
 .fg-command-main :is(.zh2050 h1,.fg2050 h2,.cg2050 h2,.im2050 h3){font-family:'Playfair Display',Georgia,serif}
 @media(max-width:890px){.fg-command-main .fg2050-lead{padding-top:30px}.fg-command-main #main-cosmos-tabs{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin}.fg-command-main #main-cosmos-tabs button{flex-shrink:0}}
+
+
+/* 12 Gates Neon Observatory — presentation only; chart math and reading content unchanged. */
+.fg-command-shell {
+  --fg-night: #050715;
+  --fg-surface: #0d1530;
+  --fg-gold: #ffd86f;
+  --fg-aqua: #53f4ff;
+  --fg-ink: #f2f5ff;
+  --fg-edge: rgba(104, 158, 255, .28);
+  --fg-neon-cyan: #53f4ff;
+  --fg-neon-violet: #b275ff;
+  --fg-neon-pink: #ff67d8;
+  --fg-neon-lime: #a9ff86;
+  --fg-dome: radial-gradient(ellipse at 80% 2%,rgba(51,94,196,.25),transparent 34%),radial-gradient(ellipse at 8% 36%,rgba(144,50,210,.16),transparent 38%),linear-gradient(180deg,#050715,#070e23 63%,#040713);
+}
+.fg-command-side {
+  border-right: 1px solid rgba(83,244,255,.26);
+  box-shadow: 12px 0 48px rgba(3,8,30,.38),inset -1px 0 rgba(178,117,255,.08);
+}
+.fg-command-side-label { color: var(--fg-neon-cyan); }
+.fg-command-side a { color: #cbd8f6; border-radius: 13px; margin-block: 4px; }
+.fg-command-side a svg { color: #79eaff; }
+.fg-command-side a[aria-current=page],
+.fg-command-side a:hover {
+  color: #fff;
+  border-color: rgba(83,244,255,.52);
+  background: linear-gradient(90deg,rgba(35,118,161,.27),rgba(100,56,173,.17));
+  box-shadow: inset 3px 0 var(--fg-neon-cyan),0 0 22px rgba(83,244,255,.10);
+}
+.fg-command-side-note {
+  border-color: rgba(178,117,255,.31);
+  background: linear-gradient(145deg,rgba(53,35,100,.25),rgba(9,22,43,.72));
+}
+.fg-command-side-note strong { color: #dbb5ff; }
+.fg-module-banner {
+  border: 1px solid rgba(115,179,255,.38);
+  background: radial-gradient(ellipse at 95% 15%,rgba(178,117,255,.19),transparent 52%),linear-gradient(115deg,rgba(11,38,73,.95),rgba(28,17,66,.87));
+  box-shadow: inset 3px 0 var(--fg-neon-cyan),0 16px 52px rgba(0,0,0,.29),0 0 32px rgba(83,244,255,.06);
+}
+.fg-module-eyebrow { color: var(--fg-neon-cyan); }
+.fg-module-title { color: #f8f7ff; text-shadow: 0 0 24px rgba(178,117,255,.19); }
+.fg-module-desc { color: #d3def5; }
+.fg-command-main #main-cosmos-tabs {
+  padding: 10px;
+  gap: 8px;
+  border: 1px solid rgba(83,244,255,.3);
+  background: rgba(6,13,34,.95);
+  box-shadow: 0 8px 30px rgba(0,0,0,.26);
+}
+.fg-command-main #main-cosmos-tabs button { border-radius: 12px; min-height: 46px; }
+.fg-command-main #main-cosmos-tabs button:hover { border-color: rgba(83,244,255,.55); box-shadow: 0 0 20px rgba(83,244,255,.1); }
+.fg-command-main #main-cosmos-tabs button[aria-selected=true],
+.fg-command-main #main-cosmos-tabs button[data-state=active] {
+  border-color: rgba(83,244,255,.7);
+  box-shadow: inset 0 -2px var(--fg-neon-cyan),0 0 19px rgba(83,244,255,.16);
+}
+.fg-command-main :is(.card,[data-slot=card]) {
+  border-color: rgba(115,179,255,.34);
+  background-color: rgba(10,19,42,.92);
+  box-shadow: 0 12px 32px rgba(0,0,0,.20),inset 0 1px rgba(255,255,255,.04);
+}
+.fg-command-main :is(input,textarea,select) {
+  background-color: rgba(3,11,30,.82);
+  border-color: rgba(115,179,255,.4);
+  color: #f3f7ff;
+}
+.fg-command-main :is(input,textarea,select):focus-visible,
+.fg-command-main :is(button,a):focus-visible {
+  outline: 2px solid var(--fg-neon-cyan);
+  outline-offset: 3px;
+}
+.fg-command-main :is(.fg-module-banner,.fg-synastry-deck,.chart-wheel-shell) + :is(.fg-module-banner,.fg-synastry-deck,.chart-wheel-shell) { margin-top: 20px; }
+@media (prefers-reduced-motion: reduce) {
+  .fg-command-main #main-cosmos-tabs button:hover { box-shadow:none; }
+}
