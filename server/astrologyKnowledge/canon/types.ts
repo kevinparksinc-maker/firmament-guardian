@@ -117,8 +117,8 @@ export type DecanCanonRecord = {
   decanNumber: 1 | 2 | 3;
   degreeRange: [number, number];
   label: string;
-  chaldeanFaceRuler: string; // Hellenistic / Arabic Face ruler
-  triplicitySubRuler: string; // Western Triplicity sub-ruler (preserved separately, not merged)
+  elementalFamilySign: string; // same-element sign governing this 10° segment
+  elementalFamilyRuler: string; // ruler of that sign (not a Chaldean face ruler)
   traditionalTitle: string;
   coreThemes: string[];
   behavioralNuance: string;
