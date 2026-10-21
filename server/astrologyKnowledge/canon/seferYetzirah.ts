@@ -27,13 +27,21 @@ export const SIMPLE_LETTERS=[
  * It must never be presented as the only authentic Sefer Yetzirah assignment.
  */
 export const DOUBLE_LETTERS=[
-  {letter:"ב",name:"Bet",planet:"Saturn",contraries:["life","death"]},
-  {letter:"ג",name:"Gimel",planet:"Jupiter",contraries:["peace","war"]},
-  {letter:"ד",name:"Dalet",planet:"Mars",contraries:["wisdom","folly"]},
-  {letter:"כ",name:"Kaf",planet:"Sun",contraries:["wealth","poverty"]},
-  {letter:"פ",name:"Pe",planet:"Venus",contraries:["grace","ugliness"]},
-  {letter:"ר",name:"Resh",planet:"Mercury",contraries:["fertility","barrenness"]},
-  {letter:"ת",name:"Tav",planet:"Moon",contraries:["dominion","servitude"]},
+  {letter:"ב",name:"Bet",planet:"Moon",quality:"wisdom"},
+  {letter:"ג",name:"Gimel",planet:"Mars",quality:"health"},
+  {letter:"ד",name:"Dalet",planet:"Sun",quality:"fertility"},
+  {letter:"כ",name:"Kaf",planet:"Venus",quality:"life"},
+  {letter:"פ",name:"Pe",planet:"Mercury",quality:"power"},
+  {letter:"ר",name:"Resh",planet:"Saturn",quality:"peace"},
+  {letter:"ת",name:"Tav",planet:"Jupiter",quality:"beauty"},
+] as const;
+/** These pairs appear as a GROUP in Westcott chapter IV; the supplement
+ * gives planet-letter-quality rows but does not pair each letter with
+ * this same chapter-IV order of opposite pairs. Keep this distinction.
+ */
+export const CONTRARY_PAIRS=[
+  ["life","death"],["peace","war"],["wealth","poverty"],["beauty","disrepute"],
+  ["wisdom","folly"],["fruitfulness","sterility"],["power","servitude"]
 ] as const;
 export const FOUR_WORLDS=[
   {name:"Atzilut",hebrew:"אצילות",stage:"Emanation",question:"What is the originating principle?"},
@@ -61,7 +69,7 @@ export function seferYetzirahEvidence(chart:ChartResult):EvidenceItem[]{
   for(const row of chart.movingBodies){
     const body=DOUBLE_LETTERS.find(r=>r.planet===row.name);
     if(body) result.push(evidence(`sy-double-${row.name.toLowerCase()}`,"sefer-yetzirah-doubles",row.name,
-      `[TEXTUAL VARIANT — not universal] ${row.name} at ${row.display}: double letter ${body.name} (${body.letter}), symbolic contraries ${body.contraries[0]} / ${body.contraries[1]}. The chart does not establish which contrary manifests; explore both as questions.`,
+      `[WESTCOTT CHAPTER IV SUPPLEMENT — found in some editions, not universal] ${row.name} at ${row.display}: double letter ${body.name} (${body.letter}), symbolic quality ${body.quality}. The seven pairs of contraries are given collectively in chapter IV; this supplement does not uniquely assign one pair to each planet. The chart does not establish what manifests.`,
       ["sefer-yetzirah","seven-doubles",row.name.toLowerCase(),body.name.toLowerCase()]));
     const simple=SIMPLE_LETTERS[Math.floor(normalizeLongitude(row.longitude)/30)];
     result.push(evidence(`sy-simple-${row.name.toLowerCase()}`,"sefer-yetzirah-simples",row.name,
