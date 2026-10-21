@@ -156,7 +156,7 @@ const STELLARIUM_REFERENCE: readonly (readonly [string,string])[] = [
   ["γ Crv","12h15m48.4s"],
 ];
 const hmsToDegrees = (value: string): number => {
-  const parsed = /^(\\d{1,2})h(\\d{1,2})m([\\d.]+)s$/.exec(value);
+  const parsed = /^(\d{1,2})h(\d{1,2})m([\d.]+)s$/.exec(value);
   if (!parsed) throw new Error("Invalid J2000 right ascension: " + value);
   return (Number(parsed[1]) + Number(parsed[2])/60 + Number(parsed[3])/3600)*15;
 };
