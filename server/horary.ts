@@ -10,6 +10,7 @@ import { HORARY_SYSTEM as HORARY_SPECIALIZED_SYSTEM } from "./horary-instruction
 import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
 import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
 import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever";
+import { seferYetzirahEvidence } from "./astrologyKnowledge/canon/seferYetzirah";
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
@@ -216,6 +217,12 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     .filter((aspect): aspect is HoraryAspect => Boolean(aspect));
   const significatorNames = new Set(aspectNames);
   const canonDossier = retrieveChartCanonDossier(calculated);
+  const kabbalahEvidenceText = seferYetzirahEvidence(calculated)
+    .map(item => `- [${item.technique}] ${item.statement}`)
+    .join("\n");
+  const natalKabbalahText = natalChart ? seferYetzirahEvidence(natalChart)
+    .filter(item => item.technique === "sefer-yetzirah-doubles" || item.technique === "sefer-yetzirah-simples")
+    .map(item => `- ${item.statement}`).join("\n") : "No querent natal profile was supplied.";
   const canonEvidenceText = canonDossier.placements
     .filter(row => significatorNames.has(row.body))
     .map(row => [
@@ -324,6 +331,8 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `RADICALITY / CONSIDERATIONS BEFORE JUDGMENT: status ${traditional.radicality.status}; ${traditional.radicality.explanation}\n${traditional.radicality.considerations.length ? traditional.radicality.considerations.map(row => `- ${row}`).join("\n") : "- No configured caution was triggered."}`,
     `TRADITIONAL EVENT-TIMING AID (degrees to perfection and modality estimate; not a guaranteed event date):\n${timingLines}`,
     `LUNAR MANSION / MANZIL / DECAN CONTEXT FOR CLASSICAL PLANETS AND ASCENDANT:\n${overlayLines}`,
+    `SEFER YETZIRAH + FOUR WORLDS — QUESTION-MOMENT SYMBOLIC CORRESPONDENCES (textual variants, contextual only; cannot change traditional judgment):\n${kabbalahEvidenceText}`,
+    `SEFER YETZIRAH — QUERENT NATAL CORRESPONDENCES (distinct from the horary moment):\n${natalKabbalahText}`,
     natalEvidence,
     transitEvidence,
     godEvidence,
@@ -339,6 +348,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Core placements:\n${corePlacementLines}`,
     `Relevant major aspects supplied by the calculator (maximum 5° orb):\n${aspectLines}`,
     `LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED FOR THE RELEVANT SIGNIFICATORS:\n${canonEvidenceText}`,
+    `SEFER YETZIRAH SYMBOLIC CORRESPONDENCES FOR THE QUESTION MOMENT (never override the core horary verdict):\n${kabbalahEvidenceText}`,
     natalQuestionEvidence,
     transitQuestionEvidence,
     `Radicality / considerations before judgment: status ${traditional.radicality.status}; ${traditional.radicality.explanation}${traditional.radicality.considerations.length ? `\n- ${traditional.radicality.considerations.join("\n- ")}` : ""}`,
