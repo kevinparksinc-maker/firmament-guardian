@@ -213,3 +213,37 @@ main.guardian-home-main :is(p,li){line-height:1.7;}
   main.guardian-home-main aside > div:first-child,
   main.guardian-home-main aside > div:nth-child(2){backdrop-filter:none;}
 }
+
+
+/* 12 Gates release UI: crisp neon module separation and readable setup. */
+.guardian-home-main .fg-home-hero{gap:clamp(18px,3vw,40px);padding:26px 28px 32px;border:1px solid rgba(83,244,255,.28);border-radius:24px;background:linear-gradient(115deg,rgba(6,16,39,.91),rgba(15,12,42,.87));box-shadow:inset 4px 0 #53f4ff,0 16px 54px rgba(0,0,0,.24)}
+.guardian-home-main .fg-home-hero>div:first-child{min-width:0;flex:1 1 56%}
+.guardian-home-main .fg-home-hero h1{font-size:clamp(2.45rem,4.8vw,4.65rem);line-height:1.06;letter-spacing:-.045em;text-shadow:0 0 24px rgba(83,244,255,.10)}
+.guardian-home-main .fg-home-hero .fg-quick-actions{flex:0 1 430px;justify-content:flex-start;align-content:center;padding:16px;border:1px solid rgba(178,117,255,.3);border-radius:18px;background:rgba(6,11,32,.72)}
+.guardian-home-main .fg-quick-actions>:is(button,a){min-height:42px;border-radius:12px!important;white-space:normal}
+.guardian-home-main .fg-quick-actions>:is(button,a):hover{box-shadow:0 0 20px rgba(83,244,255,.13);transform:translateY(-1px)}
+.guardian-home-main .fg-quick-actions>:is(button,a):focus-visible{outline:2px solid #53f4ff}
+.guardian-home-main .fg-quick-actions>:nth-child(3){border-color:rgba(255,103,216,.55);background:rgba(255,103,216,.12);color:#ffd3f4}
+.guardian-home-main .fg-quick-actions>:nth-child(4){border-color:rgba(178,117,255,.55);background:rgba(178,117,255,.12);color:#e8d4ff}
+.guardian-home-main .fg-quick-actions>a[href="/horary"]{border-color:rgba(178,117,255,.62);color:#e4caff;background:rgba(178,117,255,.11)}
+.guardian-home-main .fg-quick-actions>a[href="/sky"]{border-color:rgba(83,244,255,.6);color:#bffaff;background:rgba(83,244,255,.09)}
+/* Twelve portals: visual identity by function, with accessible contrast rather than full-panel glare. */
+.fg2050 .fg2050-portal{--gate-accent:#53f4ff;position:relative;border:1px solid color-mix(in srgb,var(--gate-accent) 47%,transparent)!important;background:linear-gradient(155deg,rgba(13,26,56,.97),rgba(7,12,32,.96))!important;box-shadow:inset 3px 0 color-mix(in srgb,var(--gate-accent) 72%,transparent),0 15px 35px rgba(0,0,0,.22)!important;isolation:isolate}
+.fg2050 .fg2050-portal:nth-child(4n+2){--gate-accent:#b275ff}
+.fg2050 .fg2050-portal:nth-child(4n+3){--gate-accent:#ff67d8}
+.fg2050 .fg2050-portal:nth-child(4n+4){--gate-accent:#ffe180}
+.fg2050 .fg2050-portal:hover{border-color:var(--gate-accent)!important;box-shadow:inset 3px 0 var(--gate-accent),0 0 26px color-mix(in srgb,var(--gate-accent) 16%,transparent),0 20px 43px rgba(0,0,0,.31)!important}
+.fg2050 .fg2050-portal-icon{color:var(--gate-accent);border-color:color-mix(in srgb,var(--gate-accent) 46%,transparent)}
+.fg2050 .fg2050-portal-cta{color:var(--gate-accent)}
+.fg2050 .fg2050-education{border:1px solid rgba(178,117,255,.32);background:linear-gradient(120deg,rgba(18,17,54,.92),rgba(6,24,45,.92));border-radius:22px;box-shadow:inset 3px 0 #b275ff}
+.fg2050 .fg2050-view-row{border-color:rgba(83,244,255,.29)}
+/* Birth setup is a separate, high-contrast workspace. */
+.guardian-home-main #chart-setup,.guardian-home-main [id="chart-setup"]{scroll-margin-top:20px}
+.guardian-home-main input:not([type="checkbox"]):not([type="radio"]),.guardian-home-main select,.guardian-home-main textarea{min-height:44px;border:1px solid rgba(95,169,242,.48)!important;background:rgba(3,9,26,.91)!important;color:#f2f6ff!important}
+.guardian-home-main input::placeholder,.guardian-home-main textarea::placeholder{color:#95a9c8!important}
+.guardian-home-main input:focus-visible,.guardian-home-main textarea:focus-visible{outline:2px solid #53f4ff;outline-offset:2px}
+.guardian-home-main label{color:#deebff}
+.guardian-home-main .fg2050-portal :is(p,small),.guardian-home-main .fg2050-education :is(p,small){color:#c2d1ec}
+@media(max-width:1100px){.guardian-home-main .fg-home-hero{flex-direction:column}.guardian-home-main .fg-home-hero .fg-quick-actions{flex-basis:auto;width:100%}}
+@media(max-width:640px){.guardian-home-main .fg-home-hero{padding:18px 16px 24px;border-radius:18px}.guardian-home-main .fg-home-hero h1{font-size:clamp(2.3rem,10vw,3.7rem)}.guardian-home-main .fg-home-hero .fg-quick-actions{padding:12px;gap:7px}.fg2050 .fg2050-portal{border-radius:18px}}
+@media(prefers-reduced-motion:reduce){.guardian-home-main .fg-quick-actions>:is(button,a):hover{transform:none}}
