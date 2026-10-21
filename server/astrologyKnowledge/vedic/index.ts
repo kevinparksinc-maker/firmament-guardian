@@ -63,6 +63,23 @@ function rows(chart: ChartResult) {
     chart.southNode,
   ].filter((row): row is ChartRow => Boolean(row));
 }
+/** Parashari graha drishti: house offsets count the occupied house as 1.
+ * Mars: 4th/7th/8th, Jupiter: 5th/7th/9th, Saturn: 3rd/7th/10th.
+ * Do not hardcode a target house: targets change with the planet's house.
+ */
+export function grahaDrishtiTargetHouses(planet: string, fromHouse: number): number[] {
+  const aspectCounts: Record<string, readonly number[]> = {
+    Mars: [4, 7, 8],
+    Jupiter: [5, 7, 9],
+    Saturn: [3, 7, 10],
+  };
+  const counts = aspectCounts[planet];
+  if (!counts) return [];
+  if (!Number.isInteger(fromHouse) || fromHouse < 1 || fromHouse > 12)
+    throw new RangeError("Graha drishti requires a valid occupied house 1–12");
+  return counts.map(count => ((fromHouse + count - 2) % 12) + 1);
+}
+
 export function resolveVedicEvidence(
   chart: ChartResult,
   plan: KnowledgePlan
@@ -136,14 +153,7 @@ export function resolveVedicEvidence(
   }
   for (const row of all) {
     if (!["Mars", "Jupiter", "Saturn"].includes(row.name)) continue;
-    const offsets =
-      row.name === "Mars"
-        ? [4, 7, 8]
-        : row.name === "Jupiter"
-          ? [5, 7, 9]
-          : [3, 7, 10];
-    for (const offset of offsets) {
-      const target = ((row.house - 1 + offset - 1) % 12) + 1;
+    for (const target of grahaDrishtiTargetHouses(row.name, row.house)) {
       evidence.push({
         id: `vedic-drishti-${row.name}-${target}`,
         tradition: "vedic",
