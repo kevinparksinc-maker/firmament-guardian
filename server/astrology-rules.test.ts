@@ -74,7 +74,7 @@ describe("deterministic astrology rule fixtures", () => {
     expect(agentHouseFor(20, 350)).toBe(2);
     expect(overlay(360)).toMatchObject(overlay(0));
     expect(overlay(0).decan).toBe("Aries (Aries 1st elemental decan)");
-    expect(overlay(10).decan).toBe("Sun (Aries 2nd)");
+    expect(overlay(10).decan).toBe("Leo (Aries 2nd elemental decan)");
     expect(overlay(360 / 27).nakshatra).toBe("Bharani");
     expect(overlay(360 / 28).manzil).toBe("Al-Butain");
     expect(FIXED_STARS.find(star => star[0] === "Hamal")?.[1]).toBe(12.9333);
