@@ -11,3 +11,5 @@ export * from "./vedicJyotishCanon";
 export * from "./planetInHouseInterpretations";
 export * from "./arabicPersianCanon";
 export * from "./retriever";
+
+export * from "./chineseMansions28";
