@@ -141,3 +141,75 @@ svg[role="img"]{max-width:100%}
   html{scroll-behavior:auto}
   .guardian-home-main .animate-pulse,.hc2050 .animate-pulse{animation:none!important}
 }
+
+
+/* 12 Gates: Neon Observatory visual hierarchy. No astronomical or interpretive changes. */
+:root{
+  --guardian-gold:#ffe180;
+  --guardian-cyan:#53f4ff;
+  --guardian-ivory:#f4f6ff;
+  --guardian-muted:#bdcdec;
+  --guardian-surface:#0a1531;
+  --neon-violet:#b275ff;
+  --neon-pink:#ff67d8;
+  --neon-lime:#a9ff86;
+}
+main.guardian-home-main > header { border-bottom:1px solid rgba(83,244,255,.3); }
+main.guardian-home-main > header::after {
+  background:linear-gradient(90deg,#53f4ff,#b275ff 55%,#ff67d8,transparent);
+  box-shadow:0 0 17px rgba(83,244,255,.48);
+}
+main.guardian-home-main > header .text-xs.uppercase { color:#6ff5ff; }
+main.guardian-home-main aside > div:first-child {
+  border:1px solid rgba(83,244,255,.4);
+  background:linear-gradient(155deg,rgba(12,32,64,.96),rgba(6,13,34,.94));
+  box-shadow:inset 3px 0 rgba(83,244,255,.78),0 18px 46px rgba(0,0,0,.25);
+}
+main.guardian-home-main aside > div:nth-child(2) {
+  border:1px solid rgba(178,117,255,.43);
+  background:linear-gradient(155deg,rgba(30,20,68,.92),rgba(9,14,34,.93));
+  box-shadow:inset 3px 0 rgba(178,117,255,.75),0 18px 46px rgba(0,0,0,.25);
+}
+main.guardian-home-main section > .grid:first-child > div {
+  border:1px solid rgba(115,179,255,.35);
+  background:linear-gradient(145deg,rgba(13,28,58,.94),rgba(7,13,32,.94));
+  box-shadow:0 14px 35px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.045);
+}
+main.guardian-home-main section > .grid:first-child > div:nth-child(3n+2) { border-color:rgba(178,117,255,.37); }
+main.guardian-home-main section > .grid:first-child > div:nth-child(3n+3) { border-color:rgba(255,103,216,.34); }
+main.guardian-home-main section > .grid:first-child > div:hover {
+  border-color:rgba(83,244,255,.68);
+  box-shadow:0 13px 40px rgba(0,0,0,.33),0 0 23px rgba(83,244,255,.09);
+}
+main.guardian-home-main section > div > div.rounded-2xl:not(.overflow-hidden) {
+  border-color:rgba(115,179,255,.33);
+  background:linear-gradient(145deg,rgba(13,31,61,.95),rgba(8,13,31,.94));
+}
+main.guardian-home-main input,main.guardian-home-main textarea{
+  border-color:rgba(115,179,255,.36)!important;
+  background:rgba(4,12,30,.82)!important;
+}
+main.guardian-home-main button.bg-violet-500{
+  background:linear-gradient(105deg,#6b4bff,#9b56fa 50%,#13cade)!important;
+  box-shadow:0 12px 30px rgba(98,61,231,.28),0 0 22px rgba(83,244,255,.13);
+}
+.chart-wheel-shell {
+  background:radial-gradient(circle at 50% 40%,rgba(54,48,122,.19),transparent 55%),linear-gradient(145deg,#101d39,#050b1e);
+  border:1px solid rgba(83,244,255,.4);
+  box-shadow:0 20px 60px rgba(0,0,0,.33),0 0 35px rgba(83,244,255,.07);
+}
+.chart-wheel-shell > div > aside{
+  background:linear-gradient(145deg,rgba(16,31,63,.96),rgba(8,14,34,.96));
+  border:1px solid rgba(178,117,255,.36);
+}
+.chart-wheel-shell svg{filter:drop-shadow(0 13px 22px rgba(0,0,0,.34));}
+main.guardian-home-main :is(h2,h3){text-wrap:balance;}
+main.guardian-home-main :is(p,li){line-height:1.7;}
+@media(max-width:767px){
+  main.guardian-home-main section > .grid:first-child > div{margin-bottom:4px;}
+  .chart-wheel-shell{box-shadow:0 12px 30px rgba(0,0,0,.3);}
+}
+@media(prefers-reduced-transparency:reduce){
+  main.guardian-home-main aside > div:first-child,
+  main.guardian-home-main aside > div:nth-child(2){backdrop-filter:none;}
+}
