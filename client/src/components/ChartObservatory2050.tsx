@@ -8,6 +8,7 @@ type Frame = "god" | "agent";
 type Layer = "nakshatra" | "manzil" | "decan" | "stars";
 const symbols:Record<string,string> = {Sun:"☉",Moon:"☽",Mercury:"☿",Venus:"♀",Mars:"♂",Jupiter:"♃",Saturn:"♄",Uranus:"♅",Neptune:"♆",Pluto:"♇"};
 const signs=["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
+const diamondPoint=(lon:number,r:number)=>{const a=(lon-90)*Math.PI/180;const x=Math.cos(a),y=Math.sin(a),d=Math.abs(x)+Math.abs(y);return {x:240+x*r/d,y:240+y*r/d}};
 const point=(lon:number,r:number)=>{const a=(lon-90)*Math.PI/180;return {x:240+Math.cos(a)*r,y:240+Math.sin(a)*r}};
 function activeName(chart:ChartResult,frame:Frame,row:ChartRow):string{
  const house=frame==="god"?row.godHouse??Math.floor(normalizeLongitude(row.longitude)/30)+1:row.agentHouse;
@@ -17,6 +18,7 @@ function starDistance(a:number,b:number){const diff=Math.abs(normalizeLongitude(
 export function ChartObservatory2050({chart}:{chart:ChartResult}){
  const [frame,setFrame]=useState<Frame>(chart.worldview==="god"?"god":chart.agentViewAvailable?"agent":"god");
  const [layer,setLayer]=useState<Layer>("nakshatra");
+ const [geometry,setGeometry]=useState<"wheel"|"diamond">("wheel");
  const [selected,setSelected]=useState("Sun");
  const selectedRow=chart.movingBodies.find(row=>row.name===selected)??chart.movingBodies[0];
  const canAgent=chart.agentViewAvailable;
@@ -32,8 +34,17 @@ export function ChartObservatory2050({chart}:{chart:ChartResult}){
    <div className="cg2050-body">
      <div className="cg2050-visual">
        <div className="cg2050-toolbar" role="group" aria-label="Select celestial frame">{frames.map(({value,label,icon:Icon})=><button key={value} type="button" disabled={value==="agent"&&!canAgent} aria-pressed={frame===value} onClick={()=>setFrame(value)} className={frame===value?"cg2050-selected":""}><Icon size={16}/>{label}</button>)}</div>
+       <div className="cg2050-geometry-switch" role="group" aria-label="Chart geometry"><button type="button" aria-pressed={geometry==="wheel"} onClick={()=>setGeometry("wheel")}>Circular Wheel</button><button type="button" aria-pressed={geometry==="diamond"} onClick={()=>setGeometry("diamond")}>◇ Diamond Chart</button></div>
        <div className="cg2050-wheel">
-         <svg viewBox="0 0 480 480" role="img" aria-label={`Fixed stellar wheel with ${rows.length} calculated planet positions, showing ${layer} sectors`}>
+         {geometry==="diamond" ? <svg viewBox="0 0 480 480" role="img" aria-label={`Diamond chart displaying ${rows.length} calculated planets and ${frame} houses`}>
+           <defs><radialGradient id="cg2050-diamond-bg"><stop offset="0" stopColor="#1a214f"/><stop offset="1" stopColor="#080e25"/></radialGradient></defs>
+           <path d="M240 22 L458 240 L240 458 L22 240 Z" fill="url(#cg2050-diamond-bg)" stroke="#53f4ff" strokeWidth="2.6"/>
+           {[176,124,75].map(r=><path key={r} d={`M240 ${240-r} L${240+r} 240 L240 ${240+r} L${240-r} 240 Z`} fill="none" stroke={r===124?"#b275ff":"#568cbb"} strokeOpacity=".65" strokeWidth="1.5"/>)
+           {Array.from({length:12},(_,i)=>{const start=normalizeLongitude((frame==="god"?0:chart.ascendant?.longitude??0)+i*30);const a=diamondPoint(start,75),b=diamondPoint(start,215),label=diamondPoint(start+15,97);return <g key={`dh-${i}`}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#77eefa" strokeOpacity=".45"/><text x={label.x} y={label.y} fill="#f3d88c" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{i+1}</text></g>})}
+           {signs.map((glyph,i)=>{const q=diamondPoint(i*30+15,190);return <text key={glyph} x={q.x} y={q.y} fill="#f7e1ff" fontSize="17" textAnchor="middle" dominantBaseline="middle">{glyph}</text>})}
+           {rows.map(row=>{const q=diamondPoint(row.longitude,150),active=selectedRow?.name===row.name;return <g key={`dp-${row.name}`} onClick={()=>setSelected(row.name)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setSelected(row.name)}}} role="button" tabIndex={0} aria-label={`Inspect ${row.name} at ${row.display}`} style={{cursor:"pointer"}}><circle cx={q.x} cy={q.y} r={active?11:9} fill="#091228" stroke={active?"#ffe180":"#53f4ff"} strokeWidth="2"/><text x={q.x} y={q.y+1} fontSize="12" fill="#fff" textAnchor="middle" dominantBaseline="middle">{symbols[row.name]??"✦"}</text><title>{row.name} · {row.display}</title></g>})}
+           <text x="240" y="231" textAnchor="middle" fontSize="12" fill="#b0caff" letterSpacing="2">12 GATES</text><text x="240" y="252" textAnchor="middle" fontSize="14" fill="#fff6db">{frame==="god"?"GOD VIEW":"AGENT VIEW"}</text>
+         </svg> : <svg viewBox="0 0 480 480" role="img" aria-label={`Fixed stellar wheel with ${rows.length} calculated planet positions, showing ${layer} sectors`}>
            <defs><radialGradient id="cg2050-core"><stop stopColor="#243552" offset="0"/><stop stopColor="#0b1427" offset=".78"/><stop stopColor="#070e1d" offset="1"/></radialGradient><filter id="cg2050-glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
            <circle cx="240" cy="240" r="219" fill="url(#cg2050-core)" stroke="#cbaa78" strokeOpacity=".56" strokeWidth="1.6"/>
            <circle cx="240" cy="240" r="205" fill="none" stroke="#a8c7e8" strokeOpacity=".22"/>
@@ -48,7 +59,7 @@ export function ChartObservatory2050({chart}:{chart:ChartResult}){
            <text x="240" y="219" textAnchor="middle" fontSize="13" fill="#c3ad83" fontFamily="Georgia,serif" letterSpacing="3">FIRMAMENT</text>
            <text x="240" y="247" textAnchor="middle" fontSize="21" fill="#f1eee9" fontFamily="Georgia,serif">{frame==="god"?"GOD VIEW":"AGENT VIEW"}</text>
            <text x="240" y="268" textAnchor="middle" fontSize="10" fill="#92a8c1">{frame==="god"?"PERMANENT FRAME":"LOCAL EQUAL HOUSES"}</text>
-         </svg>
+         </svg>}
        </div>
        <div className="cg2050-frame-caption"><span><Eye size={13}/> FIXED STARS NEVER MOVE</span><span><Orbit size={13}/> TROPICAL PLANETS MOVE</span></div>
        <p className="cg2050-help">{frameDesc}</p>
