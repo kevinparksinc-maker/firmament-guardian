@@ -1,29 +1,30 @@
-# 12 Gates of the Firmament — House Frame Contract
+# 12 Gates of the Firmament — Natal House Integrity
 
-## Agent View: reverse-numbered equal houses
+## Guardian's canonical natal Equal House numbering
 
-User-approved rule: an Ascendant in Scorpio places **Sagittarius behind Scorpio in House 12**, Capricorn in House 11, Aquarius in House 10, etc.
+Guardian's astronomical Ascendant is calculated by Swiss Ephemeris in `server/astronomy.ts`.
+Its natal/Agent house numbers must remain zodiac-forward:
 
-`server/astrologyCore.ts` is authoritative:
-- Normalize `relative = longitude - ascendant` into [0,360).
-- Sector `s = floor(relative / 30)`.
-- House = 1 if s=0; otherwise `13-s`.
-- House 1 cusp = Ascendant; for house n>1, cusp = `ascendant + 30*(13-n)` modulo 360.
+- House cusp n: `(Ascendant + 30*(n-1)) mod 360`
+- House assignment: `floor(((longitude-Ascendant) mod 360)/30)+1`
+- Planet longitudes are never adjusted to achieve a layout.
 
-Example Scorpio 0° (210°): Scorpio 1, Sagittarius 12, Capricorn 11, Aquarius 10, Pisces 9, Aries 8, Taurus 7, Gemini 6, Cancer 5, Leo 4, Virgo 3, Libra 2.
+**Regression fixture:** Dallas natal chart with Ascendant Capricorn 07°22′ and
+Sun Scorpio 28°02′ has **Sun in House 11**, not House 3.
 
-## God View intentionally separate
+## Visual geometry is NOT a house-numbering operation
 
-God View remains **fixed Aries-zero**, with forward sectors 1=Aries to 12=Pisces; this is a permanent symbolic background grid and **not** the Agent View personal Ascendant scheme.
+A user describing Sagittarius as *behind* Scorpio describes the presentation,
+not permission to renumber their natal houses. Orient the chart as desired in SVG
+or CSS while preserving the canonical house labels.
 
-## Simulation Lab alignment
+## Simulation Lab
 
-`firmament-simulation-lab-premium/server/engine/houseFrameFoundation.ts` already uses reverse house numbering. The Guardian Agent View now shares that numbering contract. The two applications can still differ in Ascendant calculation, coordinate frames, or reference epochs; those MUST be checked before comparing results.
+Simulation Lab Premium currently has an intentional reverse-numbered experimental
+house framework. Its labels may be converted explicitly with
+`translateHouseLabelBetweenFrameworks()` only when genuinely comparing the
+same longitude and Ascendant in the same frame. Guardian MUST NOT inherit
+Lab house numbering for natal interpretation.
 
-`translateHouseLabelBetweenFrameworks()` remains a legacy utility converting *forward labels to reverse labels*, NOT a required conversion from current Guardian Agent to current Lab. No planet longitude, Ascendant, or zodiac sign should be moved by label conversion.
-
-## Visual and downstream caution
-
-`server/astronomy.ts` uses Swiss Ephemeris to compute an astronomical Ascendant; it does not use the Simulation Lab sunrise approximation. All renderers must consume the reversed `chart.houses` values with corresponding house labels; a separate loop that recomputes `ascendant + i*30` may visually conflict with the numbers.
-
-Run `server/houseFrameContract.test.ts`, `server/hybrid.test.ts` and regression tests before deployment. No tests are certified passing until actually executed.
+Regression tests: `server/houseFrameContract.test.ts` and
+`server/astrology-rules.test.ts`. Verify all tests and live rendering before release.
