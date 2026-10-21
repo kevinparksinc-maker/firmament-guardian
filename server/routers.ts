@@ -375,7 +375,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `You are the Master Interpreter in LIFE STORYTELLING MODE for Bible Believers Astrology.
+        const prompt = `You are the Master Interpreter in LIFE STORYTELLING MODE for 12 Gates of the Firmament.
 The user is asking: "${input.question}".
 Natal context: ${input.natalPlacements || "Calculated Natal Horizon"}
 Transit context: ${input.transitPlacements || "Current transit moment"}
