@@ -9,7 +9,30 @@ export const FIXED_STARS = [
 
 export const NAKSHATRAS = ["Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"] as const;
 export const MANAZIL = ["Al-Sharatain", "Al-Butain", "Al-Thurayya", "Al-Dabaran", "Al-Haq’ah", "Al-Han’ah", "Al-Dhira’", "Al-Nathrah", "Al-Tarf", "Al-Jabhah", "Al-Zubrah", "Al-Sarfah", "Al-Awwa’", "Al-Simak", "Al-Ghafr", "Al-Zubana", "Al-Iklil", "Al-Qalb", "Al-Shaula", "Al-Na’am", "Al-Baldah", "Sa’d al-Dhabih", "Sa’d Bula’", "Sa’d al-Su’ud", "Sa’d al-Akhbiya", "Al-Fargh al-Muqaddam", "Al-Fargh al-Mu’akhkhar", "Al-Risha/Batn al-Hut"] as const;
-export const DECANS = ["Mars (Aries 1st)", "Sun (Aries 2nd)", "Venus (Aries 3rd)", "Mercury (Taurus 1st)", "Moon (Taurus 2nd)", "Saturn (Taurus 3rd)", "Jupiter (Gemini 1st)", "Mars (Gemini 2nd)", "Sun (Gemini 3rd)", "Venus (Cancer 1st)", "Mercury (Cancer 2nd)", "Moon (Cancer 3rd)", "Saturn (Leo 1st)", "Jupiter (Leo 2nd)", "Mars (Leo 3rd)", "Sun (Virgo 1st)", "Venus (Virgo 2nd)", "Mercury (Virgo 3rd)", "Moon (Libra 1st)", "Saturn (Libra 2nd)", "Jupiter (Libra 3rd)", "Mars (Scorpio 1st)", "Sun (Scorpio 2nd)", "Venus (Scorpio 3rd)", "Mercury (Sagittarius 1st)", "Moon (Sagittarius 2nd)", "Saturn (Sagittarius 3rd)", "Jupiter (Capricorn 1st)", "Mars (Capricorn 2nd)", "Sun (Capricorn 3rd)", "Venus (Aquarius 1st)", "Mercury (Aquarius 2nd)", "Moon (Aquarius 3rd)", "Saturn (Pisces 1st)", "Jupiter (Pisces 2nd)", "Mars (Pisces 3rd)"] as const;
+/** Elemental-family (triplicity) decans: each sign's three ten-degree sectors
+ * follow the three zodiac signs of its element, beginning with the host sign.
+ * This is NOT the Chaldean planetary-face sequence.
+ */
+export const ELEMENTAL_DECAN_SIGNS = [
+  ["Aries", "Leo", "Sagittarius"],
+  ["Taurus", "Virgo", "Capricorn"],
+  ["Gemini", "Libra", "Aquarius"],
+  ["Cancer", "Scorpio", "Pisces"],
+  ["Leo", "Sagittarius", "Aries"],
+  ["Virgo", "Capricorn", "Taurus"],
+  ["Libra", "Aquarius", "Gemini"],
+  ["Scorpio", "Pisces", "Cancer"],
+  ["Sagittarius", "Aries", "Leo"],
+  ["Capricorn", "Taurus", "Virgo"],
+  ["Aquarius", "Gemini", "Libra"],
+  ["Pisces", "Cancer", "Scorpio"],
+] as const;
+export const DECANS = ELEMENTAL_DECAN_SIGNS.flatMap((family, signIndex) =>
+  family.map((familySign, decanIndex) =>
+    `${familySign} (${ZODIAC_SIGNS[signIndex]} ${["1st","2nd","3rd"][decanIndex]} elemental decan)`
+  )
+);
+
 
 export type Overlay = { nakshatra: string; pada: number; manzil: string; decan: string; nakshatraRuler?: string };
 export function overlay(longitude: number): Overlay {
