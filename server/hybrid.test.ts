@@ -33,7 +33,7 @@ describe("Hybrid Zodiac constants and overlays", () => {
     expect(FIXED_STARS.find(([name]) => name === "Fomalhaut")?.[1]).toBe(315);
   });
   it("starts the overlay wheel at tropical Aries", () => {
-    expect(overlay(0)).toMatchObject({ nakshatra: "Ashwini", pada: 1, manzil: "Al-Sharatain", decan: "Mars (Aries 1st)" });
+    expect(overlay(0)).toMatchObject({ nakshatra: "Ashwini", pada: 1, manzil: "Al-Sharatain", decan: "Aries (Aries 1st elemental decan)" });
     expect(formatLongitude(12.9333)).toBe("Aries 12°56′");
   });
   it("keeps canonical geocentric longitudes while exposing lunar parallax separately", async () => {
