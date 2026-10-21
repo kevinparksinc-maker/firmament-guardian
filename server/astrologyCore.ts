@@ -143,47 +143,39 @@ function godThemesSentence(themes: string[]) {
 }
 
 /**
- * 12 Gates house-frame rules.
- * Agent View: Ascendant occupies House 1; successive +30° zodiac sectors
- * receive House 12, 11, ... 2 (reverse numbering).
- * God View: fixed Aries-zero sectors remain numbered 1 through 12.
- * Planetary positions and Swiss Ephemeris Ascendant are not rotated.
+ * Guardian natal/Agent Equal Houses follow zodiac-forward numbering.
+ * A planet's astronomical longitude never changes because the chart is rotated.
+ * Screen-space clockwise/counterclockwise direction is a rendering concern.
  */
-export const GUARDIAN_HOUSE_SEQUENCE = "reverse-equal-30" as const;
+export const GUARDIAN_HOUSE_SEQUENCE = "forward-equal-30" as const;
 export const SIMULATION_LAB_HOUSE_SEQUENCE = "reverse-equal-30" as const;
 export const EQUAL_HOUSE_SIZE_DEGREES = 30;
-
 export function guardianHouseCusp(house: number, ascendant: number): number {
   if (!Number.isInteger(house) || house < 1 || house > 12)
     throw new RangeError("House must be an integer from 1 to 12");
   if (!Number.isFinite(ascendant)) throw new RangeError("Ascendant must be finite");
-  return normalizeLongitude(ascendant + (house === 1 ? 0 : 13 - house) * 30);
+  return normalizeLongitude(ascendant + (house - 1) * 30);
 }
-
 export function guardianHouseAt(longitude: number, ascendant: number): number {
   if (!Number.isFinite(longitude) || !Number.isFinite(ascendant))
     throw new RangeError("Longitude and Ascendant must be finite");
-  const segment = Math.floor(normalizeLongitude(longitude - ascendant) / 30);
-  return segment === 0 ? 1 : 13 - segment;
+  return Math.floor(normalizeLongitude(longitude - ascendant) / 30) + 1;
 }
-
-/** Legacy forward ↔ reverse house label conversion, never a longitude conversion. */
+/** Only for explicit inter-app conversion, never change a natal house implicitly. */
 export function translateHouseLabelBetweenFrameworks(house: number): number {
   if (!Number.isInteger(house) || house < 1 || house > 12)
     throw new RangeError("House must be an integer from 1 to 12");
   return house === 1 ? 1 : 14 - house;
 }
-
 export function godHouseFor(longitude: number) {
   return Math.floor(normalizeLongitude(longitude) / 30) + 1;
 }
-
 export function agentHouseFor(longitude: number, ascendant: number) {
   return guardianHouseAt(longitude, ascendant);
 }
-
 export function equalHouseCusps(ascendant: number) {
-  return Array.from({ length: 12 }, (_, index) => Number(guardianHouseCusp(index + 1, ascendant).toFixed(6)));
+  return Array.from({ length: 12 }, (_, index) =>
+    Number(guardianHouseCusp(index + 1, ascendant).toFixed(6)));
 }
 
 export function angularDistance(a: number, b: number) {
