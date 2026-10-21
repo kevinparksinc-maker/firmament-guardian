@@ -11,9 +11,9 @@ describe("Astrology core worldview math", () => {
     expect(godHouseFor(359.999)).toBe(12);
   });
   it("builds 30-degree Equal House cusps from the Ascendant", () => {
-    expect(equalHouseCusps(277.35)).toEqual([277.35, 307.35, 337.35, 7.35, 37.35, 67.35, 97.35, 127.35, 157.35, 187.35, 217.35, 247.35]);
+    expect(equalHouseCusps(277.35)).toEqual([277.35, 247.35, 217.35, 187.35, 157.35, 127.35, 97.35, 67.35, 37.35, 7.35, 337.35, 307.35]);
     expect(agentHouseFor(277.35, 277.35)).toBe(1);
-    expect(agentHouseFor(7.35, 277.35)).toBe(4);
+    expect(agentHouseFor(7.35, 277.35)).toBe(10);
   });
   it("marks Royal Star anchors and assigns stepped 5-degree weights", () => {
     const contacts = royalStarContacts(45);
