@@ -82,3 +82,12 @@ export function seferYetzirahEvidence(chart:ChartResult, layer:"natal"|"transit"
     ["four-worlds","emanation","creation","formation","action"],WORLDS_SOURCE,"Jewish Encyclopedia: Beriah and the Four Worlds"));
   return result;
 }
+
+/** Shared synthesis policy for all consumers of the evidence layer.
+ * These symbolic correspondences qualify an interpretation; they do not replace
+ * calculated chart facts or establish concrete life outcomes.
+ */
+export const KABBALAH_SYNTHESIS_STANDARD = `SEFER YETZIRAH AND FOUR WORLDS — CORE INTERPRETIVE DIMENSION
+Review all supplied Sefer Yetzirah and Four Worlds correspondences for the actual question, including the seven planetary double-letter associations and twelve zodiac simple-letter associations. Distinguish which correspondences come from natal positions and which come from transits or the horary question moment. Where God View and Agent View are supplied, compare the same planetary symbolism in their different house contexts without moving any body or conflating the two frames.
+When relevant, use the later Kabbalistic Four Worlds as a disciplined interpretive sequence: Atzilut = principle or source; Beriah = possibility/creation; Yetzirah = structure and formation; Assiah = observable action and consequence. Connect the sequence to WHAT, WHY, HOW, CONSEQUENCE and MEANING and to the user's actual question. Do not fabricate a separate calculated Four Worlds score.
+Treat the Sefer Yetzirah three mothers (Air/Water/Fire) as separate from the application's four-element decans. Identify manuscript/translation variants rather than presenting one letter-planet attribution as universal. Jewish Kabbalah and later Hermetic Qabalah are separate provenance families. Keep this a real, named layer of synthesis where helpful, not an obligatory generic paragraph; it must never override classical horary judgment, astronomical calculations, or the evidence. Astrology and symbolic cosmology do not scientifically demonstrate causation or guarantee manifestation.`;
