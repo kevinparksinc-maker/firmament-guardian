@@ -143,9 +143,11 @@ describe("deterministic astrology rule fixtures", () => {
     expect(evidence.some(item => item.id === "vedic-drishti-Jupiter-7")).toBe(
       true
     );
-    expect(evidence.some(item => item.id === "vedic-drishti-Saturn-2")).toBe(
-      true
-    );
+    const saturnHouse = chart.movingBodies.find(row => row.name === "Saturn")!.house;
+    const expectedSaturnTargets = [3, 7, 10].map(n => ((saturnHouse + n - 2) % 12) + 1);
+    for (const target of expectedSaturnTargets) {
+      expect(evidence.some(item => item.id === `vedic-drishti-Saturn-${target}`)).toBe(true);
+    }
   });
 
   it("runs Genesis pattern recognition on Firmament chart calculations", async () => {
