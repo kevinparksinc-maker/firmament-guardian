@@ -58,25 +58,26 @@ const evidence=(id:string,technique:string,subject:string,statement:string,conce
   id,tradition:"firmament",category:"source-correspondence",technique,subject,statement,concepts,
   polarity:"neutral",sourceId:"sefer-yetzirah-canon",sourceTrace:trace(technique,url,title),
 });
-export function seferYetzirahEvidence(chart:ChartResult):EvidenceItem[]{
+export function seferYetzirahEvidence(chart:ChartResult, layer:"natal"|"transit"="natal"):EvidenceItem[]{
   const result:EvidenceItem[]=[];
-  result.push(evidence("sy-cosmology-32","sefer-yetzirah-framework","32 Paths",
+  if(layer==="natal") result.push(evidence("sy-cosmology-32","sefer-yetzirah-framework","32 Paths",
     "[TEXTUAL TRADITION] Thirty-two paths: ten sefirot and twenty-two Hebrew letters (three mothers, seven doubles, twelve simples). This is symbolic cosmology, not a physical prediction.",
     ["sefer-yetzirah","32-paths","cosmology"]));
-  result.push(evidence("sy-mothers","sefer-yetzirah-mothers","Aleph Mem Shin",
+  if(layer==="natal") result.push(evidence("sy-mothers","sefer-yetzirah-mothers","Aleph Mem Shin",
     "[TEXTUAL TRADITION] Mother letters: Aleph/Air, Mem/Water, Shin/Fire. Earth is not one of the three mothers. Guardian's four-element decan framework remains independent.",
     ["sefer-yetzirah","mothers","elements"]));
-  for(const row of chart.movingBodies){
+  const rows = layer==="transit" ? chart.transits : chart.movingBodies;
+  for(const row of rows){
     const body=DOUBLE_LETTERS.find(r=>r.planet===row.name);
-    if(body) result.push(evidence(`sy-double-${row.name.toLowerCase()}`,"sefer-yetzirah-doubles",row.name,
-      `[WESTCOTT CHAPTER IV SUPPLEMENT — found in some editions, not universal] ${row.name} at ${row.display}: double letter ${body.name} (${body.letter}), symbolic quality ${body.quality}. The seven pairs of contraries are given collectively in chapter IV; this supplement does not uniquely assign one pair to each planet. The chart does not establish what manifests.`,
+    if(body) result.push(evidence(`sy-${layer}-double-${row.name.toLowerCase()}`,"sefer-yetzirah-doubles",row.name,
+      `[WESTCOTT CHAPTER IV SUPPLEMENT — found in some editions, not universal] ${layer.toUpperCase()} ${row.name} at ${row.display}: double letter ${body.name} (${body.letter}), symbolic quality ${body.quality}. The seven pairs of contraries are given collectively in chapter IV; this supplement does not uniquely assign one pair to each planet. The chart does not establish what manifests.`,
       ["sefer-yetzirah","seven-doubles",row.name.toLowerCase(),body.name.toLowerCase()]));
     const simple=SIMPLE_LETTERS[Math.floor(normalizeLongitude(row.longitude)/30)];
-    result.push(evidence(`sy-simple-${row.name.toLowerCase()}`,"sefer-yetzirah-simples",row.name,
-      `[TEXTUAL VARIANT] ${row.name} at ${row.display}: ${simple.sign} is associated with the simple letter ${simple.name} (${simple.letter}) in the specified recension. This does not replace zodiac or house calculations.`,
+    result.push(evidence(`sy-${layer}-simple-${row.name.toLowerCase()}`,"sefer-yetzirah-simples",row.name,
+      `[TEXTUAL VARIANT] ${layer.toUpperCase()} ${row.name} at ${row.display}: ${simple.sign} is associated with the simple letter ${simple.name} (${simple.letter}) in the specified recension. This does not replace zodiac or house calculations.`,
       ["sefer-yetzirah","twelve-simples",simple.sign.toLowerCase(),row.name.toLowerCase()]));
   }
-  result.push(evidence("sy-four-worlds","four-worlds","Four Worlds",
+  if(layer==="natal") result.push(evidence("sy-four-worlds","four-worlds","Four Worlds",
     "[LATER JEWISH KABBALAH — distinct from Sefer Yetzirah] Atzilut/Emanation → Beriah/Creation → Yetzirah/Formation → Assiah/Action. Interpret symbolically through source, possibility, formed pattern, and observable action; do not claim a chart proves causal manifestation.",
     ["four-worlds","emanation","creation","formation","action"],WORLDS_SOURCE,"Jewish Encyclopedia: Beriah and the Four Worlds"));
   return result;
