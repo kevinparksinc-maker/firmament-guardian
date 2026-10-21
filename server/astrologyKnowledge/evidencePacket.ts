@@ -352,7 +352,7 @@ export function buildAstrologyEvidencePacket(
   const { behavioralEvidence, lifeEventEvidence } =
     behavioralReportToEvidenceItems(behavioralReport);
   const canonDossier = retrieveChartCanonDossier(chart);
-  const canonEvidence = [...canonDossierToEvidenceItems(canonDossier), ...seferYetzirahEvidence(chart)];
+  const canonEvidence = [...canonDossierToEvidenceItems(canonDossier), ...seferYetzirahEvidence(chart), ...(mode !== "natal" ? seferYetzirahEvidence(chart, "transit") : [])];
   const all = [
     ...westernEvidence,
     ...astroEvidence,
