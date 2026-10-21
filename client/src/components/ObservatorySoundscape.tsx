@@ -156,14 +156,14 @@ export function ObservatorySoundscape() {
     <div className="pointer-events-none fixed -left-[9999px] -top-[9999px] h-1 w-1 overflow-hidden opacity-0" aria-hidden="true">
       <div ref={containerRef} />
     </div>
-    <div className="fixed bottom-20 right-3 z-30 flex items-center gap-2 sm:bottom-4 sm:right-4">
+    <div className="relative z-20 mx-auto flex w-full max-w-[1480px] items-center justify-end gap-2 px-5 pt-3 md:px-10">
       <div className={`overflow-hidden rounded-full border border-violet-200/20 bg-slate-950/85 shadow-xl shadow-violet-950/20 backdrop-blur-xl transition-all ${expanded ? "w-52" : "w-0"}`}>
         <div className="flex h-10 items-center gap-2 px-3">
           <span className="truncate text-[9px] font-semibold uppercase tracking-[.12em] text-violet-100">Inner Peace · 528 Hz</span>
           <input aria-label="Music volume" type="range" min="0" max="1" step="0.01" value={volume} onChange={event => updateVolume(Number(event.target.value))} className="w-16 accent-cyan-300" />
         </div>
       </div>
-      <button type="button" onClick={() => setExpanded(value => !value)} aria-expanded={expanded} aria-label="Open music controls" className="rounded-full border border-violet-200/20 bg-slate-950/85 p-2 text-slate-300 shadow-xl shadow-violet-950/20 backdrop-blur-xl hover:border-violet-200/45 hover:text-white"><ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} /></button>
+      <button type="button" onClick={() => setExpanded(value => !value)} aria-expanded={expanded} aria-label="Open music controls" className="rounded-full border border-cyan-300/40 bg-[#0a1531]/95 p-2 text-slate-300 shadow-xl shadow-violet-950/20 backdrop-blur-xl hover:border-violet-200/45 hover:text-white"><ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} /></button>
       <button type="button" onClick={togglePlayback} aria-pressed={playing} aria-label={playing ? "Pause background music" : "Play background music"} className="inline-flex items-center gap-2 rounded-full border border-violet-200/20 bg-slate-950/85 px-3 py-2 text-[10px] font-semibold uppercase tracking-[.16em] text-violet-100 shadow-xl shadow-violet-950/20 backdrop-blur-xl hover:border-violet-200/45 hover:bg-slate-900/90">{playing ? <Pause className="h-3.5 w-3.5 text-cyan-300" /> : <Play className="h-3.5 w-3.5 text-violet-200" />}<span className="hidden sm:inline">{playing ? "Music on" : "Music off"}</span></button>
       <button type="button" onClick={toggleMute} aria-label={playing ? "Mute background music" : "Unmute background music"} className="rounded-full border border-violet-200/20 bg-slate-950/85 p-2 text-slate-300 shadow-xl shadow-violet-950/20 backdrop-blur-xl hover:border-violet-200/45 hover:text-white">{playing ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}</button>
       <AudioLines className={`h-3.5 w-3.5 ${playing ? "animate-pulse text-cyan-300" : "text-slate-600"}`} aria-hidden="true" />
