@@ -13,3 +13,4 @@ export * from "./arabicPersianCanon";
 export * from "./retriever";
 
 export * from "./chineseMansions28";
+export * from "./seferYetzirah";
