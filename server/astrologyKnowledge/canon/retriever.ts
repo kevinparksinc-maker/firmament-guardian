@@ -167,7 +167,7 @@ export function retrieveChartCanonDossier(
     }
     if (p.decanRecord) {
       lines.push(
-        `  - [Decan ${p.decanRecord.index}/36: ${p.decanRecord.label} — "${p.decanRecord.traditionalTitle}"] Chaldean Face: ${p.decanRecord.chaldeanFaceRuler} | Triplicity Sub-ruler: ${p.decanRecord.triplicitySubRuler}. ${p.decanRecord.behavioralNuance}`
+        `  - [Decan ${p.decanRecord.index}/36: ${p.decanRecord.label} — "${p.decanRecord.traditionalTitle}"] Elemental family: ${p.decanRecord.elementalFamilySign} | Family sign ruler: ${p.decanRecord.elementalFamilyRuler}. ${p.decanRecord.behavioralNuance}`
       );
     }
     if (p.manzilRecord) {
