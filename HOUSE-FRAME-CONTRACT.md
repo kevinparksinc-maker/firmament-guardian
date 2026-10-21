@@ -1,56 +1,29 @@
-# 12 Gates — House Frame Contract
+# 12 Gates of the Firmament — House Frame Contract
 
-## Authoritative Guardian behavior
+## Agent View: reverse-numbered equal houses
 
-Source: `server/astrologyCore.ts`. Guardian uses a **forward equal-house** model:
-`cusp(n) = normalize(ascendant + 30 × (n-1))` and
-`house(lon) = floor(normalize(lon - ascendant) / 30) + 1`.
-God View uses the fixed Aries-zero anchor, and Agent View uses the astronomical
-Ascendant returned by Swiss Ephemeris `houses_ex(..., "E")` in
-`server/astronomy.ts`. Planetary ecliptic longitude is unchanged between frames.
+User-approved rule: an Ascendant in Scorpio places **Sagittarius behind Scorpio in House 12**, Capricorn in House 11, Aquarius in House 10, etc.
 
-## Simulation Lab divergence — intentional and NOT silently migrated
+`server/astrologyCore.ts` is authoritative:
+- Normalize `relative = longitude - ascendant` into [0,360).
+- Sector `s = floor(relative / 30)`.
+- House = 1 if s=0; otherwise `13-s`.
+- House 1 cusp = Ascendant; for house n>1, cusp = `ascendant + 30*(13-n)` modulo 360.
 
-The separate `firmament-simulation-lab-premium` repository currently uses
-**reverse house numbering** in `server/engine/houseFrameFoundation.ts`.
-For the same Ascendant and *same longitude coordinate frame*, forward and reverse
-labels map as follows:
+Example Scorpio 0° (210°): Scorpio 1, Sagittarius 12, Capricorn 11, Aquarius 10, Pisces 9, Aries 8, Taurus 7, Gemini 6, Cancer 5, Leo 4, Virgo 3, Libra 2.
 
-| Guardian | Lab |
-|---|---|
-| 1 | 1 |
-| 2 | 12 |
-| 3 | 11 |
-| 4 | 10 |
-| 5 | 9 |
-| 6 | 8 |
-| 7 | 7 |
-| 8 | 6 |
-| 9 | 5 |
-| 10 | 4 |
-| 11 | 3 |
-| 12 | 2 |
+## God View intentionally separate
 
-Use `translateHouseLabelBetweenFrameworks()` for **labels only**.
-Do not convert longitudes, rotate the wheel, exchange teams, or reinterpret the
-physical chart as part of a label translation. Frame anchors, coordinate epochs,
-and sign conventions must be verified before any cross-app comparison.
+God View remains **fixed Aries-zero**, with forward sectors 1=Aries to 12=Pisces; this is a permanent symbolic background grid and **not** the Agent View personal Ascendant scheme.
 
-### Example
+## Simulation Lab alignment
 
-Scorpio 0° (210°) Ascendant, Sagittarius 10° (250°) object:
-Guardian house 2; Simulation Lab house 12. Both refer to the **same** 250°
-longitude; only their house numbering convention differs.
+`firmament-simulation-lab-premium/server/engine/houseFrameFoundation.ts` already uses reverse house numbering. The Guardian Agent View now shares that numbering contract. The two applications can still differ in Ascendant calculation, coordinate frames, or reference epochs; those MUST be checked before comparing results.
 
-## Change-management policy
+`translateHouseLabelBetweenFrameworks()` remains a legacy utility converting *forward labels to reverse labels*, NOT a required conversion from current Guardian Agent to current Lab. No planet longitude, Ascendant, or zodiac sign should be moved by label conversion.
 
-- The applications **remain deliberately different** until the owner explicitly
-  approves one common house-order policy.
-- Do not silently rewrite `firmament-simulation-lab-premium` while a separate
-  integration is underway.
-- Each method/evidence output should include framework identifier, Ascendant,
-  and coordinate reference.
-- Relevant regression tests: `server/houseFrameContract.test.ts`.
-- Wheel display orientation must not be mistaken for house numbering.
+## Visual and downstream caution
 
-This document reconciles the conventions; it does not certify all live renderers.
+`server/astronomy.ts` uses Swiss Ephemeris to compute an astronomical Ascendant; it does not use the Simulation Lab sunrise approximation. All renderers must consume the reversed `chart.houses` values with corresponding house labels; a separate loop that recomputes `ascendant + i*30` may visually conflict with the numbers.
+
+Run `server/houseFrameContract.test.ts`, `server/hybrid.test.ts` and regression tests before deployment. No tests are certified passing until actually executed.
