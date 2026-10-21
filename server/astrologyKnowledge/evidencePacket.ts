@@ -1,3 +1,4 @@
+import { seferYetzirahEvidence } from "./canon/seferYetzirah";
 import type { ChartResult } from "../astronomy";
 import { planKnowledge } from "./planner";
 import { resolveWesternEvidence } from "./western";
@@ -351,7 +352,7 @@ export function buildAstrologyEvidencePacket(
   const { behavioralEvidence, lifeEventEvidence } =
     behavioralReportToEvidenceItems(behavioralReport);
   const canonDossier = retrieveChartCanonDossier(chart);
-  const canonEvidence = canonDossierToEvidenceItems(canonDossier);
+  const canonEvidence = [...canonDossierToEvidenceItems(canonDossier), ...seferYetzirahEvidence(chart)];
   const all = [
     ...westernEvidence,
     ...astroEvidence,
