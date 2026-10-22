@@ -1,3 +1,4 @@
+import sweph from "sweph";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type { ChartResult } from "../../astronomy";
 import type { EvidenceItem } from "../types";
@@ -27,13 +28,24 @@ export function vargaPlacement(longitude:number, division:Varga) {
  }
  return {division,part:part+1,sourceSign:ZODIAC_SIGNS[sign],sign:ZODIAC_SIGNS[result],signIndex:result,degreeInPart:degree-part*(30/n),coordinateFrame:"guardian-fixed-zero-reference" as const};
 }
+function lahiriAyanamsa(julianDay:number):number|null {
+  try {
+    const sw=sweph as any;
+    sw.set_sid_mode(sw.constants?.SE_SIDM_LAHIRI ?? 1,0,0);
+    const raw=sw.get_ayanamsa_ut(julianDay);
+    const value=typeof raw==="number"?raw:Number(raw?.data ?? raw?.ayanamsa);
+    return Number.isFinite(value)&&value>=0&&value<40?value:null;
+  }catch{return null;}
+}
 export function resolveVargaEvidence(chart:ChartResult):EvidenceItem[]{
+ const offset=Number.isFinite(chart.julianDay)?lahiriAyanamsa(chart.julianDay):null;
+ const coordinateFrame=offset===null?"guardian-fixed-zero-reference":"lahiri-sidereal";
  const rows=[...chart.movingBodies,chart.ascendant,chart.northNode,chart.southNode].filter((r):r is NonNullable<typeof r>=>r !== null && r !== undefined && Number.isFinite(r.longitude));
- const trace=(division:Varga)=>({sourceId:"local-vedic-rules",tradition:"vedic" as const,technique:"varga",sourceTitle:"Parashari varga mapping (explicit variant); Guardian fixed-background coordinates, not Lahiri sidereal",retrievedAt:new Date().toISOString(),ruleId:"vedic-varga-architecture",confidence:"moderate" as const,calculationSettings:{division,coordinateFrame:"guardian-fixed-zero-reference",siderealConversionApplied:false}});
+ const trace=(division:Varga)=>({sourceId:"local-vedic-rules",tradition:"vedic" as const,technique:"varga",sourceTitle:"Parashari varga mapping (explicit variant); Guardian fixed-background coordinates, not Lahiri sidereal",retrievedAt:new Date().toISOString(),ruleId:"vedic-varga-architecture",confidence:"moderate" as const,calculationSettings:{division,coordinateFrame,ayanamsaDegrees:offset,siderealConversionApplied:offset!==null}});
  return (["D2","D3","D9","D10"] as const).flatMap(division=>rows.map(row=>{
-  const v=vargaPlacement(row.longitude,division);
+  const v=vargaPlacement(offset===null?row.longitude:normalizeLongitude(row.longitude-offset),division);
   return {id:`vedic-varga-${division}-${row.name.toLowerCase().replace(/\s+/g,"-")}`,tradition:"vedic" as const,category:"deterministic-rule" as const,technique:"varga",subject:row.name,
-   statement:`[${division} · Guardian fixed-zero varga projection; NOT Lahiri-sidereal] ${row.name} at ${row.display}: source ${v.sourceSign}, division ${v.part}/${Number(division.slice(1))}, derived ${v.sign}. The Parashari subdivision is mapped mathematically, but a true Jyotish varga requires sidereal source longitudes.`,
+   statement:`[${division} · ${coordinateFrame}] ${row.name} at tropical ${row.display}: ${offset===null?"Lahiri ayanamsa could not be computed; this fixed-zero projection is NOT a validated Jyotish varga.":`Lahiri ayanamsa ${offset.toFixed(5)}°, sidereal source longitude ${normalizeLongitude(row.longitude-offset).toFixed(5)}°.`} Source sign ${v.sourceSign}, division ${v.part}/${Number(division.slice(1))}, derived ${v.sign}.`,
    concepts:["varga",division.toLowerCase(),row.name.toLowerCase(),v.sign.toLowerCase()],polarity:"neutral" as const,sourceId:"local-vedic-rules",sourceTrace:trace(division)};
  }));
 }
