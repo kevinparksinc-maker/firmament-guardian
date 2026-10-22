@@ -11,3 +11,4 @@ export * from "./behavioral";
 export * from "./canon";
 
 
+export * from "./methodCoverage";
