@@ -780,38 +780,38 @@ export default function Home() {
 
             {/* Unlocking Teaser: What profound insights will unlock */}
             <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md">
+              <button type="button" onClick={() => { setMainTab("blueprint"); setIsProfileModalOpen(true); }} aria-label="Open 16-System Convergence after creating your chart" className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left backdrop-blur-md cursor-pointer transition hover:border-cyan-300/40 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300">
                 <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
                   <Layers className="h-4 w-4" />
                   <span>16-System Convergence</span>
-                </div>
+                </button>
                 <p className="mt-2 text-xs text-slate-400 leading-relaxed">
                   Swiss Ephemeris degrees mapped into 27 Vedic Nakshatras & padas, 28 Arabic Manazil, and 36 Decans.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md">
+              <button type="button" onClick={() => { setMainTab("synastry"); setIsProfileModalOpen(true); }} aria-label="Open Synastry & Chemistry Hub after creating your chart" className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left backdrop-blur-md cursor-pointer transition hover:border-cyan-300/40 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300">
                 <div className="flex items-center gap-2 text-xs font-semibold text-rose-300">
                   <Heart className="h-4 w-4" />
                   <span>Synastry & Chemistry Hub</span>
-                </div>
+                </button>
                 <p className="mt-2 text-xs text-slate-400 leading-relaxed">
                   Compare dual-chart orbital mechanics with loved ones, house overlays, and friction aspects.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md">
+              <button type="button" onClick={() => { setMainTab("weather"); setIsProfileModalOpen(true); }} aria-label="Open 30/90-Day Cosmic Weather after creating your chart" className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left backdrop-blur-md cursor-pointer transition hover:border-cyan-300/40 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300">
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
                   <Calendar className="h-4 w-4" />
                   <span>30/90-Day Cosmic Weather</span>
-                </div>
+                </button>
                 <p className="mt-2 text-xs text-slate-400 leading-relaxed">
                   Track exact transiting planetary hits against your natal houses, retrograde stations, and ingress points.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md">
+              <button type="button" onClick={() => { setMainTab("blueprint"); setIsProfileModalOpen(true); }} aria-label="Open AI Master Interpreter after creating your chart" className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left backdrop-blur-md cursor-pointer transition hover:border-cyan-300/40 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300">
                 <div className="flex items-center gap-2 text-xs font-semibold text-violet-300">
                   <Sparkles className="h-4 w-4" />
                   <span>AI Master Interpreter</span>
-                </div>
+                </button>
                 <p className="mt-2 text-xs text-slate-400 leading-relaxed">
                   Conversational RAG agent grounded strictly in your exact celestial coordinates—zero generic fluff.
                 </p>
@@ -854,7 +854,7 @@ export default function Home() {
             <div id="main-cosmos-tabs" className="fg-celestial-tabs mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
           <button
             type="button"
-            onClick={() => setMainTab("blueprint")}
+            onClick={() => { setMainTab("blueprint"); document.getElementById("main-cosmos-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
             className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
               mainTab === "blueprint"
                 ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-950/30"
@@ -867,7 +867,7 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => setMainTab("synastry")}
+            onClick={() => { setMainTab("synastry"); document.getElementById("main-cosmos-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
             className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
               mainTab === "synastry"
                 ? "bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-lg shadow-rose-950/30"
@@ -883,7 +883,7 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => setMainTab("weather")}
+            onClick={() => { setMainTab("weather"); document.getElementById("main-cosmos-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
             className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
               mainTab === "weather"
                 ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-950/30"
@@ -896,7 +896,7 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => setMainTab("podcast")}
+            onClick={() => { setMainTab("podcast"); document.getElementById("main-cosmos-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
             className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
               mainTab === "podcast"
                 ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-950/30"
@@ -909,7 +909,7 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => setMainTab("social")}
+            onClick={() => { setMainTab("social"); document.getElementById("main-cosmos-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
             className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
               mainTab === "social"
                 ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-950/30"
