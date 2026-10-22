@@ -28,7 +28,7 @@ export function vargaPlacement(longitude:number, division:Varga) {
  return {division,part:part+1,sourceSign:ZODIAC_SIGNS[sign],sign:ZODIAC_SIGNS[result],signIndex:result,degreeInPart:degree-part*(30/n),coordinateFrame:"guardian-fixed-zero-reference" as const};
 }
 export function resolveVargaEvidence(chart:ChartResult):EvidenceItem[]{
- const rows=[...chart.movingBodies,chart.ascendant,chart.northNode,chart.southNode].filter((r):r is NonNullable<typeof r>=>Boolean(r)&&Number.isFinite(r.longitude));
+ const rows=[...chart.movingBodies,chart.ascendant,chart.northNode,chart.southNode].filter((r):r is NonNullable<typeof r>=>r !== null && r !== undefined && Number.isFinite(r.longitude));
  const trace=(division:Varga)=>({sourceId:"local-vedic-rules",tradition:"vedic" as const,technique:"varga",sourceTitle:"Parashari varga mapping (explicit variant); Guardian fixed-background coordinates, not Lahiri sidereal",retrievedAt:new Date().toISOString(),ruleId:"vedic-varga-architecture",confidence:"moderate" as const,calculationSettings:{division,coordinateFrame:"guardian-fixed-zero-reference",siderealConversionApplied:false}});
  return (["D2","D3","D9","D10"] as const).flatMap(division=>rows.map(row=>{
   const v=vargaPlacement(row.longitude,division);
