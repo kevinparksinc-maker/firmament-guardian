@@ -44,6 +44,8 @@ describe("Master Interpreter prompt coverage", () => {
     expect(MASTER_INTERPRETER_PROMPT).not.toContain("The next thing I'd build");
     expect(ASTROLOGY_INTERPRETATION_ADAPTER).toContain("calculation engine and the supplied chart evidence are the sole source of chart facts");
     expect(buildAstrologyInterpreterSystem()).toContain("VEDIC Dasha & Ashtakavarga Evidence Contract");
+    expect(buildAstrologyInterpreterSystem()).toContain("BOLD CLAIM → WHY");
+    expect(buildAstrologyInterpreterSystem()).toContain("UNIVERSAL THREE-LAYER DIVINATION ARCHITECTURE");
     expect(buildAstrologyInterpreterSystem()).toContain("Never imply Trikona Sodhana or Ekadhipatya Sodhana was applied");
   });
 
@@ -63,6 +65,7 @@ describe("Master Interpreter prompt coverage", () => {
     expect(system).toContain("What this means for you");
     expect(system).toContain("FACTS");
     expect(system).toContain("VOICE");
+    expect(system).toContain("Every consequential declarative judgment");
     expect(system.indexOf("VOICE")).toBeGreaterThan(system.indexOf("METHOD"));
     expect(user).toContain("CHART EVIDENCE SHEET");
     expect(user).toContain("READING PLAN");
@@ -73,6 +76,7 @@ describe("Master Interpreter prompt coverage", () => {
     await followUp(chart, { intelligence: "synthetic", reading: "synthetic" }, [], "What does this pattern mean?", "combined");
     expect(systemPromptFromLastCall()).toContain("THE QUESTION BEHIND THE QUESTION");
     expect(systemPromptFromLastCall()).toContain(ASTROLOGY_INTERPRETATION_ADAPTER);
+    expect(systemPromptFromLastCall()).toContain("BOLD CLAIM → WHY");
   });
 
   it("attaches the Master Interpreter to model-backed Host responses", async () => {
