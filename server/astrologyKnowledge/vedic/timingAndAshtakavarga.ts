@@ -2,6 +2,40 @@ import type { ChartResult } from "../../astronomy";
 import { normalizeLongitude, ZODIAC_SIGNS, NAKSHATRAS } from "../../../shared/hybrid";
 import type { EvidenceItem, SourceTrace } from "../types";
 
+
+// Plain-language traditional symbolism. These are interpretive prompts, not
+// deterministic predictions and never substitute for the birth chart context.
+export const DASHA_THEMES: Record<string,{focus:string;opportunity:string;challenge:string;question:string}> = {
+ Ketu:{focus:"detachment, inward inquiry and simplifying identity",opportunity:"release a stale attachment or cultivate discernment",challenge:"withdrawal, disconnection or aimlessness",question:"What is no longer worth carrying?"},
+ Venus:{focus:"relationships, art, pleasure, values, beauty and material choices",opportunity:"develop a craft, strengthen partnerships and recognize what you value",challenge:"overindulgence, approval-seeking or avoiding discomfort",question:"What deserves your affection, time and resources?"},
+ Sun:{focus:"identity, visibility, authority and purpose",opportunity:"assume responsibility and express a clearer direction",challenge:"pride, overidentification with status or conflict with authority",question:"Where must you lead without needing to dominate?"},
+ Moon:{focus:"emotional needs, belonging, caregiving and changing circumstances",opportunity:"build supportive rhythms and emotional awareness",challenge:"reactivity, dependency or unsettled habits",question:"What makes you feel secure and understood?"},
+ Mars:{focus:"action, courage, conflict, physical energy and initiative",opportunity:"act decisively, build skills and defend appropriate boundaries",challenge:"impulsiveness, disputes or exhausting yourself",question:"Where is disciplined action better than reaction?"},
+ Rahu:{focus:"ambition, novelty, experimentation and unfamiliar environments",opportunity:"explore new communities or unconventional opportunities",challenge:"obsession, excess or confusing appetite with purpose",question:"What desire is genuinely worth pursuing?"},
+ Jupiter:{focus:"learning, teaching, ethics, mentoring and growth",opportunity:"broaden knowledge and use judgment generously",challenge:"overconfidence, overpromising or rigid belief",question:"Where does wisdom need to become practical?"},
+ Saturn:{focus:"duty, patience, structure, boundaries and endurance",opportunity:"master sustained work and establish reliability",challenge:"fear, isolation, delay or excessive self-criticism",question:"What lasting structure can you build through consistency?"},
+ Mercury:{focus:"speech, language, writing, trade, learning and dexterity",opportunity:"refine communication, analysis and hands-on skills",challenge:"overthinking, distraction or scattered commitments",question:"Which idea or skill needs disciplined practice?"},
+};
+export function interpretDashaLord(lord:string,level:"major"|"sub"|"micro"="major"):string{
+ const t=DASHA_THEMES[lord];
+ if(!t)return `${lord}: traditional interpretive details unavailable.`;
+ const role=level==="major"?"The overarching life-period theme":level==="sub"?"Within that larger period, the nearer-term emphasis":"The short-period emphasis";
+ return `${role} associated with ${lord} is ${t.focus}. Constructive expression: ${t.opportunity}. Potential friction: ${t.challenge}. Reflection: ${t.question} These are traditional symbolic themes, not an assertion that events will occur.`;
+}
+const SIGN_TOPICS=[
+"self-direction, courage and initiative","resources, stability and practical values",
+"communication, study and adaptability","home, kinship and inner security",
+"creative expression, confidence and visibility","craft, routine, health habits and service",
+"partnership, balance and negotiation","shared resources, intensity and transformation",
+"beliefs, teaching and exploration","career structures, persistence and responsibility",
+"community, friendships and future plans","rest, solitude, compassion and imagination",
+];
+export function interpretBindus(score:number,kind:"BAV"|"SAV",sign:string):string {
+ const tier=kind==="BAV"?(score>=5?"comparatively supported":score>=3?"mixed or moderate":"comparatively demanding"):(score>=30?"comparatively supported":score>=25?"mixed or moderate":"comparatively demanding");
+ const meaning=kind==="BAV"?"one planet's 0–8 point contribution":"the seven classical planets' combined 0–56 point total";
+ return `${sign} has ${score} ${kind} bindus (${meaning}), interpreted as ${tier} in the traditional scoring framework. Higher scores suggest relatively more ease/support, lower scores suggest more effort or caution; neither guarantees any event.`;
+}
+
 const ORDER = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"] as const;
 const YEARS: Record<(typeof ORDER)[number], number> = { Ketu:7, Venus:20, Sun:6, Moon:10, Mars:7, Rahu:18, Jupiter:16, Saturn:19, Mercury:17 };
 
@@ -56,8 +90,9 @@ function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number):Evidenc
  if(active){
   const ads=subperiods(active.start,active.end,active.lord);const ad=activePeriod(ads,now);const pds=ad?subperiods(ad.start,ad.end,ad.lord):[];const pd=activePeriod(pds,now);
   details.push("Current Mahadasha: "+active.lord+" ("+dateLabel(active.start)+"–"+dateLabel(active.end)+").");
-  if(ad) details.push("Current Antardasha: "+active.lord+"/"+ad.lord+" ("+dateLabel(ad.start)+"–"+dateLabel(ad.end)+").");
-  if(ad&&pd) details.push("Current Pratyantardasha: "+active.lord+"/"+ad.lord+"/"+pd.lord+" ("+dateLabel(pd.start)+"–"+dateLabel(pd.end)+").");
+  details.push(interpretDashaLord(active.lord,"major"));
+  if(ad) {details.push("Current Antardasha: "+active.lord+"/"+ad.lord+" ("+dateLabel(ad.start)+"–"+dateLabel(ad.end)+").");details.push(interpretDashaLord(ad.lord,"sub"));}
+  if(ad&&pd) {details.push("Current Pratyantardasha: "+active.lord+"/"+ad.lord+"/"+pd.lord+" ("+dateLabel(pd.start)+"–"+dateLabel(pd.end)+").");details.push(interpretDashaLord(pd.lord,"micro"));}
   const next=timeline.find(item=>item.start>now);if(next)details.push("Next Mahadasha: "+next.lord+", beginning "+dateLabel(next.start)+".");
  } else details.push("Current date falls outside the two full 120-year Vimshottari cycles generated; no current period is claimed.");
  return [{id:"vedic-vimshottari-dasha",tradition:"vedic",category:"calculated-fact",technique:"dasha",subject:"Vimshottari Dasha",statement:details.join(" "),concepts:["dasha","vimshottari",NAKSHATRAS[starIndex].toLowerCase(),firstLord.toLowerCase()],polarity:"neutral",strength:1,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("dasha","vedic-dasha-architecture"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,firmamentMoonDegrees:Number(moon.toFixed(6)),birthNakshatra:NAKSHATRAS[starIndex],yearLengthDays:365.25,subperiods:"proportional 120-year Vimshottari cycle"}}}];
@@ -76,6 +111,16 @@ function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,fram
  if(sav.reduce((a,b)=>a+b,0)!==337) return [{id:"vedic-ashtakavarga-sav-checksum-failed",tradition:"vedic",category:"uncertainty",technique:"ashtakavarga",subject:"Ashtakavarga",statement:"Sarvashtakavarga checksum failed; no scores are passed to the interpreter.",concepts:["ashtakavarga","validation-failed"],polarity:"neutral",strength:0,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:TRACE("ashtakavarga","vedic-ashtakavarga-classical")}];
  const ranked=sav.map((score,i)=>({sign:ZODIAC_SIGNS[i],score}));const high=[...ranked].sort((a,b)=>b.score-a.score).slice(0,3);const low=[...ranked].sort((a,b)=>a.score-b.score).slice(0,3);
  const parts=["Firmament fixed, unreduced Parashari Bhinnashtakavarga and Sarvashtakavarga; fixed stellar reference offset 0°.","SAV total checksum 337 bindus.","Highest SAV signs: "+high.map(x=>x.sign+" "+x.score).join(", ")+".","Lowest SAV signs: "+low.map(x=>x.sign+" "+x.score).join(", ")+".",...CLASSICAL.map(p=>p+" BAV total "+bav[p].reduce((a,b)=>a+b,0)+": "+bav[p].map((score,i)=>ZODIAC_SIGNS[i]+" "+score).join(", ")+".")];
+ const natalAscSign=signIndex(asc);
+ parts.push("WHAT THE SCORES MEAN: BAV (Bhinnashtakavarga) measures how supportive each sign is within one planet's eight-contributor score, from 0 to 8. SAV (Sarvashtakavarga) adds all seven planetary BAV scores for each sign, typically around the upper twenties. These are comparative traditional strengths, NOT probabilities, lucky-day guarantees, or direct statements of character.");
+ for(const [i,score] of sav.entries()){
+  const house=(i-natalAscSign+12)%12+1;
+  parts.push(`SAV EXPLAINED: ${interpretBindus(score,"SAV",ZODIAC_SIGNS[i])} With the given equal/whole-sign mapping this is sign ${ZODIAC_SIGNS[i]}, house ${house} from Lagna; the broad life area is ${SIGN_TOPICS[(house-1)%12]}. Comparison is within this person's twelve-sign SAV distribution; natal rulers, dignity, timing and context must refine the meaning.`);
+ }
+ for(const planet of CLASSICAL)for(const [i,score] of bav[planet].entries()){
+  parts.push(`${planet} BAV explained: ${interpretBindus(score,"BAV",ZODIAC_SIGNS[i])} This gauges ${planet}'s traditional contribution in that sign; it does not mean that ${planet} is physically located in that sign.`);
+ }
+ parts.push("HOW TO USE THIS: Contrast the highest and lowest SAV signs with the relevant activated house, that house's lord, the current Dasha lords, and real circumstances. A score describes relative support or friction; it is not a prediction that a specific event must occur.");
  return [{id:"vedic-ashtakavarga-bav-sav",tradition:"vedic",category:"calculated-fact",technique:"ashtakavarga",subject:"Bhinnashtakavarga and Sarvashtakavarga",statement:parts.join(" "),concepts:["ashtakavarga","bhinnashtakavarga","sarvashtakavarga","bindu-scores"],polarity:"neutral",strength:1,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("ashtakavarga","vedic-ashtakavarga-classical"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,system:"Parashari unreduced BAV/SAV",excludedContributors:["Rahu","Ketu"],checksums:{Sun:48,Moon:49,Mars:39,Mercury:54,Jupiter:56,Venus:52,Saturn:39,SAV:337}}}}];
 }
 export function resolveVedicTimingAndAshtakavarga(chart:ChartResult):EvidenceItem[]{
