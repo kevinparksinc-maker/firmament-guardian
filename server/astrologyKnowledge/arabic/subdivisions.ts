@@ -61,7 +61,7 @@ export function resolveSubdivisions(chart:ChartResult):EvidenceItem[]{
    concepts:["twelfth-parts",row.name.toLowerCase(),t.derivedSign.toLowerCase()],polarity:"neutral",sourceId:"local-arabic-rules",sourceTrace:trace("twelfth-parts")});
  }
  const {latitude,longitude}=chart.input;
- const validGeo=Number.isFinite(latitude)&&Number.isFinite(longitude)&&chart.agentViewAvailable;
+ const validGeo=Number.isFinite(latitude)&&Number.isFinite(longitude)&&chart.agentViewAvailable&&chart.momentPrecision==="exact";
  const hour=validGeo?planetaryHour(new Date(chart.utc),latitude,longitude):null;
  if(hour){
   evidence.push({id:"arabic-planetary-hour",tradition:"arabic",category:"deterministic-rule",technique:"planetary-hours",subject:"Question/chart moment",
@@ -69,6 +69,17 @@ export function resolveSubdivisions(chart:ChartResult):EvidenceItem[]{
    concepts:["planetary-hours",hour.ruler.toLowerCase(),hour.period],polarity:"neutral",sourceId:"local-arabic-rules",sourceTrace:trace("planetary-hours")});
  }else{
   evidence.push({id:"arabic-hours-unavailable",tradition:"arabic",category:"uncertainty",technique:"planetary-hours",subject:"Question/chart moment",statement:"Planetary hour unavailable: local observer location, valid time, or sunrise/sunset is absent (including polar days/nights).",concepts:["planetary-hours","unavailable"],polarity:"neutral",sourceId:"local-arabic-rules",sourceTrace:trace("planetary-hours")});
+ }
+ const transitMoment=new Date(chart.transitDate);
+ if(chart.readingScope!=="natal" && chart.transitDate!==chart.utc && chart.momentPrecision==="exact"){
+  const tlat=chart.input.transitLatitude??latitude;
+  const tlon=chart.input.transitLongitude??longitude;
+  const transitHour=chart.transitHouseFrame!=="god-fixed" && Number.isFinite(tlat)&&Number.isFinite(tlon)?planetaryHour(transitMoment,tlat,tlon):null;
+  if(transitHour){
+    evidence.push({id:"arabic-planetary-hour-transit",tradition:"arabic",category:"deterministic-rule",technique:"planetary-hours",subject:"Transit moment",
+      statement:`[Approximate transit planetary hour] ${transitHour.ruler}, ${transitHour.period} hour ${transitHour.hourNumber} at ${chart.transitDate}, using transit observer coordinates; sunrise ${transitHour.sunrise}, sunset ${transitHour.sunset}. Planetary hours are symbolic calendar divisions, not causes of events.`,
+      concepts:["planetary-hours","transit",transitHour.ruler.toLowerCase()],polarity:"neutral",sourceId:"local-arabic-rules",sourceTrace:trace("planetary-hours")});
+  }else evidence.push({id:"arabic-planetary-hour-transit-unavailable",tradition:"arabic",category:"uncertainty",technique:"planetary-hours",subject:"Transit moment",statement:"Transit planetary hour unavailable: exact local horizon data or sunrise/sunset was not supplied.",concepts:["planetary-hours","transit","unavailable"],polarity:"neutral",sourceId:"local-arabic-rules",sourceTrace:trace("planetary-hours")});
  }
  return evidence;
 }
