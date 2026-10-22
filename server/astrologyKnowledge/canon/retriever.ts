@@ -60,7 +60,9 @@ export function retrievePlacementDossier(
     getNakshatraCanonByLongitude(lon);
   const fixedStarContacts = findFixedStarContactsForLongitude(lon);
 
-  // Ancient Chinese Xiu are defined by unequal historical determinative-star divisions.\n  // Do not assign positions using a modern reference epoch without a sourced ancient boundary table.\n  return {
+  // Ancient Chinese Xiu are defined by unequal historical determinative-star divisions.
+  // Do not assign positions using a modern reference epoch without a sourced ancient boundary table.
+  return {
 
     body: row.name,
     display: row.display,
