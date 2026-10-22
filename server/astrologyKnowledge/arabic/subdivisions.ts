@@ -52,7 +52,7 @@ export function planetaryHour(moment:Date,lat:number,lon:number){
 }
 export function resolveSubdivisions(chart:ChartResult):EvidenceItem[]{
  const evidence:EvidenceItem[]=[];
- const rows=[...chart.movingBodies,chart.ascendant,chart.northNode,chart.southNode].filter((r):r is NonNullable<typeof r>=>Boolean(r)&&Number.isFinite(r.longitude));
+ const rows=[...chart.movingBodies,chart.ascendant,chart.northNode,chart.southNode].filter((r):r is NonNullable<typeof r>=>r !== null && r !== undefined && Number.isFinite(r.longitude));
  for(const row of rows){
   const t=twelfthPart(row.longitude);
   evidence.push({id:`arabic-twelfth-part-${row.name.toLowerCase().replace(/\s+/g,"-")}`,tradition:"arabic",category:"deterministic-rule",technique:"twelfth-parts",subject:row.name,
