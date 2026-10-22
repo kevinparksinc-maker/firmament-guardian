@@ -20,6 +20,7 @@ import { MapView } from "@/components/Map";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { AdvancedChartInstruments } from "@/components/AdvancedChartInstruments";
 import { LiveTransitFeed } from "@/components/LiveTransitFeed";
+import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarousel";
 import { WelcomeHost } from "@/components/WelcomeHost";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { AccountControl } from "@/components/AccountControl";
@@ -836,6 +837,7 @@ export default function Home() {
 
         {result && (
           <>
+            <PersonalDiscoveryCarousel chart={result} />
             <ChartOverview
               chart={result}
               view={readingView}
