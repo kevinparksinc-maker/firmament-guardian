@@ -14,7 +14,7 @@ import {
 import { HOUSE_CANON_RECORDS, synthesizePlanetInHouse } from "./housesAndFrames";
 import { getManzilCanonByLongitude } from "./manazil28";
 import { getNakshatraCanonByLongitude } from "./nakshatras27";
-import { chineseMansionAtRa, DEFAULT_CHINESE_MANSIONS } from "./chineseMansions28";
+import { CHINESE_MANSIONS } from "./chineseMansions28";
 import { getPlanetInHouseKnowledge } from "./planetInHouseInterpretations";
 import {
   PLANET_CANON_RECORDS,
@@ -60,9 +60,9 @@ export function retrievePlacementDossier(
     getNakshatraCanonByLongitude(lon);
   const fixedStarContacts = findFixedStarContactsForLongitude(lon);
 
-  const xiu = row.j2000RaDegrees === undefined ? null : chineseMansionAtRa(row.j2000RaDegrees, DEFAULT_CHINESE_MANSIONS);
+  // Ancient Chinese Xiu are defined by unequal historical determinative-star divisions.\n  // Do not assign positions using a modern reference epoch without a sourced ancient boundary table.\n  const xiu = null;
   return {
-    ...(xiu ? { chineseMansion: { index: xiu.mansion.index, name: xiu.mansion.pinyin, hanzi: xiu.mansion.hanzi, guardian: xiu.mansion.quadrant, rightAscension: xiu.rightAscensionDegrees, degreeInMansion: xiu.degreesIntoMansion, source: DEFAULT_CHINESE_MANSIONS.source } } : {}),
+
     body: row.name,
     display: row.display,
     longitude: lon,
@@ -321,7 +321,7 @@ export function canonDossierToEvidenceItems(
       category: "deterministic-rule",
       technique: "canon-placement-dossier",
       subject: p.body,
-      statement: `[FIRMAMENT CANON + TRADITION] ${p.planetInSignSynthesis} ${p.planetInHouseSynthesis} (${p.dignityAndCondition.conditionSummary}). Decan: ${p.decanRecord?.label} ("${p.decanRecord?.traditionalTitle}"). Manzil: ${p.manzilRecord?.name} (${p.manzilRecord?.englishTranslation}). Nakshatra: ${p.nakshatraRecord?.name} Pada ${p.activePada?.pada} (${p.nakshatraRecord?.deity}). Chinese Xiu: ${p.chineseMansion ? `${p.chineseMansion.name} (${p.chineseMansion.hanzi}, ${p.chineseMansion.guardian}); J2000 RA ${p.chineseMansion.rightAscension.toFixed(4)}°, ${p.chineseMansion.degreeInMansion.toFixed(4)}° into mansion` : "unavailable (J2000 right ascension required)"}.`,
+      statement: `[FIRMAMENT CANON + TRADITION] ${p.planetInSignSynthesis} ${p.planetInHouseSynthesis} (${p.dignityAndCondition.conditionSummary}). Decan: ${p.decanRecord?.label} ("${p.decanRecord?.traditionalTitle}"). Manzil: ${p.manzilRecord?.name} (${p.manzilRecord?.englishTranslation}). Nakshatra: ${p.nakshatraRecord?.name} Pada ${p.activePada?.pada} (${p.nakshatraRecord?.deity}). Chinese Xiu: ancient catalog contains ${CHINESE_MANSIONS.length} mansions; natal mansion assignment pending historically sourced fixed unequal boundaries (not guessed or modern-epoch adjusted).`,
       concepts: [
         p.body.toLowerCase(),
         p.sign.toLowerCase(),
