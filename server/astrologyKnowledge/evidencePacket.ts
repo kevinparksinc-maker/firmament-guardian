@@ -1,3 +1,4 @@
+import { buildDerivationSheet } from "./canon/derivationSheet";
 import { FIXED_STAR_CANON_RECORDS } from "./canon/fixedStarsAndLots";
 import { formatUniversalMethodCoverage } from "./methodCoverage";
 import { seferYetzirahEvidence } from "./canon/seferYetzirah";
@@ -523,6 +524,7 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
   return [
     "ASTROLOGY EVIDENCE PACKET",
     formatUniversalMethodCoverage(packet),
+    buildDerivationSheet(packet),
     `Question: ${packet.question}`,
     "Core policy: Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector are mandatory evaluated layers. The planner may prioritize their findings, but may not bypass the Genesis layer.",
     `Plan: ${packet.plan.reasons.join(" ")}`,
