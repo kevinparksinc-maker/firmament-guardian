@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { startLogin } from "@/const";
 import { LogIn, ShieldCheck, UserRound } from "lucide-react";
@@ -6,7 +6,7 @@ import { CelestialCommandShell } from "./components/CelestialCommandShell";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SovereignTierProvider } from "./components/SovereignTierModal";
@@ -25,7 +25,16 @@ function AccountEntryGate({ children }: { children: React.ReactNode }) {
 }
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
+  const [path] = useLocation();
+  const [hasProfile, setHasProfile] = useState(() => { try { return Boolean(localStorage.getItem("algorithms_cosmos_profile")); } catch { return false; } });
+  useEffect(() => {
+    const refresh = () => { try { setHasProfile(Boolean(localStorage.getItem("algorithms_cosmos_profile"))); } catch { setHasProfile(false); } };
+    window.addEventListener("fg:profile-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => { window.removeEventListener("fg:profile-updated", refresh); window.removeEventListener("storage", refresh); };
+  }, []);
+  // A signed-in visitor must finish the birth profile before opening other observatory modules.
+  if (!hasProfile && path !== "/") return <Home />;
   return (
     <Switch>
       <Route path={"/"} component={Home} />
