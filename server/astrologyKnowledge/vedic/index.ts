@@ -171,21 +171,6 @@ export function resolveVedicEvidence(
       });
     }
   }
-  if (false && plan.includeDivisionalCharts.length)
-    evidence.push({
-      id: "vedic-varga-status",
-      tradition: "vedic",
-      category: "uncertainty",
-      technique: "varga",
-      subject: plan.includeDivisionalCharts.join(","),
-      statement: `${plan.includeDivisionalCharts.join(" and ")} was requested, but chart-specific divisional positions are not enabled; no varga conclusion is made.`,
-      concepts: ["varga", "incomplete"],
-      polarity: "neutral",
-      strength: 0,
-      ruleId: "vedic-varga-architecture",
-      sourceId: "local-vedic-rules",
-      sourceTrace: VEDIC_TRACE("varga", "vedic-varga-architecture"),
-    });
   // Advanced Vedic timing and strength are calculated in one auditable layer.
   // The layer emits explicit uncertainty evidence when required birth data is missing.
   evidence.push(...resolveVedicTimingAndAshtakavarga(chart));
