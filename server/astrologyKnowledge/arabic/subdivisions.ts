@@ -36,7 +36,8 @@ export function planetaryHour(moment:Date,lat:number,lon:number){
   const ev=solarEvents(date,lat,lon);
   const next=solarEvents(new Date(date.getTime()+86400000),lat,lon);
   if(!ev||!next)continue;
-  const dayRuler=weekday[ev.sunrise.getUTCDay()];
+  const localSolarWeekday=new Date(ev.sunrise.getTime()+lon*240000).getUTCDay();
+  const dayRuler=weekday[localSolarWeekday];
   candidates.push({rise:ev.sunrise,set:ev.sunset,nextRise:next.sunrise,dayRuler});
  }
  const x=candidates.find(e=>moment>=e.rise&&moment<e.nextRise);
