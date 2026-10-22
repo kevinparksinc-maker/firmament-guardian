@@ -244,7 +244,7 @@ export function retrieveChartCanonDossier(
       "",
       `--- VEDIC JYOTISH INTERPRETIVE SYSTEM (Coordinate Frame: ${vedicJyotishSystem.coordinateMode}, Ayanamsa Offset: ${vedicJyotishSystem.ayanamsaDegreesApplied}°) ---`,
       `• [Panchanga] Tithi: ${vedicJyotishSystem.panchanga.tithi.name} (${vedicJyotishSystem.panchanga.tithi.paksha}, Lord: ${vedicJyotishSystem.panchanga.tithi.ruler}) | Vara: ${vedicJyotishSystem.panchanga.vara.name} | Nitya Yoga: ${vedicJyotishSystem.panchanga.yoga.name} | Karana: ${vedicJyotishSystem.panchanga.karana.name}`,
-      `• [Vimshottari Dasha] ${vedicJyotishSystem.vimshottariDasha.interpretation}`,
+      `• [Vimshottari Dasha cross-check only] Additional Jyotish canon timing engine is retained as secondary doctrine. The universal timingAndAshtakavarga evidence is the primary interpreted timeline; do not present two conflicting active period sequences. Canon mode: ${vedicJyotishSystem.coordinateMode}, source offset ${vedicJyotishSystem.ayanamsaDegreesApplied}°.`,
       `• [Jaimini Chara Karakas] ${vedicJyotishSystem.charaKarakas.map(k => `${k.karaka}: ${k.planet} (${k.degreeInSign}°)`).join(" | ")}`,
       `• [Arudha Padas] ${vedicJyotishSystem.arudhaLagnaview.interpretation}`
     );
