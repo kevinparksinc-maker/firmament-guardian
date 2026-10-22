@@ -1,4 +1,3 @@
-import { OBSERVATIONAL_FIXED_STARS_J2000, approximateStarLongitude } from "./canon/historicalStarCatalog";
 import { FIXED_STAR_CANON_RECORDS } from "./canon/fixedStarsAndLots";
 import { formatUniversalMethodCoverage } from "./methodCoverage";
 import { seferYetzirahEvidence } from "./canon/seferYetzirah";
@@ -336,42 +335,6 @@ export function buildAstrologyEvidencePacket(
       });
     })
   );
-  // A separate observational reference frame: approximated epoch-of-chart
-  // J2000 stellar positions. NEVER merge positions with symbolic locked stars.
-  const chartEpoch = new Date(chart.utc).getUTCFullYear();
-  const observationalStarEvidence: EvidenceItem[] = fixedStarTargets.flatMap(body =>
-    OBSERVATIONAL_FIXED_STARS_J2000.flatMap(star => {
-      const lon = approximateStarLongitude(star.name, chartEpoch);
-      if (lon === null) return [];
-      const sep = angularSeparation(body.longitude, lon);
-      return STAR_ASPECTS.flatMap(aspect => {
-        const orb = Math.abs(sep - aspect.angle);
-        if (orb > 5) return [];
-        return [{
-          id: `observational-star-${body.name.replace(/\\s+/g,"-")}-${star.name.replace(/\\s+/g,"-")}-${aspect.name}`,
-          tradition: "firmament" as const,
-          category: "source-correspondence" as const,
-          technique: "fixed-star-observational-reference",
-          subject: body.name,
-          statement: `[OBSERVATIONAL REFERENCE · separate from the Firmament locked star wheel] ${body.name} at ${body.display} makes a ${aspect.name} to ${star.name}; J2000 reference ${star.j2000Longitude.toFixed(3)}°, approximately precessed to ${chartEpoch} as ${lon.toFixed(3)}°, angular separation ${sep.toFixed(2)}°, orb ${orb.toFixed(2)}°. Approximate epoch projection only; historical discovery-era longitude and full astrometric correction have NOT been calculated.`,
-          concepts: ["fixed-star", "observational-reference", aspect.name, star.name.toLowerCase(), body.name.toLowerCase()],
-          polarity: "neutral" as const,
-          strength: Math.max(0,1-orb/5),
-          sourceId: "stellar-j2000-reference",
-          sourceTrace: {
-            sourceId: "stellar-j2000-reference",
-            tradition: "firmament" as const,
-            technique: "fixed-star-observational-reference",
-            sourceTitle: "J2000 observational star positions; approximate linear precession",
-            sourceUrl: "https://www.yourastrallife.com/en/fixed-star-positions",
-            retrievedAt: new Date().toISOString(),
-            confidence: "reference-only" as const,
-            calculationSettings: { reference: "J2000 tropical", observationYear: chartEpoch, approximate: true, aspect: aspect.name, orbDegrees: orb, precessionArcsecondsPerYear: 50.29 },
-          },
-        }];
-      });
-    })
-  );
   const timingEvidence: EvidenceItem[] =
     mode === "natal"
       ? []
@@ -429,7 +392,6 @@ export function buildAstrologyEvidencePacket(
     ...arabicEvidence,
     ...timingEvidence,
     ...fixedStarEvidence,
-    ...observationalStarEvidence,
   ];
   const resolved = resolveRelationships(all);
   const uncertainties = all.filter(item => item.category === "uncertainty");
@@ -499,7 +461,7 @@ export function buildAstrologyEvidencePacket(
     vedicEvidence,
     arabicEvidence,
     lunarEvidence,
-    fixedStarEvidence: [...fixedStarEvidence, ...observationalStarEvidence],
+    fixedStarEvidence,
     timingEvidence,
     relationships: resolved.relationships,
     convergences: resolved.convergences,
