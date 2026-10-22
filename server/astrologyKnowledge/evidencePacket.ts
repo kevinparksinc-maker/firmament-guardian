@@ -1,3 +1,4 @@
+import { formatUniversalMethodCoverage } from "./methodCoverage";
 import { seferYetzirahEvidence } from "./canon/seferYetzirah";
 import type { ChartResult } from "../astronomy";
 import { planKnowledge } from "./planner";
@@ -494,6 +495,7 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
   });
   return [
     "ASTROLOGY EVIDENCE PACKET",
+    formatUniversalMethodCoverage(packet),
     `Question: ${packet.question}`,
     "Core policy: Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector are mandatory evaluated layers. The planner may prioritize their findings, but may not bypass the Genesis layer.",
     `Plan: ${packet.plan.reasons.join(" ")}`,
