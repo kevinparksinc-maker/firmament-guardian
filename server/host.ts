@@ -66,7 +66,7 @@ export async function askHost(
       // 1. Build and format full multi-system Evidence Packet (Vedic, Arabic, Western, Behavioral)
       const packet = buildAstrologyEvidencePacket(chart, question, mode);
       const formattedPacket = formatEvidencePacket(packet);
-      coverage = [packet.westernEvidence, packet.genesisAstroEvidence, packet.patternEvidence, packet.behavioralEvidence, packet.lifeEventEvidence, packet.canonEvidence, packet.vedicEvidence, packet.arabicEvidence, packet.timingEvidence, packet.fixedStarEvidence].map((items, i) => ["Western","Genesis Astro","Genesis Pattern","Behavior","Life Events","Canon and Kabbalah","Vedic","Arabic","Timing","Fixed Stars"][i] + ": " + items.length + " records; " + [...new Set(items.map(item => item.technique))].slice(0,12).join(", ")).join("\n");
+      coverage = [packet.westernEvidence, packet.genesisAstroEvidence, packet.patternEvidence, packet.behavioralEvidence, packet.lifeEventEvidence, packet.canonEvidence, packet.vedicEvidence, packet.arabicEvidence, packet.timingEvidence, packet.fixedStarEvidence].map((items, i) => ["Western","Genesis Astro","Genesis Pattern","Behavior","Life Events","Canon and Kabbalah","Vedic","Arabic","Timing","Fixed Stars"][i] + ": " + items.length + " records; " + Array.from(new Set(items.map(item => item.technique))).slice(0,12).join(", ")).join("\n");
 
       // 2. Synthesize concise high-impact chart highlights
       const birthLoc = chart.input?.location || "Unknown Location";
