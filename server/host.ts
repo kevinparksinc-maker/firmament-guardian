@@ -58,12 +58,15 @@ export async function askHost(
   mode: "natal" | "transit" | "combined" = "combined"
 ) {
   let ragContext = "";
+  const deepInquiry = /pattern|trigger|self.sabotag|weakness|shadow|defen[sc]e|soul|who am i|understand myself|guide/i.test(question);
+  let coverage = "";
 
   if (chart && typeof chart === "object" && Array.isArray(chart.movingBodies)) {
     try {
       // 1. Build and format full multi-system Evidence Packet (Vedic, Arabic, Western, Behavioral)
       const packet = buildAstrologyEvidencePacket(chart, question, mode);
       const formattedPacket = formatEvidencePacket(packet);
+      coverage = [packet.westernEvidence, packet.genesisAstroEvidence, packet.patternEvidence, packet.behavioralEvidence, packet.lifeEventEvidence, packet.canonEvidence, packet.vedicEvidence, packet.arabicEvidence, packet.timingEvidence, packet.fixedStarEvidence].map((items, i) => ["Western","Genesis Astro","Genesis Pattern","Behavior","Life Events","Canon and Kabbalah","Vedic","Arabic","Timing","Fixed Stars"][i] + ": " + items.length + " records; " + [...new Set(items.map(item => item.technique))].slice(0,12).join(", ")).join("\n");
 
       // 2. Synthesize concise high-impact chart highlights
       const birthLoc = chart.input?.location || "Unknown Location";
@@ -122,6 +125,11 @@ ${formattedPacket}
 
   const systemInstructions = [
     HOST_SYSTEM,
+    deepInquiry && ragContext ? `DEEP OPEN GUIDE AND PATTERNS INVESTIGATION — REQUIRED
+This is a personalized evidence-based inquiry, not a generic personality summary. Name 4-6 precise calculated anchors with sign, house, and degree where supplied, then synthesize at least three nonduplicative patterns. For each: trigger -> human need -> defensive habit -> short-term benefit -> longer-term consequence -> possible self-sabotage -> alternative response. Use two ordinary-life examples posed as possibilities rather than known facts.
+Check all supplied method families: Western houses/rulers/aspects, Genesis Astro and Pattern, seven-channel behavioral findings, Vedic yoga/Dasha/Ashtakavarga, Arabic Lots and Manzils, Nakshatras, elemental decans, fixed stars, and Sefer Yetzirah letters plus the Four Worlds. Compare God and Agent frame testimony and distinguish natal foundations from transit activation. Name relevant supporting methods in the prose; specifically include the Kabbalah evidence when available and give the distinct provenance. Never claim missing methods were calculated or that every method confirms the same result.
+Explore triggers, interpersonal pressure, weaknesses, gifts, contradictions, and blind spots as testable interpretations, never medical diagnoses or secret facts. End with seven precise user-facing self-reflection questions tied to distinct chart findings; do not answer these questions for the user. Include evidence that would challenge the interpretation. Be thorough but omit repetition.
+EVIDENCE COVERAGE:\n${coverage}` : "",
     ragContext
       ? `YOU ARE IN DEEPLY PERSONALIZED LIFE STORYTELLING RAG MODE.
 The user's verified chart has been calculated and retrieved above.
@@ -139,7 +147,7 @@ MANDATORY STYLE RULES:
   ];
 
   const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
-  const response = await invokeLLM({ model, messages, maxTokens: 1800 });
+  const response = await invokeLLM({ model, messages, maxTokens: deepInquiry && ragContext ? 6200 : 3000 });
   return String(
     response.choices[0]?.message?.content ??
       "I couldn’t complete that interpretation just now. Please try asking again."
