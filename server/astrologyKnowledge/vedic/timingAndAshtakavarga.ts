@@ -113,11 +113,11 @@ function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,fram
  const parts=["Firmament fixed, unreduced Parashari Bhinnashtakavarga and Sarvashtakavarga; fixed stellar reference offset 0°.","SAV total checksum 337 bindus.","Highest SAV signs: "+high.map(x=>x.sign+" "+x.score).join(", ")+".","Lowest SAV signs: "+low.map(x=>x.sign+" "+x.score).join(", ")+".",...CLASSICAL.map(p=>p+" BAV total "+bav[p].reduce((a,b)=>a+b,0)+": "+bav[p].map((score,i)=>ZODIAC_SIGNS[i]+" "+score).join(", ")+".")];
  const natalAscSign=signIndex(asc);
  parts.push("WHAT THE SCORES MEAN: BAV (Bhinnashtakavarga) measures how supportive each sign is within one planet's eight-contributor score, from 0 to 8. SAV (Sarvashtakavarga) adds all seven planetary BAV scores for each sign, typically around the upper twenties. These are comparative traditional strengths, NOT probabilities, lucky-day guarantees, or direct statements of character.");
- for(const [i,score] of sav.entries()){
+ for(const [i,score] of sav.map((score,i)=>[i,score] as const)){
   const house=(i-natalAscSign+12)%12+1;
   parts.push(`SAV EXPLAINED: ${interpretBindus(score,"SAV",ZODIAC_SIGNS[i])} With the given equal/whole-sign mapping this is sign ${ZODIAC_SIGNS[i]}, house ${house} from Lagna; the broad life area is ${SIGN_TOPICS[(house-1)%12]}. Comparison is within this person's twelve-sign SAV distribution; natal rulers, dignity, timing and context must refine the meaning.`);
  }
- for(const planet of CLASSICAL)for(const [i,score] of bav[planet].entries()){
+ for(const planet of CLASSICAL)for(const [i,score] of bav[planet].map((score,i)=>[i,score] as const)){
   parts.push(`${planet} BAV explained: ${interpretBindus(score,"BAV",ZODIAC_SIGNS[i])} This gauges ${planet}'s traditional contribution in that sign; it does not mean that ${planet} is physically located in that sign.`);
  }
  parts.push("HOW TO USE THIS: Contrast the highest and lowest SAV signs with the relevant activated house, that house's lord, the current Dasha lords, and real circumstances. A score describes relative support or friction; it is not a prediction that a specific event must occur.");
