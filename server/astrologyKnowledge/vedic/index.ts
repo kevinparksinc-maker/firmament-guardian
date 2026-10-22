@@ -94,14 +94,7 @@ export function resolveVedicEvidence(
   for (const row of all) {
     const n = nakshatra(row.longitude);
     const sign = ZODIAC_SIGNS[Math.floor(row.longitude / 30)];
-    if (
-      plan.subjects.some(subject =>
-        row.name
-          .toLowerCase()
-          .includes(subject.toLowerCase().replace("natal-", ""))
-      ) ||
-      ["Sun", "Moon", "Jupiter", "Saturn", "Ascendant"].includes(row.name)
-    ) {
+    { // Universal method contract: calculate every applicable body before question prioritization.
       evidence.push({
         id: `vedic-nakshatra-${row.name}`,
         tradition: "vedic",
