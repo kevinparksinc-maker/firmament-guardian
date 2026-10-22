@@ -24,7 +24,7 @@ export function buildDerivationSheet(packet: AstrologyEvidencePacket): string {
    const d=p.dignityAndCondition;
    lines.push(`PLACEMENT ${p.body}: ${p.display}; house ${p.displayedHouse}; sign ruler ${lords[p.sign]??"unresolved"}; ${d.essentialDignities.length?"dignities "+d.essentialDignities.join(", "):"no listed essential dignity"}; ${d.essentialDebilities.length?"debilities "+d.essentialDebilities.join(", "):"no listed essential debility"}; ${d.conditionSummary}; ${p.decanRecord?"elemental decan "+p.decanRecord.label:"decan unspecified"}; ${p.nakshatraRecord?"Nakshatra "+p.nakshatraRecord.name:""}; ${p.manzilRecord?"Manzil "+p.manzilRecord.name:""}.`);
  }
- for(const d of dossier.dispositorChains){lines.push(`DISPOSITOR ${d.planet}: ${d.chainToFinalDispositor.join(" → ")}; ${d.finalDispositor?"final "+d.finalDispositor:d.inMutualReceptionLoop?"reception loop "+d.loopMembers.join(" ↔ "):"not resolved"}. ${d.conditionVsDeliveryNote}`);}
+ for(const d of dossier.dispositorChains??[]){lines.push(`DISPOSITOR ${d.planet}: ${d.chainToFinalDispositor.join(" → ")}; ${d.finalDispositor?"final "+d.finalDispositor:d.inMutualReceptionLoop?"reception loop "+d.loopMembers.join(" ↔ "):"not resolved"}. ${d.conditionVsDeliveryNote}`);}
  for(const chain of dossier.relationalChains??[])lines.push("HOUSE RULER DERIVATION: "+chain.workedChainSummary);
  for(const e of packet.fixedStarEvidence)lines.push("STELLAR PREMISE: "+e.statement);
  for(const e of packet.westernEvidence.filter(e=>/aspect|relationship|dignity/.test(e.technique)))lines.push("ASPECT/DIGNITY PREMISE: "+e.statement);
