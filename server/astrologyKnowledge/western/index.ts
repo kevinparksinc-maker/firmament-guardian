@@ -90,7 +90,6 @@ export function resolveWesternEvidence(
 ): EvidenceItem[] {
   const placements = rows(chart).filter(row => Number.isFinite(row.longitude));
   const evidence: EvidenceItem[] = placements
-    .filter(row => selected(row, plan))
     .map(row => ({
       id: `western-fact-${row.name}`,
       tradition: "firmament",
@@ -104,7 +103,7 @@ export function resolveWesternEvidence(
       sourceId: factTrace.sourceId,
       sourceTrace: factTrace,
     }));
-  for (const row of placements.filter(row => selected(row, plan))) {
+  for (const row of placements) {
     const rowSign = sign(row);
     const ruler = RULERS[rowSign];
     const condition =
