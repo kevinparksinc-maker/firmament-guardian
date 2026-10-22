@@ -574,7 +574,7 @@ function chapterPlan(analysis: string, chapterId: string) {
   return out.join("\n");
 }
 
-const ANALYSIS_SYSTEM = `You are the silent first reader of a calculated astrology chart. No one will see your output. It is a reading plan that chapter writers will follow, so make it exact and useful.
+const ANALYSIS_SYSTEM = `INCLUDE SOURCE-LABELED SEFER YETZIRAH PLANETARY LETTERS AND TWELVE SIGN LETTERS AND THE LATER FOUR WORLDS WHEN PRESENT. Do not quietly drop Kabbalah in the chapter evidence allocation. Trace its actual chart correspondences and evaluate differences between natal and transit.\n\nYou are the silent first reader of a calculated astrology chart. No one will see your output. It is a reading plan that chapter writers will follow, so make it exact and useful.
 
 Read the whole evidence sheet before deciding anything. Genesis is a mandatory core evidence layer, not an optional tradition: the Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector must be evaluated on every applicable astrology reading before you prioritize the narrative. Never omit, bypass, or downgrade Genesis because the question appears focused on another tradition. The Question Planner controls emphasis only after Genesis has been evaluated; it may classify a Genesis finding as primary, supporting, contextual, or non-decisive, but it may not declare the Genesis layer irrelevant. Find the 4 to 6 main threads of this chart: evidence that repeats, angular emphasis, the nodal axis, close star contacts, Genesis patterns and activations, yogas, and in transit modes the strongest contacts. Find 2 to 4 real tensions: places where two parts of the chart pull against each other. Then assign evidence to chapters so the chapters do not overlap: each placement is the main subject of at most one chapter. The Mirror chapter gets no evidence of its own, only synthesis.
 
@@ -727,7 +727,7 @@ function chapterSystem(
 - God View uses fixed Aries-to-Pisces houses and never an Ascendant. Agent View uses the personal Equal House placements. If the Moon is flagged uncertain, give the supplied date range, not one degree.
 - ${MODE_GUIDANCE[mode]}`,
       `METHOD
-- Follow the reading plan: write the threads and evidence assigned to this chapter. Weigh repeated evidence over isolated details. Name contradictions instead of smoothing them.
+- Visible Kabbalah synthesis is required whenever the packet provides Sefer Yetzirah or Four Worlds evidence. Name at least one applicable, exact planet-letter or sign-letter attribution with its textual variant, and explain one relevant Four Worlds (Atzilut → Beriah → Yetzirah → Assiah) chain as a symbolic interpretation rather than a fact or automatic life prediction. Where no such material meaningfully bears on the chapter, explicitly identify that limitation instead of inserting vague mysticism.\n- Follow the reading plan: write the threads and evidence assigned to this chapter. Weigh repeated evidence over isolated details. Name contradictions instead of smoothing them.
 - Explain each pattern as a chain in flowing prose: what the chart shows, the need beneath it, the protective habit, its gift and its cost, an ordinary scene, how it lands on other people, a mature choice, and how the reader could test it. Say what would make it not fit.
 - COVERAGE AUDIT BEFORE WRITING: Inspect all provided evidence families, not only Sun/Moon/Ascendant. Explicitly compare house rulership and dispositions, degrees and sign placements, house concentrations, applying/separating aspects where available, Genesis patterns and yogas, fixed-star contacts, elemental decans, lunar mansions/Manzils, Vedic Dasha and Ashtakavarga when present, Lots, and the Sefer Yetzirah / Four Worlds layer. Pick the evidence that actually differentiates THIS chart; never invent a missing method's result. If a family lacks supplied evidence, do not pretend it was calculated.
 - FORENSIC PERSONAL DEPTH: Follow at least three distinct chart-supported causal *hypotheses* in this chapter. For each: cite the exact placements, houses, aspects or sourced evidence statements that support it; identify the underlying need, ordinary triggering situation, automatic defense, immediate payoff, hidden cost, possible self-sabotage loop, and a specific healthier alternative. Include the counter-indication that could make the pattern different.
@@ -989,7 +989,7 @@ THE GUARDIAN ANGEL LIFE-STORY MANDATE:
         content: `Here is the user's chart evidence:\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nVALIDATED READING PLAN (follow its priorities and chapter logic):\n${analysisPlan}\n\nUser Question/Intent: ${question}\n\nWrite the complete, flowing Life Story Narrative now. Use the plan and evidence together; do not invent personal history.`,
       },
     ];
-    const generated = await ask(messages, 3500, 0);
+    const generated = await ask(messages, 6000, 0);
     if (generated && generated.length > 300) {
       return generated;
     }
@@ -1167,7 +1167,7 @@ export async function generateChapter(
           content: `${facts}\n\n${chapterPlan(analysis, chapterId)}\n\n${context}\n\nWrite the complete ${chapter.title} chapter now.`,
         },
       ],
-      3800,
+      5800,
       1500
     );
     if (text && text.trim().length > 200) {
