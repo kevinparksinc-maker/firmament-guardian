@@ -451,7 +451,7 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
-          messages: [{ role: "system", content: prompt }, { role: "user", content: "Generate soulmate prediction." }],
+          messages: [{ role: "system", content: buildAstrologyInterpreterSystem(prompt) }, { role: "user", content: "Generate soulmate prediction." }],
           maxTokens: 2000,
           responseFormat: { type: "json_object" },
         });
@@ -502,7 +502,7 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
-          messages: [{ role: "system", content: prompt }, { role: "user", content: "Analyze synastry." }],
+          messages: [{ role: "system", content: buildAstrologyInterpreterSystem(prompt) }, { role: "user", content: "Analyze synastry." }],
           maxTokens: 2500,
           responseFormat: { type: "json_object" },
         });
