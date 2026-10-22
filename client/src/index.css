@@ -247,3 +247,70 @@ main.guardian-home-main :is(p,li){line-height:1.7;}
 @media(max-width:1100px){.guardian-home-main .fg-home-hero{flex-direction:column}.guardian-home-main .fg-home-hero .fg-quick-actions{flex-basis:auto;width:100%}}
 @media(max-width:640px){.guardian-home-main .fg-home-hero{padding:18px 16px 24px;border-radius:18px}.guardian-home-main .fg-home-hero h1{font-size:clamp(2.3rem,10vw,3.7rem)}.guardian-home-main .fg-home-hero .fg-quick-actions{padding:12px;gap:7px}.fg2050 .fg2050-portal{border-radius:18px}}
 @media(prefers-reduced-motion:reduce){.guardian-home-main .fg-quick-actions>:is(button,a):hover{transform:none}}
+
+
+/* FIRMAMENT GUARDIAN — illuminated celestial-dome release skin.
+   Luminous panel EDGES, not heavy colored button fills. */
+.guardian-home-main {
+  --fg-gold:#ffd887;--fg-cyan:#63f1ff;--fg-violet:#b993ff;--fg-magenta:#ff77de;
+}
+.guardian-home-main .fg-home-hero{
+  position:relative;overflow:hidden;isolation:isolate;
+  border:2px solid rgba(255,211,128,.75);
+  background:radial-gradient(ellipse at 68% 10%,rgba(106,74,197,.22),transparent 48%),
+    linear-gradient(125deg,rgba(13,25,62,.95),rgba(14,13,48,.92) 62%,rgba(10,34,59,.92));
+  box-shadow:0 0 0 1px rgba(255,218,150,.22),0 0 32px rgba(255,191,89,.15),inset 0 0 38px rgba(92,154,255,.10),0 24px 60px rgba(0,0,0,.26);
+}
+.guardian-home-main .fg-home-hero::before{
+  content:"";pointer-events:none;position:absolute;z-index:-1;
+  width:min(65%,620px);aspect-ratio:1;right:-10%;top:-85%;
+  border-radius:50%;border:2px solid rgba(255,206,117,.42);
+  box-shadow:0 0 0 18px rgba(118,105,234,.06),0 0 0 43px rgba(255,212,138,.045),0 0 48px rgba(255,194,101,.18);
+  background:repeating-conic-gradient(from 4deg,transparent 0deg 29deg,rgba(255,211,143,.12) 30deg 30.6deg);
+}
+.guardian-home-main .fg-home-hero h1{
+  color:#ffe3a6;text-shadow:0 2px 20px rgba(255,190,94,.23);
+}
+.guardian-home-main .fg-home-hero .fg-quick-actions{
+  border:1px solid rgba(255,121,215,.66);
+  box-shadow:0 0 0 1px rgba(255,121,215,.12),0 0 24px rgba(255,121,215,.14),inset 0 0 22px rgba(181,112,255,.07);
+}
+.guardian-home-main .fg-celestial-tabs{
+  border:2px solid rgba(91,234,255,.75);
+  background:linear-gradient(115deg,rgba(12,22,53,.9),rgba(24,13,54,.85))!important;
+  box-shadow:0 0 0 1px rgba(89,244,255,.1),0 0 23px rgba(89,244,255,.16),inset 0 0 20px rgba(107,101,255,.08);
+  gap:10px;
+}
+.guardian-home-main .fg-celestial-tabs>button{
+  border:1px solid rgba(185,153,255,.50);
+  background:rgba(10,18,41,.66);
+  box-shadow:inset 0 0 10px rgba(94,112,250,.06);
+  min-height:44px;cursor:pointer;
+}
+.guardian-home-main .fg-celestial-tabs>button:nth-child(3n+1){border-color:rgba(255,208,118,.66)}
+.guardian-home-main .fg-celestial-tabs>button:nth-child(3n+2){border-color:rgba(255,117,222,.6)}
+.guardian-home-main .fg-celestial-tabs>button:nth-child(3n){border-color:rgba(100,235,255,.66)}
+.guardian-home-main .fg-celestial-tabs>button:hover,
+.guardian-home-main .fg-celestial-tabs>button:focus-visible{
+  border-color:#f7ddae;box-shadow:0 0 16px rgba(255,208,130,.22);outline-offset:3px;
+}
+.guardian-home-main .fg-module-banner{
+  border:1px solid rgba(255,216,137,.68);border-radius:20px;padding:22px 24px;
+  background:linear-gradient(110deg,rgba(27,25,65,.9),rgba(8,33,57,.84));
+  box-shadow:0 0 28px rgba(255,208,121,.12),inset 3px 0 rgba(255,216,137,.7);
+}
+.guardian-home-main .fg-module-title{color:#ffe4af;text-shadow:0 0 18px rgba(255,199,102,.13)}
+.guardian-home-main #master-interpreter-section,
+.guardian-home-main #social-loved-ones-section{
+  border:1px solid rgba(255,120,219,.42);border-radius:26px;padding:6px;
+  box-shadow:0 0 25px rgba(255,99,221,.09);
+}
+.guardian-home-main .fg-module-desc{color:#d7e7ff}
+.guardian-home-main .chart-wheel-shell{border:2px solid rgba(255,210,126,.6);box-shadow:0 0 26px rgba(255,193,93,.13)}
+.guardian-home-main .fg2050-portal{border-width:2px!important;box-shadow:0 0 24px color-mix(in srgb,var(--gate-accent) 18%,transparent),inset 3px 0 var(--gate-accent)!important}
+@media (max-width:640px){
+  .guardian-home-main .fg-celestial-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .guardian-home-main .fg-celestial-tabs>button{justify-content:center;padding:10px 8px;text-align:center;min-width:0}
+  .guardian-home-main .fg-module-banner{padding:18px 16px}
+}
+@media (prefers-reduced-motion:reduce){.guardian-home-main .fg-celestial-tabs>button{transition:none}}
