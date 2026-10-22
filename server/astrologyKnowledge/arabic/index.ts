@@ -139,26 +139,6 @@ export function resolveArabicEvidence(
       sourceId: "local-arabic-rules",
       sourceTrace: trace("lots", "arabic-lots"),
     });
-  if (false && plan.includeTiming)
-    evidence.push({
-      id: "arabic-hours-status",
-      tradition: "arabic",
-      category: "uncertainty",
-      technique: "planetary-hours",
-      subject: "timing",
-      statement:
-        "Planetary hours are not calculated without local sunrise and sunset inputs.",
-      concepts: ["planetary-hours", "incomplete"],
-      polarity: "neutral",
-      strength: 0,
-      ruleId: "arabic-planetary-hours",
-      sourceId: "canopy-arabian",
-      sourceTrace: trace(
-        "planetary-hours",
-        "arabic-planetary-hours",
-        "canopy-arabian"
-      ),
-    });
   evidence.push(...resolveSubdivisions(chart));
   return evidence;
 }
