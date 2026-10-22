@@ -1,3 +1,4 @@
+import { resolveVargaEvidence } from "./vargas";
 import type { ChartResult, ChartRow } from "../../astronomy";
 import {
   NAKSHATRAS,
@@ -170,7 +171,7 @@ export function resolveVedicEvidence(
       });
     }
   }
-  if (plan.includeDivisionalCharts.length)
+  if (false && plan.includeDivisionalCharts.length)
     evidence.push({
       id: "vedic-varga-status",
       tradition: "vedic",
@@ -188,5 +189,6 @@ export function resolveVedicEvidence(
   // Advanced Vedic timing and strength are calculated in one auditable layer.
   // The layer emits explicit uncertainty evidence when required birth data is missing.
   evidence.push(...resolveVedicTimingAndAshtakavarga(chart));
+  evidence.push(...resolveVargaEvidence(chart));
   return evidence;
 }
