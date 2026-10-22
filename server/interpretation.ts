@@ -946,6 +946,21 @@ export function buildLifeStoryExecutiveOverview(
   ].filter(line => line !== "").join("\n\n");
 }
 
+function ensureVisibleKabbalah(reading: string, packet: AstrologyEvidencePacket): string {
+  const items = packet.canonEvidence.filter(item =>
+    ["sefer-yetzirah-doubles", "sefer-yetzirah-simples", "four-worlds"].includes(item.technique)
+  );
+  if (!items.length || (/Sefer Yetzirah/i.test(reading) && /Atzilut|Four Worlds/i.test(reading))) return reading;
+  const sample = [
+    items.find(item => item.technique === "sefer-yetzirah-doubles"),
+    items.find(item => item.technique === "sefer-yetzirah-simples"),
+    items.find(item => item.technique === "four-worlds"),
+  ].filter((item): item is (typeof items)[number] => Boolean(item));
+  return reading + "\n\n### Kabbalah — traceable celestial correspondences\n\n" +
+    sample.map(item => "- **" + item.subject + "** (" + item.technique + "): " + item.statement).join("\n\n") +
+    "\n\n_These are historically sourced symbolic correspondences, not verified claims about your inner life. Read them against the broader chart and your own experience._";
+}
+
 async function generateLifeStoryReading(
   chart: ChartResult,
   mode: ReadingMode,
@@ -991,12 +1006,12 @@ THE GUARDIAN ANGEL LIFE-STORY MANDATE:
     ];
     const generated = await ask(messages, 6000, 0);
     if (generated && generated.length > 300) {
-      return generated;
+      return ensureVisibleKabbalah(generated, evidencePacket);
     }
   } catch (err) {
     console.warn("[generateInterpretation] LLM life story call failed, using deterministic life story engine:", err);
   }
-  return fallback;
+  return ensureVisibleKabbalah(fallback, evidencePacket);
 }
 
 export async function generateInterpretation(
@@ -1171,13 +1186,13 @@ export async function generateChapter(
       1500
     );
     if (text && text.trim().length > 200) {
-      return text;
+      return ensureVisibleKabbalah(text, evidencePacket);
     }
   } catch (err) {
     console.warn(`[generateChapter] AI request for chapter ${chapterId} failed, using rich deterministic life-story fallback:`, err);
   }
 
-  return buildLifeStoryChapterFallback(chart, mode, evidencePacket, chapterId, chapter);
+  return ensureVisibleKabbalah(buildLifeStoryChapterFallback(chart, mode, evidencePacket, chapterId, chapter), evidencePacket);
 }
 export async function followUp(
   chart: ChartResult,
