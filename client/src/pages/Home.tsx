@@ -27,6 +27,7 @@ import { Guardian2050Welcome } from "@/components/Guardian2050Welcome";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
 import { ChartOverview } from "@/components/ChartOverview";
 import { ChartObservatory2050 } from "@/components/ChartObservatory2050";
+import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
 import {
   HoverCard,
   HoverCardContent,
@@ -1317,7 +1318,8 @@ export default function Home() {
                     </a>
                   </CardContent>
                 </Card>
-                <ChartObservatory2050 chart={result} />
+                <GuardianDiamondCharts chart={result} />
+                <details className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"><summary className="cursor-pointer text-sm font-semibold text-cyan-200">Open circular observatory and stellar overlay map</summary><div className="mt-4"><ChartObservatory2050 chart={result} /></div></details>
                 <AdvancedChartInstruments chart={result} />
                 {result.worldview === "god" && (
                   <div className="rounded-2xl border border-violet-300/25 bg-violet-950/20 p-5 text-sm text-slate-200">
