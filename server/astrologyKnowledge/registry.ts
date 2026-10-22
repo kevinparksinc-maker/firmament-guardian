@@ -328,9 +328,9 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
     subject: "divisional-chart",
     kind: "deterministic-rule",
     sourceId: "local-vedic-rules",
-    status: "incomplete",
+    status: "implemented",
     statement:
-      "D2, D3, D9, and D10 contracts are reserved; chart-specific varga calculation is not yet enabled.",
+      "D2, D3, D9 and D10 fixed-coordinate Parashari subdivision projections are calculated for each body. These are NOT yet Lahiri-sidereal Vedic charts; the coordinate mode is explicitly labeled.",
   },
   {
     id: "vedic-ashtakavarga-classical",
@@ -394,9 +394,9 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
     subject: "timing",
     kind: "deterministic-rule",
     sourceId: "canopy-arabian",
-    status: "incomplete",
+    status: "implemented",
     statement:
-      "Planetary-hour calculation requires local sunrise and sunset data and is not inferred without those inputs.",
+      "Chaldean planetary hours are calculated where valid observer/time data permit NOAA approximate sunrise/sunset; polar conditions and missing data report unavailable.",
   },
   {
     id: "arabic-twelfth-parts",
@@ -405,9 +405,9 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
     subject: "planet",
     kind: "deterministic-rule",
     sourceId: "canopy-arabian",
-    status: "incomplete",
+    status: "implemented",
     statement:
-      "Twelfth-parts methodology is reserved pending an explicit house/sign doctrine setting.",
+      "Hellenistic sign-start dodecatemoria (12 times degree within sign plus parent sign start) are calculated; distinct 13x point-origin variant is not combined.",
   },
   {
     id: "firmament-canon-dossier",
