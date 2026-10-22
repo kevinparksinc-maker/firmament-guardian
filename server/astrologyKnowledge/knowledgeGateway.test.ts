@@ -135,7 +135,7 @@ describe("astrology knowledge gateway", () => {
     expect(packet.arabicEvidence.length).toBeGreaterThan(0);
     expect(packet.sourceTrace.every(trace => trace.sourceId)).toBe(true);
     expect(packet.doctrine.western.relationshipOrb).toBe(5);
-    expect(packet.uncertainties.some(item => item.technique === "varga")).toBe(
+    expect(packet.vedicEvidence.some(item => item.technique === "varga")).toBe(
       true
     );
     expect(formatEvidencePacket(packet)).toContain("ASTROLOGY EVIDENCE PACKET");
