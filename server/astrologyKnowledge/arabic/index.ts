@@ -52,14 +52,7 @@ export function resolveArabicEvidence(
   for (const row of all) {
     const ov = overlay(row.longitude);
     const m = manzil(row.longitude);
-    if (
-      row.name === "Moon" ||
-      row.name === "Ascendant" ||
-      plan.subjects.some(subject =>
-        row.name.toLowerCase().includes(subject.toLowerCase())
-      )
-    )
-      evidence.push({
+    evidence.push({
         id: `arabic-manzil-${row.name}`,
         tradition: "arabic",
         category: "deterministic-rule",
