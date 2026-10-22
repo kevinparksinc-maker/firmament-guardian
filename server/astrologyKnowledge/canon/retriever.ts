@@ -14,7 +14,7 @@ import {
 import { HOUSE_CANON_RECORDS, synthesizePlanetInHouse } from "./housesAndFrames";
 import { getManzilCanonByLongitude } from "./manazil28";
 import { getNakshatraCanonByLongitude } from "./nakshatras27";
-import { CHINESE_MANSIONS } from "./chineseMansions28";
+import { CHINESE_MANSIONS, CHINESE_MANSION_HISTORICAL_SOURCE } from "./chineseMansions28";
 import { getPlanetInHouseKnowledge } from "./planetInHouseInterpretations";
 import {
   PLANET_CANON_RECORDS,
@@ -60,8 +60,7 @@ export function retrievePlacementDossier(
     getNakshatraCanonByLongitude(lon);
   const fixedStarContacts = findFixedStarContactsForLongitude(lon);
 
-  // Ancient Chinese Xiu are defined by unequal historical determinative-star divisions.\n  // Do not assign positions using a modern reference epoch without a sourced ancient boundary table.\n  const xiu = null;
-  return {
+  // Ancient Chinese Xiu are defined by unequal historical determinative-star divisions.\n  // Do not assign positions using a modern reference epoch without a sourced ancient boundary table.\n  return {
 
     body: row.name,
     display: row.display,
@@ -349,6 +348,33 @@ export function canonDossierToEvidenceItems(
     });
   }
 
+  // The complete historically attested Xiu canon is mandatory interpreter evidence.
+  // Positional assignment remains uncalculated until verified ancient fixed
+  // boundaries are available. Do not infer a person's mansion from name alone.
+  const quadrantLabels: Record<string,string> = {
+    AZURE_DRAGON: "Azure Dragon of the East",
+    BLACK_TORTOISE: "Black Tortoise of the North",
+    WHITE_TIGER: "White Tiger of the West",
+    VERMILION_BIRD: "Vermilion Bird of the South",
+  };
+  for (const mansion of CHINESE_MANSIONS) {
+    items.push({
+      id: `canon-chinese-xiu-${mansion.index}`,
+      tradition: "firmament",
+      category: "source-correspondence",
+      technique: "chinese-28-xiu",
+      subject: `${mansion.pinyin} ${mansion.hanzi}`,
+      statement: `Chinese Xiu ${mansion.index}/28: ${mansion.pinyin} (${mansion.hanzi}), ${mansion.english}; traditional asterism ${mansion.determinativeStar}, associated with the ${quadrantLabels[mansion.quadrant]}. This is an ancient catalog entry, NOT a verified natal placement. Its traditional astronomy, Four Symbols context and historical interpretive practices may be explained; do not assign any natal planet to it or claim character traits without verified historical boundaries and sourced doctrine.`,
+      concepts: ["chinese-28-xiu", "chinese-mansion", mansion.pinyin.toLowerCase(), mansion.quadrant.toLowerCase()],
+      polarity: "neutral",
+      strength: 0,
+      sourceId: "firmament-canon-knowledge",
+      sourceTrace: {
+        ...makeTrace("firmament", "chinese-28-xiu", CHINESE_MANSION_HISTORICAL_SOURCE.title, "firmament-canon-dossier", "moderate"),
+        sourceUrl: CHINESE_MANSION_HISTORICAL_SOURCE.url,
+      },
+    });
+  }
   for (const p of dossier.placements) {
     const k = p.planetInHouseKnowledge;
     if (!k) continue;
