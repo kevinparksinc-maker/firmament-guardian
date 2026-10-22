@@ -1,3 +1,4 @@
+import { resolveSubdivisions } from "./subdivisions";
 import type { ChartResult, ChartRow } from "../../astronomy";
 import { overlay, MANAZIL, normalizeLongitude } from "../../../shared/hybrid";
 import { calculateArabicLots } from "../../utils/arabicLots";
@@ -138,7 +139,7 @@ export function resolveArabicEvidence(
       sourceId: "local-arabic-rules",
       sourceTrace: trace("lots", "arabic-lots"),
     });
-  if (plan.includeTiming)
+  if (false && plan.includeTiming)
     evidence.push({
       id: "arabic-hours-status",
       tradition: "arabic",
@@ -158,5 +159,6 @@ export function resolveArabicEvidence(
         "canopy-arabian"
       ),
     });
+  evidence.push(...resolveSubdivisions(chart));
   return evidence;
 }
