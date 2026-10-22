@@ -529,6 +529,7 @@ export default function Home() {
     setActiveProfile(newProfile);
     try {
       localStorage.setItem("algorithms_cosmos_profile", JSON.stringify(newProfile));
+      window.dispatchEvent(new Event("fg:profile-updated"));
     } catch {
       // ignore
     }
@@ -556,6 +557,7 @@ export default function Home() {
   const handleClearProfile = () => {
     try {
       localStorage.removeItem("algorithms_cosmos_profile");
+      window.dispatchEvent(new Event("fg:profile-updated"));
     } catch {
       // ignore
     }
@@ -572,6 +574,7 @@ export default function Home() {
     setActiveProfile(sample);
     try {
       localStorage.setItem("algorithms_cosmos_profile", JSON.stringify(sample));
+      window.dispatchEvent(new Event("fg:profile-updated"));
     } catch {
       // ignore
     }
