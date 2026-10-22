@@ -1,4 +1,4 @@
-import { findFixedStarContactsForLongitude } from "./canon/fixedStarsAndLots";
+import { FIXED_STAR_CANON_RECORDS } from "./canon/fixedStarsAndLots";
 import { formatUniversalMethodCoverage } from "./methodCoverage";
 import { seferYetzirahEvidence } from "./canon/seferYetzirah";
 import type { ChartResult } from "../astronomy";
@@ -292,28 +292,48 @@ export function buildAstrologyEvidencePacket(
     ...chart.movingBodies, chart.ascendant, chart.descendant, chart.midheaven,
     chart.northNode, chart.southNode,
   ].filter((row): row is NonNullable<typeof row> => row != null && Number.isFinite(row.longitude));
+  const STAR_ASPECTS = [
+    { name: "conjunction", angle: 0 },
+    { name: "sextile", angle: 60 },
+    { name: "square", angle: 90 },
+    { name: "trine", angle: 120 },
+    { name: "opposition", angle: 180 },
+  ] as const;
+  const angularSeparation = (a: number, b: number) => {
+    const raw = Math.abs(a - b) % 360;
+    return Math.min(raw, 360 - raw);
+  };
   const fixedStarEvidence: EvidenceItem[] = fixedStarTargets.flatMap(body =>
-    findFixedStarContactsForLongitude(body.longitude).map(({star, orbDeg}) => ({
-      id: `fixed-star-contact-${body.name.replace(/\\s+/g,"-")}-${star.name.replace(/\\s+/g,"-")}`,
-      tradition: "firmament" as const,
-      category: "deterministic-rule" as const,
-      technique: "fixed-stars",
-      subject: body.name,
-      statement: `${body.name} (${body.display}, house ${body.house}) contacts ${star.name} at its configured Firmament-locked longitude, orb ${orbDeg.toFixed(2)}°. Traditional meaning: ${star.traditionalMeaning} Potential gift: ${star.giftWhenIntegrated} Caution: ${star.nemesisOrTest} The locked location is a configured symbolic reference, not an observed historical discovery longitude.`,
-      concepts: ["fixed-star", body.name.toLowerCase(), star.name.toLowerCase(), star.isRoyalStar ? "royal-star" : "fixed-star-contact"],
-      polarity: "neutral" as const,
-      strength: Math.max(0, 1 - orbDeg / 5),
-      sourceId: "firmament-canon-knowledge",
-      sourceTrace: {
-        sourceId: "firmament-canon-knowledge",
-        tradition: "firmament" as const,
-        technique: "fixed-stars",
-        sourceTitle: "Firmament fixed-star canon (configured fixed longitudes)",
-        retrievedAt: new Date().toISOString(),
-        confidence: "moderate" as const,
-        calculationSettings: { orbDegrees: orbDeg, reference: "firmament-locked", isRoyal: star.isRoyalStar },
-      },
-    }))
+    FIXED_STAR_CANON_RECORDS.flatMap(star => {
+      const sep = angularSeparation(body.longitude, star.firmamentLockedLongitude);
+      return STAR_ASPECTS.flatMap(aspect => {
+        const orb = Math.abs(sep - aspect.angle);
+        if (orb > 5) return [];
+        // Every aspect retains the user's unified five-degree orb. Source records
+        // remain explicit about the configured, permanently locked sky reference.
+        return [{
+          id: `fixed-star-${body.name.replace(/\\s+/g, "-")}-${star.name.replace(/\\s+/g, "-")}-${aspect.name}`,
+          tradition: "firmament" as const,
+          category: "deterministic-rule" as const,
+          technique: "fixed-star-aspects",
+          subject: body.name,
+          statement: `${body.name} at ${body.display}, house ${body.house}, forms a ${aspect.name} (${aspect.angle}°) to ${star.name}, configured at ${star.firmamentLockedLongitude.toFixed(4)}°; separation ${sep.toFixed(2)}°, orb ${orb.toFixed(2)}°. ${star.traditionalMeaning ?? "No individually sourced traditional interpretation configured."} ${star.giftWhenIntegrated ? "Potential gift: " + star.giftWhenIntegrated : ""} ${star.nemesisOrTest ? "Caution: " + star.nemesisOrTest : ""} This is a symbolic ecliptic-longitude aspect to a configured anchor, not observed physical proximity, parans, or an ancient discovery longitude.`,
+          concepts: ["fixed-star", "fixed-star-aspect", aspect.name, body.name.toLowerCase(), star.name.toLowerCase(), star.isRoyalStar ? "royal-star" : "nonroyal-star"],
+          polarity: aspect.name === "square" || aspect.name === "opposition" ? "pressured" as const : aspect.name === "conjunction" ? "neutral" as const : "supportive" as const,
+          strength: Math.max(0, 1 - orb / 5),
+          sourceId: "firmament-canon-knowledge",
+          sourceTrace: {
+            sourceId: "firmament-canon-knowledge",
+            tradition: "firmament" as const,
+            technique: "fixed-star-aspects",
+            sourceTitle: "Firmament configured fixed-star canon; longitude-only aspects",
+            retrievedAt: new Date().toISOString(),
+            confidence: "moderate" as const,
+            calculationSettings: { aspect: aspect.name, aspectAngleDegrees: aspect.angle, angularSeparationDegrees: sep, orbDegrees: orb, maximumOrbDegrees: 5, reference: "firmament-locked", isRoyal: star.isRoyalStar },
+          },
+        }];
+      });
+    })
   );
   const timingEvidence: EvidenceItem[] =
     mode === "natal"
