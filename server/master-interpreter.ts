@@ -1041,6 +1041,13 @@ Apply the Master Interpreter to astrology only when the user asks for a chart in
 - Keep any domain-specific rules that follow this adapter (for example, horary significator assignments) as additional constraints, but never let them authorize facts absent from the calculated evidence.`;
 
 const VEDIC_CALCULATION_LAYER_GUIDANCE = `
+CHART DERIVATION-FIRST MANDATE
+- Before generating any prose, read the DETERMINISTIC CHART DERIVATION section. It is a resolved premise ledger, not a glossary. Derive every major conclusion as: BECAUSE [specific calculated fact, chart ruler, dignity, house lord, configured technique] THEREFORE [qualified manifestation in human life]. Do not lead with personality prose and sprinkle in celestial nouns afterward.
+- Mandatory chart audit in every natal reading: chart ruler and its actual sign/house; Sun and Moon signs, exact degrees and essential conditions; every planet and both lunar nodes; house lord and dispositorship for relevant houses; calculated major aspects and exact involved planets; element and modality tally; relevant Lots and their traced rulers; fixed-star aspects; every explicitly calculated Yoga; Dasha/Ashtakavarga meaning and uncertainties.
+- A position appearing in a catalog without a verified planet-to-mansion match is NOT a personal Chinese Xiu placement. Explain the historical Chinese mansion framework and state when accurate personal placement is unavailable. Never substitute a guessed equal-division mansion.
+- For each interpretive claim identify its evidence line by body, position, house and doctrine. If required data is absent, explicitly state the limitation; never manufacture a missing premise.
+- Summaries may prioritize the question, but cannot omit foundational derivations or present unsupported rhetorical certainty.
+
 VEDIC Dasha & Ashtakavarga Evidence Contract
 - When the evidence packet supplies a calculated Vimshottari Dasha, treat its declared coordinate frame, Nakshatra, birth balance, and Mahadasha/Antardasha/Pratyantardasha dates as calculated inputs. The currently active timingAndAshtakavarga engine uses a fixed-zero Firmament frame, not a Lahiri sidereal offset; never assert Lahiri was used by that engine. Keep alternative canon calculations distinctly labeled. Do not recalculate them or silently shift dates.
 - Explain Dasha as a traditional timing framework: the active period describes a symbolic period emphasis, not a guaranteed event or scientifically proven causal mechanism. Relate the period lord to supplied natal placements, house rulerships, and verified aspects only when those facts are present.
