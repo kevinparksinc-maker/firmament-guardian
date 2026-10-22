@@ -218,7 +218,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     .filter((aspect): aspect is HoraryAspect => Boolean(aspect));
   const significatorNames = new Set(aspectNames);
   const canonDossier = retrieveChartCanonDossier(calculated);
-  const fullMethodPacket = buildAstrologyEvidencePacket(calculated, input.question, "natal");
+  const fullMethodPacket = buildAstrologyEvidencePacket({ ...calculated, transits: [] }, input.question, "natal");
   const fullMethodEvidence = formatEvidencePacket(fullMethodPacket);
   const kabbalahEvidenceText = seferYetzirahEvidence(calculated)
     .map(item => `- [${item.technique}] ${item.statement}`)
