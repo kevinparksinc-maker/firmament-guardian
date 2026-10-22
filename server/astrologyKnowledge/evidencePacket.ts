@@ -509,6 +509,8 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
       packet.lifeEventEvidence
     ),
     packet.canonDossier?.formattedSummaryForInterpreter ?? "",
+    section("ALL CANON CORRESPONDENCE EVIDENCE (including Sefer Yetzirah, Kabbalah Four Worlds, and planetary source variants)", packet.canonEvidence),
+    section("Fixed star evidence", packet.fixedStarEvidence),
     section("Vedic evidence", packet.vedicEvidence),
     section("Arabic evidence", packet.arabicEvidence),
     section("Lunar evidence", packet.lunarEvidence),
