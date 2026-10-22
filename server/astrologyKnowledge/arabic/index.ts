@@ -104,6 +104,7 @@ export function resolveArabicEvidence(
       ascendant: chart.ascendant.longitude,
       sun: sun.longitude,
       moon: moon.longitude,
+      venus: chart.movingBodies.find(row => row.name === "Venus")?.longitude,
       sect,
     });
     for (const [name, longitude] of Object.entries(lots)) {
