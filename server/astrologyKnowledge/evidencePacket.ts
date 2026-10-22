@@ -1,3 +1,4 @@
+import { findFixedStarContactsForLongitude } from "./canon/fixedStarsAndLots";
 import { formatUniversalMethodCoverage } from "./methodCoverage";
 import { seferYetzirahEvidence } from "./canon/seferYetzirah";
 import type { ChartResult } from "../astronomy";
@@ -284,29 +285,35 @@ export function buildAstrologyEvidencePacket(
   const lunarEvidence = [...vedicEvidence, ...arabicEvidence].filter(item =>
     ["nakshatra", "manzil"].includes(item.technique)
   );
-  const fixedStarEvidence: EvidenceItem[] = chart.frozenStars.flatMap(star =>
-    (star.royalStarContacts ?? [])
-      .filter(contact => contact.contact)
-      .map(contact => ({
-        id: `fixed-star-${star.name}-${contact.name}`,
+  // Evaluate actual planetary/angle positions against the existing canonical star
+  // catalog. The previous implementation compared star rows against royal stars,
+  // leaving personal planet-to-star contacts out of this primary evidence family.
+  const fixedStarTargets = [
+    ...chart.movingBodies, chart.ascendant, chart.descendant, chart.midheaven,
+    chart.northNode, chart.southNode,
+  ].filter((row): row is NonNullable<typeof row> => row != null && Number.isFinite(row.longitude));
+  const fixedStarEvidence: EvidenceItem[] = fixedStarTargets.flatMap(body =>
+    findFixedStarContactsForLongitude(body.longitude).map(({star, orbDeg}) => ({
+      id: `fixed-star-contact-${body.name.replace(/\\s+/g,"-")}-${star.name.replace(/\\s+/g,"-")}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "fixed-stars",
+      subject: body.name,
+      statement: `${body.name} (${body.display}, house ${body.house}) contacts ${star.name} at its configured Firmament-locked longitude, orb ${orbDeg.toFixed(2)}°. Traditional meaning: ${star.traditionalMeaning} Potential gift: ${star.giftWhenIntegrated} Caution: ${star.nemesisOrTest} The locked location is a configured symbolic reference, not an observed historical discovery longitude.`,
+      concepts: ["fixed-star", body.name.toLowerCase(), star.name.toLowerCase(), star.isRoyalStar ? "royal-star" : "fixed-star-contact"],
+      polarity: "neutral" as const,
+      strength: Math.max(0, 1 - orbDeg / 5),
+      sourceId: "firmament-canon-knowledge",
+      sourceTrace: {
+        sourceId: "firmament-canon-knowledge",
         tradition: "firmament" as const,
-        category: "calculated-fact" as const,
         technique: "fixed-stars",
-        subject: star.name,
-        statement: `${star.name} is within ${contact.distance.toFixed(2)}° of ${contact.name}.`,
-        concepts: ["fixed-star", contact.name.toLowerCase()],
-        polarity: "neutral" as const,
-        strength: Math.max(0, 1 - contact.distance / 5),
-        sourceId: "firmament-ephemeris",
-        sourceTrace: {
-          sourceId: "firmament-ephemeris",
-          tradition: "firmament" as const,
-          technique: "fixed-stars",
-          sourceTitle: "Firmament local ephemeris",
-          retrievedAt: new Date().toISOString(),
-          confidence: "high" as const,
-        },
-      }))
+        sourceTitle: "Firmament fixed-star canon (configured fixed longitudes)",
+        retrievedAt: new Date().toISOString(),
+        confidence: "moderate" as const,
+        calculationSettings: { orbDegrees: orbDeg, reference: "firmament-locked", isRoyal: star.isRoyalStar },
+      },
+    }))
   );
   const timingEvidence: EvidenceItem[] =
     mode === "natal"
