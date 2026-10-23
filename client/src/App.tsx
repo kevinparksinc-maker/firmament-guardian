@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { ProfileSessionProvider, useProfileSession } from "./contexts/ProfileSessionContext";
+import { PROFILE_TABS } from "./config/profileNavigation";
 import { trpc } from "@/lib/trpc";
 import { startLogin } from "@/const";
 import { LogIn, ShieldCheck, UserRound } from "lucide-react";
@@ -32,10 +33,9 @@ function Router() {
   if (!profile && path !== "/") return <Redirect to="/" />;
   return (
     <Switch>
-      <Route path={"/"}><Home section="home" /></Route>
-      <Route path={"/chart"}><Home section="chart" /></Route>
-      <Route path={"/reading"}><Home section="reading" /></Route>
-      <Route path={"/guide"}><Home section="guide" /></Route>
+      {PROFILE_TABS.map(tab => (
+        <Route key={tab.href} path={tab.href}><Home section={tab.section} /></Route>
+      ))}
       <Route path={"/sky"} component={SkyHomePrototype} />
       <Route path={"/horary"} component={HoraryPage} />
       <Route path={"/zodiac-readings"} component={ZodiacHoraryPage} />
