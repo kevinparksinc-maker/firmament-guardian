@@ -20,6 +20,8 @@ const entries = [
 export function CelestialCommandShell({children}:{children:ReactNode}) {
   const [path] = useLocation();
   const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
+  const profileWorkspace = ["/", "/chart", "/reading", "/guide"].includes(path);
+  if (profileWorkspace) return <div className="fg-command-shell"><main className="min-w-0">{children}</main></div>;
   return <div className="fg-command-shell">
     <GuardianNavigation/>
     <div className="fg-command-layout">
