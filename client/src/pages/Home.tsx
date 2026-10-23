@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MAJOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
+import { PROFILE_TABS, type ProfileSection } from "@/config/profileNavigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -293,7 +294,7 @@ function CalculationReveal({
   );
 }
 
-export default function Home({ section = "home" }: { section?: "home" | "chart" | "reading" | "guide" }) {
+export default function Home({ section = "home" }: { section?: ProfileSection }) {
   const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult } = useProfileSession();
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
@@ -679,9 +680,9 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
 
         {activeProfile && (
           <nav aria-label="Primary profile navigation" className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-4 border-t border-cyan-300/30 bg-slate-950/95 p-2 pb-[max(8px,env(safe-area-inset-bottom))] backdrop-blur-lg md:sticky md:top-0 md:bottom-auto md:mb-5 md:rounded-2xl md:border">
-            {([{ href: "/", label: "Home" }, { href: "/chart", label: "Chart" }, { href: "/reading", label: "Reading" }, { href: "/guide", label: "Guide" }] as const).map(item => (
-              <Link key={item.href} href={item.href} aria-current={(section === "home" ? "/" : "/" + section) === item.href ? "page" : undefined}
-                className={`rounded-xl px-2 py-3 text-center text-sm font-semibold ${(section === "home" ? "/" : "/" + section) === item.href ? "bg-cyan-200/15 text-cyan-100 ring-1 ring-cyan-300/40" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+            {PROFILE_TABS.map(item => (
+              <Link key={item.href} href={item.href} aria-current={section === item.section ? "page" : undefined}
+                className={`rounded-xl px-2 py-3 text-center text-sm font-semibold ${section === item.section ? "bg-cyan-200/15 text-cyan-100 ring-1 ring-cyan-300/40" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
                 {item.label}
               </Link>
             ))}
