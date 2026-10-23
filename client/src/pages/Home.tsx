@@ -1,64 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { MAJOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
+import { useEffect, useState } from "react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import type { ProfileSection } from "@/config/profileNavigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Loader2,
-  MapPin,
-  Sparkles,
-  Sun,
-  Star,
-  CheckCircle2,
-  Compass,
-  BookmarkPlus,
-} from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { MapView } from "@/components/Map";
-import { AdvancedChartInstruments } from "@/components/AdvancedChartInstruments";
-import { LiveTransitFeed } from "@/components/LiveTransitFeed";
-import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarousel";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
 import { ProfileChartScreen } from "@/components/ProfileChartScreen";
 import { ProfileReadingScreen } from "@/components/ProfileReadingScreen";
 import { ProfileGuideScreen, type GuideTab } from "@/components/ProfileGuideScreen";
-import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import { CosmicShareCard } from "@/components/CosmicShareCard";
-import { SocialLovedOnesMatrix } from "@/components/SocialLovedOnesMatrix";
-import { SynastryMatrixTab } from "@/components/SynastryMatrixTab";
-import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
-import { AudioPodcastBriefing } from "@/components/AudioPodcastBriefing";
-import { useSovereignTier, SovereignTeaserLock } from "@/components/SovereignTierModal";
-import {
-  Share2,
-  Users,
-  Heart,
-  Calendar,
-  Headphones,
-  Crown,
-  Layers,
-  Sparkles as SparklesIcon,
-  User,
-} from "lucide-react";
-import {
-  NatalProfileBuilder,
-  type UserProfileData,
-  SAMPLE_PROFILE,
-} from "@/components/NatalProfileBuilder";
-import type { ChartResult } from "../../../server/astronomy";
+import { NatalProfileBuilder, type UserProfileData, SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
 import type { Worldview } from "../../../server/astrologyCore";
-import { formatInZone } from "../../../shared/time";
 import { Link, useLocation } from "wouter";
 import { startLogin } from "@/const";
 
@@ -100,7 +51,6 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
   const [transitLocationQuery, setTransitLocationQuery] = useState("");
   const [readingQuestion, setReadingQuestion] = useState("");
   const [readingMode, setReadingMode] = useState<ReadingMode>("combined");
-  const [showHelp, setShowHelp] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [, navigate] = useLocation();
   const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(() => {
@@ -127,7 +77,6 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
   }, []);
   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
 
-  const { isSovereign, openPaywall } = useSovereignTier();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleAskMasterInterpreter = (question: string) => {
@@ -139,9 +88,6 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     setInterpreterPrompt(question);
     document.getElementById("master-interpreter-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const [showMap, setShowMap] = useState(
-    () => typeof window !== "undefined" && window.innerWidth >= 640
-  );
   const geo = trpc.hybrid.geocode.useQuery(
     { query: locationQuery },
     { enabled: false, retry: false }
@@ -153,50 +99,6 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
   const calculate = trpc.hybrid.calculate.useMutation({ onSuccess: setResult });
   const me = trpc.auth.me.useQuery();
   const saveChart = trpc.history.saveChart.useMutation();
-  const update = (key: keyof typeof form, value: string | number) =>
-    setForm(current => ({ ...current, [key]: value }));
-  const useResolved = async () => {
-    setFormError("");
-    try {
-      const res = await geo.refetch();
-      if (res.data)
-        setForm(current => ({
-          ...current,
-          location: res.data.label,
-          latitude: res.data.latitude,
-          longitude: res.data.longitude,
-          timezone: res.data.timezone,
-        }));
-      else if (res.error) setFormError(res.error.message);
-    } catch (error) {
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : "Location search is temporarily unavailable. Please try the pin again."
-      );
-    }
-  };
-  const useResolvedTransit = async () => {
-    setFormError("");
-    try {
-      const res = await transitGeo.refetch();
-      if (res.data)
-        setForm(current => ({
-          ...current,
-          transitLocation: res.data.label,
-          transitLatitude: res.data.latitude,
-          transitLongitude: res.data.longitude,
-          transitTimezone: res.data.timezone,
-        }));
-      else if (res.error) setFormError(res.error.message);
-    } catch (error) {
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : "Transit location search is temporarily unavailable. Please try the pin again."
-      );
-    }
-  };
   const calculateChart = async (
     nextWorldview: Worldview = worldview,
     nextReadingMode: ReadingMode = readingMode,
@@ -389,13 +291,6 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
       if (!result && !calculate.isPending) void calculateChart(worldview, readingMode, nextForm);
     }
   }, []);
-  const summary = useMemo(
-    () =>
-      result
-        ? `${result.movingBodies.length} moving bodies · ${result.frozenStars.length} frozen stars · 12 ${result.worldview === "god" ? "fixed" : "personal"} houses`
-        : "Ready for a new chart",
-    [result]
-  );
   return (
     <div className="relative min-h-screen isolate bg-transparent text-slate-100 selection:bg-violet-400/30">
       <div
