@@ -60,7 +60,7 @@ import {
 import type { ChartResult } from "../../../server/astronomy";
 import type { Worldview } from "../../../server/astrologyCore";
 import { formatInZone } from "../../../shared/time";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { startLogin } from "@/const";
 
 const exampleChart = {
@@ -303,7 +303,15 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
   const [readingMode, setReadingMode] = useState<ReadingMode>("combined");
   const [showHelp, setShowHelp] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(null);
+  const [, navigate] = useLocation();
+  const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(() => {
+    if (section !== "reading" || typeof window === "undefined") return null;
+    try {
+      const prompt = sessionStorage.getItem("fg:pending-interpreter-prompt");
+      sessionStorage.removeItem("fg:pending-interpreter-prompt");
+      return prompt;
+    } catch { return null; }
+  });
   type ObservatoryTab = "blueprint" | "synastry" | "weather" | "podcast" | "social";
   const parseTab = (): ObservatoryTab => {
     const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
@@ -335,11 +343,13 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleAskMasterInterpreter = (question: string) => {
+    if (section !== "reading") {
+      try { sessionStorage.setItem("fg:pending-interpreter-prompt", question); } catch {}
+      navigate("/reading");
+      return;
+    }
     setInterpreterPrompt(question);
-    document.getElementById("master-interpreter-section")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    document.getElementById("master-interpreter-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   const [showMap, setShowMap] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= 640
@@ -655,12 +665,13 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
         {result && section === "chart" && (
           <section id="chart-observatory" className="mb-8 scroll-mt-24" aria-label="Primary calculated celestial diamond observatory">
             <ChartObservatory2050 chart={result} />
+            <Link href="/reading" className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-violet-300/40 bg-violet-300/10 px-5 text-sm font-semibold text-violet-100">Open the Master Interpreter →</Link>
           </section>
         )}
 
 
         {/* Active Profile Ribbon if profile is already loaded */}
-        {activeProfile && result && (
+        {activeProfile && result && section === "home" && (
           <ActiveProfileBar
             profile={activeProfile}
             chart={result}
@@ -744,6 +755,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
             )}
             </>)}
             {section === "guide" && (<>
+            <header className="mb-6 rounded-2xl border border-white/10 bg-black/30 p-5"><h1 className="font-serif text-2xl text-white">12 Gates of the Firmament</h1><p className="mt-2 text-sm text-slate-300">Explore celestial discoveries and the traditional evidence behind your chart.</p></header>
             <PersonalDiscoveryCarousel chart={result} />
             {/* Primary Cosmos Navigation Tabs */}
             <div id="main-cosmos-tabs" className="fg-celestial-tabs mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
