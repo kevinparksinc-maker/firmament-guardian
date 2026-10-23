@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { MAJOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -280,7 +281,7 @@ function CalculationReveal({
                 ))
               ) : (
                 <div className="text-slate-500">
-                  No major contact within 5°.
+                  No major contact within {MAJOR_ASPECT_ORB_DEGREES}°.
                 </div>
               )}
             </div>
@@ -1480,7 +1481,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
                     <p className="text-xs leading-5 text-slate-400">
                       Live moving bodies compared with this chart’s natal
                       placements. Houses use the natal cusps; contacts are major
-                      aspects within a 5° orb.{" "}
+                      aspects within a {MAJOR_ASPECT_ORB_DEGREES}° orb.{" "}
                       <span className="text-cyan-300/70">
                         Hover a row to explore.
                       </span>
