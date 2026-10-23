@@ -20,16 +20,14 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { MapView } from "@/components/Map";
-import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { AdvancedChartInstruments } from "@/components/AdvancedChartInstruments";
 import { LiveTransitFeed } from "@/components/LiveTransitFeed";
 import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarousel";
-import { WelcomeHost } from "@/components/WelcomeHost";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
 import { ProfileChartScreen } from "@/components/ProfileChartScreen";
+import { ProfileReadingScreen } from "@/components/ProfileReadingScreen";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
-import { ChartOverview } from "@/components/ChartOverview";
 import {
   HoverCard,
   HoverCardContent,
@@ -627,34 +625,20 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         )}
         {result && (section === "reading" || section === "guide") && (
           <>
-            {section === "reading" && (<>
-            <ChartOverview
-              chart={result}
-              view={readingView}
-              onViewChange={setReadingView}
-            />
-            {/* First Screen Hero: Big AI Master Interpreter Chatbox with RAG */}
-            <div id="master-interpreter-section">
-              <WelcomeHost
+            {section === "reading" && (
+              <ProfileReadingScreen
                 chart={result}
+                readingView={readingView}
+                onReadingViewChange={setReadingView}
                 readingMode={readingMode}
+                readingQuestion={readingQuestion}
+                interpreterPrompt={interpreterPrompt}
+                onClearInterpreterPrompt={() => setInterpreterPrompt(null)}
                 onLoadSampleChart={handleLoadSampleChart}
                 onOpenProfileBuilder={() => setIsProfileModalOpen(true)}
-                externalPrompt={interpreterPrompt}
-                onClearExternalPrompt={() => setInterpreterPrompt(null)}
-              />
-            </div>
-
-            {result && (
-              <InterpretationPanel
-                key={`${result.input.location || "god"}:${result.input.date || "live"}:${result.input.time || "none"}:${result.worldview}`}
-                chart={result}
-                initialMode={readingMode}
-                initialQuestion={readingQuestion}
-                onModeChange={nextMode => setReadingMode(nextMode)}
+                onReadingModeChange={setReadingMode}
               />
             )}
-            </>)}
             {section === "guide" && (<>
             <header className="mb-6 rounded-2xl border border-white/10 bg-black/30 p-5"><h1 className="font-serif text-2xl text-white">12 Gates of the Firmament</h1><p className="mt-2 text-sm text-slate-300">Explore celestial discoveries and the traditional evidence behind your chart.</p></header>
             <PersonalDiscoveryCarousel chart={result} />
