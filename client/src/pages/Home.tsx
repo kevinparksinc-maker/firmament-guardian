@@ -318,6 +318,7 @@ export default function Home() {
     return () => window.removeEventListener("fg:select-tab", onSelect);
   }, []);
   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
+  const [workspaceView, setWorkspaceView] = useState<"dashboard" | "reading" | "details">("dashboard");
   const { isSovereign, openPaywall } = useSovereignTier();
   const [activeProfile, setActiveProfile] = useState<UserProfileData | null>(() => {
     try {
@@ -649,7 +650,7 @@ export default function Home() {
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)] [background-size:64px_64px]" />
       </div>
       <main className="guardian-home-main relative z-10 mx-auto max-w-[1480px] px-5 py-6 md:px-10 md:py-10">
-        <Guardian2050Welcome />
+        {!result && <Guardian2050Welcome />}
         {result && (
           <section id="chart-observatory" className="mb-8 scroll-mt-24" aria-label="Primary calculated celestial diamond observatory">
             <ChartObservatory2050 chart={result} />
@@ -841,7 +842,36 @@ export default function Home() {
         />
 
         {result && (
+          <nav aria-label="Profile workspace navigation" className="mb-6 grid grid-cols-3 gap-2 rounded-2xl border border-cyan-200/20 bg-slate-950/85 p-2">
+            {([
+              { id: "dashboard", label: "Chart", description: "Diamond observatory" },
+              { id: "reading", label: "Reading", description: "Discoveries and AI" },
+              { id: "details", label: "Explore", description: "Complete instruments" },
+            ] as const).map(item => (
+              <button key={item.id} type="button" aria-current={workspaceView === item.id ? "page" : undefined}
+                onClick={() => setWorkspaceView(item.id)}
+                className={`min-w-0 rounded-xl px-2 py-3 text-center transition ${workspaceView === item.id ? "bg-cyan-200/15 text-cyan-100 ring-1 ring-cyan-300/50" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+                <span className="block text-sm font-semibold">{item.label}</span>
+                <span className="hidden text-[10px] sm:block">{item.description}</span>
+              </button>
+            ))}
+          </nav>
+        )}
+        {result && workspaceView === "dashboard" && (
+          <section aria-label="Your chart dashboard" className="mb-8 grid gap-3 sm:grid-cols-2">
+            <button type="button" onClick={() => setWorkspaceView("reading")} className="rounded-2xl border border-violet-300/25 bg-violet-200/10 p-5 text-left text-white hover:bg-violet-200/15">
+              <span className="block text-lg font-semibold">Your personal reading</span>
+              <span className="mt-1 block text-sm text-slate-300">Discover your patterns and ask the Master Interpreter.</span>
+            </button>
+            <button type="button" onClick={() => setWorkspaceView("details")} className="rounded-2xl border border-cyan-300/25 bg-cyan-200/10 p-5 text-left text-white hover:bg-cyan-200/15">
+              <span className="block text-lg font-semibold">Full celestial evidence</span>
+              <span className="mt-1 block text-sm text-slate-300">All houses, transits, methods and technical instruments.</span>
+            </button>
+          </section>
+        )}
+        {result && workspaceView !== "dashboard" && (
           <>
+            {workspaceView === "reading" && (<>
             <PersonalDiscoveryCarousel chart={result} />
             <ChartOverview
               chart={result}
@@ -860,6 +890,8 @@ export default function Home() {
               />
             </div>
 
+            </>)}
+            {workspaceView === "details" && (<>
             {/* Primary Cosmos Navigation Tabs */}
             <div id="main-cosmos-tabs" className="fg-celestial-tabs mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
           <button
@@ -1628,13 +1660,6 @@ export default function Home() {
           </section>
         </div>
 
-        {/* Social Matrix & Loved Ones Intersect System */}
-        <div id="social-loved-ones-section" className="mt-12 pt-8 border-t border-white/10">
-          <SocialLovedOnesMatrix
-            userChart={result}
-            onAskMasterInterpreter={handleAskMasterInterpreter}
-          />
-        </div>
           </>
         )}
 
@@ -1673,6 +1698,7 @@ export default function Home() {
             onAskMasterInterpreter={handleAskMasterInterpreter}
           /></>
         )}
+          </>)}
           </>
         )}
       </main>
