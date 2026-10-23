@@ -45,6 +45,8 @@ describe("Master Interpreter prompt coverage", () => {
     expect(ASTROLOGY_INTERPRETATION_ADAPTER).toContain("calculation engine and the supplied chart evidence are the sole source of chart facts");
     expect(buildAstrologyInterpreterSystem()).toContain("VEDIC Dasha & Ashtakavarga Evidence Contract");
     expect(buildAstrologyInterpreterSystem()).toContain("BOLD CLAIM → WHY");
+    expect(buildAstrologyInterpreterSystem()).toContain("GUARDIAN POWER PRINCIPLE");
+    expect(buildAstrologyInterpreterSystem()).toContain("POWER → SAFETY → COMFORT → AUTHENTICITY");
     expect(buildAstrologyInterpreterSystem()).toContain("UNIVERSAL THREE-LAYER DIVINATION ARCHITECTURE");
     expect(buildAstrologyInterpreterSystem()).toContain("Never imply Trikona Sodhana or Ekadhipatya Sodhana was applied");
   });
