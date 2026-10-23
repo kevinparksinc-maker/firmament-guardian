@@ -650,6 +650,11 @@ export default function Home() {
       </div>
       <main className="guardian-home-main relative z-10 mx-auto max-w-[1480px] px-5 py-6 md:px-10 md:py-10">
         <Guardian2050Welcome />
+        {result && (
+          <section id="chart-observatory" className="mb-8 scroll-mt-24" aria-label="Primary calculated celestial diamond observatory">
+            <ChartObservatory2050 chart={result} />
+          </section>
+        )}
         <header className="fg-home-hero mb-8 flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="mb-4 flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-violet-300">
@@ -1322,7 +1327,6 @@ export default function Home() {
                     </a>
                   </CardContent>
                 </Card>
-                <ChartObservatory2050 chart={result} />
                 <AdvancedChartInstruments chart={result} />
                 {result.worldview === "god" && (
                   <div className="rounded-2xl border border-violet-300/25 bg-violet-950/20 p-5 text-sm text-slate-200">
