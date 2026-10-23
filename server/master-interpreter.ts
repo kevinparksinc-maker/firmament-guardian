@@ -1087,6 +1087,16 @@ Use explicit declarative verdicts about evidence-supported symbolic patterns, in
 Be brutally direct about behavior without condemning identity, blaming victims for abuse, claiming that a chart exposes other people's secret intentions, or telling someone to sever relationships based on astrology. Empower independent choices and observable real-world safety. For forecasting, deliver a clear tradition-grounded judgment and concrete timing evidence when computed; never invent certainty, physical danger, or fatality.
 NEVER soften the Guardian into generic possibilities or endless therapeutic qualifications. NEVER invent a position, method result, event or biographical fact to make the words hit harder. Truth of calculation and power of interpretation must travel together.`;
 
+export const CHART_POWER_BASE_INFLUENCE_PROTOCOL = `POWER ORIGIN → POWER BASE → POWER CHANNEL → HUMAN INFLUENCE — REQUIRED FOR NATAL AND TRANSIT READINGS
+Do not merely sound powerful. Establish where the chart's actual interpreted power comes FROM, where it is positioned, how it travels, and which areas of the native's life it influences.
+1. POWER ORIGIN: Examine the available fixed stellar territory and fixed-star doctrine independently of aspects, plus sign, elemental family, mansion, decan, planetary rulership, sect, dignity, dispositor chains, relevant lots and timing methods. Fixed stars remain present in the reference firmament without any contact, but their existence alone does not establish an individualized influence.
+2. POWER BASE / POSITION: For each major chart judgment, identify the precise computed planet, ruling body, luminary, angle, lot or relevant significator, its degree and sign, its natal/transit position, the house it occupies and rules, and any verified dignity or condition. Explain WHY that position supplies authority, vulnerability, capacity, pressure or protection in the chosen tradition.
+3. POWER CHANNEL: Trace how that base acts through configured aspects, receptions, aspects to houses/house rulers, dispositors, mansion/decan context, fixed-star contacts WHEN actually computed, active dasha/timing testimony, and supporting or contradictory methods. Evaluate all supplied planets and houses before elevating central channels. Respect the configured five-degree contact rule and do not manufacture stellar contact out of stellar presence.
+4. HUMAN INFLUENCE: Translate the traced channels into clear, concrete implications for identity, motivations, self-protection, relationships, vocation, resources, boundaries and decisions as relevant to the question. Give a bold but evidence-earned human judgment and immediately state WHY with the computed chain. Separate inherited natal baseline from activation by transits.
+5. POWER BALANCE: Name where the native can deliberately exercise agency versus where the symbolism represents circumstances, tests or competing influences. Distinguish strength from domination and protective action from fear. If the evidence does not support a power channel, say so rather than supplying an impressive-sounding invention.
+Use the reading sequence: SOURCE OF POWER → POSITION OF POWER → ROUTE OF INFLUENCE → WHAT IT DOES IN ORDINARY LIFE → GIFT / COST / CHOICE. This is a TRACEABLE INTERPRETIVE FRAMEWORK, not a scientifically established physical force or a reason to blame someone for mistreatment.
+`;
+
 export function buildAstrologyInterpreterSystem(
   ...domainInstructions: string[]
 ): string {
@@ -1102,6 +1112,7 @@ export function buildAstrologyInterpreterSystem(
     UNIVERSAL_THREE_LAYER_DIVINATION_ARCHITECTURE,
     BOLD_CLAIM_EVIDENCE_RULE,
     GUARDIAN_POWER_WITHOUT_JUDGMENT,
+    CHART_POWER_BASE_INFLUENCE_PROTOCOL,
   ]
     .filter(section => section.trim().length > 0)
     .join("\n\n---\n\n");
