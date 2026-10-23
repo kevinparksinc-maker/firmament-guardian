@@ -722,7 +722,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
         )}
 
         {/* Modal for editing profile anytime */}
-        <NatalProfileBuilder
+        {isProfileModalOpen && <NatalProfileBuilder
           mode="dialog"
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
@@ -730,7 +730,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
           onSaveProfile={handleSaveProfile}
           onLoadSample={handleLoadSampleChart}
           isCalculating={calculate.isPending}
-        />
+        />}
 
         {activeProfile && (
           <nav aria-label="Primary profile navigation" className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-4 border-t border-cyan-300/30 bg-slate-950/95 p-2 pb-[max(8px,env(safe-area-inset-bottom))] backdrop-blur-lg md:sticky md:top-0 md:bottom-auto md:mb-5 md:rounded-2xl md:border">
