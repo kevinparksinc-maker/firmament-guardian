@@ -37,7 +37,10 @@ function Router() {
   if (!hasProfile && path !== "/") return <Home />;
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"}><Home section="home" /></Route>
+      <Route path={"/chart"}><Home section="chart" /></Route>
+      <Route path={"/reading"}><Home section="reading" /></Route>
+      <Route path={"/guide"}><Home section="guide" /></Route>
       <Route path={"/sky"} component={SkyHomePrototype} />
       <Route path={"/horary"} component={HoraryPage} />
       <Route path={"/zodiac-readings"} component={ZodiacHoraryPage} />
