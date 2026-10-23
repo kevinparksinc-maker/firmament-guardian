@@ -11,6 +11,23 @@ const tones = {
   pink: "border-fuchsia-300/70 shadow-[0_0_22px_rgba(255,120,207,.13)]",
 };
 
+const planetThemes: Record<string, string> = {
+ Sun:"identity, purpose and visibility", Moon:"emotional needs and instincts",
+ Mercury:"thinking, language and communication", Venus:"affection, values and connection",
+ Mars:"drive, courage and taking action", Jupiter:"growth, opportunity and belief",
+ Saturn:"responsibility, boundaries and discipline", Uranus:"independence and change",
+ Neptune:"imagination, ideals and discernment", Pluto:"intensity, transformation and power"
+};
+const houseThemes: Record<number, string> = {
+ 1:"identity",2:"resources and values",3:"learning and communication",
+ 4:"home and family",5:"creativity and pleasure",6:"habits and daily work",
+ 7:"partnership",8:"shared resources and change",9:"beliefs and exploration",
+ 10:"career and public life",11:"friendships and long-range hopes",
+ 12:"reflection and hidden patterns"
+};
+const humanMeaning = (name:string,house:number) =>
+ `Traditionally, ${name} speaks to ${planetThemes[name] ?? "a planetary life theme"}. House ${house} connects that symbolism to ${houseThemes[house] ?? "an area of life"}.`;
+
 /** No generated readings or example scores: each entry reads existing calculated chart data. */
 export function PersonalDiscoveryCarousel({ chart }: { chart: ChartResult }) {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -27,7 +44,7 @@ export function PersonalDiscoveryCarousel({ chart }: { chart: ChartResult }) {
       entries.push({
         id: `planet-${planet.name}`, category: "YOUR NATAL PLACEMENT",
         title: `${planet.name} · House ${planet.house}`,
-        teaser: `Your ${planet.name} was calculated at ${planet.display}. Explore its full set of placements.`,
+        teaser: humanMeaning(planet.name, planet.house),
         facts: evidence, tone: "gold",
       });
       entries.push({
