@@ -530,12 +530,6 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
   }, [result, readingMode, worldview, form]);
   const handleSaveProfile = async (newProfile: UserProfileData) => {
     setActiveProfile(newProfile);
-    try {
-      localStorage.setItem("algorithms_cosmos_profile", JSON.stringify(newProfile));
-      window.dispatchEvent(new Event("fg:profile-updated"));
-    } catch {
-      // ignore
-    }
     const nextForm = {
       location: newProfile.location,
       latitude: newProfile.latitude,
@@ -558,12 +552,6 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
   };
 
   const handleClearProfile = () => {
-    try {
-      localStorage.removeItem("algorithms_cosmos_profile");
-      window.dispatchEvent(new Event("fg:profile-updated"));
-    } catch {
-      // ignore
-    }
     setActiveProfile(null);
     setResult(null);
     setForm(emptyForm);
@@ -575,12 +563,6 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
   const handleLoadSampleChart = () => {
     const sample = SAMPLE_PROFILE;
     setActiveProfile(sample);
-    try {
-      localStorage.setItem("algorithms_cosmos_profile", JSON.stringify(sample));
-      window.dispatchEvent(new Event("fg:profile-updated"));
-    } catch {
-      // ignore
-    }
     setForm(exampleChart);
     setLocationQuery(exampleChart.location);
     setTransitLocationQuery(exampleChart.transitLocation);
@@ -588,7 +570,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
   };
 
   useEffect(() => {
-    if (activeProfile && !result && !calculate.isPending) {
+    if (activeProfile) {
       const nextForm = {
         location: activeProfile.location,
         latitude: activeProfile.latitude,
@@ -606,7 +588,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
       setForm(nextForm);
       setLocationQuery(activeProfile.location);
       setTransitLocationQuery(nextForm.transitLocation);
-      void calculateChart(worldview, readingMode, nextForm);
+      if (!result && !calculate.isPending) void calculateChart(worldview, readingMode, nextForm);
     }
   }, []);
   const summary = useMemo(
