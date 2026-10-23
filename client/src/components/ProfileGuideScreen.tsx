@@ -5,7 +5,6 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { BookmarkPlus, Calendar, Compass, Headphones, Heart, Layers, Loader2, Share2, Sparkles, Star, Sun, Users } from "lucide-react";
 import { AdvancedChartInstruments } from "@/components/AdvancedChartInstruments";
 import { LiveTransitFeed } from "@/components/LiveTransitFeed";
-import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarousel";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
 import { SocialLovedOnesMatrix } from "@/components/SocialLovedOnesMatrix";
 import { SynastryMatrixTab } from "@/components/SynastryMatrixTab";
@@ -201,7 +200,6 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
   return <>
 
             <header className="mb-6 rounded-2xl border border-white/10 bg-black/30 p-5"><h1 className="font-serif text-2xl text-white">12 Gates of the Firmament</h1><p className="mt-2 text-sm text-slate-300">Explore celestial discoveries and the traditional evidence behind your chart.</p></header>
-            <PersonalDiscoveryCarousel chart={result} />
             {/* Primary Cosmos Navigation Tabs */}
             <div id="main-cosmos-tabs" className="fg-celestial-tabs mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
           <button
