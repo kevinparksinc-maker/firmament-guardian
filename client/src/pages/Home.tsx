@@ -783,7 +783,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
             </>)}
             {section === "guide" && (<>
             <PersonalDiscoveryCarousel chart={result} />
-            {/* Primary Cosmos Navigation Tabs */
+            {/* Primary Cosmos Navigation Tabs */}
             <div id="main-cosmos-tabs" className="fg-celestial-tabs mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
           <button
             type="button"
