@@ -6,10 +6,10 @@ import "./GuardianNavigation.css";
 const routes = [
   { href: "/", label: "Home", Icon: Compass },
   { href: "/horary", label: "Horary", Icon: MoonStar },
-  { href: "/?tab=synastry#main-cosmos-tabs", label: "Synastry", Icon: Heart, mobileOnly: true },
-  { href: "/?tab=weather#main-cosmos-tabs", label: "Cosmic Weather", Icon: CloudSun, mobileOnly: true },
-  { href: "/?tab=podcast#main-cosmos-tabs", label: "Audio Readings", Icon: Headphones, mobileOnly: true },
-  { href: "/?tab=social#main-cosmos-tabs", label: "Loved Ones", Icon: Users, mobileOnly: true },
+  { href: "/guide?tab=synastry#main-cosmos-tabs", label: "Synastry", Icon: Heart, mobileOnly: true },
+  { href: "/guide?tab=weather#main-cosmos-tabs", label: "Cosmic Weather", Icon: CloudSun, mobileOnly: true },
+  { href: "/guide?tab=podcast#main-cosmos-tabs", label: "Audio Readings", Icon: Headphones, mobileOnly: true },
+  { href: "/guide?tab=social#main-cosmos-tabs", label: "Loved Ones", Icon: Users, mobileOnly: true },
   { href: "/zodiac-readings", label: "12 Sign Readings", Icon: Sparkles },
   { href: "/sky", label: "Celestial Map", Icon: Orbit },
   { href: "/history", label: "Library", Icon: BookOpenText },
@@ -22,7 +22,7 @@ export function GuardianNavigation() {
   useEffect(() => { setOpen(false); }, [location]);
 
   const openModule = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (location === "/" && href.startsWith("/?tab=")) {
+    if (location === "/guide" && href.startsWith("/guide?tab=")) {
       event.preventDefault();
       const tab = href.split("?tab=")[1].split("#")[0];
       window.history.replaceState({}, "", href);
