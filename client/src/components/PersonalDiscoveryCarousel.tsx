@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, MoonStar, Orbit, Sparkles, Star } from "lucide-react";
 import type { ChartResult } from "../../../server/astronomy";
+import { MAJOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
 
 type Insight = { id: string; category: string; title: string; teaser: string; facts: string[]; tone: "gold" | "cyan" | "violet" | "pink" };
 const tones = {
@@ -44,12 +45,12 @@ export function PersonalDiscoveryCarousel({ chart }: { chart: ChartResult }) {
     }
     if (chart.readingScope !== "natal") {
       for (const transit of chart.transits) {
-        const contacts = transit.natalContacts.filter(c => c.orb <= 5).sort((a,b) => a.orb-b.orb);
+        const contacts = transit.natalContacts.filter(c => c.orb <= MAJOR_ASPECT_ORB_DEGREES).sort((a,b) => a.orb-b.orb);
         entries.push({
           id: `transit-${transit.name}`, category: "PERSONAL CELESTIAL WEATHER",
           title: `Transit ${transit.name} · ${transit.display}`,
           teaser: contacts.length
-            ? `${contacts.length} calculated natal aspect${contacts.length === 1 ? "" : "s"} inside your 5° orb.`
+            ? `${contacts.length} calculated natal aspect${contacts.length === 1 ? "" : "s"} inside your ${MAJOR_ASPECT_ORB_DEGREES}° orb.`
             : "No major natal aspect inside your 5° orb at the selected transit moment.",
           facts: [`Transit timestamp: ${chart.transitDate}`, `Calculated placement: ${transit.display}`,
             ...contacts.map(c => `${c.aspect} natal ${c.natalName}, orb ${c.orb.toFixed(2)}°`)],
@@ -59,7 +60,7 @@ export function PersonalDiscoveryCarousel({ chart }: { chart: ChartResult }) {
     }
     return entries;
   }, [chart]);
-  const dayIndex = Number(new Date().toISOString().slice(-2));
+  const dayIndex = Math.floor(Date.now() / 86_400_000);
   const cards = insights.length ? [...insights.slice(dayIndex % insights.length), ...insights.slice(0, dayIndex % insights.length)] : [];
   return (
     <section aria-label="Personal celestial discoveries" className="mb-8 rounded-3xl border-2 border-amber-300/65 bg-slate-950/45 p-4 shadow-[0_0_32px_rgba(255,207,117,.13)] backdrop-blur-xl sm:p-6">
