@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MAJOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
+import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -293,8 +294,8 @@ function CalculationReveal({
 }
 
 export default function Home({ section = "home" }: { section?: "home" | "chart" | "reading" | "guide" }) {
+  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult } = useProfileSession();
   const [form, setForm] = useState(emptyForm);
-  const [result, setResult] = useState<ChartResult | null>(null);
   const [formError, setFormError] = useState("");
   const [worldview, setWorldview] = useState<Worldview>("agent");
   const [locationQuery, setLocationQuery] = useState("");
@@ -329,17 +330,6 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
 
   const { isSovereign, openPaywall } = useSovereignTier();
-  const [activeProfile, setActiveProfile] = useState<UserProfileData | null>(() => {
-    try {
-      if (typeof window !== "undefined") {
-        const saved = localStorage.getItem("algorithms_cosmos_profile");
-        if (saved) return JSON.parse(saved);
-      }
-    } catch {
-      // ignore
-    }
-    return null;
-  });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleAskMasterInterpreter = (question: string) => {
