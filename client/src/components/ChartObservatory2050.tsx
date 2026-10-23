@@ -18,7 +18,7 @@ function starDistance(a:number,b:number){const diff=Math.abs(normalizeLongitude(
 export function ChartObservatory2050({chart}:{chart:ChartResult}){
  const [frame,setFrame]=useState<Frame>(chart.worldview==="god"?"god":chart.agentViewAvailable?"agent":"god");
  const [layer,setLayer]=useState<Layer>("nakshatra");
- const [geometry,setGeometry]=useState<"wheel"|"diamond">("wheel");
+ const [geometry,setGeometry]=useState<"wheel"|"diamond">("diamond");
  const [selected,setSelected]=useState("Sun");
  const selectedRow=chart.movingBodies.find(row=>row.name===selected)??chart.movingBodies[0];
  const canAgent=chart.agentViewAvailable;
