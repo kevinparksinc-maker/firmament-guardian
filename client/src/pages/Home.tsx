@@ -611,6 +611,13 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             onSwitchProfile={handleClearProfile}
           />
         )}
+        {activeProfile && !result && (section === "reading" || section === "guide") && (
+          <section role="status" className="mx-auto max-w-3xl rounded-2xl border border-cyan-200/20 bg-slate-950/75 p-6 text-slate-200">
+            <h1 className="font-serif text-xl text-white">{section === "reading" ? "Preparing your personal reading" : "Preparing your celestial guide"}</h1>
+            <p className="mt-3 text-sm">{calculate.isPending ? "Loading your calculated chart evidence…" : formError || calculate.error?.message || "Chart evidence is not yet available."}</p>
+            <Link href="/chart" className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-cyan-300/30 px-4 text-sm text-cyan-100">View chart status →</Link>
+          </section>
+        )}
         {result && (section === "reading" || section === "guide") && (
           <>
             {section === "reading" && (
