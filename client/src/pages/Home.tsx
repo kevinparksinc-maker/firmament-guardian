@@ -291,7 +291,7 @@ function CalculationReveal({
   );
 }
 
-export default function Home() {
+export default function Home({ section = "home" }: { section?: "home" | "chart" | "reading" | "guide" }) {
   const [form, setForm] = useState(emptyForm);
   const [result, setResult] = useState<ChartResult | null>(null);
   const [formError, setFormError] = useState("");
@@ -318,7 +318,7 @@ export default function Home() {
     return () => window.removeEventListener("fg:select-tab", onSelect);
   }, []);
   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
-  const [workspaceView, setWorkspaceView] = useState<"dashboard" | "reading" | "details">("dashboard");
+
   const { isSovereign, openPaywall } = useSovereignTier();
   const [activeProfile, setActiveProfile] = useState<UserProfileData | null>(() => {
     try {
@@ -650,13 +650,13 @@ export default function Home() {
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)] [background-size:64px_64px]" />
       </div>
       <main className="guardian-home-main relative z-10 mx-auto max-w-[1480px] px-5 py-6 md:px-10 md:py-10">
-        {!result && <Guardian2050Welcome />}
-        {result && (
+
+        {result && section === "chart" && (
           <section id="chart-observatory" className="mb-8 scroll-mt-24" aria-label="Primary calculated celestial diamond observatory">
             <ChartObservatory2050 chart={result} />
           </section>
         )}
-        <header className="fg-home-hero mb-8 flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-center lg:justify-between">
+        {!activeProfile && <header className="fg-home-hero mb-8 flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="mb-4 flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-violet-300">
               <span className="h-px w-8 bg-violet-300" /> 12 Gates of the Firmament
@@ -765,7 +765,7 @@ export default function Home() {
             </Link>
             <AccountControl />
           </div>
-        </header>
+        </header>}
 
         {/* Active Profile Ribbon if profile is already loaded */}
         {activeProfile && result && (
@@ -778,7 +778,7 @@ export default function Home() {
         )}
 
         {/* Core Natal Profile Building Gate - First Page Requirement */}
-        {!result && (
+        {!activeProfile && (
           <>
             <NatalProfileBuilder
               mode="inline-gate"
@@ -841,37 +841,28 @@ export default function Home() {
           isCalculating={calculate.isPending}
         />
 
-        {result && (
-          <nav aria-label="Profile workspace navigation" className="mb-6 grid grid-cols-3 gap-2 rounded-2xl border border-cyan-200/20 bg-slate-950/85 p-2">
-            {([
-              { id: "dashboard", label: "Chart", description: "Diamond observatory" },
-              { id: "reading", label: "Reading", description: "Discoveries and AI" },
-              { id: "details", label: "Explore", description: "Complete instruments" },
-            ] as const).map(item => (
-              <button key={item.id} type="button" aria-current={workspaceView === item.id ? "page" : undefined}
-                onClick={() => setWorkspaceView(item.id)}
-                className={`min-w-0 rounded-xl px-2 py-3 text-center transition ${workspaceView === item.id ? "bg-cyan-200/15 text-cyan-100 ring-1 ring-cyan-300/50" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-                <span className="block text-sm font-semibold">{item.label}</span>
-                <span className="hidden text-[10px] sm:block">{item.description}</span>
-              </button>
+        {activeProfile && (
+          <nav aria-label="Primary profile navigation" className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-4 border-t border-cyan-300/30 bg-slate-950/95 p-2 pb-[max(8px,env(safe-area-inset-bottom))] backdrop-blur-lg md:sticky md:top-0 md:bottom-auto md:mb-5 md:rounded-2xl md:border">
+            {([{ href: "/", label: "Home" }, { href: "/chart", label: "Chart" }, { href: "/reading", label: "Reading" }, { href: "/guide", label: "Guide" }] as const).map(item => (
+              <Link key={item.href} href={item.href} aria-current={(section === "home" ? "/" : "/" + section) === item.href ? "page" : undefined}
+                className={`rounded-xl px-2 py-3 text-center text-sm font-semibold ${(section === "home" ? "/" : "/" + section) === item.href ? "bg-cyan-200/15 text-cyan-100 ring-1 ring-cyan-300/40" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+                {item.label}
+              </Link>
             ))}
           </nav>
         )}
-        {result && workspaceView === "dashboard" && (
-          <section aria-label="Your chart dashboard" className="mb-8 grid gap-3 sm:grid-cols-2">
-            <button type="button" onClick={() => setWorkspaceView("reading")} className="rounded-2xl border border-violet-300/25 bg-violet-200/10 p-5 text-left text-white hover:bg-violet-200/15">
-              <span className="block text-lg font-semibold">Your personal reading</span>
-              <span className="mt-1 block text-sm text-slate-300">Discover your patterns and ask the Master Interpreter.</span>
-            </button>
-            <button type="button" onClick={() => setWorkspaceView("details")} className="rounded-2xl border border-cyan-300/25 bg-cyan-200/10 p-5 text-left text-white hover:bg-cyan-200/15">
-              <span className="block text-lg font-semibold">Full celestial evidence</span>
-              <span className="mt-1 block text-sm text-slate-300">All houses, transits, methods and technical instruments.</span>
-            </button>
+        {activeProfile && section === "home" && (
+          <section aria-label="Celestial profile overview" className="mx-auto mb-8 max-w-3xl rounded-2xl border border-cyan-200/20 bg-slate-950/75 p-5">
+            <h1 className="font-serif text-2xl text-white">Your Celestial Observatory</h1>
+            <p className="mt-2 text-slate-300">{activeProfile.name}</p>
+            <p className="my-4 text-sm text-cyan-100">{result ? summary : calculate.isPending ? "Calculating your saved natal chart…" : "Chart not yet calculated."}</p>
+            <Link href="/chart" className="inline-flex min-h-12 items-center rounded-xl bg-cyan-300 px-6 font-semibold text-slate-950">Open your diamond chart →</Link>
           </section>
         )}
-        {result && workspaceView !== "dashboard" && (
+        {activeProfile && section === "chart" && !result && <p role="status" className="rounded-xl border border-amber-300/30 bg-slate-950/80 p-5 text-amber-100">{calculate.isPending ? "Calculating real planetary positions…" : "Calculated positions unavailable. No illustrative placements are shown as calculated evidence."}</p>}
+        {result && (section === "reading" || section === "guide") && (
           <>
-            {workspaceView === "reading" && (<>
+            {section === "reading" && (<>
             <PersonalDiscoveryCarousel chart={result} />
             <ChartOverview
               chart={result}
@@ -891,7 +882,7 @@ export default function Home() {
             </div>
 
             </>)}
-            {workspaceView === "details" && (<>
+            {section === "guide" && (<>
             {/* Primary Cosmos Navigation Tabs */}
             <div id="main-cosmos-tabs" className="fg-celestial-tabs mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
           <button
@@ -1701,6 +1692,7 @@ export default function Home() {
           </>)}
           </>
         )}
+        <div aria-hidden="true" className="h-20 md:hidden" />
       </main>
 
       {/* 1-Tap Cosmic Share Card & Social Export Modal */}
