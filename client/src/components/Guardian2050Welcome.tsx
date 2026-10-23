@@ -32,7 +32,7 @@ export function Guardian2050Welcome() {
         <div className="fg2050-kicker"><span/> THE BIBLICAL FIRMAMENT · AN INTERPRETIVE OBSERVATORY</div>
         <h2>Two skies.<br/><em>One precise moment.</em></h2>
         <p className="fg2050-subtitle">An ancient language of the heavens, reimagined for a new generation. Explore the moving tropical sky against a permanent stellar firmament—then discover what its patterns mean in everyday life.</p>
-        <div className="fg2050-actions"><a href="#chart-setup" className="fg2050-action-primary">Begin your reading <ArrowUpRight size={17}/></a><a href="/sky" className="fg2050-action-secondary">Enter the observatory <Orbit size={17}/></a></div>
+        <div className="fg2050-actions"><a href="#chart-setup" className="fg2050-action-primary">Begin your reading <ArrowUpRight size={17}/></a><a href="#chart-setup" className="fg2050-action-secondary">Cast chart · open diamond observatory <Orbit size={17}/></a></div>
         <div className="fg2050-horizon-badges"><span><Stars size={14}/> FIXED STARS</span><span><Layers3 size={14}/> 27 · 28 · 36 OVERLAYS</span><span><Compass size={14}/> EQUAL HOUSES</span></div>
       </div>
       <div className="fg2050-orrery" aria-label="Conceptual diagram showing fixed star background and moving planetary orbit">
