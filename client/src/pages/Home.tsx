@@ -26,7 +26,7 @@ import { LiveTransitFeed } from "@/components/LiveTransitFeed";
 import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarousel";
 import { WelcomeHost } from "@/components/WelcomeHost";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
-import { AccountControl } from "@/components/AccountControl";
+import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
 import { Guardian2050Welcome } from "@/components/Guardian2050Welcome";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
 import { ChartOverview } from "@/components/ChartOverview";
@@ -661,16 +661,6 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         )}
 
 
-        {/* Active Profile Ribbon if profile is already loaded */}
-        {activeProfile && result && section === "home" && (
-          <ActiveProfileBar
-            profile={activeProfile}
-            chart={result}
-            onEditProfile={() => setIsProfileModalOpen(true)}
-            onSwitchProfile={handleClearProfile}
-          />
-        )}
-
         {/* Core Natal Profile Building Gate - First Page Requirement */}
         {!activeProfile && (
           <>
@@ -697,12 +687,13 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         />}
 
         {activeProfile && section === "home" && (
-          <section aria-label="Celestial profile overview" className="mx-auto mb-8 max-w-3xl rounded-2xl border border-cyan-200/20 bg-slate-950/75 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="font-serif text-2xl text-white">Your Celestial Observatory</h1><AccountControl /></div>
-            <p className="mt-2 text-slate-300">{activeProfile.name}</p>
-            <p className="my-4 text-sm text-cyan-100">{result ? summary : calculate.isPending ? "Calculating your saved natal chart…" : "Chart not yet calculated."}</p>
-            <Link href="/chart" className="inline-flex min-h-12 items-center rounded-xl bg-cyan-300 px-6 font-semibold text-slate-950">Open your diamond chart →</Link>
-          </section>
+          <ProfileHomeScreen
+            profile={activeProfile}
+            chart={result}
+            calculating={calculate.isPending}
+            onEditProfile={() => setIsProfileModalOpen(true)}
+            onSwitchProfile={handleClearProfile}
+          />
         )}
         {activeProfile && section === "chart" && !result && <p role="status" className="rounded-xl border border-amber-300/30 bg-slate-950/80 p-5 text-amber-100">{calculate.isPending ? "Calculating real planetary positions…" : "Calculated positions unavailable. No illustrative placements are shown as calculated evidence."}</p>}
         {result && (section === "reading" || section === "guide") && (
