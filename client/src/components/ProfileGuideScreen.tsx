@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { BookmarkPlus, Calendar, Compass, Headphones, Heart, Layers, Loader2, Share2, Sparkles, Star, Sun, Users } from "lucide-react";
+import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarousel";
 import { AdvancedChartInstruments } from "@/components/AdvancedChartInstruments";
 import { LiveTransitFeed } from "@/components/LiveTransitFeed";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
@@ -273,6 +274,9 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
 
         {mainTab === "blueprint" && (
           <>
+            <section aria-label="Personal celestial discoveries" className="mb-8">
+              <PersonalDiscoveryCarousel chart={result} />
+            </section>
 
         <div className="grid gap-8 xl:grid-cols-[360px_1fr]">
 
