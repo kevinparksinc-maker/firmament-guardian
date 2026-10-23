@@ -6,7 +6,7 @@ import { CelestialCommandShell } from "./components/CelestialCommandShell";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch, useLocation } from "wouter";
+import { Redirect, Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SovereignTierProvider } from "./components/SovereignTierModal";
@@ -34,7 +34,7 @@ function Router() {
     return () => { window.removeEventListener("fg:profile-updated", refresh); window.removeEventListener("storage", refresh); };
   }, []);
   // A signed-in visitor must finish the birth profile before opening other observatory modules.
-  if (!hasProfile && path !== "/") return <Home />;
+  if (!hasProfile && path !== "/") return <Redirect to="/" />;
   return (
     <Switch>
       <Route path={"/"}><Home section="home" /></Route>
