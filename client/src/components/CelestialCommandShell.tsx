@@ -2,6 +2,7 @@ import { useLocation, Link } from "wouter";
 import { BookOpenText, Compass, Heart, Headphones, Layers3, MoonStar, Orbit, Sparkles, Users, CloudSun, Stars } from "lucide-react";
 import type { ReactNode } from "react";
 import { GuardianNavigation } from "./GuardianNavigation";
+import { isProfileRoute } from "@/config/profileNavigation";
 import "./CelestialCommandShell.css";
 
 const entries = [
@@ -20,7 +21,7 @@ const entries = [
 export function CelestialCommandShell({children}:{children:ReactNode}) {
   const [path] = useLocation();
   const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
-  const profileWorkspace = ["/", "/chart", "/reading", "/guide"].includes(path);
+  const profileWorkspace = isProfileRoute(path);
   if (profileWorkspace) return <div className="fg-command-shell"><main className="min-w-0">{children}</main></div>;
   return <div className="fg-command-shell">
     <GuardianNavigation/>
