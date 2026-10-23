@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense } from "react";
+import { ProfileSessionProvider, useProfileSession } from "./contexts/ProfileSessionContext";
 import { trpc } from "@/lib/trpc";
 import { startLogin } from "@/const";
 import { LogIn, ShieldCheck, UserRound } from "lucide-react";
@@ -26,15 +27,9 @@ function AccountEntryGate({ children }: { children: React.ReactNode }) {
 
 function Router() {
   const [path] = useLocation();
-  const [hasProfile, setHasProfile] = useState(() => { try { return Boolean(localStorage.getItem("algorithms_cosmos_profile")); } catch { return false; } });
-  useEffect(() => {
-    const refresh = () => { try { setHasProfile(Boolean(localStorage.getItem("algorithms_cosmos_profile"))); } catch { setHasProfile(false); } };
-    window.addEventListener("fg:profile-updated", refresh);
-    window.addEventListener("storage", refresh);
-    return () => { window.removeEventListener("fg:profile-updated", refresh); window.removeEventListener("storage", refresh); };
-  }, []);
+  const { profile } = useProfileSession();
   // A signed-in visitor must finish the birth profile before opening other observatory modules.
-  if (!hasProfile && path !== "/") return <Redirect to="/" />;
+  if (!profile && path !== "/") return <Redirect to="/" />;
   return (
     <Switch>
       <Route path={"/"}><Home section="home" /></Route>
@@ -67,11 +62,13 @@ function App() {
         <TooltipProvider>
           <SovereignTierProvider>
             <Toaster />
+            <ProfileSessionProvider>
             <CelestialCommandShell>
             <Suspense fallback={<main role="status" className="flex min-h-[55vh] items-center justify-center px-6 text-center text-sm text-cyan-100"><div className="rounded-2xl border border-cyan-200/20 bg-slate-950/70 px-6 py-5" aria-live="polite">Opening your celestial observatory…</div></main>}>
               <AccountEntryGate><Router /></AccountEntryGate>
             </Suspense>
             </CelestialCommandShell>
+            </ProfileSessionProvider>
           </SovereignTierProvider>
         </TooltipProvider>
       </ThemeProvider>
