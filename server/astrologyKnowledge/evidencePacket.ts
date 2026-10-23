@@ -304,7 +304,32 @@ export function buildAstrologyEvidencePacket(
     const raw = Math.abs(a - b) % 360;
     return Math.min(raw, 360 - raw);
   };
-  const fixedStarEvidence: EvidenceItem[] = fixedStarTargets.flatMap(body =>
+  // Every configured fixed star is available for interpretation independently of aspects.
+  // An orb determines a CONTACT, never whether the star exists in the dossier.
+  const fixedStarCatalogEvidence: EvidenceItem[] = FIXED_STAR_CANON_RECORDS.map(star => ({
+    id: `fixed-star-position-${star.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    tradition: "firmament" as const,
+    category: "source-correspondence" as const,
+    technique: "fixed-star-position-and-meaning",
+    subject: star.name,
+    statement: `${star.name} is configured at ${star.firmamentLockedLongitude.toFixed(4)}° in the Firmament-locked zodiac (${star.constellation}). Traditional nature: ${star.ptolemaicPlanetaryNature}. Meaning: ${star.traditionalMeaning}. Gift: ${star.giftWhenIntegrated}. Challenge: ${star.nemesisOrTest}. This position and symbolic doctrine exist whether or not any planet is within aspect orb. Do not imply a personal contact without a separately computed aspect record.`,
+    concepts: ["fixed-star", "fixed-star-position", "fixed-star-meaning", star.name.toLowerCase()],
+    polarity: "neutral" as const,
+    strength: 1,
+    sourceId: "firmament-canon-knowledge",
+    sourceTrace: {
+      sourceId: "firmament-canon-knowledge",
+      tradition: "firmament" as const,
+      technique: "fixed-star-position-and-meaning",
+      sourceTitle: "Firmament configured fixed-star canon",
+      retrievedAt: new Date().toISOString(),
+      confidence: "moderate" as const,
+      calculationSettings: { longitude: star.firmamentLockedLongitude, reference: "firmament-locked", requiresAspect: false },
+    },
+  }));
+  const fixedStarEvidence: EvidenceItem[] = [
+    ...fixedStarCatalogEvidence,
+    ...fixedStarTargets.flatMap(body =>
     FIXED_STAR_CANON_RECORDS.flatMap(star => {
       const sep = angularSeparation(body.longitude, star.firmamentLockedLongitude);
       return STAR_ASPECTS.flatMap(aspect => {
@@ -335,7 +360,8 @@ export function buildAstrologyEvidencePacket(
         }];
       });
     })
-  );
+  ),
+  ];
   const timingEvidence: EvidenceItem[] =
     mode === "natal"
       ? []
