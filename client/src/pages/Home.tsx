@@ -28,10 +28,8 @@ import { WelcomeHost } from "@/components/WelcomeHost";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
 import { ProfileChartScreen } from "@/components/ProfileChartScreen";
-import { Guardian2050Welcome } from "@/components/Guardian2050Welcome";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
 import { ChartOverview } from "@/components/ChartOverview";
-import { ChartObservatory2050 } from "@/components/ChartObservatory2050";
 import {
   HoverCard,
   HoverCardContent,
@@ -56,7 +54,6 @@ import {
 } from "lucide-react";
 import {
   NatalProfileBuilder,
-  ActiveProfileBar,
   type UserProfileData,
   SAMPLE_PROFILE,
 } from "@/components/NatalProfileBuilder";
@@ -95,58 +92,6 @@ const emptyForm = {
   transitTime: "",
 };
 type ReadingMode = "natal" | "transit" | "combined";
-const worldviewModes: Array<{
-  value: Worldview;
-  title: string;
-  description: string;
-}> = [
-  {
-    value: "god",
-    title: "God View",
-    description:
-      "The fixed collective frame: Aries through Pisces, without a horizon or location-based houses.",
-  },
-  {
-    value: "agent",
-    title: "Agent View",
-    description:
-      "Your local horizon: geocentric planetary positions with a separate topocentric lunar correction and 30-degree houses from your Ascendant.",
-  },
-  {
-    value: "agent-vs-god",
-    title: "God's View of the Agent",
-    description:
-      "See each calculated placement in both the fixed collective frame and your personal Agent houses.",
-  },
-];
-const readingModes: Array<{
-  value: ReadingMode;
-  title: string;
-  eyebrow: string;
-  description: string;
-}> = [
-  {
-    value: "natal",
-    title: "Natal Chart",
-    eyebrow: "Your foundation",
-    description:
-      "Read the birth chart: identity, temperament, houses, relationships, gifts, and lifelong patterns.",
-  },
-  {
-    value: "transit",
-    title: "Transit Chart",
-    eyebrow: "Your present sky",
-    description:
-      "Read what the moving planets are activating now—or at a specific date and time.",
-  },
-  {
-    value: "combined",
-    title: "Natal Transit Reading",
-    eyebrow: "The full picture",
-    description:
-      "See how the current sky meets your birth chart without confusing temporary weather with identity.",
-  },
-];
 function Chip({ children }: { children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-300">
