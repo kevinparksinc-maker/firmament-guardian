@@ -31,6 +31,8 @@ type Props = {
   refreshLiveTransit: () => void;
   saveCurrentChart: () => void;
   savingChart: boolean;
+  calculating: boolean;
+  readingView: "guided" | "evidence";
   hasAccount: boolean;
   setShowShareModal: (open: boolean) => void;
   handleAskMasterInterpreter: (question: string) => void;
@@ -186,7 +188,7 @@ function CalculationReveal({
 
 export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, setWorldview,
   readingMode, setReadingMode, calculateChart, refreshLiveTransit, saveCurrentChart,
-  savingChart, hasAccount, setShowShareModal, handleAskMasterInterpreter }: Props) {
+  savingChart, calculating, readingView, hasAccount, setShowShareModal, handleAskMasterInterpreter }: Props) {
   const summary = `${result.movingBodies.length} moving bodies · ${result.frozenStars.length} frozen stars · 12 ${result.worldview === "god" ? "fixed" : "personal"} houses`;
   const natalDisplayRows = [
     ...result.movingBodies,
@@ -405,7 +407,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                 <LiveTransitFeed
                   chart={result}
                   onRefresh={refreshLiveTransit}
-                  refreshing={calculate.isPending}
+                  refreshing={calculating}
                 />
                 <details open={readingView === "evidence"} className="group rounded-2xl border border-white/10 bg-white/[0.025] p-4">
                   <summary className="cursor-pointer list-none text-sm font-semibold text-slate-200 marker:hidden">
