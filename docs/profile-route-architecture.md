@@ -28,7 +28,7 @@ React 19 + TypeScript + Vite + Tailwind CSS + Wouter + tRPC.
 - Removed the duplicate legacy homepage hero and the pre-profile promotional teasers.
 - Deleted more than 300 lines of dead post-profile Step 1/Step 2 forms.
 - Removed the obsolete global Interpreter scroll-jump and the former local three-button workspace switch.
-- Moved profile Home, Chart and Reading content into dedicated presentational components.
+- Moved Home, Chart, Reading and Guide content into dedicated presentational components.
 - Moved discovery and technical work to Guide, and full long-form interpretation to Reading.
 - Retained the deterministic calculations and traditional astrology engines; no astronomical calculation rules were removed.
 
@@ -49,4 +49,4 @@ React 19 + TypeScript + Vite + Tailwind CSS + Wouter + tRPC.
 
 ## Important follow-up technical debt
 
-The existing Guide evidence work remains large and is still coordinated by `Home.tsx`. Further extraction would improve maintainability, but should not reintroduce duplicate rendering or modify astrology calculations. The CI pipeline verifies TypeScript, tests, bundling, auditing and Docker packaging; it is not a browser/device screenshot test or proof of Manus deployment.
+This Guide evidence has now been extracted into its own `ProfileGuideScreen` component, alongside `ProfileHomeScreen`, `ProfileChartScreen`, and `ProfileReadingScreen`. The former `Home.tsx` monolith is now a smaller route/session controller, and Chart, Reading, and Guide are lazy-loaded for mobile entry performance. Future changes should not reintroduce duplicate rendering or modify astrology calculations. The CI pipeline verifies TypeScript, tests, bundling, auditing and Docker packaging; it is not a browser/device screenshot test or proof of Manus deployment.
