@@ -120,7 +120,7 @@ function TransitContacts({ row }: { row: any }) {
     </div>
   ) : (
     <span className="text-xs text-slate-500">
-      No major natal contact within 5°
+      No major natal contact within {MAJOR_ASPECT_ORB_DEGREES}°
     </span>
   );
 }
@@ -585,7 +585,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             readingMode={readingMode}
             onWorldviewChange={next => { setWorldview(next); void calculateChart(next, readingMode); }}
             onReadingModeChange={next => { setReadingMode(next); void calculateChart(worldview, next); }}
-            error={formError}
+            error={formError || calculate.error?.message || ""}
           />
         )}
 
