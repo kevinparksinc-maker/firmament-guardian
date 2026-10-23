@@ -280,7 +280,7 @@ function CalculationReveal({
                 ))
               ) : (
                 <div className="text-slate-500">
-                  No major contact within 3°.
+                  No major contact within 5°.
                 </div>
               )}
             </div>
@@ -863,7 +863,6 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
         {result && (section === "reading" || section === "guide") && (
           <>
             {section === "reading" && (<>
-            <PersonalDiscoveryCarousel chart={result} />
             <ChartOverview
               chart={result}
               view={readingView}
@@ -881,9 +880,19 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
               />
             </div>
 
+            {result && (
+              <InterpretationPanel
+                key={`${result.input.location || "god"}:${result.input.date || "live"}:${result.input.time || "none"}:${result.worldview}`}
+                chart={result}
+                initialMode={readingMode}
+                initialQuestion={readingQuestion}
+                onModeChange={nextMode => setReadingMode(nextMode)}
+              />
+            )}
             </>)}
             {section === "guide" && (<>
-            {/* Primary Cosmos Navigation Tabs */}
+            <PersonalDiscoveryCarousel chart={result} />
+            {/* Primary Cosmos Navigation Tabs */
             <div id="main-cosmos-tabs" className="fg-celestial-tabs mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-black/40 p-2 backdrop-blur-md">
           <button
             type="button"
@@ -956,6 +965,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
 
         {mainTab === "blueprint" && (
           <>
+        {!activeProfile && (
         <Card className="mb-8 border-cyan-200/15 bg-gradient-to-br from-cyan-100/[0.08] via-white/[0.035] to-violet-200/[0.06] text-slate-100 shadow-2xl shadow-cyan-950/20">
           <CardContent className="p-4 sm:p-6">
             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -1051,7 +1061,9 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
             </div>
           </CardContent>
         </Card>
+        )}
         <div className="grid gap-8 xl:grid-cols-[360px_1fr]">
+          {!activeProfile && (
           <aside id="chart-setup" className="space-y-5">
             <Card className="border-white/10 bg-white/[0.045] text-slate-100 shadow-2xl shadow-black/20">
               <CardHeader>
@@ -1265,6 +1277,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
               </CardContent>
             </Card>
           </aside>
+          )}
           <section className="min-w-0 space-y-6">
             {result && (
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3 text-xs text-slate-400">
@@ -1576,7 +1589,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
                     <p className="text-xs leading-5 text-slate-400">
                       Live moving bodies compared with this chart’s natal
                       placements. Houses use the natal cusps; contacts are major
-                      aspects within a 3° orb.{" "}
+                      aspects within a 5° orb.{" "}
                       <span className="text-cyan-300/70">
                         Hover a row to explore.
                       </span>
@@ -1639,15 +1652,7 @@ export default function Home({ section = "home" }: { section?: "home" | "chart" 
                 </CardContent>
               </Card>
             )}
-            {result && (
-              <InterpretationPanel
-                key={`${result.input.location || "god"}:${result.input.date || "live"}:${result.input.time || "none"}:${result.worldview}`}
-                chart={result}
-                initialMode={readingMode}
-                initialQuestion={readingQuestion}
-                onModeChange={nextMode => setReadingMode(nextMode)}
-              />
-            )}
+
           </section>
         </div>
 
