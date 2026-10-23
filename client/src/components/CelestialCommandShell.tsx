@@ -7,11 +7,11 @@ import "./CelestialCommandShell.css";
 
 const entries = [
   { href:"/", name:"Home & Natal", icon:Compass },
-  { href:"/?tab=blueprint#main-cosmos-tabs", name:"Celestial Blueprint", icon:Layers3 },
-  { href:"/?tab=synastry#main-cosmos-tabs", name:"Synastry & Chemistry", icon:Heart },
-  { href:"/?tab=weather#main-cosmos-tabs", name:"Cosmic Weather", icon:CloudSun },
-  { href:"/?tab=podcast#main-cosmos-tabs", name:"Audio Observatory", icon:Headphones },
-  { href:"/?tab=social#main-cosmos-tabs", name:"Loved Ones", icon:Users },
+  { href:"/guide?tab=blueprint#main-cosmos-tabs", name:"Celestial Blueprint", icon:Layers3 },
+  { href:"/guide?tab=synastry#main-cosmos-tabs", name:"Synastry & Chemistry", icon:Heart },
+  { href:"/guide?tab=weather#main-cosmos-tabs", name:"Cosmic Weather", icon:CloudSun },
+  { href:"/guide?tab=podcast#main-cosmos-tabs", name:"Audio Observatory", icon:Headphones },
+  { href:"/guide?tab=social#main-cosmos-tabs", name:"Loved Ones", icon:Users },
   { href:"/horary", name:"Traditional Horary", icon:MoonStar },
   { href:"/zodiac-readings", name:"Twelve Celestial Gates", icon:Sparkles },
   { href:"/sky", name:"Celestial Map", icon:Orbit },
@@ -34,7 +34,7 @@ export function CelestialCommandShell({children}:{children:ReactNode}) {
             const query=href.includes("?tab=")?href.split("?tab=")[1].split("#")[0]:null;
             const active = path===route && (query ? tab===query : !tab);
             return <Link href={href} key={href} aria-current={active?"page":undefined} onClick={event=>{
-              if(path==="/" && query){
+              if(path==="/guide" && query){
                 event.preventDefault();
                 window.history.replaceState({}, "", href);
                 window.dispatchEvent(new CustomEvent("fg:select-tab",{detail:{tab:query}}));
