@@ -352,6 +352,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             calculating={calculate.isPending}
             onEditProfile={() => setIsProfileModalOpen(true)}
             onSwitchProfile={handleClearProfile}
+            onRefreshTransits={refreshLiveTransit}
           />
         )}
         {activeProfile && !result && (section === "reading" || section === "guide") && (
