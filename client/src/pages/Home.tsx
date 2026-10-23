@@ -637,6 +637,26 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
           <section id="chart-observatory" className="mb-8 scroll-mt-24" aria-label="Primary calculated celestial diamond observatory">
             <ChartObservatory2050 key={`${result.worldview}:${result.utc}`} chart={result} />
             <Link href="/reading" className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-violet-300/40 bg-violet-300/10 px-5 text-sm font-semibold text-violet-100">Open the Master Interpreter →</Link>
+            <details className="mt-4 rounded-xl border border-cyan-200/20 bg-black/30 p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-cyan-100">Chart and reading settings</summary>
+              <p className="mb-3 mt-2 text-xs text-slate-400">Choose an existing calculation frame and reading scope. The saved birth profile remains unchanged.</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {worldviewModes.map(item => (
+                  <button key={item.value} type="button" aria-pressed={worldview === item.value}
+                    className={`min-h-11 rounded-lg border p-3 text-left text-xs ${worldview === item.value ? "border-cyan-300/70 bg-cyan-300/15 text-white" : "border-white/15 text-slate-300"}`}
+                    onClick={() => { setWorldview(item.value); void calculateChart(item.value, readingMode); }}>{item.title}</button>
+                ))}
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {readingModes.map(item => (
+                  <button key={item.value} type="button" aria-pressed={readingMode === item.value}
+                    className={`min-h-11 rounded-lg border p-3 text-left text-xs ${readingMode === item.value ? "border-violet-300/70 bg-violet-300/15 text-white" : "border-white/15 text-slate-300"}`}
+                    onClick={() => { setReadingMode(item.value); void calculateChart(worldview, item.value); }}>{item.title}</button>
+                ))}
+              </div>
+              {formError && <p role="alert" className="mt-3 text-sm text-amber-200">{formError}</p>}
+            </details>
+            <Link href="/guide?tab=blueprint" className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-cyan-300/30 px-5 text-sm font-semibold text-cyan-100">Inspect all chart evidence →</Link>
           </section>
         )}
 
