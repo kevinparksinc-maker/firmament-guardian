@@ -1,17 +1,19 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import type { ProfileSection } from "@/config/profileNavigation";
 import { trpc } from "@/lib/trpc";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
-import { ProfileChartScreen } from "@/components/ProfileChartScreen";
-import { ProfileReadingScreen } from "@/components/ProfileReadingScreen";
-import { ProfileGuideScreen, type GuideTab } from "@/components/ProfileGuideScreen";
+import type { GuideTab } from "@/components/ProfileGuideScreen";
 import { CosmicShareCard } from "@/components/CosmicShareCard";
 import { NatalProfileBuilder, type UserProfileData, SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
 import type { Worldview } from "../../../server/astrologyCore";
 import { Link, useLocation } from "wouter";
 import { startLogin } from "@/const";
+
+const ProfileChartScreen = lazy(() => import("@/components/ProfileChartScreen").then(module => ({ default: module.ProfileChartScreen })));
+const ProfileReadingScreen = lazy(() => import("@/components/ProfileReadingScreen").then(module => ({ default: module.ProfileReadingScreen })));
+const ProfileGuideScreen = lazy(() => import("@/components/ProfileGuideScreen").then(module => ({ default: module.ProfileGuideScreen })));
 
 const exampleChart = {
   location: "Dallas, Texas, USA",
@@ -305,6 +307,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)] [background-size:64px_64px]" />
       </div>
       <main className="guardian-home-main relative z-10 mx-auto max-w-[1480px] px-5 py-6 md:px-10 md:py-10">
+        <Suspense fallback={<p role="status" className="rounded-xl border border-cyan-200/20 bg-slate-950/70 p-5 text-sm text-cyan-100">Opening your celestial workspace…</p>}>
         {activeProfile && section === "chart" && (
           <ProfileChartScreen
             chart={result}
@@ -397,6 +400,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
 
           </>
         )}
+        </Suspense>
       </main>
 
       {/* 1-Tap Cosmic Share Card & Social Export Modal */}
