@@ -68,7 +68,7 @@ export function PersonalDiscoveryCarousel({ chart, compact = false }: { chart: C
           title: `Transit ${transit.name} · ${transit.display}`,
           teaser: contacts.length
             ? `${contacts.length} calculated natal aspect${contacts.length === 1 ? "" : "s"} inside your ${MAJOR_ASPECT_ORB_DEGREES}° orb.`
-            : "No major natal aspect inside your 5° orb at the selected transit moment.",
+            : `No major natal aspect inside your ${MAJOR_ASPECT_ORB_DEGREES}° orb at the selected transit moment.`,
           facts: [`Transit timestamp: ${chart.transitDate}`, `Calculated placement: ${transit.display}`,
             ...contacts.map(c => `${c.aspect} natal ${c.natalName}, orb ${c.orb.toFixed(2)}°`)],
           tone: "violet",
@@ -92,7 +92,8 @@ export function PersonalDiscoveryCarousel({ chart, compact = false }: { chart: C
         {cards.map((item, index) => (
           <button type="button" key={item.id} onClick={() => setOpenId(openId === item.id ? null : item.id)}
             aria-expanded={openId === item.id}
-            className={compact ? "w-[min(70vw,280px)] shrink-0 snap-start rounded-xl border border-white/10 bg-gradient-to-br from-[#172034] to-[#090e19] p-4 text-left transition hover:border-[#D4AF37]/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200" : `w-[min(80vw,320px)] shrink-0 snap-start rounded-2xl border-2 bg-slate-950/65 p-4 text-left backdrop-blur-lg transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white ${tones[item.tone]}`}>
+            className={compact ? "group relative w-[min(70vw,280px)] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-[#090e19]/95 p-4 text-left shadow-[0_6px_25px_rgba(0,0,0,.25)] backdrop-blur-md transition-all duration-300 hover:border-[#D4AF37]/50 hover:shadow-[0_0_24px_rgba(212,175,55,.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200" : `w-[min(80vw,320px)] shrink-0 snap-start rounded-2xl border-2 bg-slate-950/65 p-4 text-left backdrop-blur-lg transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white ${tones[item.tone]}`}>
+            {compact && <span aria-hidden="true" className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/75 to-transparent" />}
             <div className="mb-3 flex items-center justify-between text-amber-100">{item.tone === "cyan" ? <MoonStar size={22}/> : item.tone === "violet" ? <Orbit size={22}/> : item.tone === "pink" ? <Star size={22}/> : <Sparkles size={22}/>}<span className="text-xs text-slate-400">{index+1} / {cards.length}</span></div>
             <p className="text-[10px] font-bold uppercase tracking-[.15em] text-cyan-200">{item.category}</p>
             <h3 className="mt-2 font-serif text-lg text-white">{item.title}</h3>
