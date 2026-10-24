@@ -11,7 +11,7 @@ const tones = {
 };
 
 /** No generated readings or example scores: each entry reads existing calculated chart data. */
-export function PersonalDiscoveryCarousel({ chart }: { chart: ChartResult }) {
+export function PersonalDiscoveryCarousel({ chart, compact = false }: { chart: ChartResult; compact?: boolean }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const insights = useMemo<Insight[]>(() => {
     const entries: Insight[] = [];
@@ -59,10 +59,10 @@ export function PersonalDiscoveryCarousel({ chart }: { chart: ChartResult }) {
     }
     return entries;
   }, [chart]);
-  const dayIndex = Number(new Date().toISOString().slice(-2));
+  const dayIndex = new Date().getUTCDate();
   const cards = insights.length ? [...insights.slice(dayIndex % insights.length), ...insights.slice(0, dayIndex % insights.length)] : [];
   return (
-    <section aria-label="Personal celestial discoveries" className="mb-8 rounded-3xl border-2 border-amber-300/65 bg-slate-950/45 p-4 shadow-[0_0_32px_rgba(255,207,117,.13)] backdrop-blur-xl sm:p-6">
+    <section aria-label="Personal celestial discoveries" className={`${compact ? "mb-4" : "mb-8"} rounded-3xl border-2 border-amber-300/65 bg-slate-950/45 p-4 shadow-[0_0_32px_rgba(255,207,117,.13)] backdrop-blur-xl sm:p-6`}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div><p className="text-[10px] font-bold uppercase tracking-[.24em] text-amber-200">Your living natal dossier</p>
           <h2 className="mt-1 font-serif text-2xl text-white sm:text-3xl">Discover Your Firmament</h2>
