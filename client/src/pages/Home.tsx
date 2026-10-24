@@ -4,7 +4,6 @@ import type { ProfileSection } from "@/config/profileNavigation";
 import { trpc } from "@/lib/trpc";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
-import { SavedProfilePicker } from "@/components/SavedProfilePicker";
 import type { GuideTab } from "@/components/ProfileGuideScreen";
 import { CosmicShareCard } from "@/components/CosmicShareCard";
 import { NatalProfileBuilder, type UserProfileData, SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
@@ -46,7 +45,7 @@ const emptyForm = {
 };
 type ReadingMode = "natal" | "transit" | "combined";
 export default function Home({ section = "home" }: { section?: ProfileSection }) {
-  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult, savedProfiles } = useProfileSession();
+  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult } = useProfileSession();
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
   const [worldview, setWorldview] = useState<Worldview>("agent");
@@ -324,7 +323,6 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         {/* Core Natal Profile Building Gate - First Page Requirement */}
         {!activeProfile && (
           <>
-            <div className="mb-5"><SavedProfilePicker onLoad={profile => { void handleSaveProfile(profile); navigate("/"); }} /></div>
             <NatalProfileBuilder
               mode="inline-gate"
               currentProfile={activeProfile}
@@ -348,18 +346,13 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         />}
 
         {activeProfile && section === "home" && (
-          <>
           <ProfileHomeScreen
             profile={activeProfile}
             chart={result}
             calculating={calculate.isPending}
             onEditProfile={() => setIsProfileModalOpen(true)}
             onSwitchProfile={handleClearProfile}
-            onRefreshTransits={refreshLiveTransit}
-            savedProfiles={savedProfiles}
-            onLoadProfile={profile => { void handleSaveProfile(profile); navigate("/"); }}
           />
-          </>
         )}
         {activeProfile && !result && (section === "reading" || section === "guide") && (
           <section role="status" className="mx-auto max-w-3xl rounded-2xl border border-cyan-200/20 bg-slate-950/75 p-6 text-slate-200">
