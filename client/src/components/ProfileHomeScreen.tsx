@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PersonalCosmicForecast } from "@/components/PersonalCosmicForecast";
 import { Link } from "wouter";
 import { ArrowRight, Compass, Diamond, Pencil, Sparkles, Sun, Moon, UserRound } from "lucide-react";
 import { AccountControl } from "@/components/AccountControl";
@@ -15,6 +16,8 @@ type ProfileHomeScreenProps = {
   onRefreshTransits?: () => void;
   savedProfiles: UserProfileData[];
   onLoadProfile: (profile: UserProfileData) => void;
+  onUsePhoneLocation?: () => void;
+  locationStatus?: string;
 };
 
 const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"] as const;
@@ -25,7 +28,7 @@ function signAt(longitude: number | undefined): string {
 }
 
 /** Single-purpose dashboard. Long readings, carousel and advanced instruments live on their dedicated routes. */
-export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles, onLoadProfile }: ProfileHomeScreenProps) {
+export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles, onLoadProfile, onRefreshTransits, onUsePhoneLocation, locationStatus }: ProfileHomeScreenProps) {
   const [activeSignal, setActiveSignal] = useState<"Sun" | "Moon" | "Ascendant" | null>(null);
   const sun = chart?.movingBodies.find(body => body.name === "Sun");
   const moon = chart?.movingBodies.find(body => body.name === "Moon");
@@ -43,6 +46,8 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
       </div>
       <AccountControl />
     </header>
+
+    <PersonalCosmicForecast chart={chart} calculating={calculating} onRefresh={onRefreshTransits} onUsePhoneLocation={onUsePhoneLocation} locationStatus={locationStatus} locationLabel={profile.transitLocation || profile.location} />
 
     <section className="relative overflow-hidden rounded-3xl border border-[#e2c38b]/20 bg-[linear-gradient(180deg,rgba(8,20,42,.58),rgba(4,11,27,.88)),url('/assets/firmament-starfield.png')] bg-cover bg-center p-6 shadow-[0_20px_60px_rgba(0,0,0,.4)] sm:p-8" aria-label="Welcome to your firmament">
       <div className="pointer-events-none absolute right-[12%] top-[17%] text-6xl text-amber-100/75 blur-[1px]" aria-hidden="true">✦</div>
