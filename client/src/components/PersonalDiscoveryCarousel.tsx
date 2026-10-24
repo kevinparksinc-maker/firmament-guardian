@@ -29,7 +29,7 @@ const humanMeaning = (name:string,house:number) =>
  `Traditionally, ${name} speaks to ${planetThemes[name] ?? "a planetary life theme"}. House ${house} connects that symbolism to ${houseThemes[house] ?? "an area of life"}.`;
 
 /** No generated readings or example scores: each entry reads existing calculated chart data. */
-export function PersonalDiscoveryCarousel({ chart }: { chart: ChartResult }) {
+export function PersonalDiscoveryCarousel({ chart, compact = false }: { chart: ChartResult; compact?: boolean }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const insights = useMemo<Insight[]>(() => {
     const entries: Insight[] = [];
@@ -80,19 +80,19 @@ export function PersonalDiscoveryCarousel({ chart }: { chart: ChartResult }) {
   const dayIndex = Math.floor(Date.now() / 86_400_000);
   const cards = insights.length ? [...insights.slice(dayIndex % insights.length), ...insights.slice(0, dayIndex % insights.length)] : [];
   return (
-    <section aria-label="Personal celestial discoveries" className="mb-8 rounded-3xl border-2 border-amber-300/65 bg-slate-950/45 p-4 shadow-[0_0_32px_rgba(255,207,117,.13)] backdrop-blur-xl sm:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <section aria-label="Personal celestial discoveries" className={compact ? "rounded-2xl border border-white/10 bg-[#111622]/85 p-4" : "mb-8 rounded-3xl border-2 border-amber-300/65 bg-slate-950/45 p-4 shadow-[0_0_32px_rgba(255,207,117,.13)] backdrop-blur-xl sm:p-6"}>
+      {compact ? <div className="mb-3 flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-semibold text-slate-200"><Sparkles size={15} className="text-[#D4AF37]"/> Chart Insights</h2><span className="text-[10px] text-slate-400">Swipe to explore →</span></div> : <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div><p className="text-[10px] font-bold uppercase tracking-[.24em] text-amber-200">Your living natal dossier</p>
           <h2 className="mt-1 font-serif text-2xl text-white sm:text-3xl">Discover Your Firmament</h2>
           <p className="mt-2 max-w-xl text-sm text-slate-300">Swipe to explore real placements, mansions, elemental decans, and calculated transit contacts. Tap any discovery for the evidence.</p>
         </div>
         <span className="rounded-full border border-cyan-300/45 px-3 py-1.5 text-xs text-cyan-100">{insights.length} calculated discoveries</span>
-      </div>
+      </div>}
       <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4" aria-label="Swipeable personal discovery cards">
         {cards.map((item, index) => (
           <button type="button" key={item.id} onClick={() => setOpenId(openId === item.id ? null : item.id)}
             aria-expanded={openId === item.id}
-            className={`w-[min(80vw,320px)] shrink-0 snap-start rounded-2xl border-2 bg-slate-950/65 p-4 text-left backdrop-blur-lg transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white ${tones[item.tone]}`}>
+            className={compact ? "w-[min(70vw,280px)] shrink-0 snap-start rounded-xl border border-white/10 bg-gradient-to-br from-[#172034] to-[#090e19] p-4 text-left transition hover:border-[#D4AF37]/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200" : `w-[min(80vw,320px)] shrink-0 snap-start rounded-2xl border-2 bg-slate-950/65 p-4 text-left backdrop-blur-lg transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white ${tones[item.tone]}`}>
             <div className="mb-3 flex items-center justify-between text-amber-100">{item.tone === "cyan" ? <MoonStar size={22}/> : item.tone === "violet" ? <Orbit size={22}/> : item.tone === "pink" ? <Star size={22}/> : <Sparkles size={22}/>}<span className="text-xs text-slate-400">{index+1} / {cards.length}</span></div>
             <p className="text-[10px] font-bold uppercase tracking-[.15em] text-cyan-200">{item.category}</p>
             <h3 className="mt-2 font-serif text-lg text-white">{item.title}</h3>
