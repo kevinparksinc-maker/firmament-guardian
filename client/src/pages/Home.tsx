@@ -45,9 +45,10 @@ const emptyForm = {
 };
 type ReadingMode = "natal" | "transit" | "combined";
 export default function Home({ section = "home" }: { section?: ProfileSection }) {
-  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult } = useProfileSession();
+  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult, savedProfiles } = useProfileSession();
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
+  const [locationStatus, setLocationStatus] = useState("");
   const [worldview, setWorldview] = useState<Worldview>("agent");
   const [locationQuery, setLocationQuery] = useState("");
   const [transitLocationQuery, setTransitLocationQuery] = useState("");
@@ -205,12 +206,15 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     });
   };
   const refreshLiveTransit = () => {
-    if (!result || readingMode === "natal") return;
+    if (!activeProfile || readingMode === "natal") return;
     const now = new Date();
+    const tz = form.transitTimezone || form.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+    const get = (key: string) => parts.find(p => p.type === key)?.value || "";
     calculate.mutate({
       ...form,
-      transitDate: now.toISOString().slice(0, 10),
-      transitTime: now.toTimeString().slice(0, 5),
+      transitDate: `${get("year")}-${get("month")}-${get("day")}`,
+      transitTime: `${get("hour")}:${get("minute")}`,
       transitLocation: form.transitLocation || form.location,
       transitLatitude: form.transitLatitude || form.latitude,
       transitLongitude: form.transitLongitude || form.longitude,
@@ -230,6 +234,21 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     const id = window.setInterval(refreshLiveTransit, 5 * 60 * 1000);
     return () => window.clearInterval(id);
   }, [result, readingMode, worldview, form]);
+  const usePhoneLocation = () => {
+    if (!navigator.geolocation) { setLocationStatus("Phone location is unavailable. Your saved transit location will be used."); return; }
+    setLocationStatus("Requesting phone location permission…");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || form.transitTimezone || form.timezone;
+        const nextForm = { ...form, transitLocation: "Current phone location", transitLatitude: coords.latitude, transitLongitude: coords.longitude, transitTimezone: zone, transitDate: "", transitTime: "" };
+        setForm(nextForm);
+        setLocationStatus("Phone location applied to your transit chart.");
+        calculate.mutate({ ...nextForm, worldview, readingScope: "combined", birthTimeKnown: Boolean(nextForm.time) });
+      },
+      () => setLocationStatus("Location permission unavailable or denied. Using your saved transit location."),
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 }
+    );
+  };
   const handleSaveProfile = async (newProfile: UserProfileData) => {
     setActiveProfile(newProfile);
     const nextForm = {
@@ -352,6 +371,11 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             calculating={calculate.isPending}
             onEditProfile={() => setIsProfileModalOpen(true)}
             onSwitchProfile={handleClearProfile}
+            savedProfiles={savedProfiles}
+            onLoadProfile={handleSaveProfile}
+            onRefreshTransits={refreshLiveTransit}
+            onUsePhoneLocation={usePhoneLocation}
+            locationStatus={locationStatus}
           />
         )}
         {activeProfile && !result && (section === "reading" || section === "guide") && (
