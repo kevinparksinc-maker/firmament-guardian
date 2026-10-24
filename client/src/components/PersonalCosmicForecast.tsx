@@ -8,7 +8,7 @@ const aspectFlow: Record<TransitContact["aspect"], number> = {
   trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 0,
 };
 const percentWeight = (orb: number) =>
-  Math.max(0, 100 * (1 - Math.max(0, orb) / MAX_ORB));
+  orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
 
 export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { chart: ChartResult | null; calculating: boolean; onRefresh?: () => void }) {
   const data = useMemo(() => {
@@ -40,7 +40,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
     </div> : <>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <span className={`rounded-full border px-4 py-2 text-base font-semibold shadow-[0_0_20px_rgba(83,244,255,.14)] ${data.signal === "Easy Flow" ? "border-emerald-300/70 text-emerald-200" : data.signal === "Friction" ? "border-rose-300/70 text-rose-200" : "border-cyan-300/70 text-cyan-100"}`}><Zap size={16} className="mr-2 inline"/>{data.signal}</span>
-        <span className="text-xs text-slate-400">{data.contacts.length} calculated contacts · 5° orb</span>
+        <span className="text-xs text-slate-400">{data.contacts.length} calculated contacts · 5° orb · 100/80/60/40 weighting</span>
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-200">{data.signal === "Easy Flow"
         ? "Supportive angular relationships carry more weight in this snapshot. Explore the contacts to see which parts of life are involved."
