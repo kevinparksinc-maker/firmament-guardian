@@ -11,6 +11,8 @@ type ProfileHomeScreenProps = {
   onEditProfile: () => void;
   onSwitchProfile: () => void;
   onRefreshTransits?: () => void;
+  savedProfiles: UserProfileData[];
+  onLoadProfile: (profile: UserProfileData) => void;
 };
 
 const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"] as const;
@@ -21,7 +23,7 @@ function signAt(longitude: number | undefined): string {
 }
 
 /** Single-purpose dashboard. Long readings, carousel and advanced instruments live on their dedicated routes. */
-export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile }: ProfileHomeScreenProps) {
+export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles, onLoadProfile }: ProfileHomeScreenProps) {
   const sun = chart?.movingBodies.find(body => body.name === "Sun");
   const moon = chart?.movingBodies.find(body => body.name === "Moon");
   const asc = chart?.ascendant;
@@ -41,10 +43,10 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile }
 
     <section className="relative overflow-hidden rounded-3xl border border-[#e2c38b]/20 bg-[linear-gradient(180deg,rgba(8,20,42,.58),rgba(4,11,27,.88)),url('/assets/firmament-starfield.png')] bg-cover bg-center p-6 shadow-[0_20px_60px_rgba(0,0,0,.4)] sm:p-8" aria-label="Welcome to your firmament">
       <div className="pointer-events-none absolute right-[12%] top-[17%] text-6xl text-amber-100/75 blur-[1px]" aria-hidden="true">✦</div>
-      <div className="relative max-w-[78%]"><p className="font-serif text-3xl leading-tight text-[#fff8ed] sm:text-4xl">Welcome to your celestial journey</p><p className="mt-3 text-sm leading-6 text-slate-300">Your chart is a gateway to exploring the patterns of your personal sky.</p></div>
+      <div className="relative max-w-[78%]"><p className="font-serif text-3xl leading-tight text-[#fff8ed] sm:text-4xl">Welcome to Your Celestial Journey</p><p className="mt-3 text-sm leading-6 text-slate-300">Your chart is a gateway to exploring the patterns of your personal sky.</p></div>
     </section>
 
-    <section className="flex items-center justify-between gap-3 rounded-2xl border border-blue-300/20 bg-[#0d1c33]/90 p-4" aria-label="Current birth profile">
+    <section className="flex items-center justify-between gap-3 rounded-2xl border border-blue-300/20 bg-[#111622]/90 p-4" aria-label="Current birth profile">
       <div className="flex min-w-0 items-center gap-3">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-400/15 text-blue-100"><UserRound size={25}/></span>
         <div className="min-w-0"><h2 className="font-serif text-lg text-white">Your Profile</h2><p className="truncate text-xs text-slate-300">{profile.name} · {profile.date} · {profile.location}</p></div>
@@ -52,7 +54,7 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile }
       <button type="button" onClick={onEditProfile} aria-label="Edit birth profile" className="shrink-0 rounded-lg p-3 text-amber-200 hover:bg-white/10"><Pencil size={17}/></button>
     </section>
 
-    <section className="rounded-2xl border border-blue-300/20 bg-[#0d1b30]/90 p-4 sm:p-5" aria-label="Calculated chart at a glance">
+    <section className="rounded-2xl border border-blue-300/20 bg-[#111622]/90 p-4 sm:p-5" aria-label="Calculated chart at a glance">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3"><h2 className="flex items-center gap-2 font-serif text-lg text-white"><Sparkles size={17} className="text-[#f1cf8a]"/> At a Glance</h2><p className="text-[11px] text-slate-400">Your three celestial signals</p></div>
       <div className="grid grid-cols-3">
         {signals.map(({title,value,caption,Icon,tint}, index) => <div key={title} className={`flex min-w-0 flex-col items-center px-1 text-center ${index ? "border-l border-white/10" : ""}`}>
@@ -70,6 +72,24 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile }
       <span className="min-w-0 flex-1"><strong className="block font-serif text-xl text-white">Your Diamond Chart</strong><span className="mt-1 block text-xs leading-5 text-slate-300">Explore the calculated 360° observatory, God View, Agent View, planets and stars.</span></span>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f4c96f] text-slate-950"><ArrowRight size={22}/></span>
     </Link>
+
+    <section aria-label="Saved birth profiles" className="rounded-2xl border border-white/5 bg-[#111622]/85 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-medium text-slate-200">Saved Profiles</h2>
+        <span className="text-xs text-[#D4AF37]">{savedProfiles.length} saved</span>
+      </div>
+      <div className="flex snap-x gap-3 overflow-x-auto pb-2">
+        {savedProfiles.length === 0 ? <p className="text-xs text-slate-400">Your saved birth profiles will appear here.</p> : savedProfiles.map((saved, index) => (
+          <button type="button" key={`${saved.name}:${saved.date}:${saved.time}:${index}`} onClick={() => onLoadProfile(saved)}
+            className="min-w-[145px] max-w-[195px] snap-start rounded-xl border border-white/10 bg-[#172034] p-3 text-left transition hover:border-[#D4AF37]/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
+            <span className="block truncate text-sm font-medium text-white">{saved.name}</span>
+            <span className="mt-1 block truncate text-[11px] text-slate-400">{saved.date}</span>
+            <span className="block truncate text-[11px] text-slate-400">{saved.location}</span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-[10px] text-slate-500">Saved on this browser only; profiles do not yet sync between deployments.</p>
+    </section>
 
     <nav aria-label="Other personal experiences" className="flex flex-wrap justify-center gap-x-7 gap-y-3 px-3 py-2 text-xs text-slate-300">
       <Link href="/reading" className="hover:text-amber-200">Master Interpreter →</Link>
