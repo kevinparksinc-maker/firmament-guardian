@@ -1,4 +1,5 @@
 import { ChartOverview } from "@/components/ChartOverview";
+import { LifeStoryInterpreter } from "@/components/LifeStoryInterpreter";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { WelcomeHost } from "@/components/WelcomeHost";
 import type { ChartResult } from "../../../server/astronomy";
@@ -25,6 +26,7 @@ export function ProfileReadingScreen({
 }: ProfileReadingScreenProps) {
   return <section aria-label="Personal reading and Master Interpreter" className="space-y-6">
     <ChartOverview chart={chart} view={readingView} onViewChange={onReadingViewChange} />
+    <LifeStoryInterpreter key={`${chart.input.date}:${chart.input.time}:${chart.input.location}:${chart.worldview}`} chart={chart} />
     <div id="master-interpreter-section" className="scroll-mt-24">
       <WelcomeHost
         chart={chart}
