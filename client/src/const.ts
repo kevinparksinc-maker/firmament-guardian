@@ -52,6 +52,5 @@ export const startLogin = async (): Promise<void> => {
     const reason = error instanceof Error ? error.message : "Unknown sign-in error";
     const message = `Unable to start sign-in: ${reason}. Please try again or contact support if this persists.`;
     window.dispatchEvent(new CustomEvent("fg:auth-error", { detail: { message } }));
-    throw new Error(message, { cause: error });
   }
 };
