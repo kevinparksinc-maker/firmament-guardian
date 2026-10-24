@@ -49,5 +49,9 @@ export const startLogin = async (): Promise<void> => {
     window.location.assign(url.toString());
   } catch (error) {
     console.error("[OAuth] Unable to begin sign-in", error);
+    const reason = error instanceof Error ? error.message : "Unknown sign-in error";
+    const message = `Unable to start sign-in: ${reason}. Please try again or contact support if this persists.`;
+    window.dispatchEvent(new CustomEvent("fg:auth-error", { detail: { message } }));
+    throw new Error(message, { cause: error });
   }
 };
