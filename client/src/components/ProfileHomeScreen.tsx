@@ -1,7 +1,7 @@
 import { Link } from "wouter";
-import { ArrowUpRight, Diamond } from "lucide-react";
+import { ArrowRight, Compass, Diamond, Pencil, Sparkles, Sun, Moon, UserRound } from "lucide-react";
 import { AccountControl } from "@/components/AccountControl";
-import { type UserProfileData } from "@/components/NatalProfileBuilder";
+import type { UserProfileData } from "@/components/NatalProfileBuilder";
 import type { ChartResult } from "../../../server/astronomy";
 
 type ProfileHomeScreenProps = {
@@ -13,38 +13,67 @@ type ProfileHomeScreenProps = {
   onRefreshTransits?: () => void;
 };
 
-/**
- * Home is an entry dashboard, not another reading or discovery surface.
- * Keep the full chart, discovery cards, transits and interpretations in their
- * single dedicated destinations: Chart, Guide and Reading.
- */
-export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, onSwitchProfile }: ProfileHomeScreenProps) {
-  const summary = chart
-    ? `${chart.movingBodies.length} moving bodies · ${chart.frozenStars.length} fixed stars · 12 ${chart.worldview === "god" ? "fixed" : "personal"} houses`
-    : calculating
-      ? "Calculating your chart…"
-      : "Your chart is not calculated yet.";
+const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"] as const;
+function signAt(longitude: number | undefined): string {
+  return typeof longitude === "number" && Number.isFinite(longitude)
+    ? SIGNS[Math.floor((((longitude % 360) + 360) % 360) / 30)]
+    : "Unavailable";
+}
 
-  return <div className="mx-auto max-w-4xl pb-4">
-    <section className="relative overflow-hidden rounded-3xl border border-amber-300/35 bg-[radial-gradient(ellipse_at_60%_0%,rgba(99,45,154,.35),transparent_60%),linear-gradient(140deg,rgba(6,18,48,.95),rgba(17,10,40,.94))] p-5 shadow-[0_16px_65px_rgba(0,0,0,.32)] sm:p-8" aria-label="Personal firmament dashboard">
-      <div className="relative flex items-center justify-between gap-3">
-        <span className="text-[10px] font-bold uppercase tracking-[.24em] text-amber-200">Firmament Guardian · Your personal sky</span>
-        <AccountControl />
+/** Single-purpose dashboard. Long readings, carousel and advanced instruments live on their dedicated routes. */
+export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile }: ProfileHomeScreenProps) {
+  const sun = chart?.movingBodies.find(body => body.name === "Sun");
+  const moon = chart?.movingBodies.find(body => body.name === "Moon");
+  const asc = chart?.ascendant;
+  const signals = [
+    { title: "Sun", value: signAt(sun?.longitude), caption: "Identity", Icon: Sun, tint: "text-amber-300" },
+    { title: "Moon", value: signAt(moon?.longitude), caption: "Emotional nature", Icon: Moon, tint: "text-fuchsia-300" },
+    { title: "Ascendant", value: chart?.agentViewAvailable ? signAt(asc?.longitude) : "Unavailable", caption: "Outer expression", Icon: Compass, tint: "text-indigo-200" },
+  ];
+  return <div className="mx-auto max-w-[660px] space-y-4 pb-5 text-slate-100">
+    <header className="flex items-center justify-between gap-3 px-1 py-2">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-amber-200/70 text-3xl text-amber-200 shadow-[0_0_22px_rgba(232,190,105,.12)]" aria-hidden="true">✧</span>
+        <div><p className="font-serif text-lg uppercase tracking-[.09em] text-[#ecd39b] sm:text-2xl">Firmament Guardian</p><p className="text-[9px] uppercase tracking-[.19em] text-slate-400">Ancient wisdom · Living guidance</p></div>
       </div>
-      <h1 className="mt-5 font-serif text-3xl leading-tight text-white sm:text-5xl">Welcome to your firmament, {profile.name}.</h1>
-      <p className="mt-3 text-sm text-slate-300">{profile.date || "Your natal chart"} · {profile.location || "Birth location not supplied"}</p>
-      <p className="mt-4 text-xs text-cyan-200/80" role="status">{summary}</p>
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link href="/chart" className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-200/15 px-5 text-sm font-semibold text-amber-100 hover:bg-amber-200/25">
-          <Diamond size={17} /> Open your diamond chart <ArrowUpRight size={16} />
-        </Link>
-        <button type="button" onClick={onEditProfile} className="min-h-12 rounded-xl border border-white/20 px-4 text-sm text-slate-200 hover:bg-white/10">Edit birth details</button>
-        <button type="button" onClick={onSwitchProfile} className="min-h-12 rounded-xl border border-white/20 px-4 text-sm text-slate-200 hover:bg-white/10">Switch profile</button>
-      </div>
-      <nav aria-label="Explore your chart" className="mt-6 flex flex-wrap gap-x-5 gap-y-3 border-t border-white/10 pt-5 text-sm">
-        <Link href="/reading" className="text-fuchsia-200 underline-offset-4 hover:underline">Full personal reading →</Link>
-        <Link href="/guide" className="text-cyan-200 underline-offset-4 hover:underline">Discoveries & traditional guide →</Link>
-      </nav>
+      <AccountControl />
+    </header>
+
+    <section className="relative overflow-hidden rounded-3xl border border-[#e2c38b]/20 bg-[linear-gradient(180deg,rgba(8,20,42,.58),rgba(4,11,27,.88)),url('/assets/firmament-starfield.png')] bg-cover bg-center p-6 shadow-[0_20px_60px_rgba(0,0,0,.4)] sm:p-8" aria-label="Welcome to your firmament">
+      <div className="pointer-events-none absolute right-[12%] top-[17%] text-6xl text-amber-100/75 blur-[1px]" aria-hidden="true">✦</div>
+      <div className="relative max-w-[78%]"><p className="font-serif text-3xl leading-tight text-[#fff8ed] sm:text-4xl">Welcome to your celestial journey</p><p className="mt-3 text-sm leading-6 text-slate-300">Your chart is a gateway to exploring the patterns of your personal sky.</p></div>
     </section>
+
+    <section className="flex items-center justify-between gap-3 rounded-2xl border border-blue-300/20 bg-[#0d1c33]/90 p-4" aria-label="Current birth profile">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-400/15 text-blue-100"><UserRound size={25}/></span>
+        <div className="min-w-0"><h2 className="font-serif text-lg text-white">Your Profile</h2><p className="truncate text-xs text-slate-300">{profile.name} · {profile.date} · {profile.location}</p></div>
+      </div>
+      <button type="button" onClick={onEditProfile} aria-label="Edit birth profile" className="shrink-0 rounded-lg p-3 text-amber-200 hover:bg-white/10"><Pencil size={17}/></button>
+    </section>
+
+    <section className="rounded-2xl border border-blue-300/20 bg-[#0d1b30]/90 p-4 sm:p-5" aria-label="Calculated chart at a glance">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3"><h2 className="flex items-center gap-2 font-serif text-lg text-white"><Sparkles size={17} className="text-[#f1cf8a]"/> At a Glance</h2><p className="text-[11px] text-slate-400">Your three celestial signals</p></div>
+      <div className="grid grid-cols-3">
+        {signals.map(({title,value,caption,Icon,tint}, index) => <div key={title} className={`flex min-w-0 flex-col items-center px-1 text-center ${index ? "border-l border-white/10" : ""}`}>
+          <Icon size={26} className={tint} aria-hidden="true"/>
+          <p className="mt-2 text-xs text-slate-300">{title}</p>
+          <p className="mt-1 break-words font-serif text-base text-white sm:text-xl">{chart ? value : "—"}</p>
+          <p className="mt-1 text-[10px] text-slate-400">{caption}</p>
+        </div>)}
+      </div>
+      {!chart && <p className="mt-4 text-center text-xs text-amber-200" role="status">{calculating ? "Calculating your celestial signals…" : "Chart values unavailable; no illustrative placements are shown."}</p>}
+    </section>
+
+    <Link href="/chart" className="group flex min-h-28 items-center gap-4 rounded-2xl border border-[#eec77e]/70 bg-[linear-gradient(115deg,rgba(109,77,41,.42),rgba(9,22,45,.96)_45%,rgba(4,19,39,.98))] p-5 shadow-[0_0_28px_rgba(238,199,126,.09)] transition hover:border-amber-200">
+      <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/10 text-amber-100"><Diamond size={37} strokeWidth={1.1}/></span>
+      <span className="min-w-0 flex-1"><strong className="block font-serif text-xl text-white">Your Diamond Chart</strong><span className="mt-1 block text-xs leading-5 text-slate-300">Explore the calculated 360° observatory, God View, Agent View, planets and stars.</span></span>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f4c96f] text-slate-950"><ArrowRight size={22}/></span>
+    </Link>
+
+    <nav aria-label="Other personal experiences" className="flex flex-wrap justify-center gap-x-7 gap-y-3 px-3 py-2 text-xs text-slate-300">
+      <Link href="/reading" className="hover:text-amber-200">Master Interpreter →</Link>
+      <Link href="/guide" className="hover:text-amber-200">Celestial Guide →</Link>
+    </nav>
   </div>;
 }
