@@ -45,9 +45,10 @@ const emptyForm = {
 };
 type ReadingMode = "natal" | "transit" | "combined";
 export default function Home({ section = "home" }: { section?: ProfileSection }) {
-  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult } = useProfileSession();
+  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult, savedProfiles } = useProfileSession();
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
+  const [locationStatus, setLocationStatus] = useState("");
   const [worldview, setWorldview] = useState<Worldview>("agent");
   const [locationQuery, setLocationQuery] = useState("");
   const [transitLocationQuery, setTransitLocationQuery] = useState("");
@@ -230,6 +231,21 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     const id = window.setInterval(refreshLiveTransit, 5 * 60 * 1000);
     return () => window.clearInterval(id);
   }, [result, readingMode, worldview, form]);
+  const usePhoneLocation = () => {
+    if (!navigator.geolocation) { setLocationStatus("Phone location is unavailable. Your saved transit location will be used."); return; }
+    setLocationStatus("Requesting phone location permission…");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || form.transitTimezone || form.timezone;
+        const nextForm = { ...form, transitLocation: "Current phone location", transitLatitude: coords.latitude, transitLongitude: coords.longitude, transitTimezone: zone, transitDate: "", transitTime: "" };
+        setForm(nextForm);
+        setLocationStatus("Phone location applied to your transit chart.");
+        calculate.mutate({ ...nextForm, worldview, readingScope: "combined", birthTimeKnown: Boolean(nextForm.time) });
+      },
+      () => setLocationStatus("Location permission unavailable or denied. Using your saved transit location."),
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 }
+    );
+  };
   const handleSaveProfile = async (newProfile: UserProfileData) => {
     setActiveProfile(newProfile);
     const nextForm = {
@@ -352,6 +368,11 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             calculating={calculate.isPending}
             onEditProfile={() => setIsProfileModalOpen(true)}
             onSwitchProfile={handleClearProfile}
+            savedProfiles={savedProfiles}
+            onLoadProfile={handleSaveProfile}
+            onRefreshTransits={refreshLiveTransit}
+            onUsePhoneLocation={usePhoneLocation}
+            locationStatus={locationStatus}
           />
         )}
         {activeProfile && !result && (section === "reading" || section === "guide") && (
