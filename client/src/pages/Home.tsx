@@ -46,7 +46,7 @@ const emptyForm = {
 };
 type ReadingMode = "natal" | "transit" | "combined";
 export default function Home({ section = "home" }: { section?: ProfileSection }) {
-  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult } = useProfileSession();
+  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult, savedProfiles } = useProfileSession();
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
   const [worldview, setWorldview] = useState<Worldview>("agent");
@@ -356,8 +356,9 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             onEditProfile={() => setIsProfileModalOpen(true)}
             onSwitchProfile={handleClearProfile}
             onRefreshTransits={refreshLiveTransit}
+            savedProfiles={savedProfiles}
+            onLoadProfile={profile => { void handleSaveProfile(profile); navigate("/"); }}
           />
-          <div className="mx-auto mt-5 max-w-4xl"><SavedProfilePicker onLoad={profile => { void handleSaveProfile(profile); navigate("/"); }} /></div>
           </>
         )}
         {activeProfile && !result && (section === "reading" || section === "guide") && (
