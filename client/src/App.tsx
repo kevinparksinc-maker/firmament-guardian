@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { toast } from "sonner";
 import { ProfileSessionProvider, useProfileSession } from "./contexts/ProfileSessionContext";
 import { PROFILE_TABS } from "./config/profileNavigation";
 import { trpc } from "@/lib/trpc";
@@ -53,6 +54,14 @@ function Router() {
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
+  useEffect(() => {
+    const onAuthError = (event: Event) => {
+      const message = (event as CustomEvent<{ message?: string }>).detail?.message;
+      toast.error(message || "Unable to start sign-in. Please try again.");
+    };
+    window.addEventListener("fg:auth-error", onAuthError);
+    return () => window.removeEventListener("fg:auth-error", onAuthError);
+  }, []);
   return (
     <ErrorBoundary>
       <ThemeProvider
