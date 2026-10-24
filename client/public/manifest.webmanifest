@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "Firmament Guardian",
+  "short_name": "Firmament",
+  "description": "Your personal celestial observatory, chart and Master Interpreter.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#05080f",
+  "theme_color": "#05080f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/firmament-icon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
