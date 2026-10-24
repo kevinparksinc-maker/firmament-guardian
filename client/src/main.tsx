@@ -89,3 +89,12 @@ createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </trpc.Provider>
 );
+
+// Allow Android browsers to offer a home-screen install. No API or user data is cached.
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(error => {
+      console.warn("Firmament Guardian install support unavailable:", error);
+    });
+  });
+}
