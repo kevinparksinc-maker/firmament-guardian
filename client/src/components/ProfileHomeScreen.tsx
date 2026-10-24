@@ -14,8 +14,8 @@ type ProfileHomeScreenProps = {
   onEditProfile: () => void;
   onSwitchProfile: () => void;
   onRefreshTransits?: () => void;
-  savedProfiles: UserProfileData[];
-  onLoadProfile: (profile: UserProfileData) => void;
+  savedProfiles?: UserProfileData[];
+  onLoadProfile?: (profile: UserProfileData) => void;
 };
 
 const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"] as const;
@@ -26,7 +26,7 @@ function signAt(longitude: number | undefined): string {
 }
 
 /** Single-purpose dashboard. Long readings, carousel and advanced instruments live on their dedicated routes. */
-export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles, onLoadProfile, onRefreshTransits }: ProfileHomeScreenProps) {
+export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles = [], onLoadProfile, onRefreshTransits }: ProfileHomeScreenProps) {
   const [activeSignal, setActiveSignal] = useState<"Sun" | "Moon" | "Ascendant" | null>(null);
   const sun = chart?.movingBodies.find(body => body.name === "Sun");
   const moon = chart?.movingBodies.find(body => body.name === "Moon");
@@ -105,7 +105,7 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
       </div>
       <div className="flex snap-x gap-3 overflow-x-auto pb-2">
         {savedProfiles.length === 0 ? <p className="text-xs text-slate-400">Your saved birth profiles will appear here.</p> : savedProfiles.map((saved, index) => (
-          <button type="button" key={`${saved.name}:${saved.date}:${saved.time}:${index}`} onClick={() => onLoadProfile(saved)}
+          <button type="button" key={`${saved.name}:${saved.date}:${saved.time}:${index}`} onClick={() => onLoadProfile?.(saved)}
             className="min-w-[145px] max-w-[195px] snap-start rounded-xl border border-white/10 bg-[#172034] p-3 text-left transition hover:border-[#D4AF37]/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
             <span className="block truncate text-sm font-medium text-white">{saved.name}</span>
             <span className="mt-1 block truncate text-[11px] text-slate-400">{saved.date}</span>
