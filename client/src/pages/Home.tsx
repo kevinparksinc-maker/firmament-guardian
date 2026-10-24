@@ -206,12 +206,15 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     });
   };
   const refreshLiveTransit = () => {
-    if (!result || readingMode === "natal") return;
+    if (!activeProfile || readingMode === "natal") return;
     const now = new Date();
+    const tz = form.transitTimezone || form.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+    const get = (key: string) => parts.find(p => p.type === key)?.value || "";
     calculate.mutate({
       ...form,
-      transitDate: now.toISOString().slice(0, 10),
-      transitTime: now.toTimeString().slice(0, 5),
+      transitDate: `${get("year")}-${get("month")}-${get("day")}`,
+      transitTime: `${get("hour")}:${get("minute")}`,
       transitLocation: form.transitLocation || form.location,
       transitLatitude: form.transitLatitude || form.latitude,
       transitLongitude: form.transitLongitude || form.longitude,
