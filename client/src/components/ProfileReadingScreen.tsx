@@ -1,3 +1,4 @@
+import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
 import { ChartOverview } from "@/components/ChartOverview";
 import { LifeStoryInterpreter } from "@/components/LifeStoryInterpreter";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
@@ -26,6 +27,7 @@ export function ProfileReadingScreen({
 }: ProfileReadingScreenProps) {
   return <section aria-label="Personal reading and Master Interpreter" className="space-y-6">
     <ChartOverview chart={chart} view={readingView} onViewChange={onReadingViewChange} />
+    <GuardianDiamondCharts chart={chart} />
     <LifeStoryInterpreter key={`${chart.input.date}:${chart.input.time}:${chart.input.location}:${chart.worldview}`} chart={chart} />
     <div id="master-interpreter-section" className="scroll-mt-24">
       <WelcomeHost
