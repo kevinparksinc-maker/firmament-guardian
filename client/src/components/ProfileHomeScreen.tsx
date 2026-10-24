@@ -26,7 +26,7 @@ function signAt(longitude: number | undefined): string {
 }
 
 /** Single-purpose dashboard. Long readings, carousel and advanced instruments live on their dedicated routes. */
-export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles, onLoadProfile }: ProfileHomeScreenProps) {
+export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles, onLoadProfile, onRefreshTransits }: ProfileHomeScreenProps) {
   const [activeSignal, setActiveSignal] = useState<"Sun" | "Moon" | "Ascendant" | null>(null);
   const sun = chart?.movingBodies.find(body => body.name === "Sun");
   const moon = chart?.movingBodies.find(body => body.name === "Moon");
@@ -50,7 +50,7 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
       <div className="relative max-w-[78%]"><p className="font-serif text-3xl leading-tight text-[#fff8ed] sm:text-4xl">Welcome to Your Celestial Journey</p><p className="mt-3 text-sm leading-6 text-slate-300">Your chart is a gateway to exploring the patterns of your personal sky.</p></div>
     </section>
 
-    <PersonalCosmicForecast chart={chart} calculating={calculating} />
+    <PersonalCosmicForecast chart={chart} calculating={calculating} onRefresh={onRefreshTransits} />
 
     <section className="flex items-center justify-between gap-3 rounded-2xl border border-blue-300/20 bg-[#111622]/90 p-4" aria-label="Current birth profile">
       <div className="flex min-w-0 items-center gap-3">
