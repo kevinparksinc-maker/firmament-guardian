@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { ArrowRight, Compass, Diamond, Pencil, Sparkles, Sun, Moon, UserRound } from "lucide-react";
 import { AccountControl } from "@/components/AccountControl";
+import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarousel";
 import type { UserProfileData } from "@/components/NatalProfileBuilder";
 import type { ChartResult } from "../../../server/astronomy";
 
@@ -72,6 +73,8 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
       <span className="min-w-0 flex-1"><strong className="block font-serif text-xl text-white">Your Diamond Chart</strong><span className="mt-1 block text-xs leading-5 text-slate-300">Explore the calculated 360° observatory, God View, Agent View, planets and stars.</span></span>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f4c96f] text-slate-950"><ArrowRight size={22}/></span>
     </Link>
+
+    {chart && <PersonalDiscoveryCarousel chart={chart} compact />}
 
     <section aria-label="Saved birth profiles" className="rounded-2xl border border-white/5 bg-[#111622]/85 p-4">
       <div className="mb-3 flex items-center justify-between">
