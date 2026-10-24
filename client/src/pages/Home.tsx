@@ -4,6 +4,7 @@ import type { ProfileSection } from "@/config/profileNavigation";
 import { trpc } from "@/lib/trpc";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
+import { SavedProfilePicker } from "@/components/SavedProfilePicker";
 import type { GuideTab } from "@/components/ProfileGuideScreen";
 import { CosmicShareCard } from "@/components/CosmicShareCard";
 import { NatalProfileBuilder, type UserProfileData, SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
@@ -323,6 +324,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         {/* Core Natal Profile Building Gate - First Page Requirement */}
         {!activeProfile && (
           <>
+            <div className="mb-5"><SavedProfilePicker onLoad={profile => { void handleSaveProfile(profile); navigate("/"); }} /></div>
             <NatalProfileBuilder
               mode="inline-gate"
               currentProfile={activeProfile}
@@ -346,6 +348,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         />}
 
         {activeProfile && section === "home" && (
+          <>
           <ProfileHomeScreen
             profile={activeProfile}
             chart={result}
@@ -354,6 +357,8 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             onSwitchProfile={handleClearProfile}
             onRefreshTransits={refreshLiveTransit}
           />
+          <div className="mx-auto mt-5 max-w-4xl"><SavedProfilePicker onLoad={profile => { void handleSaveProfile(profile); navigate("/"); }} /></div>
+          </>
         )}
         {activeProfile && !result && (section === "reading" || section === "guide") && (
           <section role="status" className="mx-auto max-w-3xl rounded-2xl border border-cyan-200/20 bg-slate-950/75 p-6 text-slate-200">
