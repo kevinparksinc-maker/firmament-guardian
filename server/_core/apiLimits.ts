@@ -16,7 +16,7 @@ export function createInterpretationLimiter(): RequestHandler {
     const maxActive = user ? 4 : 2;
     const now = Date.now();
     if (buckets.size > 20000) {
-      for (const [key, bucket] of buckets) {
+      for (const [key, bucket] of Array.from(buckets.entries())) {
         if (bucket.resetAt < now && bucket.active === 0) buckets.delete(key);
       }
     }
