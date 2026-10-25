@@ -473,5 +473,6 @@ export type ChartCanonDossier = {
   vedicJyotishSystem?: VedicStrengthAndPanchangaSummary;
   arabicPersianSystem?: ArabicPersianTraditionSummary;
   relationalChains?: RelationalHouseChainSynthesis[];
+  shaniDoctrine?: import("./shaniDoctrine").ShaniDoctrineResult;
   formattedSummaryForInterpreter: string;
 };
