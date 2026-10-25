@@ -9,14 +9,14 @@ import "./CelestialCommandShell.css";
 const entries = [
   { href:"/", name:"Home & Natal", icon:Compass },
   { href:"/ephemeris", name:"Daily Ephemeris", icon:Globe },
-  { href:"/guide?tab=blueprint#main-cosmos-tabs", name:"Celestial Blueprint", icon:Layers3 },
+  { href:"/guide?tab=blueprint#main-cosmos-tabs", name:"Divine Blueprint", icon:Layers3 },
   { href:"/guide?tab=synastry#main-cosmos-tabs", name:"Synastry & Chemistry", icon:Heart },
   { href:"/guide?tab=weather#main-cosmos-tabs", name:"Cosmic Weather", icon:CloudSun },
   { href:"/guide?tab=podcast#main-cosmos-tabs", name:"Audio Observatory", icon:Headphones },
   { href:"/guide?tab=social#main-cosmos-tabs", name:"Loved Ones", icon:Users },
   { href:"/horary", name:"Traditional Horary", icon:MoonStar },
-  { href:"/zodiac-readings", name:"Twelve Celestial Gates", icon:Sparkles },
-  { href:"/sky", name:"Celestial Map", icon:Orbit },
+  { href:"/zodiac-readings", name:"Twelve Divine Gates", icon:Sparkles },
+  { href:"/sky", name:"Divine Map", icon:Orbit },
   { href:"/history", name:"Reading Library", icon:BookOpenText },
 ];
 
@@ -29,7 +29,7 @@ export function CelestialCommandShell({children}:{children:ReactNode}) {
     <GuardianNavigation/>
     <PrimaryProfileNavigation/>
     <div className="fg-command-layout pb-20 md:pb-0">
-      <aside className="fg-command-side" aria-label="Celestial Observatory modules">
+      <aside className="fg-command-side" aria-label="Divine Observatory modules">
         <div className="fg-command-side-label">THE OBSERVATORY</div>
         <nav aria-label="Full application navigation">
           {entries.map(({href,name,icon:Icon})=>{
@@ -48,7 +48,7 @@ export function CelestialCommandShell({children}:{children:ReactNode}) {
             </Link>;
           })}
         </nav>
-        <div className="fg-command-side-note"><Stars size={16}/><strong>TWO SKIES · ONE MOMENT</strong>Moving planets and a permanent stellar frame. Every module retains the same celestial foundation.</div>
+        <div className="fg-command-side-note"><Stars size={16}/><strong>TWO SKIES · ONE MOMENT</strong>Moving planets and a permanent stellar frame. Every module retains the same divine foundation.</div>
       </aside>
       <div className="fg-command-main">{children}</div>
     </div>
