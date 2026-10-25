@@ -38,7 +38,7 @@ export function ProfileChartScreen({
     </section>;
   }
 
-  return <section id="chart-observatory" className="mb-8 scroll-mt-24" aria-label="Primary calculated celestial diamond observatory">
+  return <section id="chart-observatory" className="mb-8 scroll-mt-24" aria-label="Primary calculated divine diamond observatory">
     <ChartObservatory2050 key={`${chart.worldview}:${chart.utc}`} chart={chart} />
     <div className="mt-3 flex flex-wrap gap-3">
       <Link href="/reading" className="inline-flex min-h-11 items-center rounded-xl border border-violet-300/40 bg-violet-300/10 px-5 text-sm font-semibold text-violet-100">Open the Master Interpreter →</Link>
