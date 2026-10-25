@@ -40,14 +40,14 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
     <header className="flex items-center justify-between gap-3 px-1 py-2">
       <div className="flex min-w-0 items-center gap-3">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-amber-200/70 text-3xl text-amber-200 shadow-[0_0_22px_rgba(232,190,105,.12)]" aria-hidden="true">✧</span>
-        <div><p className="font-serif text-lg uppercase tracking-[.09em] text-[#ecd39b] sm:text-2xl">Firmament Guardian</p><p className="text-[9px] uppercase tracking-[.19em] text-slate-400">Ancient wisdom · Living guidance</p></div>
+        <div><p className="font-serif text-lg uppercase tracking-[.09em] text-[#ecd39b] sm:text-2xl">THE ABSOLUTE</p><p className="text-[9px] uppercase tracking-[.19em] text-slate-400">Uncovering Your Divine Code · From the Lights in the Firmament</p></div>
       </div>
       <AccountControl />
     </header>
 
     <section className="relative overflow-hidden rounded-3xl border border-[#e2c38b]/20 bg-[linear-gradient(180deg,rgba(8,20,42,.58),rgba(4,11,27,.88)),url('/assets/firmament-starfield.png')] bg-cover bg-center p-6 shadow-[0_20px_60px_rgba(0,0,0,.4)] sm:p-8" aria-label="Welcome to your firmament">
       <div className="pointer-events-none absolute right-[12%] top-[17%] text-6xl text-amber-100/75 blur-[1px]" aria-hidden="true">✦</div>
-      <div className="relative max-w-[78%]"><p className="font-serif text-3xl leading-tight text-[#fff8ed] sm:text-4xl">Welcome to Your Divine Journey</p><p className="mt-3 text-sm leading-6 text-slate-300">Your chart is a gateway to exploring the patterns of your personal sky.</p></div>
+      <div className="relative max-w-[78%]"><p className="font-serif text-3xl leading-tight text-[#fff8ed] sm:text-4xl">THE ABSOLUTE</p><p className="mt-3 text-sm leading-6 text-slate-300">Uncovering Your Divine Code<br/>From the Lights in the Firmament</p></div>
     </section>
 
     <PersonalCosmicForecast chart={chart} calculating={calculating} onRefresh={onRefreshTransits} />
