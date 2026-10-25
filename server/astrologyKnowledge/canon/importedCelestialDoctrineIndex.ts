@@ -439,3 +439,20 @@ export const IMPORTED_CELESTIAL_DOCTRINES = [
   }
 ] as const;
 export function findImportedCelestialDoctrine(id:string){return IMPORTED_CELESTIAL_DOCTRINES.find(r=>r.id===id);}
+
+/** Original six-file source package is not part of this index commit.
+ * Keep the distinction explicit until every source record is committed.
+ */
+export const CELESTIAL_SOURCE_PACKAGE = {
+  expectedDoctrineRecords: 62,
+  sourceLineCount: 850,
+  sourceFiles: [
+    "canon.types.ts",
+    "records.jyotish.ts",
+    "records.western.ts",
+    "records.ancient-east.ts",
+    "records.egypt-medieval-maya.ts",
+    "index.ts",
+  ],
+  integrationStatus: "index-only-pending-full-source-commit",
+} as const;
