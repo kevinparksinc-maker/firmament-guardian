@@ -105,7 +105,7 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
   if (candidates.size > 1) {
     throw new Error("That local time is ambiguous in the selected timezone because the clock repeated; choose a different minute.");
   }
-  return new Date([...candidates][0]);
+  return new Date(Array.from(candidates)[0]);
 }
 
 const MOSHIER_FLAGS = 4 | 256;
