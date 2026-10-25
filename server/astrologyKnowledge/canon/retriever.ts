@@ -27,6 +27,7 @@ import type {
   RetrievedPlacementDossier,
   VedicAyanamsaMode,
 } from "./types";
+import { evaluateShaniDoctrine, SHANI_DOCTRINE_SOURCE } from "./shaniDoctrine";
 import { evaluateVedicJyotishSystem } from "./vedicJyotishCanon";
 import {
   buildDispositorChains,
@@ -135,6 +136,7 @@ export function retrieveChartCanonDossier(
     options?.vedicCoordinateMode ?? "firmament-tropical-hybrid"
   );
   const arabicPersianSystem = evaluateArabicPersianTradition(chart, isDayChart);
+  const shaniDoctrine = evaluateShaniDoctrine(chart, options?.vedicCoordinateMode ?? "firmament-tropical-hybrid");
   const relationalChains = buildRelationalHouseChains(
     chart,
     isDayChart,
@@ -257,6 +259,8 @@ export function retrieveChartCanonDossier(
     }
   }
 
+  lines.push("", "--- SHANI / SATURN CONDITIONAL JYOTISH DOCTRINE ---", shaniDoctrine.explanation);
+
   if (arabicPersianSystem) {
     lines.push(
       "",
@@ -289,6 +293,7 @@ export function retrieveChartCanonDossier(
     dispositorChains,
     westernTimingActivations,
     vedicJyotishSystem,
+    shaniDoctrine,
     arabicPersianSystem,
     relationalChains,
     formattedSummaryForInterpreter: lines.join("\n"),
@@ -363,6 +368,15 @@ export function canonDossierToEvidenceItems(
       sourceTrace: makeTrace("vedic", "jyotish-bhava-classifications", JYOTISH_HOUSE_GROUP_PROVENANCE.sourceTitle, "jyotish-bhava-overlapping-categories", "moderate"),
     });
   }
+
+  if (dossier.shaniDoctrine) items.push({
+    id: "canon-jyotish-shani-conditions", tradition: "vedic", category: "deterministic-rule",
+    technique: "shani-lordship-sade-sati-dhaiya", subject: "Saturn",
+    statement: dossier.shaniDoctrine.explanation,
+    concepts: ["shani","saturn","yogakaraka","sade-sati","dhaiya","graha-lordship"],
+    polarity: "mixed", strength: 0.85, ruleId: "jyotish-shani-conditional-doctrine", sourceId: "firmament-canon-knowledge",
+    sourceTrace: makeTrace("vedic", "shani-lordship-sade-sati-dhaiya", SHANI_DOCTRINE_SOURCE, "jyotish-shani-conditional-doctrine", "moderate"),
+  });
 
   // The complete historically attested Xiu canon is mandatory interpreter evidence.
   // Positional assignment remains uncalculated until verified ancient fixed
