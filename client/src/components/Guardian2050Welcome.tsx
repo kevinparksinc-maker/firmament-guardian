@@ -7,12 +7,12 @@ type Portal = { href: string; eyebrow: string; title: string; summary: string; i
 const portals: Portal[] = [
   { href: "#chart-setup", eyebrow: "01 / YOUR FOUNDATION", title: "Cast a natal chart", summary: "Begin with your birth details. See the moving sky against the permanently fixed firmament.", icon: Stars, label: "Open chart setup" },
   { href: "/horary", eyebrow: "02 / A LIVING QUESTION", title: "Ask a Horary question", summary: "Explore the heavens at the exact moment of your question, including rulers and testimony.", icon: MoonStar, label: "Open Horary" },
-  { href: "/zodiac-readings", eyebrow: "NEW / THE TWELVE CELESTIAL GATES", title: "Your sign’s celestial reading", summary: "Each sign’s ruling planet becomes Agent House 1, while God View stays fixed. Explore the same calculated sky through twelve distinct house perspectives.", icon: Sparkles, label: "Open zodiac sign readings" },
-  { href: "/sky", eyebrow: "03 / THE CELESTIAL MAP", title: "Explore the Firmament", summary: "Examine tropical planets, fixed stellar territories, and the 27 / 28 / 36 overlays.", icon: Orbit, label: "Explore celestial map" },
+  { href: "/zodiac-readings", eyebrow: "NEW / THE TWELVE DIVINE GATES", title: "Your sign’s divine reading", summary: "Each sign’s ruling planet becomes Agent House 1, while God View stays fixed. Explore the same calculated sky through twelve distinct house perspectives.", icon: Sparkles, label: "Open zodiac sign readings" },
+  { href: "/sky", eyebrow: "03 / THE DIVINE MAP", title: "Explore the Firmament", summary: "Examine tropical planets, fixed stellar territories, and the 27 / 28 / 36 overlays.", icon: Orbit, label: "Explore divine map" },
   { href: "/history", eyebrow: "04 / YOUR LIBRARY", title: "Return to your readings", summary: "Revisit previous chart work and reflect on what you have learned.", icon: BookOpenText, label: "Open history" },
 ];
 const glossary = [
-  { word: "God View", meaning: "The permanent twelve-sector celestial reference frame. It does not depend on your local horizon." },
+  { word: "God View", meaning: "The permanent twelve-sector divine reference frame. It does not depend on your local horizon." },
   { word: "Agent View", meaning: "Your observer-centered equal houses, beginning with the local Ascendant. Moving planets are interpreted locally." },
   { word: "Synthesis", meaning: "Where the independent God and Agent calculations are woven together and their agreements and differences explained." },
   { word: "Nakshatras · Manzils · Decans", meaning: "The permanent 27, 28 and 36 equal divisions of the fixed Firmament backdrop; moving planets pass through them." },
@@ -21,10 +21,10 @@ const glossary = [
 export function Guardian2050Welcome() {
   const [depth, setDepth] = useState<Depth>("guided");
   const [guideOpen, setGuideOpen] = useState(false);
-  return <section className="fg2050" aria-label="Firmament Guardian celestial observatory">
+  return <section className="fg2050" aria-label="Firmament Guardian divine observatory">
     <nav className="fg2050-topbar" aria-label="Guardian primary navigation">
-      <a href="/" className="fg2050-brand"><span className="fg2050-brandmark"><Orbit size={21}/></span><span><b>FIRMAMENT</b><small>GUARDIAN · CELESTIAL WISDOM</small></span></a>
-      <div className="fg2050-toplinks"><a href="#chart-setup">Natal</a><a href="/horary">Horary</a><a href="/zodiac-readings">12 Signs</a><a href="/sky">Celestial Map</a><a href="/history">Library</a></div>
+      <a href="/" className="fg2050-brand"><span className="fg2050-brandmark"><Orbit size={21}/></span><span><b>FIRMAMENT</b><small>GUARDIAN · DIVINE WISDOM</small></span></a>
+      <div className="fg2050-toplinks"><a href="#chart-setup">Natal</a><a href="/horary">Horary</a><a href="/zodiac-readings">12 Signs</a><a href="/sky">Divine Map</a><a href="/history">Library</a></div>
       <span className="fg2050-model-tag"><i/> FIXED STELLAR FRAME</span>
     </nav>
     <div className="fg2050-lead">
@@ -42,11 +42,11 @@ export function Guardian2050Welcome() {
       </div>
     </div>
     <div className="fg2050-portal-heading">
-      <div><span className="fg2050-eyebrow">YOUR CELESTIAL JOURNEY</span><h3>Where would you like to begin?</h3><p>Choose a simple starting point. The deeper knowledge remains one tap away.</p></div>
+      <div><span className="fg2050-eyebrow">YOUR DIVINE JOURNEY</span><h3>Where would you like to begin?</h3><p>Choose a simple starting point. The deeper knowledge remains one tap away.</p></div>
       <div className="fg2050-depth-switch" role="group" aria-label="Explanation depth"><button type="button" aria-pressed={depth==="guided"} className={depth==="guided"?"active":""} onClick={()=>setDepth("guided")}><Sparkles size={14}/> New to astrology</button><button type="button" aria-pressed={depth==="scholar"} className={depth==="scholar"?"active":""} onClick={()=>setDepth("scholar")}><BookOpenText size={14}/> Deep study</button></div>
     </div>
     <div className="fg2050-portals">{portals.map(({href,eyebrow,title,summary,icon:Icon,label})=><a key={href} href={href} className="fg2050-portal" aria-label={label}><div className="fg2050-portal-top"><span>{eyebrow}</span><ArrowUpRight size={17}/></div><div className="fg2050-portal-icon"><Icon size={23} strokeWidth={1.4}/></div><strong>{title}</strong><p>{depth==="guided"?summary:href==="#chart-setup"?"Natal foundation · geocentric tropical ephemeris · dual fixed/local 30° house frameworks":href==="/horary"?"Question-moment significators · reception · lunar applications · traditional testimony":href==="/sky"?"Deterministic fixed-star archive · Nakshatras, Manzils, Decans · dual-frame overlays":"Saved charts, interpretations, evidence chains and re-examination"}</p><span className="fg2050-portal-cta">{label} <ArrowUpRight size={14}/></span></a>)}</div>
-    <div className="fg2050-education"><div><div className="fg2050-eyebrow">ONE CALCULATION · TWO PERSPECTIVES</div><h3>Separate in calculation.<br/><em>United in understanding.</em></h3><p>Your chart keeps God View and Agent View distinct. The Master Interpreter connects their evidence in clear English, without erasing the differences between them.</p></div><div className="fg2050-education-right"><div className="fg2050-view-row"><span><Eye size={17}/> GOD VIEW</span><p>Permanent celestial reference · the shared fixed order</p></div><div className="fg2050-view-row"><span><Compass size={17}/> AGENT VIEW</span><p>Local Ascendant · observer-centered equal houses</p></div><div className="fg2050-view-row"><span><Sparkles size={17}/> SYNTHESIS</span><p>Agreements, contradictions, and lived human meaning</p></div></div></div>
+    <div className="fg2050-education"><div><div className="fg2050-eyebrow">ONE CALCULATION · TWO PERSPECTIVES</div><h3>Separate in calculation.<br/><em>United in understanding.</em></h3><p>Your chart keeps God View and Agent View distinct. The Master Interpreter connects their evidence in clear English, without erasing the differences between them.</p></div><div className="fg2050-education-right"><div className="fg2050-view-row"><span><Eye size={17}/> GOD VIEW</span><p>Permanent divine reference · the shared fixed order</p></div><div className="fg2050-view-row"><span><Compass size={17}/> AGENT VIEW</span><p>Local Ascendant · observer-centered equal houses</p></div><div className="fg2050-view-row"><span><Sparkles size={17}/> SYNTHESIS</span><p>Agreements, contradictions, and lived human meaning</p></div></div></div>
     <div className="fg2050-guide"><button type="button" aria-expanded={guideOpen} onClick={()=>setGuideOpen(v=>!v)}><HelpCircle size={18}/><span>{guideOpen?"Hide the quick guide":"What do these astrology terms mean?"}</span><span className="fg2050-guide-state">{guideOpen?"−":"+"}</span></button>{guideOpen&&<dl>{glossary.map(item=><div key={item.word}><dt>{item.word}</dt><dd>{item.meaning}</dd></div>)}</dl>}</div>
     <a href="#chart-setup" className="fg2050-step-link">CONTINUE TO YOUR CHART SETUP <ArrowDown size={15}/></a>
   </section>;
