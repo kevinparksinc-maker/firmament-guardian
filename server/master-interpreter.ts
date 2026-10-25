@@ -1223,6 +1223,7 @@ export function buildAstrologyInterpreterSystem(
   ...domainInstructions: string[]
 ): string {
   return [
+    MASTER_INTERPRETER_PROMPT,
     FIRMAMENT_MASTER_INTERPRETATION_PROMPT,
     FIRMAMENT_CARE_DELIVERY_STANDARD,
     FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT,
