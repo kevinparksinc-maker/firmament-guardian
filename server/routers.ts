@@ -18,6 +18,8 @@ import { ZODIAC_SIGNS } from "../shared/hybrid";
 import { horaryFollowUpHistorySchema } from "./horary-input";
 import {
   diagnoseAstrologyEvidence,
+  buildAstrologyEvidencePacket,
+  formatEvidencePacket,
   evaluateBehavioralIntelligence,
 } from "./astrologyKnowledge";
 import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
@@ -536,8 +538,12 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         })
       )
       .mutation(({ input }) => {
+        const evidence = buildAstrologyEvidencePacket(input.chart, input.question || input.focusArea, input.chart.readingScope ?? "combined");
+        if (!evidence.canonDossier || !evidence.canonEvidence.length) {
+          throw new Error("Genesis requires evaluated Firmament Canon evidence.");
+        }
         const pipeline = runGenesisPatternPipeline(input.chart);
-        return generateReading(
+        const reading = generateReading(
           pipeline.analysis,
           {
             question: input.question,
@@ -548,6 +554,7 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
           input.chart.input?.time || "12:00",
           input.chart.input?.date || new Date().toISOString().split("T")[0]
         );
+        return { ...reading, formattedReading: reading.formattedReading + "\n\n## Firmament Canon — Chart Evidence\n\n" + formatEvidencePacket(evidence) };
       }),
   }),
 });
