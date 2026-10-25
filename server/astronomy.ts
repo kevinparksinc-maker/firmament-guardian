@@ -69,14 +69,43 @@ export type ChartResult = {
 };
 
 export function parseLocalToUtc(date: string, time: string, timezone: string) {
-  const [y, m, d] = date.split("-").map(Number); const [hh, mm] = time.split(":").map(Number);
-  const wallKey = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")} ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-  const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  const naive = Date.UTC(y, m - 1, d, hh, mm); const candidates = new Set<number>();
-  for (let delta = -36; delta <= 36; delta += 1) { const candidate = new Date(naive + delta * 3_600_000); const parts = formatter.formatToParts(candidate); const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value])); const key = `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}`; if (key === wallKey) candidates.add(candidate.getTime()); }
-  if (candidates.size === 0) throw new Error("That local time does not exist in the selected timezone, usually because of a daylight-saving transition.");
-  if (candidates.size > 1) throw new Error("That local time is ambiguous in the selected timezone because the clock repeated; choose a different minute.");
-  return new Date(Array.from(candidates)[0]);
+  const [y, m, d] = date.split("-").map(Number);
+  const [hh, mm] = time.split(":").map(Number);
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !/^\\d{2}:\\d{2}$/.test(time) ||
+      ![y, m, d, hh, mm].every(Number.isInteger) || hh > 23 || mm > 59 ||
+      new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10) !== date) {
+    throw new Error("Invalid local date or time.");
+  }
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  });
+  const naive = Date.UTC(y, m - 1, d, hh, mm);
+  const wallKey = `${date} ${time}`;
+  const partsFor = (ms: number) => {
+    const parts = formatter.formatToParts(new Date(ms));
+    return Object.fromEntries(parts.filter(p => p.type !== "literal").map(p => [p.type, p.value]));
+  };
+  const candidates = new Set<number>();
+  // Probe surrounding instants to discover real IANA offsets, including
+  // half/quarter-hour zones and both sides of daylight-saving transitions.
+  for (let hour = -36; hour <= 36; hour++) {
+    const probe = naive + hour * 3_600_000;
+    const p = partsFor(probe);
+    const localAsUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+    const offsetMinutes = Math.round((localAsUtc - probe) / 60_000);
+    const candidate = naive - offsetMinutes * 60_000;
+    const actual = partsFor(candidate);
+    const key = `${actual.year}-${actual.month}-${actual.day} ${actual.hour}:${actual.minute}`;
+    if (key === wallKey) candidates.add(candidate);
+  }
+  if (candidates.size === 0) {
+    throw new Error("That local time does not exist in the selected timezone, usually because of a daylight-saving transition.");
+  }
+  if (candidates.size > 1) {
+    throw new Error("That local time is ambiguous in the selected timezone because the clock repeated; choose a different minute.");
+  }
+  return new Date([...candidates][0]);
 }
 
 const MOSHIER_FLAGS = 4 | 256;
