@@ -437,7 +437,7 @@ Speak in a generous, flowing narrative connecting this present celestial moment 
     generateSoulmatePrediction: publicProcedure
       .input(
         z.object({
-          natalPlacements: z.string(),
+          natalPlacements: z.string().max(12000),
           gender: z.enum(["male", "female", "other"]).optional(),
         })
       )
@@ -445,7 +445,7 @@ Speak in a generous, flowing narrative connecting this present celestial moment 
         const prompt = `You are the Master Interpreter evaluating synastry and soulmate connection.
 Placements: ${input.natalPlacements}
 Gender: ${input.gender || "other"}
-Analyze their 7th house, Venus, Moon, and descendant aspects to describe their cosmic soulmate connection in deep, evocative 2026 relational terms. Return a JSON with:
+Discuss symbolic relationship themes only where explicitly supplied. Never invent a future spouse, meeting event, planetary position or aspect. If calculated relationship data is missing, explain the limitations. Return a JSON with:
 {
   "soulmatePrediction": "A multi-paragraph flowing description of their soulmate's energy, demeanor, values, how they meet, and mutual dynamic",
   "descriptors": ["3-5 vivid adjectives/traits"]
@@ -459,16 +459,17 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         });
         try {
           const content = String(response.choices[0]?.message?.content ?? "{}");
-          const parsed = JSON.parse(content);
+          const parsed: unknown = JSON.parse(content);
+          if (!parsed || typeof parsed !== "object" ||
+              typeof (parsed as any).soulmatePrediction !== "string") throw new Error("Invalid AI response.");
           return {
-            soulmatePrediction: parsed.soulmatePrediction || "A profound partner who mirrors your deep loyalty, integrity, and quiet strength.",
-            descriptors: Array.isArray(parsed.descriptors) ? parsed.descriptors : ["Grounding", "Loyal", "Intuitive", "Sovereign"],
+            soulmatePrediction: (parsed as {soulmatePrediction:string}).soulmatePrediction,
+            descriptors: Array.isArray((parsed as any).descriptors)
+              ? (parsed as any).descriptors.filter((v:unknown):v is string=>typeof v==="string").slice(0,5)
+              : [],
           };
         } catch {
-          return {
-            soulmatePrediction: "Your cosmic soulmate is someone whose steady presence offers complete psychological safety—matching your fierce loyalty and honoring your need for sacred space.",
-            descriptors: ["Loyal", "Grounded", "Perceptive", "Steadfast"],
-          };
+          return { soulmatePrediction: "Relationship interpretation unavailable: the AI response could not be validated.", descriptors: [] };
         }
       }),
 
