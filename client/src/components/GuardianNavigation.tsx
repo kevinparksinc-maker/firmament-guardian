@@ -34,10 +34,10 @@ export function GuardianNavigation() {
 
   return (
     <header className="guardian-global-nav">
-      <nav className="guardian-global-nav-inner" aria-label="Firmament Guardian main navigation">
-        <Link href="/" className="guardian-global-brand" aria-label="Firmament Guardian home">
+      <nav className="guardian-global-nav-inner" aria-label="The Absolute main navigation">
+        <Link href="/" className="guardian-global-brand" aria-label="The Absolute home">
           <Stars size={21} aria-hidden="true" />
-          <span><strong>FIRMAMENT</strong><small>GUARDIAN · DIVINE WISDOM</small></span>
+          <span><strong>THE ABSOLUTE</strong><small>UNCOVERING YOUR DIVINE CODE</small></span>
         </Link>
         <div className="guardian-global-desktop-links">
           {routes.filter(route => !("mobileOnly" in route)).map(({ href, label, Icon }) => (
@@ -52,7 +52,7 @@ export function GuardianNavigation() {
         </button>
       </nav>
       {open && (
-        <nav id="guardian-global-mobile-links" className="guardian-global-mobile-links" aria-label="Firmament Guardian mobile navigation">
+        <nav id="guardian-global-mobile-links" className="guardian-global-mobile-links" aria-label="The Absolute mobile navigation">
           {routes.map(({ href, label, Icon }) => (
             <Link key={href} href={href} aria-current={location === href ? "page" : undefined} className={location === href ? "active" : ""} onClick={event => { openModule(event, href); setOpen(false); }}>
               <Icon size={19} aria-hidden="true" /> {label}
