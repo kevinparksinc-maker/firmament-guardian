@@ -71,7 +71,7 @@ export type ChartResult = {
 export function parseLocalToUtc(date: string, time: string, timezone: string) {
   const [y, m, d] = date.split("-").map(Number);
   const [hh, mm] = time.split(":").map(Number);
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !/^\\d{2}:\\d{2}$/.test(time) ||
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time) ||
       ![y, m, d, hh, mm].every(Number.isInteger) || hh > 23 || mm > 59 ||
       new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10) !== date) {
     throw new Error("Invalid local date or time.");
