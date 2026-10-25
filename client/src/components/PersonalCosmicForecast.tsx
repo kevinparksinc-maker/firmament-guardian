@@ -34,7 +34,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
     const lat = chart.input.transitLatitude ?? chart.input.latitude;
     const lon = chart.input.transitLongitude ?? chart.input.longitude;
     if (typeof lat !== "number" || typeof lon !== "number") return null;
-    return calculatePlanetaryHours(new Date(chart.transitDate), lat, lon);
+    return calculatePlanetaryHours(new Date(chart.transitDate), lat, lon, chart.input.transitTimezone || chart.input.timezone);
   }, [chart]);
   const timeZone = chart?.input.transitTimezone || chart?.input.timezone || "UTC";
   const formatHour = (iso: string) => {
