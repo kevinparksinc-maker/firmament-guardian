@@ -29,7 +29,7 @@ function solarEvents(utcDay: Date, lat: number, lon: number): { sunrise: number;
   const delta = Math.acos(cosHour) / (2 * Math.PI);
   return { sunrise: fromJulian(transit - delta), sunset: fromJulian(transit + delta) };
 }
-export function calculatePlanetaryHours(at: Date, latitude: number, longitude: number): { current: PlanetaryHour; next: PlanetaryHour; upcoming: PlanetaryHour[] } | null {
+export function calculatePlanetaryHours(at: Date, latitude: number, longitude: number, timeZone?: string): { current: PlanetaryHour; next: PlanetaryHour; upcoming: PlanetaryHour[] } | null {
   if (!Number.isFinite(at.getTime()) || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
   // Build surrounding solar days in UTC to cover local dawns near the date line.
   const midnight = Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate());
@@ -40,10 +40,9 @@ export function calculatePlanetaryHours(at: Date, latitude: number, longitude: n
     const a=events[i], b=events[i+1];
     if (!(a.sunrise<a.sunset && a.sunset<b.sunrise)) continue;
     // Sunday 0 -> Sun, Monday 1 -> Moon, etc.
-    const weekday = new Date(a.sunrise).getUTCDay();
-    // Weekday at local sunrise: longitude-based approximation can fail around
-    // the date line; derive local solar day using longitude.
-    const localWeekday = new Date(a.sunrise + longitude / 15 * 3600000).getUTCDay();
+    // Use the transit location timezone for the weekday at sunrise.
+    const localDate = timeZone ? new Intl.DateTimeFormat("en-US", {weekday:"short", timeZone}).format(new Date(a.sunrise)) : null;
+    const localWeekday = localDate ? ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(localDate) : new Date(a.sunrise + longitude / 15 * 3600000).getUTCDay();
     const dayRuler: PlanetaryRuler = (["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn"] as const)[localWeekday];
     const startIndex = CHALDEAN_ORDER.indexOf(dayRuler);
     const add = (start:number,end:number,index:number,period:"day"|"night") => {
