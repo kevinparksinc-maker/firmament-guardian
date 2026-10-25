@@ -15,6 +15,7 @@ import { HOUSE_CANON_RECORDS, synthesizePlanetInHouse } from "./housesAndFrames"
 import { getManzilCanonByLongitude } from "./manazil28";
 import { getNakshatraCanonByLongitude } from "./nakshatras27";
 import { CHINESE_MANSIONS, CHINESE_MANSION_HISTORICAL_SOURCE } from "./chineseMansions28";
+import { describeJyotishHouse, getJyotishHouseGroups, JYOTISH_HOUSE_GROUP_PROVENANCE } from "./jyotishHouseGroups";
 import { getPlanetInHouseKnowledge } from "./planetInHouseInterpretations";
 import {
   PLANET_CANON_RECORDS,
@@ -154,6 +155,7 @@ export function retrieveChartCanonDossier(
     lines.push(`  - [Sign & Dignity] ${p.planetInSignSynthesis}`);
     lines.push(`  - [Condition & Bounds] ${p.dignityAndCondition.conditionSummary} | ${p.dignityAndCondition.sectAlignment}`);
     lines.push(`  - [House Doctrine] ${p.planetInHouseSynthesis}`);
+    lines.push(`  - [Jyotish overlapping bhava categories · TRADITION] ${describeJyotishHouse(p.displayedHouse)} Coordinate caution: use traditional Jyotish Lagna framing for school-specific judgments.`);
     if (p.planetInHouseKnowledge) {
       const k = p.planetInHouseKnowledge;
       lines.push(`  - [Planet-in-House Library · ${k.epistemicStatus}] Domain: ${k.domain}. ${k.core}`);
@@ -347,6 +349,18 @@ export function canonDossierToEvidenceItems(
         "firmament-canon-dossier",
         "high"
       ),
+    });
+  }
+
+  for (const house of Array.from(new Set(dossier.placements.map(p => p.displayedHouse))).sort((a,b)=>a-b)) {
+    if (!getJyotishHouseGroups(house).length) continue;
+    items.push({
+      id: `canon-jyotish-bhava-groups-${house}`,
+      tradition: "vedic", category: "deterministic-rule", technique: "jyotish-bhava-classifications",
+      subject: `House ${house}`, statement: describeJyotishHouse(house),
+      concepts: ["jyotish", "bhava", `house-${house}`, ...getJyotishHouseGroups(house).map(g=>g.id)],
+      polarity: "mixed", strength: 0.9, ruleId: "jyotish-bhava-overlapping-categories", sourceId: "firmament-canon-knowledge",
+      sourceTrace: makeTrace("vedic", "jyotish-bhava-classifications", JYOTISH_HOUSE_GROUP_PROVENANCE.sourceTitle, "jyotish-bhava-overlapping-categories", "moderate"),
     });
   }
 
