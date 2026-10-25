@@ -11,7 +11,7 @@ const routes = [
   { href: "/guide?tab=podcast#main-cosmos-tabs", label: "Audio Readings", Icon: Headphones, mobileOnly: true },
   { href: "/guide?tab=social#main-cosmos-tabs", label: "Loved Ones", Icon: Users, mobileOnly: true },
   { href: "/zodiac-readings", label: "12 Sign Readings", Icon: Sparkles },
-  { href: "/sky", label: "Celestial Map", Icon: Orbit },
+  { href: "/sky", label: "Divine Map", Icon: Orbit },
   { href: "/history", label: "Library", Icon: BookOpenText },
 ];
 
@@ -37,7 +37,7 @@ export function GuardianNavigation() {
       <nav className="guardian-global-nav-inner" aria-label="Firmament Guardian main navigation">
         <Link href="/" className="guardian-global-brand" aria-label="Firmament Guardian home">
           <Stars size={21} aria-hidden="true" />
-          <span><strong>FIRMAMENT</strong><small>GUARDIAN · CELESTIAL WISDOM</small></span>
+          <span><strong>FIRMAMENT</strong><small>GUARDIAN · DIVINE WISDOM</small></span>
         </Link>
         <div className="guardian-global-desktop-links">
           {routes.filter(route => !("mobileOnly" in route)).map(({ href, label, Icon }) => (
