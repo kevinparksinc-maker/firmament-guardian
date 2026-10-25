@@ -51,6 +51,31 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
         : data.signal === "Mixed"
         ? "Supportive and challenging contacts are both present. The pattern can be explored through the planets and houses involved."
         : "No major natal–transit aspects fall inside your selected 5° orb in this snapshot. This is not a claim that nothing is happening."}</p>
+      <div className="mt-5 overflow-hidden rounded-2xl border border-amber-200/20 bg-[radial-gradient(ellipse_at_50%_0%,rgba(225,185,108,.13),transparent_65%),linear-gradient(145deg,rgba(11,24,50,.96),rgba(5,10,25,.98))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.07),0_16px_36px_rgba(0,0,0,.28)] sm:p-5">
+        <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-amber-200">Celestial Energy Balance</p><h3 className="mt-1 font-serif text-lg text-white">Your current energetic signature</h3></div><span className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-slate-300">Calculated snapshot</span></div>
+        {(() => {
+          const total = data.flow + data.friction;
+          const flowShare = total ? data.flow / total : 0;
+          const circumference = 2 * Math.PI * 48;
+          return <div className="mt-5 grid items-center gap-5 sm:grid-cols-[190px_1fr]">
+            <div className="relative mx-auto h-44 w-44">
+              <svg viewBox="0 0 160 160" role="img" aria-label={total ? `${Math.round(flowShare*100)} percent of classified aspect weight is flow` : "No classified flow or friction contacts"} className="h-full w-full -rotate-90">
+                <circle cx="80" cy="80" r="48" fill="none" stroke="#26334a" strokeWidth="13"/>
+                <circle cx="80" cy="80" r="48" fill="none" stroke="#ef8b91" strokeWidth="13" strokeLinecap="round" strokeDasharray={`${total ? circumference : 0} ${circumference}`}/>
+                <circle cx="80" cy="80" r="48" fill="none" stroke="#70e3bb" strokeWidth="13" strokeLinecap="round" strokeDasharray={`${flowShare*circumference} ${circumference}`} className="drop-shadow-[0_0_8px_rgba(112,227,187,.55)]"/>
+                <circle cx="80" cy="80" r="32" fill="#0c1730" stroke="#bca078" strokeOpacity=".2"/>
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center"><strong className="font-serif text-3xl text-white">{total ? `${Math.round(flowShare*100)}%` : "—"}</strong><span className="text-[10px] uppercase tracking-widest text-emerald-200">Flow share</span></div>
+            </div>
+            <div className="space-y-4">
+              <div><div className="mb-2 flex justify-between text-xs"><span className="text-emerald-200">Harmonious contacts</span><strong className="text-white">{data.flow}</strong></div><div className="h-2.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.4)]" style={{width:`${flowShare*100}%`}}/></div></div>
+              <div><div className="mb-2 flex justify-between text-xs"><span className="text-rose-200">Friction contacts</span><strong className="text-white">{data.friction}</strong></div><div className="h-2.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-rose-400" style={{width:`${total ? (1-flowShare)*100 : 0}%`}}/></div></div>
+              <div className="flex flex-wrap gap-2 text-[11px]"><span className="rounded-lg border border-violet-300/20 bg-violet-300/10 px-2 py-1 text-violet-200">{data.neutral.length} conjunctions</span><span className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-amber-100">{data.contacts.filter(c=>c.orb<=1.25).length} tight contacts</span></div>
+            </div>
+          </div>;
+        })()}
+        <p className="mt-4 border-t border-white/10 pt-3 text-[11px] leading-5 text-slate-400">The dial compares actual calculated natal–transit aspect weights, not a prediction of outcomes. Conjunctions are counted separately. Future energy curves require new timed chart calculations.</p>
+      </div>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-emerald-300/35 bg-emerald-300/[.055] p-3"><p className="text-xs text-emerald-200">Flow weight</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.flow)}</p></div>
         <div className="rounded-xl border border-rose-300/35 bg-rose-300/[.055] p-3"><p className="text-xs text-rose-200">Friction weight</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.friction)}</p></div>
