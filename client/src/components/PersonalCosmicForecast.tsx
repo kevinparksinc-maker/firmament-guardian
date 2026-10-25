@@ -76,6 +76,25 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
         })()}
         <p className="mt-4 border-t border-white/10 pt-3 text-[11px] leading-5 text-slate-400">The dial compares actual calculated natal–transit aspect weights, not a prediction of outcomes. Conjunctions are counted separately. Future energy curves require new timed chart calculations.</p>
       </div>
+      <div className="mt-4 rounded-2xl border border-violet-300/20 bg-[linear-gradient(135deg,rgba(24,34,67,.94),rgba(10,15,32,.98))] p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-violet-200">Planetary Contributors</p><h3 className="mt-1 font-serif text-lg text-white">What is shaping your energy?</h3></div><Sparkles size={19} className="text-amber-200"/></div>
+        <div className="mt-4 space-y-4">{data.strongest.slice(0,5).map((contact,index) => {
+          const mode = aspectFlow[contact.aspect];
+          return <div key={`${contact.transit}-${contact.natalName}-${index}`}>
+            <div className="mb-2 flex items-center justify-between gap-2 text-xs"><span className="text-slate-100">{contact.transit} {contact.aspect} {contact.natalName}</span><span className={mode>0?"text-emerald-200":mode<0?"text-rose-200":"text-violet-200"}>{contact.strength}% · {mode>0?"Flow":mode<0?"Friction":"Conjunction"}</span></div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/10"><div className={`h-full rounded-full shadow-[0_0_12px_rgba(255,255,255,.13)] ${mode>0?"bg-gradient-to-r from-cyan-400 to-emerald-300":mode<0?"bg-gradient-to-r from-amber-400 to-rose-400":"bg-gradient-to-r from-violet-400 to-fuchsia-300"}`} style={{width:`${contact.strength}%`}}/></div>
+            <p className="mt-1 text-[10px] text-slate-400">{contact.orb.toFixed(2)}° exact orb · within 5°</p>
+          </div>;
+        })}</div>
+        {!data.strongest.length && <p className="mt-3 text-xs text-slate-400">No major natal–transit contacts within the 5° orb.</p>}
+      </div>
+      <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-[#0b1730] p-4">
+        <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-cyan-200">Harmonic Energy Wave</p><h3 className="mt-1 font-serif text-lg text-white">Next 24 hours</h3></div><Clock3 size={18} className="text-cyan-200"/></div>
+        <div className="mt-4 flex min-h-28 items-center justify-center rounded-xl border border-dashed border-cyan-200/20 bg-[repeating-linear-gradient(90deg,transparent,transparent_24%,rgba(148,163,184,.08)_25%)] px-5 text-center">
+          <p className="max-w-xs text-xs leading-5 text-slate-300">Awaiting calculated 30-minute transit snapshots. Energy peaks and shifts will appear here once the time-series engine is connected.</p>
+        </div>
+        <div className="mt-2 flex justify-between text-[10px] text-slate-400"><span>Now</span><span>+6h</span><span>+12h</span><span>+18h</span><span>+24h</span></div>
+      </div>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-emerald-300/35 bg-emerald-300/[.055] p-3"><p className="text-xs text-emerald-200">Flow weight</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.flow)}</p></div>
         <div className="rounded-xl border border-rose-300/35 bg-rose-300/[.055] p-3"><p className="text-xs text-rose-200">Friction weight</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.friction)}</p></div>
