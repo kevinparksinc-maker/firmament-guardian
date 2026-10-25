@@ -19,9 +19,12 @@ export async function getDb() {
     try {
       _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
-      console.warn("[Database] Failed to connect, using in-memory mock:", error);
+      console.warn("[Database] Failed to initialize:", error);
       _db = null;
     }
+  }
+  if (!_db && process.env.NODE_ENV === "production") {
+    throw new Error("Persistent DATABASE_URL is required in production.");
   }
   return _db;
 }
