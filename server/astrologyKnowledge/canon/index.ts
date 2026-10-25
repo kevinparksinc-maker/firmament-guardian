@@ -17,3 +17,4 @@ export * from "./seferYetzirah";
 export * from "./jyotishHouseGroups";
 export * from "./shaniDoctrine";
 export * from "./civilizationDoctrineInventory";
+export * from "./doctrineResearchIntake";
