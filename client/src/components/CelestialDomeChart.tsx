@@ -20,9 +20,9 @@ export function CelestialDomeChart({chart}:{chart:ChartResult}){
  const nodes=layer==="natal"?[chart.northNode,chart.southNode]:[];
  const entries=[...bodies,...nodes];
  const chosen=entries.find(row=>row.name===selected);
- return <section aria-label="Three-dimensional celestial dome chart" className="rounded-3xl border border-cyan-300/25 bg-gradient-to-b from-[#0a1533] via-[#080e22] to-black p-4 text-slate-100 shadow-2xl sm:p-6">
+ return <section aria-label="Three-dimensional divine dome chart" className="rounded-3xl border border-cyan-300/25 bg-gradient-to-b from-[#0a1533] via-[#080e22] to-black p-4 text-slate-100 shadow-2xl sm:p-6">
    <div className="flex flex-wrap items-start justify-between gap-3">
-     <div><div className="text-xs font-bold uppercase tracking-[.2em] text-cyan-300">Celestial Atlas · Dome instrument</div><h2 className="mt-1 font-serif text-2xl">The Firmament Dome</h2><p className="mt-1 max-w-xl text-sm text-slate-400">A hemispherical projection of the calculated zodiac and planetary longitudes, with a curved canopy, concentric sky bands, and selectable bodies.</p></div>
+     <div><div className="text-xs font-bold uppercase tracking-[.2em] text-cyan-300">Divine Atlas · Dome instrument</div><h2 className="mt-1 font-serif text-2xl">The Firmament Dome</h2><p className="mt-1 max-w-xl text-sm text-slate-400">A hemispherical projection of the calculated zodiac and planetary longitudes, with a curved canopy, concentric sky bands, and selectable bodies.</p></div>
      <div className="flex gap-2">{(["natal","transit"] as const).map(v=><button key={v} type="button" aria-pressed={layer===v} onClick={()=>{setLayer(v);setSelected(null)}} className={`rounded-xl border px-4 py-2 text-sm font-semibold ${layer===v?"border-cyan-300 bg-cyan-300/20 text-cyan-100":"border-white/15 bg-white/5 text-slate-300"}`}>{v==="natal"?"Natal sky":"Transit sky"}</button>)}</div>
    </div>
    <svg viewBox="0 0 600 475" role="img" aria-label="Perspective hemisphere dome with actual zodiacal longitudes and planet markers" className="mt-4 w-full max-h-[580px]">
@@ -41,7 +41,7 @@ export function CelestialDomeChart({chart}:{chart:ChartResult}){
    <label className="mt-2 flex flex-col gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Rotate longitude reference · {rotate}°
      <input aria-label="Rotate dome longitude reference" type="range" min="0" max="359" step="1" value={rotate} onChange={e=>setRotate(Number(e.target.value))} className="w-full accent-cyan-300"/>
    </label>
-   <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200" aria-live="polite">{chosen?<><strong>{chosen.name}</strong> · {chosen.display} · House {chosen.house} · {chosen.longitude.toFixed(4)}° longitude</>:<>Select any celestial body to inspect its calculated position.</>}</div>
+   <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200" aria-live="polite">{chosen?<><strong>{chosen.name}</strong> · {chosen.display} · House {chosen.house} · {chosen.longitude.toFixed(4)}° longitude</>:<>Select any divine body to inspect its calculated position.</>}</div>
    <p className="mt-3 text-xs leading-5 text-amber-100/80">Projection note: The planetary longitudes are taken from the chart; the dome elevation is illustrative. Physical horizon/zenith positions require calculated local altitude and azimuth, which are not yet part of this chart data. This is not a claim about the physical shape of Earth.</p>
  </section>;
 }
