@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Activity, ArrowRight, Clock3, RefreshCw, Sparkles, Zap } from "lucide-react";
 import { Link } from "wouter";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
@@ -11,6 +11,8 @@ const percentWeight = (orb: number) =>
   orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
 
 export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { chart: ChartResult | null; calculating: boolean; onRefresh?: () => void }) {
+  const [showAllContacts, setShowAllContacts] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const data = useMemo(() => {
     if (!chart || chart.readingScope === "natal") return null;
     const contacts = chart.transits.flatMap(body =>
@@ -22,7 +24,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
     const neutral = contacts.filter(c => aspectFlow[c.aspect] === 0);
     const signal = !contacts.length ? "No close contacts" : flow > friction * 1.2 ? "Easy Flow" : friction > flow * 1.2 ? "Friction" : "Mixed";
     return { contacts, flow, friction, neutral, signal,
-      strongest: [...contacts].sort((a,b)=>b.strength-a.strength).slice(0,3),
+      strongest: [...contacts].sort((a,b)=>a.orb-b.orb),
       moment: chart.transitDate };
   }, [chart]);
 
@@ -54,8 +56,22 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
         <div className="rounded-xl border border-rose-300/35 bg-rose-300/[.055] p-3"><p className="text-xs text-rose-200">Friction weight</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.friction)}</p></div>
       </div>
       {data.strongest.length > 0 && <div className="mt-4 space-y-2">
-        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-200"><Sparkles size={14}/> Leading chart contacts</p>
-        {data.strongest.map((c,i)=><p key={`${c.transit}-${c.natalName}-${i}`} className="rounded-lg border border-white/10 bg-white/[.035] px-3 py-2 text-sm text-slate-200">Transit {c.transit} {c.aspect} natal {c.natalName} · {c.orb.toFixed(2)}° orb</p>)}
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-200"><Sparkles size={14}/> Calculated transit contacts ({data.contacts.length})</p>
+        {(showAllContacts ? data.strongest : data.strongest.slice(0,4)).map((c,i) => {
+          const id = `${c.transit}-${c.natalName}-${c.aspect}-${i}`;
+          return <div key={id} className="rounded-lg border border-white/10 bg-white/[.035] p-3 text-sm text-slate-200">
+            <button type="button" className="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200" aria-expanded={selectedContact === id} onClick={() => setSelectedContact(current => current === id ? null : id)}>
+              <span className="font-medium text-white">Transit {c.transit} {c.aspect} natal {c.natalName}</span>
+              <span className="mt-1 block text-xs text-amber-100">{c.orb.toFixed(2)}° orb · {c.strength}% weight · {aspectFlow[c.aspect] === 1 ? "Flow" : aspectFlow[c.aspect] === -1 ? "Friction" : "Conjunction / context dependent"}</span>
+            </button>
+            {selectedContact === id && <div className="mt-3 border-t border-white/10 pt-3 text-xs leading-5 text-slate-300">
+              <p>Exact chart testimony: transiting {c.transit} forms a {c.aspect} with natal {c.natalName}, separated by {c.orb.toFixed(2)}°. This contact contributes {c.strength} weighted points under the configured 5° orb.</p>
+              <p className="mt-2">A complete judgment requires the planets’ signs, houses, rulerships, relevant mansions and other calculated Canon evidence. Open the Master Interpreter for chart-level synthesis; this card does not invent those missing results.</p>
+              <Link href="/reading" className="mt-2 inline-block font-semibold text-cyan-200 underline underline-offset-2">Ask the Master Interpreter →</Link>
+            </div>}
+          </div>;
+        })}
+        {data.strongest.length > 4 && <button type="button" className="w-full rounded-lg border border-amber-300/40 px-3 py-3 text-sm font-semibold text-amber-100" onClick={() => setShowAllContacts(current => !current)}>{showAllContacts ? "Show leading four contacts" : `Show all ${data.strongest.length} calculated contacts`}</button>}
       </div>}
       <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-400"><Clock3 size={14} className="mt-0.5 shrink-0"/>Snapshot: {new Date(data.moment).toLocaleString()} · This displays the calculated chart moment, not an automatically updating live clock. Exact future shift times need additional time-series calculations.</p>
       <Link href="/guide?tab=weather#main-cosmos-tabs" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-cyan-300/45 bg-cyan-300/10 px-4 text-sm font-semibold text-cyan-100 hover:bg-cyan-300/20">Explore your energy in depth <ArrowRight size={16}/></Link>
