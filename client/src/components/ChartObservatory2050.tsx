@@ -219,13 +219,13 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
       <header className="cg2050-header">
         <div>
           <p className="cg2050-eyebrow">
-            <Orbit size={16} /> CELESTIAL OBSERVATORY · HIGH-CLASS MAP CHART
+            <Orbit size={16} /> DIVINE OBSERVATORY · HIGH-CLASS MAP CHART
           </p>
           <h2 id="cg2050-title">
             The Firmament <em>Sky Map & Wheel</em>
           </h2>
           <p>
-            An astronomical planisphere and multi-projection celestial map chart. Grounded in precise Swiss Ephemeris coordinates with live geometric aspect chords, prominent stellar beacons, and dual God/Agent reference frames.
+            An astronomical planisphere and multi-projection divine map chart. Grounded in precise Swiss Ephemeris coordinates with live geometric aspect chords, prominent stellar beacons, and dual God/Agent reference frames.
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -251,7 +251,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
           {/* Controls: Projections & Frame */}
           <div className="cg2050-toolbar-row">
             {/* Projection selector */}
-            <div className="cg2050-projections" role="group" aria-label="Celestial map projection">
+            <div className="cg2050-projections" role="group" aria-label="Divine map projection">
               <button
                 type="button"
                 aria-pressed={projection === "planisphere"}
@@ -352,13 +352,13 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
 
           {/* THE SVG MAP STAGE */}
           <div className="cg2050-wheel">
-            {/* PROJECTION 1: CELESTIAL PLANISPHERE SKY MAP */}
+            {/* PROJECTION 1: DIVINE PLANISPHERE SKY MAP */}
             {projection === "planisphere" && (
               <svg
                 ref={svgRef}
                 viewBox="0 0 600 600"
                 role="img"
-                aria-label={`Celestial Planisphere Map displaying ${rows.length} planets and ${STAR_CATALOG.length} fixed stars`}
+                aria-label={`Divine Planisphere Map displaying ${rows.length} planets and ${STAR_CATALOG.length} fixed stars`}
               >
                 <defs>
                   {/* Space radial background */}
@@ -395,14 +395,14 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
                   </linearGradient>
                 </defs>
 
-                {/* Outer Celestial Sphere Disc */}
+                {/* Outer Divine Sphere Disc */}
                 <circle cx="300" cy="300" r="280" fill="url(#planiBg)" stroke="#38bdf8" strokeOpacity="0.35" strokeWidth="1.5" />
                 <circle cx="300" cy="300" r="270" fill="none" stroke="#60a5fa" strokeOpacity="0.15" strokeDasharray="3 5" />
                 <circle cx="300" cy="300" r="215" fill="none" stroke="url(#eclipticGrad)" strokeWidth="2.5" filter="url(#laserGlow)" />
                 <circle cx="300" cy="300" r="145" fill="none" stroke="#94a3b8" strokeOpacity="0.18" strokeDasharray="2 4" />
                 <circle cx="300" cy="300" r="75" fill="none" stroke="#94a3b8" strokeOpacity="0.12" />
 
-                {/* Celestial Axis Crosshairs */}
+                {/* Divine Axis Crosshairs */}
                 <line x1="300" y1="20" x2="300" y2="580" stroke="#38bdf8" strokeOpacity="0.2" strokeWidth="1" />
                 <line x1="20" y1="300" x2="580" y2="300" stroke="#38bdf8" strokeOpacity="0.2" strokeWidth="1" />
 
@@ -605,7 +605,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
                   );
                 })}
 
-                {/* Celestial Center Core Hub */}
+                {/* Divine Center Core Hub */}
                 <circle cx="300" cy="300" r="32" fill="#04091a" stroke="#ffe180" strokeOpacity="0.6" strokeWidth="1.5" />
                 <circle cx="300" cy="300" r="4" fill="#53f4ff" filter="url(#laserGlow)" />
                 <text x="300" y="293" textAnchor="middle" fontSize="8" fill="#ffe180" letterSpacing="1.5" fontWeight="bold">
@@ -834,7 +834,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
                 ref={svgRef}
                 viewBox="0 0 600 500"
                 role="img"
-                aria-label={`3D Celestial Dome displaying ${rows.length} calculated planets`}
+                aria-label={`3D Divine Dome displaying ${rows.length} calculated planets`}
               >
                 <defs>
                   <radialGradient id="domeSkyGrad" cx="50%" cy="85%" r="90%">
@@ -1002,7 +1002,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
             <div className="cg2050-panel-kicker">
               <Sparkles size={16} /> INSPECT THE EVIDENCE
             </div>
-            <h3>Celestial Coordinates</h3>
+            <h3>Divine Coordinates</h3>
           </div>
 
           {/* Planet Selection Pills */}
@@ -1097,7 +1097,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
               </div>
             </div>
 
-            <div className="cg2050-overlays" role="group" aria-label="Fixed celestial overlay">
+            <div className="cg2050-overlays" role="group" aria-label="Fixed divine overlay">
               {[
                 { key: "nakshatra" as const, name: "27 Nakshatras" },
                 { key: "manzil" as const, name: "28 Manzils" },
@@ -1133,7 +1133,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
               </strong>
               <small>
                 {layer === "stars"
-                  ? "Nearest archived fixed star beacon by celestial separation."
+                  ? "Nearest archived fixed star beacon by divine separation."
                   : `Permanent coordinate division sector corresponding to ${selectedRow?.name}'s tropical longitude.`}
               </small>
             </div>
