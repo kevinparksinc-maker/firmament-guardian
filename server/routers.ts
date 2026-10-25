@@ -475,32 +475,19 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
     generateSynastryBreakdown: publicProcedure
       .input(
         z.object({
-          natalPlacements: z.string(),
-          soulmatePlacements: z.string(),
+          natalPlacements: z.string().max(12000),
+          soulmatePlacements: z.string().max(12000),
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `Analyze synastry between:
+        const prompt = `Analyze relationship patterns ONLY from the supplied chart information.
 Person 1: ${input.natalPlacements}
 Person 2: ${input.soulmatePlacements}
-Generate a rich, deeply insightful relationship compatibility breakdown in JSON format with:
-{
-  "interpretation": "A flowing, comprehensive synthesis of this relationship's potential and spiritual purpose",
-  "aspectGroups": [
-    {
-      "type": "harmonious",
-      "aspects": [
-        { "planet1": "Sun", "planet2": "Moon", "aspect": "Trine", "orb": 1.5, "interpretation": "Deep natural understanding and intuitive emotional harmony." }
-      ]
-    },
-    {
-      "type": "challenging",
-      "aspects": [
-        { "planet1": "Mars", "planet2": "Saturn", "aspect": "Square", "orb": 2.1, "interpretation": "Patience and timing require conscious communication." }
-      ]
-    }
-  ]
-}`;
+Return JSON with interpretation (string) and aspectGroups (array).
+Do not invent aspects, planetary degrees, orbs or circumstances. If no verified
+pairwise aspect data is provided, return an empty aspectGroups array and explain
+what additional calculated chart evidence is needed. This text-only route cannot
+calculate synastry aspects.`;
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
@@ -510,22 +497,20 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         });
         try {
           const content = String(response.choices[0]?.message?.content ?? "{}");
-          const parsed = JSON.parse(content);
+          const parsed: unknown = JSON.parse(content);
+          if (!parsed || typeof parsed !== "object" || typeof (parsed as any).interpretation !== "string") {
+            throw new Error("Invalid synastry response schema.");
+          }
+          // A text-only route cannot verify angular separations against chart data.
+          // Never emit LLM-supplied aspects or pretend that they were calculated.
           return {
-            interpretation: parsed.interpretation || "A powerful synastry dynamic rooted in complementary strengths and mutual growth.",
-            aspectGroups: Array.isArray(parsed.aspectGroups) ? parsed.aspectGroups : [],
+            interpretation: (parsed as {interpretation:string}).interpretation,
+            aspectGroups: [],
           };
         } catch {
           return {
-            interpretation: "This celestial pairing unites complementary strengths, balancing individual sovereignty with unshakeable mutual dedication.",
-            aspectGroups: [
-              {
-                type: "harmonious",
-                aspects: [
-                  { planet1: "Sun", planet2: "Moon", aspect: "Trine", orb: 1.8, interpretation: "Mutual intuitive ease and natural respect for each other's emotional rhythms." }
-                ]
-              }
-            ],
+            interpretation: "Synastry interpretation unavailable: the AI response could not be validated.",
+            aspectGroups: [],
           };
         }
       }),
