@@ -53,7 +53,7 @@ export function PersonalDiscoveryCarousel({ chart, compact = false }: { chart: C
       for (const transit of chart.transits) {
         const contacts = transit.natalContacts.filter(c => c.orb <= 5).sort((a,b) => a.orb-b.orb);
         entries.push({
-          id: `transit-${transit.name}`, category: "PERSONAL CELESTIAL WEATHER",
+          id: `transit-${transit.name}`, category: "PERSONAL DIVINE WEATHER",
           title: `Transit ${transit.name} · ${transit.display}`,
           teaser: contacts.length
             ? `Fun fact: Moving ${transit.name} makes ${contacts.length} close contact${contacts.length === 1 ? "" : "s"} with your natal chart inside your 5° orb.`
@@ -69,7 +69,7 @@ export function PersonalDiscoveryCarousel({ chart, compact = false }: { chart: C
   const dayIndex = new Date().getUTCDate();
   const cards = insights.length ? [...insights.slice(dayIndex % insights.length), ...insights.slice(0, dayIndex % insights.length)] : [];
   return (
-    <section aria-label="Personal celestial discoveries" className={`${compact ? "mb-4" : "mb-8"} rounded-3xl border-2 border-amber-300/65 bg-slate-950/45 p-4 shadow-[0_0_32px_rgba(255,207,117,.13)] backdrop-blur-xl sm:p-6`}>
+    <section aria-label="Personal divine discoveries" className={`${compact ? "mb-4" : "mb-8"} rounded-3xl border-2 border-amber-300/65 bg-slate-950/45 p-4 shadow-[0_0_32px_rgba(255,207,117,.13)] backdrop-blur-xl sm:p-6`}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div><p className="text-[10px] font-bold uppercase tracking-[.24em] text-amber-200">Your living natal dossier</p>
           <h2 className="mt-1 font-serif text-2xl text-white sm:text-3xl">Discover Your Firmament</h2>
