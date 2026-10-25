@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Activity, ArrowRight, Clock3, RefreshCw, Sparkles, Zap } from "lucide-react";
 import { Link } from "wouter";
+import { calculatePlanetaryHours } from "../lib/planetaryHours";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
 
 const MAX_ORB = 5;
@@ -28,6 +29,18 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
       moment: chart.transitDate };
   }, [chart]);
 
+  const hours = useMemo(() => {
+    if (!chart || chart.readingScope === "natal") return null;
+    const lat = chart.input.transitLatitude ?? chart.input.latitude;
+    const lon = chart.input.transitLongitude ?? chart.input.longitude;
+    if (typeof lat !== "number" || typeof lon !== "number") return null;
+    return calculatePlanetaryHours(new Date(chart.transitDate), lat, lon);
+  }, [chart]);
+  const timeZone = chart?.input.transitTimezone || chart?.input.timezone || "UTC";
+  const formatHour = (iso: string) => {
+    try { return new Intl.DateTimeFormat("en-US", { hour:"numeric", minute:"2-digit", timeZone }).format(new Date(iso)); }
+    catch { return new Date(iso).toISOString().slice(11,16) + " UTC"; }
+  };
   return <section aria-label="Personal Cosmic Forecast" className="relative overflow-hidden rounded-3xl border border-cyan-300/65 bg-[radial-gradient(ellipse_at_top_right,rgba(123,78,240,.21),transparent_65%),linear-gradient(150deg,#0A152C,#080D19)] p-5 shadow-[0_0_26px_rgba(83,244,255,.15),inset_0_0_18px_rgba(83,244,255,.035)] sm:p-6">
     <div className="flex items-center justify-between gap-3">
       <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-cyan-300">Personal Harmonic Flow Clock</p>
@@ -94,6 +107,19 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
           <p className="max-w-xs text-xs leading-5 text-slate-300">Awaiting calculated 30-minute transit snapshots. Energy peaks and shifts will appear here once the time-series engine is connected.</p>
         </div>
         <div className="mt-2 flex justify-between text-[10px] text-slate-400"><span>Now</span><span>+6h</span><span>+12h</span><span>+18h</span><span>+24h</span></div>
+      </div>
+      <div className="mt-4 rounded-2xl border border-amber-300/30 bg-[radial-gradient(ellipse_at_top_right,rgba(245,158,11,.14),transparent_65%),linear-gradient(145deg,#111c37,#0a1225)] p-4 shadow-[0_12px_32px_rgba(0,0,0,.24)] sm:p-5">
+        <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber-200">Traditional Time Lord</p><h3 className="mt-1 font-serif text-xl text-white">Planetary Hour Clock</h3></div><Clock3 size={23} className="text-amber-200"/></div>
+        {hours ? <>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-amber-300/30 bg-amber-300/[.06] p-3"><p className="text-[10px] uppercase tracking-wider text-amber-200">Ruling this hour</p><p className="mt-1 font-serif text-2xl text-white">{hours.current.ruler}</p><p className="mt-1 text-xs text-slate-300">{formatHour(hours.current.start)} – {formatHour(hours.current.end)}</p></div>
+            <div className="rounded-xl border border-cyan-300/25 bg-cyan-300/[.05] p-3"><p className="text-[10px] uppercase tracking-wider text-cyan-200">Up next</p><p className="mt-1 font-serif text-2xl text-white">{hours.next.ruler}</p><p className="mt-1 text-xs text-slate-300">Begins {formatHour(hours.next.start)}</p></div>
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-200" style={{width:`${Math.max(0,Math.min(100,100*(Date.parse(chart!.transitDate)-Date.parse(hours.current.start))/(Date.parse(hours.current.end)-Date.parse(hours.current.start))))}%`}}/></div>
+          <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-slate-300">Coming rulers</p>
+          <div className="mt-2 flex flex-wrap gap-2">{hours.upcoming.map((hour,i)=><div key={hour.start} className="rounded-lg border border-white/10 bg-white/[.035] px-3 py-2 text-xs text-slate-200"><span className="text-amber-100">{hour.ruler}</span><span className="ml-2 text-slate-400">{i===0?"Now":formatHour(hour.start)}</span></div>)}</div>
+          <p className="mt-3 text-xs leading-5 text-slate-400">Calculated from sunrise and sunset at the transit coordinates. The hour ruler is a traditional timing indicator; its favorable or challenging meaning depends on natal and transit chart context.</p>
+        </> : <p className="mt-3 text-sm text-slate-300">Resolve a transit location to calculate planetary hours. Polar day/night locations may require a different traditional convention.</p>}
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-emerald-300/35 bg-emerald-300/[.055] p-3"><p className="text-xs text-emerald-200">Flow weight</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.flow)}</p></div>
