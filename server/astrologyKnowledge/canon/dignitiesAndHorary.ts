@@ -425,7 +425,6 @@ export function evaluatePlacementDignityAndCondition(
     degInSign
   );
   const chaldeanFaceRuler = lookupChaldeanFaceRuler(lon);
-  const dorotheanTriplicityRulers = signRec?.triplicityLords.dorothean;
 
   const essentialDignities: string[] = [];
   const essentialDebilities: string[] = [];
@@ -449,22 +448,10 @@ export function evaluatePlacementDignityAndCondition(
         `Exalted in ${signName} (classical degree ${signRec.exaltation.classicalDegree}°, +4)`
       );
     }
-    if (
-      dorotheanTriplicityRulers &&
-      [
-        dorotheanTriplicityRulers.day,
-        dorotheanTriplicityRulers.night,
-        dorotheanTriplicityRulers.participating,
-      ].includes(row.name)
-    ) {
-      const role =
-        dorotheanTriplicityRulers.day === row.name
-          ? "Day Triplicity Lord"
-          : dorotheanTriplicityRulers.night === row.name
-            ? "Night Triplicity Lord"
-            : "Participating Triplicity Lord";
-      essentialDignities.push(`${role} of ${signRec.element} (+3)`);
-    }
+    // Firmament adopted elemental triplicity policy: Fire, Earth, Air and Water
+    // are fixed sign families regardless of day/night birth. Historical Dorothean
+    // day/night/participating rulers remain in the source Canon for reference,
+    // but DO NOT generate active +3 dignity or override domicile lordship.
     if (egyptianTermRuler === row.name) {
       essentialDignities.push(`In own Egyptian Bound/Term (+2)`);
     }
