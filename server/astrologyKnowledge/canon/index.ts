@@ -16,3 +16,4 @@ export * from "./chineseMansions28";
 export * from "./seferYetzirah";
 export * from "./jyotishHouseGroups";
 export * from "./shaniDoctrine";
+export * from "./civilizationDoctrineInventory";
