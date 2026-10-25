@@ -47,7 +47,7 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
 
     <section className="relative overflow-hidden rounded-3xl border border-[#e2c38b]/20 bg-[linear-gradient(180deg,rgba(8,20,42,.58),rgba(4,11,27,.88)),url('/assets/firmament-starfield.png')] bg-cover bg-center p-6 shadow-[0_20px_60px_rgba(0,0,0,.4)] sm:p-8" aria-label="Welcome to your firmament">
       <div className="pointer-events-none absolute right-[12%] top-[17%] text-6xl text-amber-100/75 blur-[1px]" aria-hidden="true">✦</div>
-      <div className="relative max-w-[78%]"><p className="font-serif text-3xl leading-tight text-[#fff8ed] sm:text-4xl">Welcome to Your Celestial Journey</p><p className="mt-3 text-sm leading-6 text-slate-300">Your chart is a gateway to exploring the patterns of your personal sky.</p></div>
+      <div className="relative max-w-[78%]"><p className="font-serif text-3xl leading-tight text-[#fff8ed] sm:text-4xl">Welcome to Your Divine Journey</p><p className="mt-3 text-sm leading-6 text-slate-300">Your chart is a gateway to exploring the patterns of your personal sky.</p></div>
     </section>
 
     <PersonalCosmicForecast chart={chart} calculating={calculating} onRefresh={onRefreshTransits} />
@@ -61,7 +61,7 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
     </section>
 
     <section className="rounded-2xl border border-blue-300/20 bg-[#111622]/90 p-4 sm:p-5" aria-label="Calculated chart at a glance">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3"><h2 className="flex items-center gap-2 font-serif text-lg text-white"><Sparkles size={17} className="text-[#f1cf8a]"/> At a Glance</h2><p className="text-[11px] text-slate-400">Your three celestial signals</p></div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3"><h2 className="flex items-center gap-2 font-serif text-lg text-white"><Sparkles size={17} className="text-[#f1cf8a]"/> At a Glance</h2><p className="text-[11px] text-slate-400">Your three divine signals</p></div>
       <div className="grid grid-cols-3">
         {signals.map(({title,value,caption,Icon,tint,source}, index) => <button type="button" key={title}
           disabled={!chart || !source}
@@ -87,7 +87,7 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
           <Link href="/chart" className="mt-2 inline-block text-xs font-semibold text-amber-200 underline underline-offset-2">View on diamond chart →</Link>
         </div>;
       })()}
-      {!chart && <p className="mt-4 text-center text-xs text-amber-200" role="status">{calculating ? "Calculating your celestial signals…" : "Chart values unavailable; no illustrative placements are shown."}</p>}
+      {!chart && <p className="mt-4 text-center text-xs text-amber-200" role="status">{calculating ? "Calculating your divine signals…" : "Chart values unavailable; no illustrative placements are shown."}</p>}
     </section>
 
     <Link href="/chart" className="group relative isolate flex min-h-28 items-center gap-4 overflow-hidden rounded-2xl border border-[#eec77e]/70 bg-[linear-gradient(115deg,rgba(109,77,41,.42),rgba(9,22,45,.96)_45%,rgba(4,19,39,.98))] p-5 shadow-[0_0_28px_rgba(238,199,126,.15)] transition-all duration-300 hover:border-amber-200 hover:shadow-[0_0_38px_rgba(238,199,126,.29)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200">
@@ -118,7 +118,7 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
 
     <nav aria-label="Other personal experiences" className="flex flex-wrap justify-center gap-x-7 gap-y-3 px-3 py-2 text-xs text-slate-300">
       <Link href="/reading" className="hover:text-amber-200">Master Interpreter →</Link>
-      <Link href="/guide" className="hover:text-amber-200">Celestial Guide →</Link>
+      <Link href="/guide" className="hover:text-amber-200">Divine Guide →</Link>
     </nav>
   </div>;
 }
