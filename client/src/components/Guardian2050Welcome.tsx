@@ -21,9 +21,9 @@ const glossary = [
 export function Guardian2050Welcome() {
   const [depth, setDepth] = useState<Depth>("guided");
   const [guideOpen, setGuideOpen] = useState(false);
-  return <section className="fg2050" aria-label="Firmament Guardian divine observatory">
+  return <section className="fg2050" aria-label="The Absolute Divine Observatory">
     <nav className="fg2050-topbar" aria-label="Guardian primary navigation">
-      <a href="/" className="fg2050-brand"><span className="fg2050-brandmark"><Orbit size={21}/></span><span><b>FIRMAMENT</b><small>GUARDIAN · DIVINE WISDOM</small></span></a>
+      <a href="/" className="fg2050-brand"><span className="fg2050-brandmark"><Orbit size={21}/></span><span><b>THE ABSOLUTE</b><small>UNCOVERING YOUR DIVINE CODE</small></span></a>
       <div className="fg2050-toplinks"><a href="#chart-setup">Natal</a><a href="/horary">Horary</a><a href="/zodiac-readings">12 Signs</a><a href="/sky">Divine Map</a><a href="/history">Library</a></div>
       <span className="fg2050-model-tag"><i/> FIXED STELLAR FRAME</span>
     </nav>
@@ -36,7 +36,7 @@ export function Guardian2050Welcome() {
         <div className="fg2050-horizon-badges"><span><Stars size={14}/> FIXED STARS</span><span><Layers3 size={14}/> 27 · 28 · 36 OVERLAYS</span><span><Compass size={14}/> EQUAL HOUSES</span></div>
       </div>
       <div className="fg2050-orrery" aria-label="Conceptual diagram showing fixed star background and moving planetary orbit">
-        <div className="fg2050-orrery-shell"><div className="fg2050-orrery-outer"/><div className="fg2050-orrery-mid"/><div className="fg2050-orrery-inner"/><div className="fg2050-orrery-line l1"/><div className="fg2050-orrery-line l2"/><div className="fg2050-orrery-line l3"/><div className="fg2050-orrery-center"><Orbit size={29}/><b>FIRMAMENT</b><small>STARS REMAIN FIXED</small></div><i className="fg2050-planet p1"/><i className="fg2050-planet p2"/><i className="fg2050-planet p3"/></div>
+        <div className="fg2050-orrery-shell"><div className="fg2050-orrery-outer"/><div className="fg2050-orrery-mid"/><div className="fg2050-orrery-inner"/><div className="fg2050-orrery-line l1"/><div className="fg2050-orrery-line l2"/><div className="fg2050-orrery-line l3"/><div className="fg2050-orrery-center"><Orbit size={29}/><b>THE ABSOLUTE</b><small>STARS REMAIN FIXED</small></div><i className="fg2050-planet p1"/><i className="fg2050-planet p2"/><i className="fg2050-planet p3"/></div>
         <div className="fg2050-orrery-caption"><span><i/> PERMANENT STELLAR GRID</span><span><i/> MOVING TROPICAL PLANETS</span></div>
         <p>Conceptual visualization · not a calculated natal placement</p>
       </div>
