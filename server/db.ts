@@ -196,13 +196,14 @@ export async function upsertLovedOne(openId: string, input: LovedOneInput): Prom
   if (db) {
     const { id, ...payload } = input;
     if (id) {
-      const matched = await db.select({ id: lovedOnes.id }).from(lovedOnes)
-        .where(eq(lovedOnes.id, id)).limit(1);
-      const existing = await db.select().from(lovedOnes).where(eq(lovedOnes.openId, openId));
-      if (!matched.length || !existing.some(record => record.id === id)) throw new Error("Loved-one record not found in this account.");
-      await db.update(lovedOnes).set({ payload, updatedAt: new Date() }).where(eq(lovedOnes.id, id));
-      const row = (await db.select().from(lovedOnes).where(eq(lovedOnes.id, id)).limit(1))[0];
-      return { ...payload, id: row.id, openId: row.openId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
+      const existing = await db.select({ id: lovedOnes.id }).from(lovedOnes).where(eq(lovedOnes.openId, openId));
+      if (existing.some(record => record.id === id)) {
+        await db.update(lovedOnes).set({ payload, updatedAt: new Date() }).where(eq(lovedOnes.id, id));
+        const row = (await db.select().from(lovedOnes).where(eq(lovedOnes.id, id)).limit(1))[0];
+        return { ...payload, id: row.id, openId: row.openId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
+      }
+      // An ID outside this user's account must never overwrite that user's
+      // record; treat it as a new profile for the requesting account instead.
     }
     const inserted = await db.insert(lovedOnes).values({ openId, payload });
     const newId = Number(inserted[0].insertId);
@@ -212,9 +213,10 @@ export async function upsertLovedOne(openId: string, input: LovedOneInput): Prom
   if (process.env.NODE_ENV === "production") throw new Error("Database required to store loved ones.");
   if (input.id) {
     const idx = mockLovedOnes.findIndex(l => l.id === input.id && l.openId === openId);
-    if (idx === -1) throw new Error("Loved-one record not found in this account.");
-    mockLovedOnes[idx] = { ...mockLovedOnes[idx], ...input, updatedAt: now };
-    return mockLovedOnes[idx];
+    if (idx !== -1) {
+      mockLovedOnes[idx] = { ...mockLovedOnes[idx], ...input, updatedAt: now };
+      return mockLovedOnes[idx];
+    }
   }
   const newRecord: LovedOneRecord = {
     ...input, id: nextLovedOneId++, openId, createdAt: now, updatedAt: now,
