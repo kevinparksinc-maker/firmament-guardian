@@ -426,6 +426,8 @@ export function evaluatePlacementDignityAndCondition(
   );
   const chaldeanFaceRuler = lookupChaldeanFaceRuler(lon);
 
+  // Preserve historic rulers as reference data without awarding sect-based dignity points.
+  const dorotheanTriplicityRulers = signRec?.triplicityLords.dorothean;
   const essentialDignities: string[] = [];
   const essentialDebilities: string[] = [];
 
