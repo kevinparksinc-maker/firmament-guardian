@@ -204,6 +204,14 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
       chart: result as unknown as Record<string, unknown>,
     });
   };
+  const calculateEnergyTransit = (selection: { date: string; time: string; location: string; latitude: number; longitude: number; timezone: string }) => {
+    const nextForm = { ...form, transitDate: selection.date, transitTime: selection.time,
+      transitLocation: selection.location, transitLatitude: selection.latitude,
+      transitLongitude: selection.longitude, transitTimezone: selection.timezone };
+    setForm(nextForm);
+    setReadingMode("combined");
+    calculate.mutate({ ...nextForm, worldview: "agent", readingScope: "combined", birthTimeKnown: Boolean(nextForm.time) });
+  };
   const refreshLiveTransit = () => {
     if (!result || readingMode === "natal") return;
     const now = new Date();
@@ -353,6 +361,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             onEditProfile={() => setIsProfileModalOpen(true)}
             onSwitchProfile={handleClearProfile}
             onRefreshTransits={refreshLiveTransit}
+            onCalculateTransit={calculateEnergyTransit}
           />
         )}
         {activeProfile && !result && (section === "reading" || section === "guide") && (
