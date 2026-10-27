@@ -437,7 +437,7 @@ Speak in a generous, flowing narrative connecting this present celestial moment 
     generateSoulmatePrediction: publicProcedure
       .input(
         z.object({
-          natalPlacements: z.string(),
+          natalPlacements: z.string().max(12000),
           gender: z.enum(["male", "female", "other"]).optional(),
         })
       )
@@ -445,7 +445,7 @@ Speak in a generous, flowing narrative connecting this present celestial moment 
         const prompt = `You are the Master Interpreter evaluating synastry and soulmate connection.
 Placements: ${input.natalPlacements}
 Gender: ${input.gender || "other"}
-Analyze their 7th house, Venus, Moon, and descendant aspects to describe their cosmic soulmate connection in deep, evocative 2026 relational terms. Return a JSON with:
+Discuss symbolic relationship themes only where explicitly supplied. Never invent a future spouse, meeting event, planetary position or aspect. If calculated relationship data is missing, explain the limitations. Return a JSON with:
 {
   "soulmatePrediction": "A multi-paragraph flowing description of their soulmate's energy, demeanor, values, how they meet, and mutual dynamic",
   "descriptors": ["3-5 vivid adjectives/traits"]
@@ -459,48 +459,36 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         });
         try {
           const content = String(response.choices[0]?.message?.content ?? "{}");
-          const parsed = JSON.parse(content);
+          const parsed: unknown = JSON.parse(content);
+          if (!parsed || typeof parsed !== "object" ||
+              typeof (parsed as any).soulmatePrediction !== "string") throw new Error("Invalid AI response.");
           return {
-            soulmatePrediction: parsed.soulmatePrediction || "A profound partner who mirrors your deep loyalty, integrity, and quiet strength.",
-            descriptors: Array.isArray(parsed.descriptors) ? parsed.descriptors : ["Grounding", "Loyal", "Intuitive", "Sovereign"],
+            soulmatePrediction: (parsed as {soulmatePrediction:string}).soulmatePrediction,
+            descriptors: Array.isArray((parsed as any).descriptors)
+              ? (parsed as any).descriptors.filter((v:unknown):v is string=>typeof v==="string").slice(0,5)
+              : [],
           };
         } catch {
-          return {
-            soulmatePrediction: "Your cosmic soulmate is someone whose steady presence offers complete psychological safety—matching your fierce loyalty and honoring your need for sacred space.",
-            descriptors: ["Loyal", "Grounded", "Perceptive", "Steadfast"],
-          };
+          return { soulmatePrediction: "Relationship interpretation unavailable: the AI response could not be validated.", descriptors: [] };
         }
       }),
 
     generateSynastryBreakdown: publicProcedure
       .input(
         z.object({
-          natalPlacements: z.string(),
-          soulmatePlacements: z.string(),
+          natalPlacements: z.string().max(12000),
+          soulmatePlacements: z.string().max(12000),
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `Analyze synastry between:
+        const prompt = `Analyze relationship patterns ONLY from the supplied chart information.
 Person 1: ${input.natalPlacements}
 Person 2: ${input.soulmatePlacements}
-Generate a rich, deeply insightful relationship compatibility breakdown in JSON format with:
-{
-  "interpretation": "A flowing, comprehensive synthesis of this relationship's potential and spiritual purpose",
-  "aspectGroups": [
-    {
-      "type": "harmonious",
-      "aspects": [
-        { "planet1": "Sun", "planet2": "Moon", "aspect": "Trine", "orb": 1.5, "interpretation": "Deep natural understanding and intuitive emotional harmony." }
-      ]
-    },
-    {
-      "type": "challenging",
-      "aspects": [
-        { "planet1": "Mars", "planet2": "Saturn", "aspect": "Square", "orb": 2.1, "interpretation": "Patience and timing require conscious communication." }
-      ]
-    }
-  ]
-}`;
+Return JSON with interpretation (string) and aspectGroups (array).
+Do not invent aspects, planetary degrees, orbs or circumstances. If no verified
+pairwise aspect data is provided, return an empty aspectGroups array and explain
+what additional calculated chart evidence is needed. This text-only route cannot
+calculate synastry aspects.`;
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
@@ -510,22 +498,20 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         });
         try {
           const content = String(response.choices[0]?.message?.content ?? "{}");
-          const parsed = JSON.parse(content);
+          const parsed: unknown = JSON.parse(content);
+          if (!parsed || typeof parsed !== "object" || typeof (parsed as any).interpretation !== "string") {
+            throw new Error("Invalid synastry response schema.");
+          }
+          // A text-only route cannot verify angular separations against chart data.
+          // Never emit LLM-supplied aspects or pretend that they were calculated.
           return {
-            interpretation: parsed.interpretation || "A powerful synastry dynamic rooted in complementary strengths and mutual growth.",
-            aspectGroups: Array.isArray(parsed.aspectGroups) ? parsed.aspectGroups : [],
+            interpretation: (parsed as {interpretation:string}).interpretation,
+            aspectGroups: [],
           };
         } catch {
           return {
-            interpretation: "This celestial pairing unites complementary strengths, balancing individual sovereignty with unshakeable mutual dedication.",
-            aspectGroups: [
-              {
-                type: "harmonious",
-                aspects: [
-                  { planet1: "Sun", planet2: "Moon", aspect: "Trine", orb: 1.8, interpretation: "Mutual intuitive ease and natural respect for each other's emotional rhythms." }
-                ]
-              }
-            ],
+            interpretation: "Synastry interpretation unavailable: the AI response could not be validated.",
+            aspectGroups: [],
           };
         }
       }),

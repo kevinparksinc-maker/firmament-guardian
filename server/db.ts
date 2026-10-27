@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertSavedChart, InsertSavedReading, InsertUser, savedCharts, savedReadings, users } from "../drizzle/schema";
+import { InsertSavedChart, InsertSavedReading, InsertUser, savedCharts, savedReadings, lovedOnes, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -19,9 +19,12 @@ export async function getDb() {
     try {
       _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
-      console.warn("[Database] Failed to connect, using in-memory mock:", error);
+      console.warn("[Database] Failed to initialize:", error);
       _db = null;
     }
+  }
+  if (!_db && process.env.NODE_ENV === "production") {
+    throw new Error("Persistent DATABASE_URL is required in production.");
   }
   return _db;
 }
@@ -173,47 +176,66 @@ const mockLovedOnes: Array<LovedOneRecord> = [];
 
 export async function listLovedOnes(openId: string): Promise<LovedOneRecord[]> {
   if (!openId) throw new Error("Authentication required.");
-  return mockLovedOnes.filter(item => item.openId === openId);
+  const db = await getDb();
+  if (!db) {
+    if (process.env.NODE_ENV === "production") throw new Error("Database required to store loved ones.");
+    return mockLovedOnes.filter(item => item.openId === openId);
+  }
+  const rows = await db.select().from(lovedOnes).where(eq(lovedOnes.openId, openId)).orderBy(desc(lovedOnes.updatedAt));
+  return rows.map(row => ({
+    ...(row.payload as Omit<LovedOneRecord, "id" | "openId" | "createdAt" | "updatedAt">),
+    id: row.id, openId: row.openId,
+    createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(),
+  }));
 }
 
 export async function upsertLovedOne(openId: string, input: LovedOneInput): Promise<LovedOneRecord> {
+  if (!openId) throw new Error("Authentication required.");
+  const db = await getDb();
   const now = new Date().toISOString();
+  if (db) {
+    const { id, ...payload } = input;
+    if (id) {
+      const existing = await db.select({ id: lovedOnes.id }).from(lovedOnes).where(eq(lovedOnes.openId, openId));
+      if (existing.some(record => record.id === id)) {
+        await db.update(lovedOnes).set({ payload, updatedAt: new Date() }).where(eq(lovedOnes.id, id));
+        const row = (await db.select().from(lovedOnes).where(eq(lovedOnes.id, id)).limit(1))[0];
+        return { ...payload, id: row.id, openId: row.openId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
+      }
+      // An ID outside this user's account must never overwrite that user's
+      // record; treat it as a new profile for the requesting account instead.
+    }
+    const inserted = await db.insert(lovedOnes).values({ openId, payload });
+    const newId = Number(inserted[0].insertId);
+    const row = (await db.select().from(lovedOnes).where(eq(lovedOnes.id, newId)).limit(1))[0];
+    return { ...payload, id: row.id, openId: row.openId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
+  }
+  if (process.env.NODE_ENV === "production") throw new Error("Database required to store loved ones.");
   if (input.id) {
     const idx = mockLovedOnes.findIndex(l => l.id === input.id && l.openId === openId);
     if (idx !== -1) {
-      mockLovedOnes[idx] = {
-        ...mockLovedOnes[idx],
-        ...input,
-        updatedAt: now,
-      };
+      mockLovedOnes[idx] = { ...mockLovedOnes[idx], ...input, updatedAt: now };
       return mockLovedOnes[idx];
     }
   }
   const newRecord: LovedOneRecord = {
-    id: nextLovedOneId++,
-    openId,
-    name: input.name,
-    relationship: input.relationship,
-    location: input.location,
-    latitude: input.latitude,
-    longitude: input.longitude,
-    timezone: input.timezone,
-    date: input.date,
-    time: input.time,
-    notes: input.notes,
-    createdAt: now,
-    updatedAt: now,
+    ...input, id: nextLovedOneId++, openId, createdAt: now, updatedAt: now,
   };
   mockLovedOnes.unshift(newRecord);
   return newRecord;
 }
 
 export async function deleteLovedOne(openId: string, id: number): Promise<boolean> {
-  const idx = mockLovedOnes.findIndex(l => l.id === id && l.openId === openId);
-  if (idx !== -1) {
-    mockLovedOnes.splice(idx, 1);
+  if (!openId) throw new Error("Authentication required.");
+  const db = await getDb();
+  if (db) {
+    const existing = await db.select({ id: lovedOnes.id }).from(lovedOnes).where(eq(lovedOnes.openId, openId));
+    if (!existing.some(row => row.id === id)) return false;
+    await db.delete(lovedOnes).where(eq(lovedOnes.id, id));
     return true;
   }
+  if (process.env.NODE_ENV === "production") throw new Error("Database required to store loved ones.");
+  const idx = mockLovedOnes.findIndex(l => l.id === id && l.openId === openId);
+  if (idx !== -1) { mockLovedOnes.splice(idx, 1); return true; }
   return false;
 }
-

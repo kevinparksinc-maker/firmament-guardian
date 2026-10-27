@@ -6,6 +6,8 @@ import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
+import { sdk } from "./sdk";
+import { createInterpretationLimiter } from "./apiLimits";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -78,15 +80,34 @@ async function startServer() {
       res.status(502).json({ error: "Google Maps script proxy failed" });
     }
   });
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  app.post("/api/background-music", express.raw({ type: "*/*", limit: "80mb" }), (req, res) => {
+  // Ordinary JSON requests should never accept a full media-file sized body.
+  app.use(express.json({ limit: "1mb" }));
+  app.use(express.urlencoded({ limit: "1mb", extended: true }));
+  // Preserve the background soundscape and its playback path; only harden replacement.
+  app.post("/api/background-music", express.raw({ type: ["audio/mpeg", "application/octet-stream"], limit: "12mb" }), async (req, res) => {
     try {
+      const user = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.role !== "admin") {
+        res.status(403).json({ error: "Only an authenticated administrator may replace the background music." });
+        return;
+      }
+      const audio = req.body;
+      if (!Buffer.isBuffer(audio) || audio.length < 128 ||
+          !((audio[0] === 0x49 && audio[1] === 0x44 && audio[2] === 0x33) ||
+            (audio[0] === 0xff && (audio[1] & 0xe0) === 0xe0))) {
+        res.status(415).json({ error: "A valid MP3 audio file is required." });
+        return;
+      }
       const targetDir = path.resolve(process.cwd(), "client", "public", "assets");
-      fs.mkdirSync(targetDir, { recursive: true });
+      await fs.promises.mkdir(targetDir, { recursive: true });
       const targetPath = path.join(targetDir, "firmament-inner-peace-528hz.mp3");
-      fs.writeFileSync(targetPath, req.body);
+      const stagingPath = targetPath + ".upload-" + process.pid;
+      await fs.promises.writeFile(stagingPath, audio, { flag: "wx" });
+      try {
+        await fs.promises.rename(stagingPath, targetPath);
+      } finally {
+        await fs.promises.rm(stagingPath, { force: true });
+      }
       res.json({ ok: true, path: "/assets/firmament-inner-peace-528hz.mp3" });
     } catch (error) {
       console.error("Failed to save background music", error);
@@ -95,6 +116,8 @@ async function startServer() {
   });
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  // Apply a bounded resource budget before entering expensive AI procedures.
+  app.use("/api/trpc", createInterpretationLimiter());
   // tRPC API
   app.use(
     "/api/trpc",
