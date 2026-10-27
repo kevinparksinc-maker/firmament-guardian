@@ -61,3 +61,31 @@ describe("God View live sky", () => {
     expect(chart.transits.every(row => row.natalContacts.length === 0)).toBe(true);
   });
 });
+
+describe("integrated Fixed Firmament geometry", () => {
+  it("uses the same canonical longitudes for chart rows and dome positions", async () => {
+    const chart = await calculateChart({ ...dallas, worldview: "agent", readingScope: "natal" });
+    expect(chart.firmament.model).toBe("zero-obliquity-visual-convention");
+    expect(chart.firmament.horizonModel).toBe("conventional-swiss-ephemeris-ascendant");
+    for (const body of [...chart.movingBodies, chart.northNode, chart.southNode]) {
+      expect(chart.firmament.natal.positions[body.name].bearing).toBeCloseTo(body.longitude, 8);
+    }
+    expect(chart.firmament.natal.houseCusps).toHaveLength(12);
+    chart.firmament.natal.houseCusps.forEach((cusp, index) => expect(cusp).toBeCloseTo(chart.houses[index], 5));
+    expect(chart.firmament.natal.lots.fortune).toBeCloseTo(
+      ((chart.ascendant!.longitude + chart.movingBodies.find(row => row.name === "Moon")!.longitude - chart.movingBodies.find(row => row.name === "Sun")!.longitude) % 360 + 360) % 360,
+      8,
+    );
+  });
+
+  it("keeps God View positions canonical while explicitly withholding a physical horizon", async () => {
+    const chart = await calculateChart({
+      location: "God View", latitude: 0, longitude: 0, timezone: "UTC", date: "", time: "",
+      transitLocation: "God View", transitLatitude: 0, transitLongitude: 0, transitTimezone: "UTC",
+      transitDate: "2026-10-03", transitTime: "17:13", worldview: "god", readingScope: "transit", birthTimeKnown: false,
+    });
+    expect(chart.firmament.horizonModel).toBe("not-available");
+    expect(chart.firmament.transit.houseCusps).toEqual(Array.from({ length: 12 }, (_, index) => index * 30));
+    for (const body of chart.transits) expect(chart.firmament.transit.positions[body.name].bearing).toBeCloseTo(body.longitude, 8);
+  });
+});

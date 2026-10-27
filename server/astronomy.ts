@@ -3,6 +3,7 @@ import { MAJOR_ASPECT_ORB_DEGREES } from "../shared/chartRules";
 import tzLookup from "tz-lookup";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
 import { agentHouseFor, angularDistance, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship, type ReadingScope, type Worldview, type DualPlacement } from "./astrologyCore";
+import { calculateDomeFramework, type DomeInput } from "./firmament-geometry";
 
 export const REFERENCE_FRAME = "firmament-aldebaran-15-taurus" as const;
 export type CoordinateFrame = typeof REFERENCE_FRAME;
@@ -71,6 +72,13 @@ export type ChartResult = {
   validation: { passed: boolean; notes: string[] };
   /** Every longitude exposed by this result uses the same fixed reference frame. */
   referenceFrame: CoordinateFrame;
+  /** Canonical dome/lots geometry derived from the same longitudes. */
+  firmament: {
+    model: "zero-obliquity-visual-convention";
+    horizonModel: "conventional-swiss-ephemeris-ascendant" | "not-available";
+    natal: ReturnType<typeof calculateDomeFramework>;
+    transit: ReturnType<typeof calculateDomeFramework>;
+  };
 };
 
 export function parseLocalToUtc(date: string, time: string, timezone: string) {
@@ -195,6 +203,13 @@ function moonRange(date: string): MoonUncertainty | undefined {
   return { from, to, label: `${formatLongitude(from)} to ${formatLongitude(to)} possible on this date` };
 }
 
+function domeInput(placements: ChartRow[], ascendant: number | null): DomeInput {
+  return {
+    ascendant: ascendant ?? 0,
+    planetLongitudes: Object.fromEntries(placements.map(placement => [placement.name, placement.longitude])),
+  };
+}
+
 export async function calculateChart(rawInput: ChartInput): Promise<ChartResult> {
   const worldview: Worldview = rawInput.worldview ?? "agent"; const readingScope: ReadingScope = rawInput.readingScope ?? "combined";
   // Natal-only readings never use transit fields, so stale or half-filled form values are ignored.
@@ -241,7 +256,10 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts }; });
   const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
-  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }], validation, referenceFrame: REFERENCE_FRAME };
+  const transitRows = [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }];
+  const natalGeometry = calculateDomeFramework(domeInput([...movingBodies, northNode, southNode], asc));
+  const transitGeometry = calculateDomeFramework(domeInput(transitRows, transitAsc ?? asc));
+  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: transitRows, validation, referenceFrame: REFERENCE_FRAME, firmament: { model: "zero-obliquity-visual-convention", horizonModel: hasAgentLocation ? "conventional-swiss-ephemeris-ascendant" : "not-available", natal: natalGeometry, transit: transitGeometry } };
 }
 
 export async function geocodeLocation(query: string) {

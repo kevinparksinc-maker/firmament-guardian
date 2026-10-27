@@ -19,6 +19,14 @@ export function CelestialDomeChart({chart}:{chart:ChartResult}){
  const bodies=useMemo(()=>layer==="transit"?chart.transits:chart.movingBodies,[chart,layer]);
  const nodes=layer==="natal"?[chart.northNode,chart.southNode]:[];
  const entries=[...bodies,...nodes];
+ const framework=layer==="transit"?chart.firmament.transit:chart.firmament.natal;
+ const frameworkPosition=(name:string,longitude:number,ring:number)=>{
+   const projected=framework.positions[name];
+   if(!projected) return position(longitude,ring,rotate);
+   const angle=(Math.atan2(projected.y,projected.x)-rotate*Math.PI/180);
+   const distance=Math.min(210,Math.max(28,Math.hypot(projected.x,projected.y)*2.7));
+   return {x:300+Math.cos(angle)*distance,y:282+Math.sin(angle)*distance*.45};
+ };
  const chosen=entries.find(row=>row.name===selected);
  return <section aria-label="Three-dimensional divine dome chart" className="rounded-3xl border border-cyan-300/25 bg-gradient-to-b from-[#0a1533] via-[#080e22] to-black p-4 text-slate-100 shadow-2xl sm:p-6">
    <div className="flex flex-wrap items-start justify-between gap-3">
@@ -35,13 +43,14 @@ export function CelestialDomeChart({chart}:{chart:ChartResult}){
      <ellipse cx="300" cy="282" rx="138" ry="58" fill="none" stroke="#c3a2ff" strokeOpacity=".4"/>
      <text x="300" y="26" textAnchor="middle" fill="#ecf4ff" fontSize="12" letterSpacing="3">ZENITH</text>
      {ZODIAC_SIGNS.map((name,i)=>{const p=position(i*30+15,238,rotate);return <g key={name}><circle cx={p.x} cy={p.y} r="15" fill="#0b1530" stroke="#40cdec" strokeOpacity=".7"/><text x={p.x} y={p.y+4} textAnchor="middle" fill="#d5edff" fontSize="10">{name.slice(0,3)}</text></g>})}
-     {entries.filter(row=>Number.isFinite(row.longitude)).map((row,i)=>{const p=position(row.longitude,185-(i%3)*28,rotate);return <g key={row.name} onClick={()=>setSelected(row.name)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==="Enter"||e.key===" ")setSelected(row.name)}} aria-label={`${row.name}: ${row.display}`} style={{cursor:"pointer"}}><circle cx={p.x} cy={p.y} r={selected===row.name?15:12} fill="#101a40" stroke={selected===row.name?"#f3e8ff":"#55e6ff"} strokeWidth={selected===row.name?2.7:1.4}/><text x={p.x} y={p.y+5} textAnchor="middle" fontSize="18" fill="#f8f3ff">{symbols[row.name]??"✦"}</text></g>})}
+     {entries.filter(row=>Number.isFinite(row.longitude)).map((row,i)=>{const p=frameworkPosition(row.name,row.longitude,185-(i%3)*28);return <g key={row.name} onClick={()=>setSelected(row.name)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==="Enter"||e.key===" ")setSelected(row.name)}} aria-label={`${row.name}: ${row.display}`} style={{cursor:"pointer"}}><circle cx={p.x} cy={p.y} r={selected===row.name?15:12} fill="#101a40" stroke={selected===row.name?"#f3e8ff":"#55e6ff"} strokeWidth={selected===row.name?2.7:1.4}/><text x={p.x} y={p.y+5} textAnchor="middle" fontSize="18" fill="#f8f3ff">{symbols[row.name]??"✦"}</text></g>})}
      <text x="300" y="440" textAnchor="middle" fill="#b3c7e4" fontSize="12">360° ZODIAC LONGITUDE · PERSPECTIVE DOME</text>
    </svg>
    <label className="mt-2 flex flex-col gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Rotate longitude reference · {rotate}°
      <input aria-label="Rotate dome longitude reference" type="range" min="0" max="359" step="1" value={rotate} onChange={e=>setRotate(Number(e.target.value))} className="w-full accent-cyan-300"/>
    </label>
    <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200" aria-live="polite">{chosen?<><strong>{chosen.name}</strong> · {chosen.display} · House {chosen.house} · {chosen.longitude.toFixed(4)}° longitude</>:<>Select any divine body to inspect its calculated position.</>}</div>
+   <div className="mt-2 grid gap-2 text-xs text-slate-300 sm:grid-cols-2"><div>Lot of Fortune · {framework.lots.fortune.toFixed(4)}° · House {Math.floor(normalizeLongitude(framework.lots.fortune-framework.houseCusps[0])/30)+1}</div><div>Lot of Spirit · {framework.lots.spirit.toFixed(4)}° · House {Math.floor(normalizeLongitude(framework.lots.spirit-framework.houseCusps[0])/30)+1}</div></div>
    <p className="mt-3 text-xs leading-5 text-amber-100/80">Projection note: The planetary longitudes are taken from the chart; the dome elevation is illustrative. Physical horizon/zenith positions require calculated local altitude and azimuth, which are not yet part of this chart data. This is not a claim about the physical shape of Earth.</p>
  </section>;
 }
