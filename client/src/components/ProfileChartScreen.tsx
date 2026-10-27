@@ -42,7 +42,7 @@ export function ProfileChartScreen({
   return <section id="chart-observatory" className="mb-8 scroll-mt-24" aria-label="Primary calculated divine diamond observatory">
 
     <CelestialDegreeWheel
-      referenceFrame="Tropical geocentric — sidereal migration pending"
+      referenceFrame="Aldebaran-anchored geocentric · canonical"
       points={chart.movingBodies.map(body => ({
         id: body.name, label: body.name,
         glyph: ({ Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀", Mars: "♂", Jupiter: "♃", Saturn: "♄", Uranus: "♅", Neptune: "♆", Pluto: "♇" } as Record<string,string>)[body.name] ?? "✦",

@@ -193,7 +193,7 @@ function OverlayMap({
           "A traditional Arabic lunar station (12°51′) used to track the Moon’s passage through the fixed sky.")
         : active === "Decan"
           ? `${DECAN_RULER_MEANINGS[decanRuler] ?? "A traditional planetary ruler marks the tone of this section."} This is the ${selectedName.replace(`${decanRuler} `, "")} decan: one of three 10° faces within its zodiac sign.`
-          : "A 30° tropical zodiac sign: the shared geocentric reference band anchoring all four overlay traditions.";
+          : "A 30° Aldebaran-anchored sign: the shared geocentric reference band anchoring all four overlay traditions.";
 
   const bodiesInSelectedSegment = bodies.filter(
     b =>
@@ -213,7 +213,7 @@ function OverlayMap({
           </h2>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400 sm:text-sm">
             Inspect how the exact same astronomical degree simultaneously
-            activates the 12 Tropical Signs, 27 Vedic Nakshatras, 28 Arabic
+            activates the 12 Babylonian Stellar Signs, 27 Vedic Nakshatras, 28 Arabic
             Manazil, and 36 Hellenistic Decans.
           </p>
         </div>
@@ -862,7 +862,7 @@ export default function SkyHomePrototype() {
                   </h3>
                   <p className="mt-2 text-xs leading-5 text-slate-400">
                     Track the Moon and planets across all 27 Vedic Nakshatras,
-                    28 Arabic Manazil, 36 Hellenistic Decans, and 12 Tropical
+                    28 Arabic Manazil, 36 Hellenistic Decans, and 12 Babylonian Stellar
                     Signs simultaneously.
                   </p>
                 </div>

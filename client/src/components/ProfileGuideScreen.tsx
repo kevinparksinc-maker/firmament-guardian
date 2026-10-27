@@ -426,7 +426,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                           <Sun className="h-4 w-4 text-violet-300" /> Moving
                           bodies & angles{" "}
                           <span className="ml-auto text-xs font-normal text-slate-500">
-                            Tropical geocentric ·{" "}
+                            Aldebaran-anchored geocentric ·{" "}
                             <span className="text-cyan-300/70">
                               Hover a row to explore
                             </span>
@@ -551,7 +551,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                   <div className="absolute h-px w-full bg-gradient-to-r from-transparent via-cyan-200/10 to-transparent" />
                   <div className="absolute h-full w-px bg-gradient-to-b from-transparent via-violet-200/10 to-transparent" />
                   <div className="absolute -top-4 left-8 font-mono text-[10px] uppercase tracking-[0.24em] text-cyan-200/30">
-                    0° Aries / tropical frame
+                    0° Aries / Aldebaran-anchored frame
                   </div>
                   <div className="absolute bottom-6 right-8 font-mono text-[10px] uppercase tracking-[0.24em] text-amber-200/30">
                     fixed star archive / locked

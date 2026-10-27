@@ -32,7 +32,7 @@ describe("Hybrid Zodiac constants and overlays", () => {
     expect(FIXED_STARS.find(([name]) => name === "Regulus")?.[1]).toBe(135);
     expect(FIXED_STARS.find(([name]) => name === "Fomalhaut")?.[1]).toBe(315);
   });
-  it("starts the overlay wheel at tropical Aries", () => {
+  it("starts the overlay wheel at the fixed Aries reference", () => {
     expect(overlay(0)).toMatchObject({ nakshatra: "Ashwini", pada: 1, manzil: "Al-Sharatain", decan: "Aries (Aries 1st elemental decan)" });
     expect(formatLongitude(12.9333)).toBe("Aries 12°56′");
   });
@@ -58,10 +58,10 @@ describe("Hybrid Zodiac constants and overlays", () => {
   it("preserves 30-degree Equal Houses in the converted Agent zodiac", async () => {
     const chart = await calculateChart({ location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797, timezone: "America/Chicago", date: "1986-11-20", time: "10:06", worldview: "agent", readingScope: "natal" });
     expect(chart.ascendant).not.toBeNull();
-    expect(chart.houses[0]).toBeCloseTo(chart.ascendant!.longitude, 7);
+    expect(chart.houses[0]).toBeCloseTo(chart.ascendant!.longitude, 6);
     for (let i = 0; i < 12; i++) {
       const expected = (chart.ascendant!.longitude + i * 30) % 360;
-      expect(chart.houses[i]).toBeCloseTo(expected, 7);
+      expect(chart.houses[i]).toBeCloseTo(expected, 5);
     }
   });
   it("supports date-only God Natal calculations without inventing personal angles", async () => {

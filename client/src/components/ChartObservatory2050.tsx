@@ -986,7 +986,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
               <Eye size={13} className="text-amber-300" /> FIXED STARS PRESERVED
             </span>
             <span>
-              <Orbit size={13} className="text-cyan-300" /> TROPICAL PLANETS POSITIONED
+              <Orbit size={13} className="text-cyan-300" /> CANONICAL PLANETS POSITIONED
             </span>
           </div>
           <p className="cg2050-help">
@@ -1134,7 +1134,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
               <small>
                 {layer === "stars"
                   ? "Nearest archived fixed star beacon by divine separation."
-                  : `Permanent coordinate division sector corresponding to ${selectedRow?.name}'s tropical longitude.`}
+                  : `Permanent coordinate division sector corresponding to ${selectedRow?.name}'s canonical longitude.`}
               </small>
             </div>
           </div>

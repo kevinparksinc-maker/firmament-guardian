@@ -1,6 +1,6 @@
 # Bible Believers Astrology-Only Final Validation Report
 
-Validation date: 2026-10-03
+Validation date: 2026-10-27
 
 ## Scope
 
@@ -25,9 +25,9 @@ Validated the astrology-only source tree, excluding the separate `simulation-lab
 | Check | Result |
 |---|---|
 | TypeScript (`pnpm check`) | Passed |
-| Full Vitest suite | **12 test files, 47 tests passed** |
+| Full Vitest suite | **39 test files, 204 tests passed** |
 | New aspect/Horary regression suite | 3 tests passed |
-| God/Agent relationship suite | 5 tests passed |
+| God/Agent relationship suite | 9 tests passed |
 | Production build (`pnpm build`) | Passed |
 | Health endpoint | HTTP 200, `{"ok":true}` |
 | Route manifest | HTTP 200, valid JSON, 4 declared routes |
@@ -93,7 +93,7 @@ The Horary route rendered its question form, topic-house selector, location cont
 
 ## Findings and disposition
 
-The final pass found and corrected one God View presentation/contract issue. The live God View feed was receiving natal-contact comparisons even though its request had no natal profile and God View has no personal houses. The engine now returns empty natal contacts for God View, and the feed presents current geocentric positions and God Houses for the key live bodies instead of showing misleading “conjunction natal” entries. The live Sky Home browser check confirmed the corrected output.
+The final pass found and corrected one God View presentation/contract issue and one Vedic helper syntax-order issue (the `catch`/`finally` block). The live God View feed was receiving natal-contact comparisons even though its request had no natal profile and God View has no personal houses. The engine now returns empty natal contacts for God View, and the feed presents current geocentric positions and God Houses for the key live bodies instead of showing misleading “conjunction natal” entries. The live Sky Home browser check confirmed the corrected output.
 
 Two non-issues were encountered during validation:
 
@@ -102,4 +102,4 @@ Two non-issues were encountered during validation:
 
 ## Conclusion
 
-The astrology-only engine, aspect-wraparound fix, Horary no-natal fix, and God View live-feed cleanup are passing the full available validation matrix.
+The astrology-only engine, Aldebaran-anchored coordinate migration, aspect-wraparound fix, Horary no-natal fix, God View live-feed cleanup, and Vedic helper repair are passing the full available validation matrix.

@@ -107,7 +107,7 @@ export const NAKSHATRA_CANON_RECORDS: NakshatraCanonRecord[] = NAKSHATRAS.map((n
     padas,
     epistemicNote: {
       category: "FIRMAMENT_CANON",
-      statement: `Firmament projects ${name} onto the locked 0° Aries tropical coordinate frame (${startDeg.toFixed(2)}°–${endDeg.toFixed(2)}°). Classical Vedic Jyotish (Parashara / Taittiriya Brahmana) applies a sidereal ayanamsa offset; Firmament preserves the classical deity (${doc.deity}), Shakti, and 4 Navamsha padas while explicitly documenting the tropical 0° Aries lock.`,
+      statement: `Firmament projects ${name} onto the locked 0° Aries Firmament Aldebaran-anchored coordinate frame (${startDeg.toFixed(2)}°–${endDeg.toFixed(2)}°). Classical Vedic Jyotish (Parashara / Taittiriya Brahmana) applies a sidereal ayanamsa offset; Firmament preserves the classical deity (${doc.deity}), Shakti, and 4 Navamsha padas while explicitly documenting the Firmament Aldebaran-anchored 0° Aries lock.`,
       provenance: {
         tradition: "firmament",
         sourceTitle: "Firmament Hybrid Zodiac Canon",

@@ -29,13 +29,13 @@ describe("deterministic astrology rule fixtures", () => {
       birthTimeKnown: true,
     });
     expect(chart.validation.passed).toBe(true);
-    expect(chart.ascendant?.display).toBe("Capricorn 07°22′");
+    expect(chart.ascendant?.display).toBe("Sagittarius 12°48′");
     expect(chart.movingBodies.find(row => row.name === "Sun")).toMatchObject({
-      display: "Scorpio 28°02′",
+      display: "Scorpio 03°28′",
       house: 11,
     });
     expect(chart.movingBodies.find(row => row.name === "Moon")).toMatchObject({
-      display: "Cancer 13°30′",
+      display: "Gemini 18°56′",
       house: 7,
     });
   });
@@ -130,7 +130,7 @@ describe("deterministic astrology rule fixtures", () => {
       evidence.some(
         item =>
           item.id === "vedic-nakshatra-Moon" &&
-          item.statement.includes("Pushya, pada 4")
+          item.statement.includes("Ardra, pada 4")
       )
     ).toBe(true);
     expect(

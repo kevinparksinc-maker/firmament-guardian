@@ -4,6 +4,9 @@ import tzLookup from "tz-lookup";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
 import { agentHouseFor, angularDistance, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship, type ReadingScope, type Worldview, type DualPlacement } from "./astrologyCore";
 
+export const REFERENCE_FRAME = "firmament-aldebaran-15-taurus" as const;
+export type CoordinateFrame = typeof REFERENCE_FRAME;
+
 export type ChartInput = {
   location: string;
   latitude: number;
@@ -66,6 +69,8 @@ export type ChartResult = {
   transitHouseFrame: TransitHouseFrame;
   transits: TransitRow[];
   validation: { passed: boolean; notes: string[] };
+  /** Every longitude exposed by this result uses the same fixed reference frame. */
+  referenceFrame: CoordinateFrame;
 };
 
 export function parseLocalToUtc(date: string, time: string, timezone: string) {
@@ -112,13 +117,13 @@ const MOSHIER_FLAGS = 4 | 256;
 // Swiss Ephemeris Aldebaran at 15 Taurus (sidereal mode 14).
 const ALDEBARAN_15_TAU_MODE = 14;
 const SIDEREAL_FLAG = 65536;
-function initializeBabylonianFrame() {
+export function setCanonicalReferenceFrame() {
   const sw = sweph as any;
   if (typeof sw.set_sid_mode !== "function") throw new Error("Swiss Ephemeris sidereal mode is unavailable.");
   sw.set_sid_mode(ALDEBARAN_15_TAU_MODE, 0, 0);
 }
 function babylonianAyanamsha(jd: number): number {
-  initializeBabylonianFrame();
+  setCanonicalReferenceFrame();
   const sw = sweph as any;
   if (typeof sw.get_ayanamsa_ut !== "function") throw new Error("Swiss Ephemeris ayanamsha calculation is unavailable.");
   const result: any = sw.get_ayanamsa_ut(jd);
@@ -137,13 +142,17 @@ function rawCalc(jd: number, planet: number, flags: number) {
 }
 /** Geocentric position. Never touches sweph's global topocentric observer. */
 function safeCalc(jd: number, planet: number) {
-  initializeBabylonianFrame();
+  setCanonicalReferenceFrame();
   return rawCalc(jd, planet, MOSHIER_FLAGS | SIDEREAL_FLAG);
+}
+/** Canonical geocentric position for downstream engines that need the same frame. */
+export function canonicalPositionAt(jd: number, planet: number) {
+  return safeCalc(jd, planet);
 }
 /** Parallax-corrected Moon longitude for one observer; always restores the zero observer. */
 function topocentricMoonLongitude(jd: number, longitude: number, latitude: number, elevation = 0) {
   const sw = sweph as any;
-  initializeBabylonianFrame();
+  setCanonicalReferenceFrame();
   try {
     sw.set_topo?.(longitude, latitude, elevation);
     return rawCalc(jd, 1, MOSHIER_FLAGS | TOPOCENTRIC_FLAG | SIDEREAL_FLAG).longitude;
@@ -215,7 +224,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Source calculation success is distinct from an optional historical reference fixture.
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
-    "Chart calculated in Equal Houses using Swiss Ephemeris Aldebaran-at-15-Taurus sidereal reference (mode 14) for moving planets, nodes and ascendant.",
+    "Chart calculated in Equal Houses using the Firmament Aldebaran-at-15-Taurus fixed reference frame (Swiss Ephemeris mode 14) for moving planets, nodes and ascendant.",
     "Fixed-star archive retains defined symbolic positions; stars not historically calibrated are not claimed as catalog-verified.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
@@ -232,7 +241,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts }; });
   const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
-  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }], validation };
+  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }], validation, referenceFrame: REFERENCE_FRAME };
 }
 
 export async function geocodeLocation(query: string) {

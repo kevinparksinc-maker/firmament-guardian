@@ -88,7 +88,7 @@ The panel is visible in the main chart result and in Horary results.
 ## Validation
 
 - TypeScript: `pnpm check` passed.
-- Full tests: **12 test files, 47 tests passed**.
+- Full tests: **39 test files, 204 tests passed**.
 - Production build: `pnpm build` passed.
 
 ## Remaining gaps / architectural notes
@@ -113,4 +113,4 @@ The data contract supplies relationship metadata for both natal and transit rows
 
 ## Conclusion
 
-The existing astronomy engine was not replaced. God's View of the Agent is now a first-class additive interpretation layer with structured relationships, evidence-aware AI instructions, Horary integration, visible paired UI, and automated coverage. The remaining notes are explicit architectural choices for a future canonical-position split and richer narrative/export presentation, not hidden failures in the delivered layer.
+The existing astronomy engine was not replaced. God's View of the Agent is now a first-class additive interpretation layer with structured relationships, evidence-aware AI instructions, Horary integration, visible paired UI, and automated coverage. The remaining notes are explicit architectural choices for a richer narrative/export presentation, not hidden failures in the delivered layer. The canonical coordinate migration is complete: active chart, transit, horary, UI, and interpretation paths now identify the Aldebaran-anchored frame rather than tropical coordinates.
