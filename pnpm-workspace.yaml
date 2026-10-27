@@ -3,3 +3,8 @@ allowBuilds:
   esbuild: true
   protobufjs: true
   sweph: true
+onlyBuiltDependencies:
+  - '@google/genai'
+  - esbuild
+  - protobufjs
+  - sweph
