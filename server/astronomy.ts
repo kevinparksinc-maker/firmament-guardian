@@ -109,6 +109,26 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
 }
 
 const MOSHIER_FLAGS = 4 | 256;
+// Swiss Ephemeris Aldebaran at 15 Taurus (sidereal mode 14).
+const ALDEBARAN_15_TAU_MODE = 14;
+const SIDEREAL_FLAG = 65536;
+function initializeBabylonianFrame() {
+  const sw = sweph as any;
+  if (typeof sw.set_sid_mode !== "function") throw new Error("Swiss Ephemeris sidereal mode is unavailable.");
+  sw.set_sid_mode(ALDEBARAN_15_TAU_MODE, 0, 0);
+}
+function babylonianAyanamsha(jd: number): number {
+  initializeBabylonianFrame();
+  const sw = sweph as any;
+  if (typeof sw.get_ayanamsa_ut !== "function") throw new Error("Swiss Ephemeris ayanamsha calculation is unavailable.");
+  const result: any = sw.get_ayanamsa_ut(jd);
+  const value = Number(result?.data?.[0] ?? result?.data ?? result?.ayanamsa ?? result);
+  if (!Number.isFinite(value)) throw new Error("Swiss Ephemeris returned an invalid Aldebaran ayanamsha.");
+  return value;
+}
+function babylonianLongitude(tropicalLongitude: number, jd: number) {
+  return normalizeLongitude(tropicalLongitude - babylonianAyanamsha(jd));
+}
 const TOPOCENTRIC_FLAG = 32768;
 function rawCalc(jd: number, planet: number, flags: number) {
   const result: any = (sweph as any).calc_ut(jd, planet, flags); const data = result?.data ?? result;
@@ -117,14 +137,16 @@ function rawCalc(jd: number, planet: number, flags: number) {
 }
 /** Geocentric position. Never touches sweph's global topocentric observer. */
 function safeCalc(jd: number, planet: number) {
-  return rawCalc(jd, planet, MOSHIER_FLAGS);
+  initializeBabylonianFrame();
+  return rawCalc(jd, planet, MOSHIER_FLAGS | SIDEREAL_FLAG);
 }
 /** Parallax-corrected Moon longitude for one observer; always restores the zero observer. */
 function topocentricMoonLongitude(jd: number, longitude: number, latitude: number, elevation = 0) {
   const sw = sweph as any;
+  initializeBabylonianFrame();
   try {
     sw.set_topo?.(longitude, latitude, elevation);
-    return rawCalc(jd, 1, MOSHIER_FLAGS | TOPOCENTRIC_FLAG).longitude;
+    return rawCalc(jd, 1, MOSHIER_FLAGS | TOPOCENTRIC_FLAG | SIDEREAL_FLAG).longitude;
   } finally {
     sw.set_topo?.(0, 0, 0);
   }
@@ -176,8 +198,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
   const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, 0, input.latitude, input.longitude, "E") : null;
-  const asc = hasAgentLocation ? Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0]) : null;
-  const mc = hasAgentLocation ? Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]) : null;
+  const asc = hasAgentLocation ? babylonianLongitude(Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0]), jd) : null;
+  const mc = hasAgentLocation ? babylonianLongitude(Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]), jd) : null;
   if (hasAgentLocation && Number.isNaN(asc)) throw new Error("Swiss Ephemeris failed to calculate the Ascendant for Equal House.");
   const houses = fixedHouseRows(worldview, asc);
   const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
@@ -193,8 +215,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Source calculation success is distinct from an optional historical reference fixture.
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
-    "Chart calculated in the requested Equal House frame with tropical moving planetary positions.",
-    "Stellar archive and 27/28/36 divisions remain at their permanent Firmament coordinates.",
+    "Chart calculated in Equal Houses using Swiss Ephemeris Aldebaran-at-15-Taurus sidereal reference (mode 14) for moving planets, nodes and ascendant.",
+    "Fixed-star archive retains defined symbolic positions; stars not historically calibrated are not claimed as catalog-verified.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
   const transitInputsPresent = Boolean(input.transitDate?.trim() || input.transitTime?.trim() || input.transitTimezone?.trim() || input.transitLocation?.trim() || transitCoordinatesPresent);
@@ -203,7 +225,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
   const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, 0, input.transitLatitude, input.transitLongitude, "E") : null;
-  const transitAsc = transitHasLocation ? Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0]) : null;
+  const transitAsc = transitHasLocation ? babylonianLongitude(Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0]), transitJd) : null;
   if (transitHasLocation && Number.isNaN(transitAsc)) throw new Error("Swiss Ephemeris failed to calculate the transit Ascendant for Equal House.");
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
