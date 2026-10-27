@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { ChartObservatory2050 } from "@/components/ChartObservatory2050";
+import { CelestialDegreeWheel } from "@/components/CelestialDegreeWheel";
 import type { ChartResult } from "../../../server/astronomy";
 import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
 
@@ -39,6 +40,23 @@ export function ProfileChartScreen({
   }
 
   return <section id="chart-observatory" className="mb-8 scroll-mt-24" aria-label="Primary calculated divine diamond observatory">
+
+    <CelestialDegreeWheel
+      referenceFrame="Tropical geocentric — sidereal migration pending"
+      points={chart.movingBodies.map(body => ({
+        id: body.name, label: body.name,
+        glyph: ({ Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀", Mars: "♂", Jupiter: "♃", Saturn: "♄", Uranus: "♅", Neptune: "♆", Pluto: "♇" } as Record<string,string>)[body.name] ?? "✦",
+        longitude: body.longitude,
+      }))}
+      houseCusps={chart.houses}
+    />
+    <div className="mt-4 overflow-x-auto rounded-xl border border-amber-300/20 bg-slate-950/90 p-3">
+      <h2 className="mb-2 font-serif text-lg text-amber-100">Exact calculated placements</h2>
+      <table className="w-full min-w-[440px] text-left text-sm text-slate-200">
+        <thead><tr className="border-b border-amber-300/20 text-amber-200"><th className="p-2">Body</th><th className="p-2">Zodiac degree</th><th className="p-2">House</th><th className="p-2">Nakshatra</th><th className="p-2">Decan</th></tr></thead>
+        <tbody>{chart.movingBodies.map(body => <tr key={body.name} className="border-b border-white/10"><td className="p-2">{body.name}</td><td className="p-2">{body.display}</td><td className="p-2">{body.house}</td><td className="p-2">{body.overlay.nakshatra}</td><td className="p-2">{body.overlay.decan}</td></tr>)}</tbody>
+      </table>
+    </div>
     <ChartObservatory2050 key={`${chart.worldview}:${chart.utc}`} chart={chart} />
     <div className="mt-3 flex flex-wrap gap-3">
       <Link href="/reading" className="inline-flex min-h-11 items-center rounded-xl border border-violet-300/40 bg-violet-300/10 px-5 text-sm font-semibold text-violet-100">Open the Master Interpreter →</Link>
