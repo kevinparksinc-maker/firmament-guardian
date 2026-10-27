@@ -46,6 +46,24 @@ describe("Hybrid Zodiac constants and overlays", () => {
     expect(tokyoMoon.topocentricLongitude).toBeDefined();
     expect(Math.abs(nyMoon.topocentricLongitude! - tokyoMoon.topocentricLongitude!)).toBeGreaterThan(0.1);
   });
+  it("uses the same Aldebaran-anchored longitude for God and Agent views", async () => {
+    const base = { location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797, timezone: "America/Chicago", date: "1986-11-20", time: "10:06", readingScope: "natal" as const };
+    const agent = await calculateChart({ ...base, worldview: "agent" });
+    const god = await calculateChart({ ...base, worldview: "god" });
+    expect(agent.movingBodies.map(body => body.longitude)).toEqual(god.movingBodies.map(body => body.longitude));
+    expect(agent.northNode.longitude).toBe(god.northNode.longitude);
+    expect(agent.frozenStars.map(star => star.longitude)).toEqual(god.frozenStars.map(star => star.longitude));
+    expect(agent.validation.notes.join(" ")).toContain("Aldebaran");
+  });
+  it("preserves 30-degree Equal Houses in the converted Agent zodiac", async () => {
+    const chart = await calculateChart({ location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797, timezone: "America/Chicago", date: "1986-11-20", time: "10:06", worldview: "agent", readingScope: "natal" });
+    expect(chart.ascendant).not.toBeNull();
+    expect(chart.houses[0]).toBeCloseTo(chart.ascendant!.longitude, 7);
+    for (let i = 0; i < 12; i++) {
+      const expected = (chart.ascendant!.longitude + i * 30) % 360;
+      expect(chart.houses[i]).toBeCloseTo(expected, 7);
+    }
+  });
   it("supports date-only God Natal calculations without inventing personal angles", async () => {
     const result = await calculateChart({ location: "", latitude: 0, longitude: 0, timezone: "", date: "1986-11-20", time: "", worldview: "god", readingScope: "natal", birthTimeKnown: false });
     expect(result.ascendant).toBeNull();
