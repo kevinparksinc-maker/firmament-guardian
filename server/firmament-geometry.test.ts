@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aldebaranDelta, anchorRawLongitude, projectToDome, arabicLots, equalHouseCuspsOnDome, equalHouseOnDome, calculateDomeFramework } from "./firmament-geometry";
+import { aldebaranDelta, anchorRawLongitude, projectToDome, arabicLots, equalHouseCuspsOnDome, equalHouseOnDome, calculateDomeFramework, calculateZeroTiltAscendant } from "./firmament-geometry";
 
 describe("Fixed Firmament map geometry", () => {
   it("anchors raw Aldebaran exactly at 45 degrees", () => {
@@ -25,5 +25,13 @@ describe("Fixed Firmament map geometry", () => {
     expect(result.positions.Sun.bearing).toBe(213);
     expect(result.positions.Lot_Of_Fortune.bearing).toBeCloseTo(142.35);
     expect(result.houseCusps).toHaveLength(12);
+  });
+  it("selects the eastern zero-tilt horizon and never reverses ASC/DSC", () => {
+    expect(calculateZeroTiltAscendant(0)).toMatchObject({ ascendant: 90, descendant: 270, midheaven: 0, obliquity: 0 });
+    expect(calculateZeroTiltAscendant(359.999).ascendant).toBeCloseTo(89.999, 6);
+    for (const theta of [0, 45, 180, 359.999]) {
+      const angles = calculateZeroTiltAscendant(theta);
+      expect((angles.descendant - angles.ascendant + 360) % 360).toBeCloseTo(180, 8);
+    }
   });
 });

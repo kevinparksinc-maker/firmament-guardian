@@ -1,7 +1,4 @@
-/** The Absolute: Aldebaran-referenced, two-dimensional Firmament map geometry.
- * This is a custom chart-coordinate convention, not a physical ephemeris or
- * an astronomical zero-obliquity horizon solver.
- */
+/** The Absolute: Aldebaran-referenced, zero-tilt Firmament geometry. */
 export const FIRMAMENT_FRAME = "firmament-aldebaran-15-taurus" as const;
 export const ALDEBARAN_ANCHOR = 45;
 export const ZERO_OBLIQUITY_MODEL = 0;
@@ -9,6 +6,24 @@ export const normalize = (angle: number): number => {
   if (!Number.isFinite(angle)) throw new RangeError("Longitude must be finite");
   return ((angle % 360) + 360) % 360;
 };
+export const normalize360 = normalize;
+
+/**
+ * Zero-obliquity horizon convention. thetaCanonical is local sidereal angle
+ * already expressed in the Aldebaran-anchored zodiac frame. The eastern
+ * horizon is the +90° intersection; the western intersection is its opposite.
+ */
+export function calculateZeroTiltAscendant(thetaCanonical: number) {
+  const ascendant = normalize360(thetaCanonical + 90);
+  const descendant = normalize360(ascendant + 180);
+  return {
+    ascendant,
+    descendant,
+    midheaven: normalize360(thetaCanonical),
+    obliquity: ZERO_OBLIQUITY_MODEL,
+    referenceFrame: FIRMAMENT_FRAME,
+  } as const;
+}
 export function aldebaranDelta(rawAldebaranLongitude: number): number {
   return normalize(ALDEBARAN_ANCHOR - rawAldebaranLongitude);
 }

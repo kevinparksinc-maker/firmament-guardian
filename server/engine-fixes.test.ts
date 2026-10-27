@@ -66,7 +66,8 @@ describe("integrated Fixed Firmament geometry", () => {
   it("uses the same canonical longitudes for chart rows and dome positions", async () => {
     const chart = await calculateChart({ ...dallas, worldview: "agent", readingScope: "natal" });
     expect(chart.firmament.model).toBe("zero-obliquity-visual-convention");
-    expect(chart.firmament.horizonModel).toBe("conventional-swiss-ephemeris-ascendant");
+    expect(chart.firmament.horizonModel).toBe("zero-tilt-local-sidereal");
+    expect(chart.descendant!.longitude).toBeCloseTo((chart.ascendant!.longitude + 180) % 360, 8);
     for (const body of [...chart.movingBodies, chart.northNode, chart.southNode]) {
       expect(chart.firmament.natal.positions[body.name].bearing).toBeCloseTo(body.longitude, 8);
     }

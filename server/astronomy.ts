@@ -3,7 +3,7 @@ import { MAJOR_ASPECT_ORB_DEGREES } from "../shared/chartRules";
 import tzLookup from "tz-lookup";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
 import { agentHouseFor, angularDistance, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship, type ReadingScope, type Worldview, type DualPlacement } from "./astrologyCore";
-import { calculateDomeFramework, type DomeInput } from "./firmament-geometry";
+import { calculateDomeFramework, calculateZeroTiltAscendant, type DomeInput } from "./firmament-geometry";
 
 export const REFERENCE_FRAME = "firmament-aldebaran-15-taurus" as const;
 export type CoordinateFrame = typeof REFERENCE_FRAME;
@@ -75,7 +75,7 @@ export type ChartResult = {
   /** Canonical dome/lots geometry derived from the same longitudes. */
   firmament: {
     model: "zero-obliquity-visual-convention";
-    horizonModel: "conventional-swiss-ephemeris-ascendant" | "not-available";
+    horizonModel: "zero-tilt-local-sidereal" | "not-available";
     natal: ReturnType<typeof calculateDomeFramework>;
     transit: ReturnType<typeof calculateDomeFramework>;
   };
@@ -188,6 +188,17 @@ function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope,
 function julianDay(date: Date) {
   return Number((sweph as any).julday(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours() + date.getUTCMinutes() / 60, 1));
 }
+
+function canonicalLocalSiderealAngle(jd: number, observerLongitude: number) {
+  const sw = sweph as any;
+  if (typeof sw.sidtime !== "function") throw new Error("Swiss Ephemeris sidereal-time calculation is unavailable.");
+  const greenwichDegrees = Number(sw.sidtime(jd)) * 15;
+  if (!Number.isFinite(greenwichDegrees)) throw new Error("Swiss Ephemeris returned an invalid sidereal time.");
+  // sidtime() is Greenwich apparent sidereal time in the tropical equatorial
+  // origin. Apply the mode-14 ayanamsha exactly once to enter the canonical
+  // Aldebaran-anchored zodiac frame.
+  return normalizeLongitude(greenwichDegrees + observerLongitude - babylonianAyanamsha(jd));
+}
 function row(name: string, longitude: number, house: number, worldview: Worldview, ascendant: number | null, extra: Partial<ChartRow> = {}): ChartRow {
   const dual = dualPlacement(longitude, ascendant, name) as DualPlacement;
   return { name, longitude, display: formatLongitude(longitude), house, godHouse: dual.godHouse, ...(dual.agentHouse == null ? {} : { agentHouse: dual.agentHouse }), ...(dual.frameRelationship ? { frameRelationship: dual.frameRelationship } : {}), royalStarContacts: dual.royalStarContacts, overlay: overlay(longitude), ...extra };
@@ -221,10 +232,9 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview === "god" && readingScope !== "transit" && !input.date) throw new Error("God View Natal readings require a birth date; birth time and location are optional.");
   const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
-  const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, 0, input.latitude, input.longitude, "E") : null;
-  const asc = hasAgentLocation ? babylonianLongitude(Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0]), jd) : null;
-  const mc = hasAgentLocation ? babylonianLongitude(Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]), jd) : null;
-  if (hasAgentLocation && Number.isNaN(asc)) throw new Error("Swiss Ephemeris failed to calculate the Ascendant for Equal House.");
+  const natalAngles = hasAgentLocation ? calculateZeroTiltAscendant(canonicalLocalSiderealAngle(jd, input.longitude)) : null;
+  const asc = natalAngles?.ascendant ?? null;
+  const mc = natalAngles?.midheaven ?? null;
   const houses = fixedHouseRows(worldview, asc);
   const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
   const planetNames = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
@@ -239,7 +249,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Source calculation success is distinct from an optional historical reference fixture.
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
-    "Chart calculated in Equal Houses using the Firmament Aldebaran-at-15-Taurus fixed reference frame (Swiss Ephemeris mode 14) for moving planets, nodes and ascendant.",
+    "Chart calculated in Equal Houses using the Firmament Aldebaran-at-15-Taurus fixed reference frame (Swiss Ephemeris mode 14) for moving planets and nodes; Agent View angles use the verified zero-tilt local-sidereal eastern horizon.",
     "Fixed-star archive retains defined symbolic positions; stars not historically calibrated are not claimed as catalog-verified.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
@@ -248,9 +258,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview !== "god" && transitInputsPresent && !transitLocationResolved) throw new Error("Transit location must be resolved before calculating transit houses.");
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
-  const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, 0, input.transitLatitude, input.transitLongitude, "E") : null;
-  const transitAsc = transitHasLocation ? babylonianLongitude(Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0]), transitJd) : null;
-  if (transitHasLocation && Number.isNaN(transitAsc)) throw new Error("Swiss Ephemeris failed to calculate the transit Ascendant for Equal House.");
+  const transitAngles = transitHasLocation ? calculateZeroTiltAscendant(canonicalLocalSiderealAngle(transitJd, input.transitLongitude as number)) : null;
+  const transitAsc = transitAngles?.ascendant ?? null;
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
   const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts }; });
@@ -259,7 +268,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitRows = [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }];
   const natalGeometry = calculateDomeFramework(domeInput([...movingBodies, northNode, southNode], asc));
   const transitGeometry = calculateDomeFramework(domeInput(transitRows, transitAsc ?? asc));
-  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: transitRows, validation, referenceFrame: REFERENCE_FRAME, firmament: { model: "zero-obliquity-visual-convention", horizonModel: hasAgentLocation ? "conventional-swiss-ephemeris-ascendant" : "not-available", natal: natalGeometry, transit: transitGeometry } };
+  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: transitRows, validation, referenceFrame: REFERENCE_FRAME, firmament: { model: "zero-obliquity-visual-convention", horizonModel: hasAgentLocation ? "zero-tilt-local-sidereal" : "not-available", natal: natalGeometry, transit: transitGeometry } };
 }
 
 export async function geocodeLocation(query: string) {

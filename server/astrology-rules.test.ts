@@ -29,14 +29,14 @@ describe("deterministic astrology rule fixtures", () => {
       birthTimeKnown: true,
     });
     expect(chart.validation.passed).toBe(true);
-    expect(chart.ascendant?.display).toBe("Sagittarius 12°48′");
+    expect(chart.ascendant?.display).toBe("Sagittarius 29°30′");
     expect(chart.movingBodies.find(row => row.name === "Sun")).toMatchObject({
       display: "Scorpio 03°28′",
       house: 11,
     });
     expect(chart.movingBodies.find(row => row.name === "Moon")).toMatchObject({
       display: "Gemini 18°56′",
-      house: 7,
+      house: 6,
     });
   });
 
@@ -136,11 +136,11 @@ describe("deterministic astrology rule fixtures", () => {
     expect(
       evidence.some(
         item =>
-          item.id === "vedic-house-lord-Moon" &&
-          item.statement.includes("house 7")
+      item.id === "vedic-house-lord-Moon" &&
+          item.statement.includes("house 6")
       )
     ).toBe(true);
-    expect(evidence.some(item => item.id === "vedic-drishti-Jupiter-7")).toBe(
+    expect(evidence.some(item => item.id === "vedic-drishti-Jupiter-6")).toBe(
       true
     );
     const saturnHouse = chart.movingBodies.find(row => row.name === "Saturn")!.house;
