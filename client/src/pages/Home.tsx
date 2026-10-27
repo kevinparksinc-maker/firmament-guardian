@@ -204,13 +204,29 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
       chart: result as unknown as Record<string, unknown>,
     });
   };
+  const calculateEnergyTransit = (selection: { date: string; time: string; location: string; latitude: number; longitude: number; timezone: string }) => {
+    const nextForm = { ...form, transitDate: selection.date, transitTime: selection.time,
+      transitLocation: selection.location, transitLatitude: selection.latitude,
+      transitLongitude: selection.longitude, transitTimezone: selection.timezone };
+    setForm(nextForm);
+    setReadingMode("combined");
+    calculate.mutate({ ...nextForm, worldview: "agent", readingScope: "combined", birthTimeKnown: Boolean(nextForm.time) });
+  };
   const refreshLiveTransit = () => {
     if (!result || readingMode === "natal") return;
     const now = new Date();
+    const timezone = form.transitTimezone || form.timezone;
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).formatToParts(now);
+    const get = (part: string) => parts.find(item => item.type === part)?.value ?? "";
+    const transitDate = `${get("year")}-${get("month")}-${get("day")}`;
+    const transitTime = `${get("hour")}:${get("minute")}`;
     calculate.mutate({
       ...form,
-      transitDate: now.toISOString().slice(0, 10),
-      transitTime: now.toTimeString().slice(0, 5),
+      transitDate,
+      transitTime,
       transitLocation: form.transitLocation || form.location,
       transitLatitude: form.transitLatitude || form.latitude,
       transitLongitude: form.transitLongitude || form.longitude,
@@ -353,6 +369,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             onEditProfile={() => setIsProfileModalOpen(true)}
             onSwitchProfile={handleClearProfile}
             onRefreshTransits={refreshLiveTransit}
+            onCalculateTransit={calculateEnergyTransit}
           />
         )}
         {activeProfile && !result && (section === "reading" || section === "guide") && (
