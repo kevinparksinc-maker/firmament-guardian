@@ -38,16 +38,21 @@ export function FrameRelationshipPanel({
 
   const shifted = paired.filter(row => row.godHouse !== row.agentHouse).length;
 
+  const destinationCounts = paired.filter(row=>row.godHouse !== row.agentHouse).reduce<Record<number,number>>((counts,row)=>{ const key=row.agentHouse!; counts[key]=(counts[key]??0)+1;return counts; }, {});
+  const topHouses = Object.entries(destinationCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([house,count])=>`Agent House ${house} (${count})`).join(" · ");
+
   return (
-    <section aria-label={title} className="overflow-hidden rounded-2xl border border-violet-200/20 bg-gradient-to-br from-violet-200/[0.09] via-cyan-200/[0.04] to-transparent text-slate-100">
-      <div className="border-b border-white/10 px-5 py-5 sm:px-7">
+    <details className="group overflow-hidden rounded-2xl border border-violet-200/20 bg-gradient-to-br from-violet-200/[0.09] via-cyan-200/[0.04] to-transparent text-slate-100" aria-label={title}>
+      <summary className="cursor-pointer border-b border-white/10 px-5 py-5 sm:px-7">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-200">House-frame comparison</p>
         <h2 className="mt-2 font-serif text-2xl text-white">{title}</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{intro}</p>
         <p className="mt-3 text-xs text-slate-300">
-          {paired.length} bodies compared · {shifted} change houses · one shared astronomical position per body
+          {paired.length} bodies compared · {shifted} change houses · select to explore
         </p>
-      </div>
+        {topHouses && <p className="mt-2 text-xs text-amber-100">Most common destinations: {topHouses}</p>}
+        <p className="mt-2 text-xs text-cyan-200">Expand full house comparison ↓</p>
+      </summary>
       <div className="divide-y divide-white/10">
         {paired.map(row => {
           const relationship = row.frameRelationship!;
@@ -79,6 +84,6 @@ export function FrameRelationshipPanel({
           );
         })}
       </div>
-    </section>
+    </details>
   );
 }
