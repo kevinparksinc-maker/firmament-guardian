@@ -21,6 +21,20 @@ export function CosmicInfluenceLayers({chart}:{chart:ChartResult}) {
     const natal=new Map(chart.movingBodies.map(p=>[p.name,p]));
     const transit=new Map(chart.transits.map(p=>[p.name,p]));
     const moon=transit.get("Moon"),natalMoon=natal.get("Moon");
+    const aspectContexts:LayerEvent[]=[];
+    // Every natal-transit aspect carries the zodiac, mansion and decan context
+    // of BOTH participating planets. The aspect itself is scored only once.
+    for(const moving of chart.transits) for(const contact of moving.natalContacts) {
+      const natalBody = natal.get(contact.natalName);
+      if(!natalBody || contact.orb>5) continue;
+      const a=decanRuler(moving.longitude),d=decanRuler(natalBody.longitude);
+      aspectContexts.push({
+        key:`context-${moving.name}-${natalBody.name}-${contact.aspect}`,
+        title:`Transit ${moving.name} ${contact.aspect} natal ${natalBody.name}`,
+        detail:`Transit ${moving.name}: ${moving.display}, house ${moving.house}, Nakshatra ${moving.overlay.nakshatra}, Manzil ${moving.overlay.manzil}, elemental decan ${a.name} (ruler ${a.ruler}). Natal ${natalBody.name}: ${natalBody.display}, house ${natalBody.house}, Nakshatra ${natalBody.overlay.nakshatra}, Manzil ${natalBody.overlay.manzil}, elemental decan ${d.name} (ruler ${d.ruler}). One geometric aspect, enriched by both placements.`,
+        mode:tone(contact.aspect),orb:contact.orb
+      });
+    }
     const lunar:LayerEvent[]=[];
     if(moon) {
       lunar.push({key:"vedic",title:"Vedic lunar mansion",detail:`Transit Moon: ${moon.overlay.nakshatra}, pada ${moon.overlay.pada}. Natal Moon: ${natalMoon?.overlay.nakshatra??"unavailable"}.`,mode:"Position"});
@@ -41,8 +55,8 @@ export function CosmicInfluenceLayers({chart}:{chart:ChartResult}) {
       }
     }
     const unique=[...new Map(decans.map(x=>[x.title,x])).values()];
-    return {lunar,decans:unique};
+    return {lunar,decans:unique,aspectContexts};
   },[chart]);
   const render=(title:string,items:LayerEvent[]) => <div className="rounded-xl border border-white/10 bg-white/[.035] p-3"><h4 className="font-semibold text-amber-100">{title}</h4><p className="mt-1 text-xs text-slate-400">{items.filter(x=>x.mode==="Flow").length} supportive · {items.filter(x=>x.mode==="Friction").length} challenging · {items.filter(x=>x.mode==="Contextual").length} conjunctions</p><div className="mt-3 space-y-2">{items.slice(0,6).map(item=><div key={item.key} className="border-t border-white/10 pt-2"><div className="flex justify-between gap-2 text-xs"><strong className="text-slate-100">{item.title}</strong><span className={item.mode==="Flow"?"text-emerald-200":item.mode==="Friction"?"text-rose-200":"text-violet-200"}>{item.mode}{item.orb!=null?` · ${item.orb.toFixed(2)}°`:""}</span></div><p className="mt-1 text-xs leading-5 text-slate-400">{item.detail}</p></div>)}</div><details className="mt-3 text-xs text-cyan-200"><summary className="cursor-pointer">All {items.length} entries</summary><div className="mt-2 space-y-2">{items.slice(6).map(item=><p key={item.key} className="border-t border-white/10 pt-2">{item.title} — {item.detail}</p>)}</div></details></div>;
-  return <section className="mt-4 rounded-2xl border border-violet-300/30 bg-[#101a31] p-4 text-white"><p className="text-[10px] font-bold uppercase tracking-widest text-violet-200">Expanded energetic evidence</p><h3 className="mt-1 font-serif text-xl text-white">Mansions & Elemental Decans</h3><p className="mt-2 text-xs leading-5 text-slate-300">Calculated from the same natal and transit longitudes as your aspects. Flow and friction labels describe geometry; they are not independent mansion or decan scores.</p><div className="mt-4 grid gap-3 lg:grid-cols-2">{render("Lunar mansion influences",result.lunar)}{render("Elemental-family decan influences",result.decans)}</div><p className="mt-3 text-xs text-slate-400">Chinese mansions are not included until their specific longitude boundaries and reference frame are implemented and validated.</p></section>;
+  return <section className="mt-4 rounded-2xl border border-violet-300/30 bg-[#101a31] p-4 text-white"><p className="text-[10px] font-bold uppercase tracking-widest text-violet-200">Expanded energetic evidence</p><h3 className="mt-1 font-serif text-xl text-white">Mansions & Elemental Decans</h3><p className="mt-2 text-xs leading-5 text-slate-300">Calculated from the same natal and transit longitudes as your aspects. Flow and friction labels describe geometry; they are not independent mansion or decan scores.</p><div className="mt-4 grid gap-3 lg:grid-cols-2">{render("All planetary aspects · mansion context",result.aspectContexts)}{render("Lunar mansion influences",result.lunar)}{render("Elemental-family decan influences",result.decans)}</div><p className="mt-3 text-xs text-slate-400">Chinese mansions are not included until their specific longitude boundaries and reference frame are implemented and validated.</p></section>;
 }
