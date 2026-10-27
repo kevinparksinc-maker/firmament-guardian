@@ -357,6 +357,7 @@ export function canonDossierToEvidenceItems(
     });
   }
 
+<<<<<<< HEAD
   for (const house of Array.from(new Set(dossier.placements.map(p => p.displayedHouse))).sort((a,b)=>a-b)) {
     if (!getJyotishHouseGroups(house).length) continue;
     items.push({
@@ -405,6 +406,8 @@ export function canonDossierToEvidenceItems(
       },
     });
   }
+=======
+>>>>>>> origin/migration/planet-house-canon
   for (const p of dossier.placements) {
     const k = p.planetInHouseKnowledge;
     if (!k) continue;
