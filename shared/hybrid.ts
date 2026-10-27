@@ -1,3 +1,5 @@
+import { nakshatraRulerAtLongitude } from "./lunar-mansion-framework";
+
 export const ZODIAC_SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"] as const;
 
 // Frozen symbolic anchors used by the hybrid zodiac. These are intentionally
@@ -39,7 +41,7 @@ export function overlay(longitude: number): Overlay {
   const L = normalizeLongitude(longitude);
   const nakSize = 360 / 27;
   const padaSize = nakSize / 4;
-  return { nakshatra: NAKSHATRAS[Math.floor(L / nakSize) % 27], pada: Math.floor((L % nakSize) / padaSize) + 1, manzil: MANAZIL[Math.floor(L / (360 / 28)) % 28], decan: DECANS[Math.floor(L / 10) % 36] };
+  return { nakshatra: NAKSHATRAS[Math.floor(L / nakSize) % 27], nakshatraRuler: nakshatraRulerAtLongitude(L), pada: Math.floor((L % nakSize) / padaSize) + 1, manzil: MANAZIL[Math.floor(L / (360 / 28)) % 28], decan: DECANS[Math.floor(L / 10) % 36] };
 }
 export function formatLongitude(longitude: number) { const L = normalizeLongitude(longitude); const sign = ZODIAC_SIGNS[Math.floor(L / 30)]; const deg = L % 30; const d = Math.floor(deg); const m = Math.round((deg - d) * 60); return `${sign} ${String(d).padStart(2, "0")}°${String(m % 60).padStart(2, "0")}′`; }
 export function normalizeLongitude(value: number) { const wrapped = value % 360; return wrapped < 0 ? wrapped + 360 : wrapped; }

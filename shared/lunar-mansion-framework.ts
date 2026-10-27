@@ -40,6 +40,7 @@ export type ChineseMansionResult = {
   referenceFrame: "firmament-aldebaran-15-taurus";
   boundaryModel: "calibrated-ecliptic";
 };
+const BOUNDARY_EPSILON = 1e-10;
 
 export function normalizeMansionLongitude(value: number): number {
   if (!Number.isFinite(value)) throw new RangeError("Longitude must be finite");
@@ -85,7 +86,7 @@ export function chineseMansionAtLongitude(
   const sorted = validateChineseBoundaries(calibratedBoundaries);
   let chosen = sorted[sorted.length - 1];
   for (const boundary of sorted) {
-    if (longitude >= boundary.start) chosen = boundary;
+    if (longitude + BOUNDARY_EPSILON >= boundary.start) chosen = boundary;
     else break;
   }
   return {
@@ -99,5 +100,5 @@ export function chineseMansionAtLongitude(
 /** Classical Vimshottari lord of the 27 equal nakshatra sectors. */
 export function nakshatraRulerAtLongitude(canonicalLongitude: number): string {
   const longitude = normalizeMansionLongitude(canonicalLongitude);
-  return NAKSHATRA_RULERS[Math.floor(longitude / (360 / 27)) % 27];
+  return NAKSHATRA_RULERS[Math.floor(longitude / (360 / 27) + BOUNDARY_EPSILON) % 27];
 }
