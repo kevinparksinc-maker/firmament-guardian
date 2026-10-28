@@ -101,7 +101,7 @@ const diamondPoint = (lon: number, r: number, cx = 300, cy = 300) => {
   return { x: cx + (x * r) / d, y: cy + (y * r) / d };
 };
 
-export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
+export function ChartObservatory2050({ chart, onInterpretBody }: { chart: ChartResult; onInterpretBody?: (bodyName: string) => void }) {
   const [frame, setFrame] = useState<Frame>(
     chart.worldview === "god" ? "god" : chart.agentViewAvailable ? "agent" : "god"
   );
@@ -1056,6 +1056,16 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
               <p>
                 This planet is at <span className="font-mono text-cyan-200">{selectedRow.display}</span>. In God View, it occupies {selectedRow.godHouse ? `House ${selectedRow.godHouse}` : "its fixed sector"}; in Agent View, it is read through {selectedRow.agentHouse ? `House ${selectedRow.agentHouse}` : "the local houses"}.
               </p>
+
+              <button
+                type="button"
+                onClick={() => onInterpretBody?.(selectedRow.name)}
+                disabled={!onInterpretBody}
+                className="mt-3 w-full rounded-xl border border-violet-300/50 bg-violet-400/15 px-4 py-3 text-left text-sm font-semibold text-violet-100 transition hover:bg-violet-400/25 disabled:opacity-50"
+              >
+                <BookOpen size={16} className="mr-2 inline" />
+                Reveal full esoteric interpretation of {selectedRow.name}
+              </button>
 
               {/* Active Aspects to this body */}
               {selectedBodyAspects.length > 0 && (
