@@ -13,7 +13,7 @@ export const OVERLAY_MAP_SPECS: OverlayMapSpec[] = [
     name: "Zodiac",
     segmentCount: 12,
     unitWidthDegrees: 30,
-    sourceLabel: "Aldebaran-anchored zodiac frame",
+    sourceLabel: "tropical zodiac frame",
     shortDescription: "The primary 360° reference band. Use it as the common coordinate system for every overlay.",
     visualTreatment: "Neutral ivory ticks with brighter sign labels and a thin longitude cursor.",
     mobileAssetSpec: "SVG ring or horizontal strip, 360 × 44 px logical size, labels at 30° intervals.",

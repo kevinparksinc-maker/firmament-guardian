@@ -106,10 +106,9 @@ export function translationFor(planet: string, godHouse: number, agentHouse: num
   const translation = isUndoing
     ? `${planet} in God House ${godHouse} (the field of ${god.label}: ${godThemes}) is routed through Agent House 12, the 1st-house undoing/opposition to the Agent (private work, closure, and behind-the-scenes development). ${planet}'s ${nature.quality} ${nature.mechanism} here by withdrawing the field from direct agency, so it appears as ${agent.manifestations}, colored by ${nature.localExpression}.`
     : `${planet} in God House ${godHouse} (the field of ${god.label}: ${godThemes}) is routed through Agent House ${agentHouse} (${agent.label}). ${planet}'s ${nature.quality} ${nature.mechanism} the wider field as it enters this local channel, showing up in ${agent.manifestations} through ${nature.localExpression}.`;
-  // Synthesis is deliberately one practical takeaway, not a paraphrase of translation.
   const synthesis = isUndoing
-    ? `Practical emphasis: ${planet} calls for private preparation, boundaries, or closure before acting publicly in Agent House 12.`
-    : `Practical emphasis: apply ${planet}'s ${nature.mechanism} influence to ${agent.label}, while remembering its God House ${godHouse} background.`;
+    ? `${planet} makes the God House ${godHouse} field consequential through absence and preparation: its ${nature.quality} are felt in Agent House 12 as a limit on immediate agency, requiring retreat, containment, or work that matures before it can be seen through ${nature.localExpression}.`
+    : `${planet} makes the God House ${godHouse} field concrete through Agent House ${agentHouse}: its ${nature.quality} determine how ${agent.manifestations} becomes the place where the wider pattern is expressed through ${nature.localExpression}.`;
   return { translation, synthesis };
 }
 

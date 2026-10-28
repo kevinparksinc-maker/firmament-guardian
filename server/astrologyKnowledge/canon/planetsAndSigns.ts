@@ -130,7 +130,7 @@ export const PLANET_CANON_RECORDS: Record<string, PlanetCanonRecord> = {
     firmamentCanonNote: {
       category: "FIRMAMENT_CANON",
       statement:
-        "Canonical geocentric longitude in the Firmament Aldebaran-anchored frame governs sign, Nakshatra (27), Manzil (28), and Decan (36) overlays; topocentric parallax is preserved separately in Agent View. If birth time is unknown, Firmament flags the full ~12°–15° daily lunar range rather than guessing a single degree.",
+        "Canonical geocentric longitude governs tropical sign, Nakshatra (27), Manzil (28), and Decan (36) overlays; topocentric parallax is preserved separately in Agent View. If birth time is unknown, Firmament flags the full ~12°–15° daily lunar range rather than guessing a single degree.",
       provenance: {
         tradition: "firmament",
         sourceTitle: "Firmament Core Doctrine",

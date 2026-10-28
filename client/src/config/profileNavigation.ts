@@ -4,6 +4,7 @@ export const PROFILE_TABS = [
   { href: "/chart", label: "Chart", section: "chart" },
   { href: "/reading", label: "Reading", section: "reading" },
   { href: "/guide", label: "Guide", section: "guide" },
+  { href: "/profile", label: "Profile", section: "profile" },
 ] as const;
 
 export type ProfileSection = (typeof PROFILE_TABS)[number]["section"];

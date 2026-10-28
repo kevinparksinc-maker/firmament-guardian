@@ -1,11 +1,11 @@
 import sweph from "sweph";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
-import { setCanonicalReferenceFrame, type ChartResult } from "../../astronomy";
+import type { ChartResult } from "../../astronomy";
 import type { EvidenceItem } from "../types";
 
 /** Explicit traditional Parashari variants, applied to supplied fixed-frame longitude.
  * These are NOT automatically Lahiri-sidereal vargas; the underlying chart supplies
- * Aldebaran-anchored/geocentric longitudes in Guardian's fixed reference.
+ * tropical/geocentric longitudes in Guardian's fixed-zero reference.
  * A sidereal conversion needs to be made upstream if genuine Jyotish D charts are desired.
  */
 export type Varga = "D2"|"D3"|"D9"|"D10";
@@ -35,12 +35,7 @@ function lahiriAyanamsa(julianDay:number):number|null {
     const raw=sw.get_ayanamsa_ut(julianDay);
     const value=typeof raw==="number"?raw:Number(raw?.data ?? raw?.ayanamsa);
     return Number.isFinite(value)&&value>=0&&value<40?value:null;
-  } catch {
-    return null;
-  } finally {
-    // Swiss Ephemeris keeps sidereal mode globally; never leak Lahiri into the canonical engine.
-    setCanonicalReferenceFrame();
-  }
+  }catch{return null;}
 }
 export function resolveVargaEvidence(chart:ChartResult):EvidenceItem[]{
  const offset=Number.isFinite(chart.julianDay)?lahiriAyanamsa(chart.julianDay):null;
@@ -50,7 +45,7 @@ export function resolveVargaEvidence(chart:ChartResult):EvidenceItem[]{
  return (["D2","D3","D9","D10"] as const).flatMap(division=>rows.map(row=>{
   const v=vargaPlacement(offset===null?row.longitude:normalizeLongitude(row.longitude-offset),division);
   return {id:`vedic-varga-${division}-${row.name.toLowerCase().replace(/\s+/g,"-")}`,tradition:"vedic" as const,category:"deterministic-rule" as const,technique:"varga",subject:row.name,
-   statement:`[${division} · ${coordinateFrame}] ${row.name} at ${row.display} in the Firmament Aldebaran-anchored frame: ${offset===null?"Lahiri ayanamsa could not be computed; this fixed-zero projection is NOT a validated Jyotish varga.":`Lahiri ayanamsa ${offset.toFixed(5)}°, sidereal source longitude ${normalizeLongitude(row.longitude-offset).toFixed(5)}°.`} Source sign ${v.sourceSign}, division ${v.part}/${Number(division.slice(1))}, derived ${v.sign}.`,
+   statement:`[${division} · ${coordinateFrame}] ${row.name} at tropical ${row.display}: ${offset===null?"Lahiri ayanamsa could not be computed; this fixed-zero projection is NOT a validated Jyotish varga.":`Lahiri ayanamsa ${offset.toFixed(5)}°, sidereal source longitude ${normalizeLongitude(row.longitude-offset).toFixed(5)}°.`} Source sign ${v.sourceSign}, division ${v.part}/${Number(division.slice(1))}, derived ${v.sign}.`,
    concepts:["varga",division.toLowerCase(),row.name.toLowerCase(),v.sign.toLowerCase()],polarity:"neutral" as const,sourceId:"local-vedic-rules",sourceTrace:trace(division)};
  }));
 }

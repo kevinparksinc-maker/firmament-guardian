@@ -1,10 +1,12 @@
 import { useEffect, useState, type MouseEvent } from "react";
-import { BookOpenText, CloudSun, Compass, Headphones, Heart, Menu, MoonStar, Orbit, Sparkles, Stars, Users, X } from "lucide-react";
+import { BookOpenText, CloudSun, Compass, Headphones, Heart, Menu, MoonStar, Orbit, Sparkles, Stars, Users, UserRound, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import "./GuardianNavigation.css";
 
 const routes = [
   { href: "/", label: "Home", Icon: Compass },
+  { href: "/profile", label: "Birth Profile", Icon: UserRound },
+  { href: "/life-story", label: "Life Story", Icon: BookOpenText },
   { href: "/horary", label: "Horary", Icon: MoonStar },
   { href: "/guide?tab=synastry#main-cosmos-tabs", label: "Synastry", Icon: Heart, mobileOnly: true },
   { href: "/guide?tab=weather#main-cosmos-tabs", label: "Cosmic Weather", Icon: CloudSun, mobileOnly: true },

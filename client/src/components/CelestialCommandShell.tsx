@@ -1,5 +1,5 @@
 import { useLocation, Link } from "wouter";
-import { BookOpenText, Compass, Heart, Headphones, Layers3, MoonStar, Orbit, Sparkles, Users, CloudSun, Stars, Globe } from "lucide-react";
+import { BookOpenText, Compass, Heart, Headphones, Layers3, MoonStar, Orbit, Sparkles, Users, CloudSun, Stars, Globe, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { GuardianNavigation } from "./GuardianNavigation";
 import { PrimaryProfileNavigation } from "./PrimaryProfileNavigation";
@@ -8,6 +8,8 @@ import "./CelestialCommandShell.css";
 
 const entries = [
   { href:"/", name:"Home & Natal", icon:Compass },
+  { href:"/profile", name:"Birth Profile", icon:UserRound },
+  { href:"/life-story", name:"Life Story Mode", icon:BookOpenText },
   { href:"/ephemeris", name:"Daily Ephemeris", icon:Globe },
   { href:"/guide?tab=blueprint#main-cosmos-tabs", name:"Divine Blueprint", icon:Layers3 },
   { href:"/guide?tab=synastry#main-cosmos-tabs", name:"Synastry & Chemistry", icon:Heart },

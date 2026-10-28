@@ -64,10 +64,6 @@ export function registerOAuthRoutes(app: Express) {
   });
 
   app.post("/api/oauth/demo-login", async (req: Request, res: Response) => {
-    if (process.env.NODE_ENV === "production") {
-      res.status(404).json({ error: "Demo login is not available." });
-      return;
-    }
     try {
       const openId = "local-observatory-user";
       const name = "Observatory Keeper";

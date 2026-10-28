@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, Compass, Diamond, Pencil, Sparkles, Sun, Moon, UserRound } from "lucide-react";
+import { ArrowRight, BookOpen, Compass, Diamond, Pencil, Sparkles, Sun, Moon, UserRound } from "lucide-react";
 import { AccountControl } from "@/components/AccountControl";
 import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarousel";
 import { PersonalCosmicForecast } from "@/components/PersonalCosmicForecast";
@@ -14,7 +14,6 @@ type ProfileHomeScreenProps = {
   onEditProfile: () => void;
   onSwitchProfile: () => void;
   onRefreshTransits?: () => void;
-  onCalculateTransit?: (selection: { date: string; time: string; location: string; latitude: number; longitude: number; timezone: string }) => void;
   savedProfiles?: UserProfileData[];
   onLoadProfile?: (profile: UserProfileData) => void;
 };
@@ -27,7 +26,7 @@ function signAt(longitude: number | undefined): string {
 }
 
 /** Single-purpose dashboard. Long readings, carousel and advanced instruments live on their dedicated routes. */
-export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles = [], onLoadProfile, onRefreshTransits, onCalculateTransit }: ProfileHomeScreenProps) {
+export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles = [], onLoadProfile, onRefreshTransits }: ProfileHomeScreenProps) {
   const [activeSignal, setActiveSignal] = useState<"Sun" | "Moon" | "Ascendant" | null>(null);
   const sun = chart?.movingBodies.find(body => body.name === "Sun");
   const moon = chart?.movingBodies.find(body => body.name === "Moon");
@@ -51,14 +50,22 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
       <div className="relative max-w-[78%]"><p className="font-serif text-3xl leading-tight text-[#fff8ed] sm:text-4xl">THE ABSOLUTE</p><p className="mt-3 text-sm leading-6 text-slate-300">Uncovering Your Divine Code<br/>From the Lights in the Firmament</p></div>
     </section>
 
-    <PersonalCosmicForecast chart={chart} calculating={calculating} onRefresh={onRefreshTransits} onCalculateTransit={onCalculateTransit} />
+    <PersonalCosmicForecast chart={chart} calculating={calculating} onRefresh={onRefreshTransits} />
 
     <section className="flex items-center justify-between gap-3 rounded-2xl border border-blue-300/20 bg-[#111622]/90 p-4" aria-label="Current birth profile">
-      <div className="flex min-w-0 items-center gap-3">
+      <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-90">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-400/15 text-blue-100"><UserRound size={25}/></span>
-        <div className="min-w-0"><h2 className="font-serif text-lg text-white">Your Profile</h2><p className="truncate text-xs text-slate-300">{profile.name} · {profile.date} · {profile.location}</p></div>
-      </div>
-      <button type="button" onClick={onEditProfile} aria-label="Edit birth profile" className="shrink-0 rounded-lg p-3 text-amber-200 hover:bg-white/10"><Pencil size={17}/></button>
+        <div className="min-w-0">
+          <h2 className="font-serif text-lg text-white flex items-center gap-2">
+            <span>Your Profile</span>
+            <span className="text-[10px] font-sans font-medium uppercase tracking-wider text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-300/30">Edit Details</span>
+          </h2>
+          <p className="truncate text-xs text-slate-300">{profile.name} · {profile.date} · {profile.location}</p>
+        </div>
+      </Link>
+      <Link href="/profile" aria-label="Edit birth profile" className="shrink-0 rounded-lg p-3 text-amber-200 hover:bg-white/10">
+        <Pencil size={17}/>
+      </Link>
     </section>
 
     <section className="rounded-2xl border border-blue-300/20 bg-[#111622]/90 p-4 sm:p-5" aria-label="Calculated chart at a glance">
@@ -91,11 +98,19 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
       {!chart && <p className="mt-4 text-center text-xs text-amber-200" role="status">{calculating ? "Calculating your divine signals…" : "Chart values unavailable; no illustrative placements are shown."}</p>}
     </section>
 
-    <Link href="/chart" className="group relative isolate flex min-h-28 items-center gap-4 overflow-hidden rounded-2xl border border-[#eec77e]/70 bg-[linear-gradient(115deg,rgba(109,77,41,.42),rgba(9,22,45,.96)_45%,rgba(4,19,39,.98))] p-5 shadow-[0_0_28px_rgba(238,199,126,.15)] transition-all duration-300 hover:border-amber-200 hover:shadow-[0_0_38px_rgba(238,199,126,.29)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200">
-      <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-amber-200/30 bg-amber-300/10 text-amber-100 shadow-[0_0_19px_rgba(238,199,126,.2)] transition-transform duration-300 motion-safe:group-hover:scale-110"><Diamond size={37} strokeWidth={1.1}/></span>
-      <span className="min-w-0 flex-1"><strong className="block font-serif text-xl text-white">Your Diamond Chart</strong><span className="mt-1 block text-xs leading-5 text-slate-300">Explore the calculated 360° observatory, God View, Agent View, planets and stars.</span></span>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f4c96f] text-slate-950 shadow-[0_0_16px_rgba(244,201,111,.35)] transition-transform motion-safe:group-hover:translate-x-1"><ArrowRight size={22}/></span>
-    </Link>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Link href="/chart" className="group relative isolate flex min-h-28 items-center gap-4 overflow-hidden rounded-2xl border border-[#eec77e]/70 bg-[linear-gradient(115deg,rgba(109,77,41,.42),rgba(9,22,45,.96)_45%,rgba(4,19,39,.98))] p-5 shadow-[0_0_28px_rgba(238,199,126,.15)] transition-all duration-300 hover:border-amber-200 hover:shadow-[0_0_38px_rgba(238,199,126,.29)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-amber-200/30 bg-amber-300/10 text-amber-100 shadow-[0_0_19px_rgba(238,199,126,.2)] transition-transform duration-300 motion-safe:group-hover:scale-110"><Diamond size={32} strokeWidth={1.1}/></span>
+        <span className="min-w-0 flex-1"><strong className="block font-serif text-lg text-white">Your Diamond Chart</strong><span className="mt-1 block text-xs leading-4 text-slate-300">Explore the 360° observatory, God/Agent frames, planets and stars.</span></span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f4c96f] text-slate-950 shadow-[0_0_16px_rgba(244,201,111,.35)] transition-transform motion-safe:group-hover:translate-x-1"><ArrowRight size={18}/></span>
+      </Link>
+
+      <Link href="/life-story" className="group relative isolate flex min-h-28 items-center gap-4 overflow-hidden rounded-2xl border border-fuchsia-400/70 bg-[linear-gradient(115deg,rgba(112,26,117,.42),rgba(15,23,42,.96)_45%,rgba(3,7,18,.98))] p-5 shadow-[0_0_28px_rgba(217,70,239,.15)] transition-all duration-300 hover:border-fuchsia-300 hover:shadow-[0_0_38px_rgba(217,70,239,.29)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-fuchsia-300">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-fuchsia-300/30 bg-fuchsia-400/10 text-fuchsia-200 shadow-[0_0_19px_rgba(217,70,239,.2)] transition-transform duration-300 motion-safe:group-hover:scale-110"><BookOpen size={30} strokeWidth={1.3}/></span>
+        <span className="min-w-0 flex-1"><strong className="block font-serif text-lg text-white">Life Story Mode</strong><span className="mt-1 block text-xs leading-4 text-slate-300">Chronological life stages, annual profections & planetary return milestones.</span></span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-fuchsia-400 text-slate-950 shadow-[0_0_16px_rgba(232,121,249,.35)] transition-transform motion-safe:group-hover:translate-x-1"><ArrowRight size={18}/></span>
+      </Link>
+    </div>
 
     {chart && <PersonalDiscoveryCarousel chart={chart} compact />}
 

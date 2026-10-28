@@ -4,6 +4,7 @@ import type { ChartResult } from "../../../server/astronomy";
 
 const AdvancedSkyWheel = lazy(() => import("./SkyObservatoryWheel").then(module => ({ default: module.SkyObservatoryWheel })));
 const AdvancedChartWheel = lazy(() => import("./ChartWheel").then(module => ({ default: module.ChartWheel })));
+const FixedStarIntensityVisualizer = lazy(() => import("./FixedStarIntensityVisualizer").then(module => ({ default: module.FixedStarIntensityVisualizer })));
 
 export function AdvancedChartInstruments({ chart }: { chart: ChartResult }) {
   const [open, setOpen] = useState(false);
@@ -24,6 +25,7 @@ export function AdvancedChartInstruments({ chart }: { chart: ChartResult }) {
         <div id="guardian-advanced-wheel-content" className="mt-4 space-y-6">
           <p className="text-xs leading-6 text-slate-300">The complete original chart instruments remain available for detailed study. They use the same chart calculation shown in the guided view.</p>
           <Suspense fallback={<p role="status" className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-6 text-sm text-cyan-100"><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true"/>Opening advanced chart instruments…</p>}>
+            <FixedStarIntensityVisualizer chart={chart} />
             <AdvancedSkyWheel chart={chart} />
             <AdvancedChartWheel chart={chart} />
           </Suspense>

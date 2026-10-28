@@ -8,9 +8,9 @@ type Props = {
 };
 
 const labels: Record<FrameRelationshipType, string> = {
-  convergence: "Same territory",
-  translation: "House shift",
-  tension: "Different emphasis",
+  convergence: "Convergence",
+  translation: "Translation",
+  tension: "Tension",
   concealment: "Behind the scenes",
 };
 
@@ -21,69 +21,39 @@ const tone: Record<FrameRelationshipType, string> = {
   concealment: "border-violet-200/20 bg-violet-200/[0.06] text-violet-100",
 };
 
-/**
- * A comparison, not a second full reading. The detailed horary judgment and
- * Master Interpreter already supply the narrative. Keep ALL available bodies
- * and both calculated house placements, with one optional explanation each.
- */
-export function FrameRelationshipPanel({
-  rows,
-  title = "God's View of the Agent",
-  intro = "One planetary longitude, two house perspectives. Compare the house shift at a glance; expand a placement only when you want its interpretation.",
-}: Props) {
-  const paired = rows.filter(row =>
-    row.frameRelationship && row.godHouse != null && row.agentHouse != null
-  );
+export function FrameRelationshipPanel({ rows, title = "God's View of the Agent", intro = "One astronomical position, read through two reference frames. The translation is interpretive context; it does not replace the primary chart testimony." }: Props) {
+  const paired = rows.filter(row => row.frameRelationship && row.godHouse != null && row.agentHouse != null).slice(0, 10);
   if (!paired.length) return null;
 
-  const shifted = paired.filter(row => row.godHouse !== row.agentHouse).length;
-
-  const destinationCounts = paired.filter(row=>row.godHouse !== row.agentHouse).reduce<Record<number,number>>((counts,row)=>{ const key=row.agentHouse!; counts[key]=(counts[key]??0)+1;return counts; }, {});
-  const topHouses = Object.entries(destinationCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([house,count])=>`Agent House ${house} (${count})`).join(" · ");
-
-  return (
-    <details className="group overflow-hidden rounded-2xl border border-violet-200/20 bg-gradient-to-br from-violet-200/[0.09] via-cyan-200/[0.04] to-transparent text-slate-100" aria-label={title}>
-      <summary className="cursor-pointer border-b border-white/10 px-5 py-5 sm:px-7">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-200">House-frame comparison</p>
-        <h2 className="mt-2 font-serif text-2xl text-white">{title}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{intro}</p>
-        <p className="mt-3 text-xs text-slate-300">
-          {paired.length} bodies compared · {shifted} change houses · select to explore
-        </p>
-        {topHouses && <p className="mt-2 text-xs text-amber-100">Most common destinations: {topHouses}</p>}
-        <p className="mt-2 text-xs text-cyan-200">Expand full house comparison ↓</p>
-      </summary>
-      <div className="divide-y divide-white/10">
-        {paired.map(row => {
-          const relationship = row.frameRelationship!;
-          const shiftedHouse = row.godHouse !== row.agentHouse;
-          return (
-            <details key={row.name} className="group px-4 py-3 open:bg-white/[0.035] sm:px-7">
-              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 marker:hidden">
-                <div className="min-w-[130px] flex-1">
-                  <strong className="block text-sm text-white">{row.name}</strong>
-                  <span className="font-mono text-xs text-slate-400">{row.display}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="rounded-lg border border-violet-200/15 bg-violet-200/[0.05] px-2.5 py-1.5 text-violet-100">God H{row.godHouse}</span>
-                  <span aria-hidden="true" className="text-slate-500">→</span>
-                  <span className="rounded-lg border border-cyan-200/15 bg-cyan-200/[0.05] px-2.5 py-1.5 text-cyan-100">Agent H{row.agentHouse}</span>
-                </div>
-                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${tone[relationship.type]}`}>
-                  {shiftedHouse ? labels[relationship.type] : "Same house"}
-                </span>
-                <span className="text-xs text-cyan-200 group-open:text-white">Details <span aria-hidden="true">⌄</span></span>
-              </summary>
-              <div className="mt-3 grid gap-3 border-t border-white/10 pt-3 text-xs leading-5 sm:grid-cols-2">
-                <div><strong className="text-violet-200">God House {row.godHouse}</strong><p className="text-slate-400">{relationship.godThemes.join(" · ")}</p></div>
-                <div><strong className="text-cyan-200">Agent House {row.agentHouse}</strong><p className="text-slate-400">{relationship.agentThemes.join(" · ")}</p></div>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-slate-200">{relationship.translation}</p>
-              {relationship.tension && <p className="mt-2 text-xs leading-5 text-rose-200">{relationship.tension}</p>}
-            </details>
-          );
-        })}
+  return <section aria-labelledby="frame-relationship-title" className="overflow-hidden rounded-2xl border border-violet-200/20 bg-gradient-to-br from-violet-200/[0.09] via-cyan-200/[0.04] to-transparent text-slate-100 shadow-lg shadow-violet-950/15">
+    <div className="border-b border-white/10 px-5 py-5 sm:px-7">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-200">Three-layer interpretation</div>
+      <h2 id="frame-relationship-title" className="mt-2 font-serif text-2xl text-white">{title}</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{intro}</p>
+      <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+        <div className="rounded-xl border border-white/10 bg-black/15 p-3"><strong className="block text-violet-100">God View</strong><span className="text-slate-500">The broader shared field</span></div>
+        <div className="rounded-xl border border-white/10 bg-black/15 p-3"><strong className="block text-cyan-100">Agent View</strong><span className="text-slate-500">The local lived channel</span></div>
+        <div className="rounded-xl border border-white/10 bg-black/15 p-3"><strong className="block text-amber-100">Relationship</strong><span className="text-slate-500">How the field is translated</span></div>
       </div>
-    </details>
-  );
+    </div>
+    <div className="grid gap-3 p-4 sm:p-5 lg:grid-cols-2">
+      {paired.map(row => {
+        const relationship = row.frameRelationship!;
+        return <article key={row.name} className="rounded-xl border border-white/10 bg-black/15 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div><h3 className="font-serif text-xl text-white">{row.name}</h3><p className="font-mono text-xs text-slate-400">{row.display} · one calculated longitude</p></div>
+            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${tone[relationship.type]}`}>{labels[relationship.type]}</span>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg border border-violet-200/10 bg-violet-200/[0.05] p-3"><div className="uppercase tracking-[0.14em] text-violet-200/70">God View</div><div className="mt-1 text-white">House {row.godHouse}</div><div className="mt-1 leading-5 text-slate-400">{relationship.godThemes.join(" · ")}</div></div>
+            <div className="rounded-lg border border-cyan-200/10 bg-cyan-200/[0.05] p-3"><div className="uppercase tracking-[0.14em] text-cyan-200/70">Agent View</div><div className="mt-1 text-white">House {row.agentHouse}</div><div className="mt-1 leading-5 text-slate-400">{relationship.agentThemes.join(" · ")}</div></div>
+          </div>
+          <div className="mt-3 rounded-lg border border-amber-200/10 bg-amber-100/[0.04] p-3 text-xs leading-5 text-amber-50"><div className="mb-1 uppercase tracking-[0.14em] text-amber-200/70">Translation</div>{relationship.translation}</div>
+          {relationship.tension && <p className="mt-3 rounded-lg border border-rose-200/10 bg-rose-200/[0.04] p-3 text-xs leading-5 text-rose-100">{relationship.tension}</p>}
+          <p className="mt-3 text-xs leading-5 text-slate-400"><span className="font-semibold text-slate-200">Synthesis:</span> {relationship.synthesis}</p>
+        </article>;
+      })}
+    </div>
+    {rows.filter(row => row.frameRelationship).length > 10 && <p className="border-t border-white/10 px-5 py-3 text-xs text-slate-500">Showing the first 10 placements. Open detailed placements for the complete evidence set.</p>}
+  </section>;
 }

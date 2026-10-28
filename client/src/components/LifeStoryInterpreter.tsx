@@ -48,9 +48,22 @@ export function LifeStoryInterpreter({ chart }: { chart: ChartResult }) {
           <h2 className="mt-2 font-serif text-2xl text-white">The Story Within Your Stars</h2>
           <p className="mt-1 max-w-xl text-sm text-slate-300">A deep, chapter-by-chapter portrait drawn from your calculated birth chart and the existing Master Interpreter.</p>
         </div>
-        <button type="button" onClick={() => setOpen(value => !value)} className="rounded-xl border border-fuchsia-300/50 bg-fuchsia-400/15 px-4 py-3 text-sm font-semibold text-fuchsia-100 shadow-[0_0_16px_rgba(232,121,249,0.14)]">
-          {open ? "Close Life Story" : "Explore My Life Story"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/life-story"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-400/20"
+          >
+            <Sparkles className="h-4 w-4 text-cyan-300" />
+            <span>Open Dedicated Life Story Suite →</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(value => !value)}
+            className="rounded-xl border border-fuchsia-300/50 bg-fuchsia-400/15 px-4 py-3 text-sm font-semibold text-fuchsia-100 shadow-[0_0_16px_rgba(232,121,249,0.14)]"
+          >
+            {open ? "Close Life Story" : "Explore Quick Stages"}
+          </button>
+        </div>
       </div>
       {open && <div className="relative mt-5 space-y-3">
         <p className="text-xs text-slate-400">Choose a life stage to generate its own detailed narrative. Chapters are based on symbolic chart evidence, not verified personal history.</p>

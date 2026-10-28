@@ -1,35 +1,16 @@
-import { useMemo, useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useMemo } from "react";
 import { Activity, ArrowRight, Clock3, RefreshCw, Sparkles, Zap } from "lucide-react";
 import { Link } from "wouter";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
 
 const MAX_ORB = 5;
 const aspectFlow: Record<TransitContact["aspect"], number> = {
-  trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 1,
+  trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 0,
 };
 const percentWeight = (orb: number) =>
   orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
 
-type TransitSelection = { date: string; time: string; location: string; latitude: number; longitude: number; timezone: string };
-export function PersonalCosmicForecast({ chart, calculating, onRefresh, onCalculateTransit }: { chart: ChartResult | null; calculating: boolean; onRefresh?: () => void; onCalculateTransit?: (selection: TransitSelection) => void }) {
-  const utils = trpc.useUtils();
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [inputError, setInputError] = useState("");
-  const [resolving, setResolving] = useState(false);
-  const submitTransit = async () => {
-    setInputError("");
-    if (!date || !time || location.trim().length < 2) { setInputError("Enter the transit date, time, and location."); return; }
-    setResolving(true);
-    try {
-      const resolved = await utils.hybrid.geocode.fetch({ query: location.trim() });
-      if (!resolved?.timezone || !Number.isFinite(resolved.latitude) || !Number.isFinite(resolved.longitude)) throw new Error("Could not resolve that transit location.");
-      onCalculateTransit?.({ date, time, location: resolved.label, latitude: resolved.latitude, longitude: resolved.longitude, timezone: resolved.timezone });
-    } catch (error) { setInputError(error instanceof Error ? error.message : "Location lookup failed. Try a city and state."); }
-    finally { setResolving(false); }
-  };
+export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { chart: ChartResult | null; calculating: boolean; onRefresh?: () => void }) {
   const data = useMemo(() => {
     if (!chart || chart.readingScope === "natal") return null;
     const contacts = chart.transits.flatMap(body =>
@@ -39,11 +20,8 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh, onCalcul
     const flow = contacts.filter(c => aspectFlow[c.aspect] === 1).reduce((sum,c) => sum+c.strength,0);
     const friction = contacts.filter(c => aspectFlow[c.aspect] === -1).reduce((sum,c) => sum+c.strength,0);
     const neutral = contacts.filter(c => aspectFlow[c.aspect] === 0);
-    const total = flow + friction;
-    const flowPercent = total ? Math.round(flow / total * 100) : null;
-    const frictionPercent = total ? 100 - flowPercent! : null;
     const signal = !contacts.length ? "No close contacts" : flow > friction * 1.2 ? "Easy Flow" : friction > flow * 1.2 ? "Friction" : "Mixed";
-    return { contacts, flow, friction, neutral, flowPercent, frictionPercent, signal,
+    return { contacts, flow, friction, neutral, signal,
       strongest: [...contacts].sort((a,b)=>b.strength-a.strength).slice(0,3),
       moment: chart.transitDate };
   }, [chart]);
@@ -55,18 +33,6 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh, onCalcul
         <p className="mt-1 text-sm text-slate-300">Feel the Flow. See What’s Ahead.</p>
       </div><div className="rounded-full border border-amber-300/45 bg-amber-300/10 p-3 text-amber-200"><Activity size={25}/></div>
     </div>
-    <form className="mt-5 space-y-3 rounded-xl border border-amber-300/30 bg-black/20 p-4" onSubmit={event => { event.preventDefault(); void submitTransit(); }}>
-      <h3 className="text-sm font-semibold text-amber-100">Transit chart inputs</h3>
-      <p className="text-xs text-slate-300">Enter the transit moment and city to calculate against your saved natal chart. Time is interpreted in the selected city's timezone.</p>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="text-xs text-slate-200">Transit date<input aria-label="Transit date" required type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-white" /></label>
-        <label className="text-xs text-slate-200">Transit time<input aria-label="Transit time" required type="time" value={time} onChange={e => setTime(e.target.value)} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-white" /></label>
-      </div>
-      <label className="block text-xs text-slate-200">Transit city and state<input aria-label="Transit location" required value={location} onChange={e => setLocation(e.target.value)} placeholder="Las Vegas, Nevada" className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-white" /></label>
-      {inputError && <p role="alert" className="text-xs text-rose-300">{inputError}</p>}
-      <button type="submit" disabled={calculating || resolving || !onCalculateTransit} className="min-h-10 rounded-xl border border-amber-300/50 bg-amber-300/15 px-4 text-sm font-semibold text-amber-100 disabled:opacity-50">{resolving ? "Resolving transit location…" : "Calculate natal + transit energy"}</button>
-      {chart && <p className="text-xs leading-5 text-slate-300">Calculated natal: {chart.input.date} {chart.input.time} · {chart.input.location || "God View"}<br/>Calculated transit: {chart.transitDate} · {chart.input.transitLocation || chart.input.location || "No location"} · {chart.input.transitTimezone || chart.input.timezone || "UTC"}</p>}
-    </form>
     {onRefresh && <button type="button" disabled={calculating} onClick={onRefresh} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-300/10 px-4 text-sm font-semibold text-amber-100 disabled:opacity-50"><RefreshCw size={15} className={calculating ? "animate-spin" : ""}/>Refresh current energy</button>}
     {!data ? <div className="mt-5 rounded-xl border border-amber-200/25 bg-white/[.035] p-4 text-sm text-slate-200">
       {calculating ? "Calculating your personal sky…" : "Your birth chart is ready for a personal energy forecast. Open Cosmic Weather to calculate current transit contacts with your natal chart."}
@@ -84,15 +50,13 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh, onCalcul
         ? "Supportive and challenging contacts are both present. The pattern can be explored through the planets and houses involved."
         : "No major natal–transit aspects fall inside your selected 5° orb in this snapshot. This is not a claim that nothing is happening."}</p>
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-emerald-300/35 bg-emerald-300/[.055] p-3"><p className="text-xs text-emerald-200">Flow · {data.flowPercent === null ? "No scored contacts" : `${data.flowPercent}%`}</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.flow)}</p></div>
-        <div className="rounded-xl border border-rose-300/35 bg-rose-300/[.055] p-3"><p className="text-xs text-rose-200">Friction · {data.frictionPercent === null ? "No scored contacts" : `${data.frictionPercent}%`}</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.friction)}</p></div>
+        <div className="rounded-xl border border-emerald-300/35 bg-emerald-300/[.055] p-3"><p className="text-xs text-emerald-200">Flow weight</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.flow)}</p></div>
+        <div className="rounded-xl border border-rose-300/35 bg-rose-300/[.055] p-3"><p className="text-xs text-rose-200">Friction weight</p><p className="mt-1 text-xl font-semibold text-white">{Math.round(data.friction)}</p></div>
       </div>
-      <p className="mt-2 text-xs text-slate-400">Flow: conjunction, trine, sextile · Friction: square, opposition · 5° maximum orb · weight bands 100/80/60/40. Percentages reflect these scored contacts only, not other Canon layers.</p>
       {data.strongest.length > 0 && <div className="mt-4 space-y-2">
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-200"><Sparkles size={14}/> Leading chart contacts</p>
         {data.strongest.map((c,i)=><p key={`${c.transit}-${c.natalName}-${i}`} className="rounded-lg border border-white/10 bg-white/[.035] px-3 py-2 text-sm text-slate-200">Transit {c.transit} {c.aspect} natal {c.natalName} · {c.orb.toFixed(2)}° orb</p>)}
       </div>}
-      <details className="mt-4 rounded-xl border border-white/15 p-3"><summary className="cursor-pointer text-sm font-semibold text-amber-100">Inspect all {data.contacts.length} scored aspects</summary><div className="mt-3 space-y-1">{data.contacts.map((c,i) => <p key={i} className="text-xs text-slate-200">Transit {c.transit} {c.aspect} natal {c.natalName} · {c.orb.toFixed(2)}° · {c.strength}% weight · {aspectFlow[c.aspect] === 1 ? "Flow" : "Friction"}</p>)}</div></details>
       <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-400"><Clock3 size={14} className="mt-0.5 shrink-0"/>Snapshot: {new Date(data.moment).toLocaleString()} · This displays the calculated chart moment, not an automatically updating live clock. Exact future shift times need additional time-series calculations.</p>
       <Link href="/guide?tab=weather#main-cosmos-tabs" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-cyan-300/45 bg-cyan-300/10 px-4 text-sm font-semibold text-cyan-100 hover:bg-cyan-300/20">Explore your energy in depth <ArrowRight size={16}/></Link>
     </>}

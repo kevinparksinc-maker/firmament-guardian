@@ -13,12 +13,12 @@ describe("Guardian natal equal-house contract",()=>{
    expect(agentHouseFor((cusp+0.01)%360,asc)).toBe(i+1);
   });
  });
- it("keeps the canonical Scorpio Sun in 11th house with the Aldebaran-frame Ascendant",()=>{
-  expect(agentHouseFor(213.466667,252.798731)).toBe(11);
+ it("keeps a Scorpio Sun in 11th house with a Capricorn 7°22 Ascendant",()=>{
+  expect(agentHouseFor(238.033333,277.366667)).toBe(11);
  });
  it("never applies Lab reversed labels without an explicit conversion",()=>{
   expect(translateHouseLabelBetweenFrameworks(11)).toBe(3);
-  expect(agentHouseFor(213.466667,252.798731)).toBe(11);
+  expect(agentHouseFor(238.033333,277.366667)).toBe(11);
  });
  it("preserves fixed God numbering and validates house labels",()=>{
   expect(godHouseFor(0)).toBe(1);

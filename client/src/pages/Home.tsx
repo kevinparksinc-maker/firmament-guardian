@@ -1,4 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Diamond, House, RotateCcw, Sparkles, UserRound } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import type { ProfileSection } from "@/config/profileNavigation";
 import { trpc } from "@/lib/trpc";
@@ -204,29 +206,13 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
       chart: result as unknown as Record<string, unknown>,
     });
   };
-  const calculateEnergyTransit = (selection: { date: string; time: string; location: string; latitude: number; longitude: number; timezone: string }) => {
-    const nextForm = { ...form, transitDate: selection.date, transitTime: selection.time,
-      transitLocation: selection.location, transitLatitude: selection.latitude,
-      transitLongitude: selection.longitude, transitTimezone: selection.timezone };
-    setForm(nextForm);
-    setReadingMode("combined");
-    calculate.mutate({ ...nextForm, worldview: "agent", readingScope: "combined", birthTimeKnown: Boolean(nextForm.time) });
-  };
   const refreshLiveTransit = () => {
     if (!result || readingMode === "natal") return;
     const now = new Date();
-    const timezone = form.transitTimezone || form.timezone;
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-    }).formatToParts(now);
-    const get = (part: string) => parts.find(item => item.type === part)?.value ?? "";
-    const transitDate = `${get("year")}-${get("month")}-${get("day")}`;
-    const transitTime = `${get("hour")}:${get("minute")}`;
     calculate.mutate({
       ...form,
-      transitDate,
-      transitTime,
+      transitDate: now.toISOString().slice(0, 10),
+      transitTime: now.toTimeString().slice(0, 5),
       transitLocation: form.transitLocation || form.location,
       transitLatitude: form.transitLatitude || form.latitude,
       transitLongitude: form.transitLongitude || form.longitude,
@@ -350,6 +336,57 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
           </>
         )}
 
+        {/* Dedicated Profile Screen / Route (/profile) */}
+        {activeProfile && section === "profile" && (
+          <div className="mx-auto max-w-4xl space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-cyan-400/20 bg-slate-950/70 p-5 backdrop-blur-md">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-cyan-300 font-medium">Celestial Seeker Profile</p>
+                <h1 className="text-2xl font-serif text-white mt-1">
+                  {activeProfile.name}'s Natal Coordinates
+                </h1>
+                <p className="text-sm text-slate-300 mt-1">
+                  Born {activeProfile.date} at {activeProfile.birthTimeUnknown ? "12:00 PM (Untimed)" : activeProfile.time} in {activeProfile.location}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href="/chart"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-cyan-400/30 bg-cyan-950/40 text-cyan-200 hover:bg-cyan-900/40 transition-colors"
+                >
+                  <Diamond className="w-3.5 h-3.5 text-cyan-300" />
+                  View Chart
+                </Link>
+                <Link
+                  href="/life-story"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-violet-400/30 bg-violet-950/40 text-violet-200 hover:bg-violet-900/40 transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-violet-300" />
+                  Life Story
+                </Link>
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-slate-700 bg-slate-900/60 text-slate-300 hover:bg-slate-800 transition-colors"
+                >
+                  <House className="w-3.5 h-3.5" />
+                  Home
+                </Link>
+              </div>
+            </div>
+
+            <NatalProfileBuilder
+              mode="inline-gate"
+              currentProfile={activeProfile}
+              onSaveProfile={async (updated) => {
+                await handleSaveProfile(updated);
+                navigate("/chart");
+              }}
+              onLoadSample={handleLoadSampleChart}
+              isCalculating={calculate.isPending}
+            />
+          </div>
+        )}
+
         {/* Modal for editing profile anytime */}
         {isProfileModalOpen && <NatalProfileBuilder
           mode="dialog"
@@ -369,7 +406,6 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             onEditProfile={() => setIsProfileModalOpen(true)}
             onSwitchProfile={handleClearProfile}
             onRefreshTransits={refreshLiveTransit}
-            onCalculateTransit={calculateEnergyTransit}
           />
         )}
         {activeProfile && !result && (section === "reading" || section === "guide") && (

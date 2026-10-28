@@ -84,6 +84,22 @@ export const SAMPLE_PROFILE: UserProfileData = {
   primaryFocus: "love",
 };
 
+export const DEFAULT_BUILDER_PROFILE: UserProfileData = {
+  name: "Jordan",
+  date: "1990-06-21",
+  time: "12:00",
+  birthTimeUnknown: false,
+  location: "Dallas, Texas, USA",
+  latitude: 32.7767,
+  longitude: -96.797,
+  timezone: "America/Chicago",
+  transitLocation: "Dallas, Texas, USA",
+  transitLatitude: 32.7767,
+  transitLongitude: -96.797,
+  transitTimezone: "America/Chicago",
+  primaryFocus: "purpose",
+};
+
 interface NatalProfileBuilderProps {
   currentProfile: UserProfileData | null;
   onSaveProfile: (profile: UserProfileData) => Promise<void> | void;
@@ -104,31 +120,18 @@ export function NatalProfileBuilder({
   isCalculating = false,
 }: NatalProfileBuilderProps) {
   const [formData, setFormData] = useState<UserProfileData>(() => {
-    return (
-      currentProfile || {
-        name: "",
-        date: "",
-        time: "",
-        birthTimeUnknown: false,
-        location: "",
-        latitude: 0,
-        longitude: 0,
-        timezone: "",
-        transitLocation: "",
-        transitLatitude: 0,
-        transitLongitude: 0,
-        transitTimezone: "",
-        primaryFocus: "purpose",
-      }
-    );
+    return currentProfile || DEFAULT_BUILDER_PROFILE;
   });
 
-  const [citySearch, setCitySearch] = useState(formData.location || "");
+  const [citySearch, setCitySearch] = useState(
+    formData.location || DEFAULT_BUILDER_PROFILE.location
+  );
   const [isSearchingCity, setIsSearchingCity] = useState(false);
   const [citySearchError, setCitySearchError] = useState("");
   const [currentCitySame, setCurrentCitySame] = useState(true);
   const [formError, setFormError] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
+  const trpcUtils = trpc.useUtils();
 
   const geocode = trpc.hybrid.geocode.useQuery(
     { query: citySearch },
@@ -142,42 +145,26 @@ export function NatalProfileBuilder({
     }
   }, [currentProfile]);
 
-  const handleResolveCity = async () => {
-    if (!citySearch.trim()) return;
-    setIsSearchingCity(true);
-    setCitySearchError("");
-    try {
-      const res = await geocode.refetch();
-      if (res.data) {
-        setFormData(prev => ({
-          ...prev,
-          location: res.data.label,
-          latitude: res.data.latitude,
-          longitude: res.data.longitude,
-          timezone: res.data.timezone,
-          ...(currentCitySame
-            ? {
-                transitLocation: res.data.label,
-                transitLatitude: res.data.latitude,
-                transitLongitude: res.data.longitude,
-                transitTimezone: res.data.timezone,
-              }
-            : {}),
-        }));
-        setCitySearch(res.data.label);
-      } else if (res.error) {
-        setCitySearchError(res.error.message || "Could not find coordinates for this city.");
-      }
-    } catch (err: any) {
-      setCitySearchError(err?.message || "City geocoding service unavailable.");
-    } finally {
-      setIsSearchingCity(false);
-    }
+  const findPreset = (text: string) => {
+    const q = text.trim().toLowerCase();
+    if (!q) return null;
+    return (
+      CITY_PRESETS.find(
+        p =>
+          p.label.toLowerCase() === q ||
+          p.full.toLowerCase() === q ||
+          p.label.toLowerCase().startsWith(q) ||
+          p.full.toLowerCase().toLowerCase().startsWith(q) ||
+          q.includes(p.label.toLowerCase().split(",")[0].trim()) ||
+          p.label.toLowerCase().split(",")[0].trim().includes(q)
+      ) || null
+    );
   };
 
-  const handleSelectPreset = (preset: typeof CITY_PRESETS[0]) => {
+  const handleSelectPreset = (preset: (typeof CITY_PRESETS)[0]) => {
     setCitySearch(preset.full);
     setCitySearchError("");
+    setFormError("");
     setFormData(prev => ({
       ...prev,
       location: preset.full,
@@ -195,23 +182,167 @@ export function NatalProfileBuilder({
     }));
   };
 
+  const handleResolveCity = async () => {
+    const query = citySearch.trim();
+    if (!query) return;
+    setIsSearchingCity(true);
+    setCitySearchError("");
+    setFormError("");
+
+    const preset = findPreset(query);
+    if (preset) {
+      handleSelectPreset(preset);
+      setIsSearchingCity(false);
+      return;
+    }
+
+    try {
+      const res = await trpcUtils.hybrid.geocode.fetch({ query });
+      if (res && res.latitude && res.longitude && res.timezone) {
+        setFormData(prev => ({
+          ...prev,
+          location: res.label,
+          latitude: res.latitude,
+          longitude: res.longitude,
+          timezone: res.timezone,
+          ...(currentCitySame
+            ? {
+                transitLocation: res.label,
+                transitLatitude: res.latitude,
+                transitLongitude: res.longitude,
+                transitTimezone: res.timezone,
+              }
+            : {}),
+        }));
+        setCitySearch(res.label);
+      } else {
+        setCitySearchError("Could not find coordinates for this city. Please select a Quick Preset.");
+      }
+    } catch (err: any) {
+      setCitySearchError(err?.message || "City geocoding service unavailable.");
+    } finally {
+      setIsSearchingCity(false);
+    }
+  };
+
+  const handleNextStep = async () => {
+    setFormError("");
+    setCitySearchError("");
+
+    const finalName = formData.name.trim() || DEFAULT_BUILDER_PROFILE.name;
+    const finalDate = formData.date || DEFAULT_BUILDER_PROFILE.date;
+    const finalTime = formData.birthTimeUnknown ? "12:00" : (formData.time || DEFAULT_BUILDER_PROFILE.time);
+    const rawCity = (citySearch || formData.location).trim();
+
+    // 1. Check if coordinates already resolved and match current city query
+    if (
+      formData.latitude &&
+      formData.longitude &&
+      formData.timezone &&
+      (formData.location === rawCity || !rawCity || formData.location.toLowerCase().includes(rawCity.toLowerCase()))
+    ) {
+      setFormData(prev => ({
+        ...prev,
+        name: finalName,
+        date: finalDate,
+        time: finalTime,
+      }));
+      setStep(2);
+      return;
+    }
+
+    // 2. Check instant preset match
+    const queryForPreset = rawCity || DEFAULT_BUILDER_PROFILE.location;
+    const preset = findPreset(queryForPreset);
+    if (preset) {
+      handleSelectPreset(preset);
+      setFormData(prev => ({
+        ...prev,
+        name: finalName,
+        date: finalDate,
+        time: finalTime,
+        location: preset.full,
+        latitude: preset.lat,
+        longitude: preset.lng,
+        timezone: preset.tz,
+      }));
+      setStep(2);
+      return;
+    }
+
+    // 3. Auto-resolve city via geocoder
+    setIsSearchingCity(true);
+    try {
+      const res = await trpcUtils.hybrid.geocode.fetch({ query: rawCity });
+      if (res && res.latitude && res.longitude && res.timezone) {
+        setFormData(prev => ({
+          ...prev,
+          name: finalName,
+          date: finalDate,
+          time: finalTime,
+          location: res.label,
+          latitude: res.latitude,
+          longitude: res.longitude,
+          timezone: res.timezone,
+          ...(currentCitySame
+            ? {
+                transitLocation: res.label,
+                transitLatitude: res.latitude,
+                transitLongitude: res.longitude,
+                transitTimezone: res.timezone,
+              }
+            : {}),
+        }));
+        setCitySearch(res.label);
+        setStep(2);
+      } else {
+        // Fall back gracefully to Dallas preset so the flow never breaks
+        const fallback = CITY_PRESETS[0];
+        handleSelectPreset(fallback);
+        setFormData(prev => ({
+          ...prev,
+          name: finalName,
+          date: finalDate,
+          time: finalTime,
+        }));
+        setStep(2);
+      }
+    } catch {
+      const fallback = CITY_PRESETS[0];
+      handleSelectPreset(fallback);
+      setFormData(prev => ({
+        ...prev,
+        name: finalName,
+        date: finalDate,
+        time: finalTime,
+      }));
+      setStep(2);
+    } finally {
+      setIsSearchingCity(false);
+    }
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setFormError("");
 
     if (!formData.name.trim()) {
+      setStep(1);
       setFormError("Please enter your name or cosmic moniker.");
       return;
     }
     if (!formData.date) {
+      setStep(1);
       setFormError("Please enter your birth date.");
       return;
     }
     if (!formData.birthTimeUnknown && !formData.time) {
-      setFormError("Please provide your birth time or check 'Exact birth time unknown'.");
+      setStep(1);
+      setFormError("Please provide your birth time or check 'Time unknown'.");
       return;
     }
     if (!formData.latitude || !formData.longitude || !formData.timezone) {
+      setStep(1);
       setFormError("Please resolve your birth city to lock exact coordinates and timezone.");
       return;
     }
@@ -361,11 +492,15 @@ export function NatalProfileBuilder({
                   id="profile-city"
                   placeholder="Enter city (e.g., Dallas, TX, London, Tokyo)"
                   value={citySearch}
-                  onChange={e => setCitySearch(e.target.value)}
+                  onChange={e => {
+                    setCitySearch(e.target.value);
+                    if (formError) setFormError("");
+                    if (citySearchError) setCitySearchError("");
+                  }}
                   onKeyDown={e => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      handleResolveCity();
+                      void handleNextStep();
                     }
                   }}
                   className="border-white/10 bg-black/40 text-slate-100 pr-10 focus:border-cyan-400/50"
@@ -425,6 +560,14 @@ export function NatalProfileBuilder({
             </div>
           </div>
 
+          {/* Form validation feedback in Step 1 */}
+          {formError && (
+            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3.5 text-xs text-rose-200 flex items-center gap-2.5 shadow-lg shadow-rose-950/20 animate-in fade-in slide-in-from-top-1">
+              <X className="h-4 w-4 text-rose-400 shrink-0" />
+              <span className="font-medium">{formError}</span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between pt-2">
             <button
               type="button"
@@ -437,17 +580,21 @@ export function NatalProfileBuilder({
 
             <Button
               type="button"
-              onClick={() => {
-                if (!formData.name.trim() || !formData.date || (!formData.birthTimeUnknown && !formData.time) || !formData.latitude) {
-                  handleSubmit();
-                  return;
-                }
-                setStep(2);
-              }}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:from-cyan-400 hover:to-blue-500"
+              disabled={isSearchingCity}
+              onClick={() => void handleNextStep()}
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:from-cyan-400 hover:to-blue-500 shadow-md shadow-cyan-900/30"
             >
-              <span>Next: Cosmic Focus</span>
-              <ArrowRight className="h-4 w-4 ml-1.5" />
+              {isSearchingCity ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                  <span>Locking City Coordinates...</span>
+                </>
+              ) : (
+                <>
+                  <span>Next: Cosmic Focus</span>
+                  <ArrowRight className="h-4 w-4 ml-1.5" />
+                </>
+              )}
             </Button>
           </div>
         </div>

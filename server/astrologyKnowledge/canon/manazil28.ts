@@ -67,7 +67,7 @@ export const MANZIL_CANON_RECORDS: ManzilCanonRecord[] = MANAZIL.map((name, idx)
     natalAndPsychologicalMeaning: doc.natalMeaning,
     firmamentCanonNote: {
       category: "FIRMAMENT_CANON",
-      statement: `Firmament locks the 28 Manazil to the Firmament Aldebaran-anchored 0° Aries frame (${startDeg.toFixed(2)}°–${endDeg.toFixed(2)}°), preserving the medieval Arabic tropicalized mansion wheel (Picatrix / Ibn Arabi) while noting historical pre-Islamic sidereal asterism origins.`,
+      statement: `Firmament locks the 28 Manazil to the tropical 0° Aries frame (${startDeg.toFixed(2)}°–${endDeg.toFixed(2)}°), preserving the medieval Arabic tropicalized mansion wheel (Picatrix / Ibn Arabi) while noting historical pre-Islamic sidereal asterism origins.`,
       provenance: {
         tradition: "firmament",
         sourceTitle: "Firmament Hybrid Zodiac Canon",
@@ -80,7 +80,7 @@ export const MANZIL_CANON_RECORDS: ManzilCanonRecord[] = MANAZIL.map((name, idx)
         "Ghayat al-Hakim (Picatrix) Book I ch. 4; Al-Biruni, Book of Instruction; Ibn Arabi, Mansions of the Moon",
       epistemicCategory: "TRADITION",
       disputedOrVariantNote:
-        "Pre-Islamic anwa' traditions anchored mansions to visible star asterisms; medieval Western/Andalusian Arabic astrology (Picatrix) used a 28-division frame starting at 0° Aries.",
+        "Pre-Islamic anwa' traditions anchored mansions to visible star asterisms; medieval Western/Andalusian Arabic astrology (Picatrix) tropicalized the 28 divisions starting at 0° Aries.",
     },
   };
 });

@@ -51,12 +51,3 @@ export type SavedChart = typeof savedCharts.$inferSelect;
 export type InsertSavedChart = typeof savedCharts.$inferInsert;
 export type SavedReading = typeof savedReadings.$inferSelect;
 export type InsertSavedReading = typeof savedReadings.$inferInsert;
-
-/** Per-account durable loved-one profiles; migration required before production use. */
-export const lovedOnes = mysqlTable("loved_ones", {
-  id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull(),
-  payload: json("payload").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, table => ({ openIdIdx: index("loved_ones_open_id_idx").on(table.openId) }));

@@ -63,7 +63,7 @@ describe("Vedic Dasha and Ashtakavarga calculation layer", () => {
       julianDay: 2483275.17,
     } as ChartResult);
     const dasha = (items: typeof base) => items.find(item => item.technique === "dasha");
-    expect(dasha(base)?.sourceTrace.calculationSettings?.coordinateFrame).toBe("firmament-aldebaran-anchored");
+    expect(dasha(base)?.sourceTrace.calculationSettings?.coordinateFrame).toBe("firmament-fixed-tropical");
     expect(dasha(base)?.sourceTrace.calculationSettings?.birthNakshatra).toBe(
       dasha(later)?.sourceTrace.calculationSettings?.birthNakshatra
     );

@@ -20,11 +20,12 @@ import {
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import { toast } from "sonner";
+import { FixedStarIntensityVisualizer } from "./FixedStarIntensityVisualizer";
 import "./ChartObservatory2050.css";
 
 type Frame = "god" | "agent";
 type Layer = "nakshatra" | "manzil" | "decan" | "stars";
-type Projection = "planisphere" | "wheel" | "diamond" | "dome";
+type Projection = "planisphere" | "wheel" | "diamond" | "dome" | "stars";
 
 const SYMBOLS: Record<string, string> = {
   Sun: "☉",
@@ -283,6 +284,15 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
                 <Radio size={14} />
                 <span>3D Horizon Dome</span>
               </button>
+              <button
+                type="button"
+                aria-pressed={projection === "stars"}
+                onClick={() => setProjection("stars")}
+                title="Detailed fixed star photometric magnitude, luminous flux, and chart resonance"
+              >
+                <Star size={14} className="text-amber-400" />
+                <span>Fixed Star Spectrum</span>
+              </button>
             </div>
 
             {/* Frame Switcher */}
@@ -350,10 +360,15 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
             </button>
           </div>
 
-          {/* THE SVG MAP STAGE */}
-          <div className="cg2050-wheel">
-            {/* PROJECTION 1: DIVINE PLANISPHERE SKY MAP */}
-            {projection === "planisphere" && (
+          {/* THE STAGE: CELESTIAL WHEEL OR FIXED STAR SPECTRUM */}
+          {projection === "stars" ? (
+            <div className="w-full min-w-0 my-2">
+              <FixedStarIntensityVisualizer chart={chart} />
+            </div>
+          ) : (
+            <div className="cg2050-wheel">
+              {/* PROJECTION 1: DIVINE PLANISPHERE SKY MAP */}
+              {projection === "planisphere" && (
               <svg
                 ref={svgRef}
                 viewBox="0 0 600 600"
@@ -944,6 +959,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
               </svg>
             )}
           </div>
+        )}
 
           {/* Time Scrubber / Drift Bar */}
           <div className="cg2050-scrubber">
@@ -986,7 +1002,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
               <Eye size={13} className="text-amber-300" /> FIXED STARS PRESERVED
             </span>
             <span>
-              <Orbit size={13} className="text-cyan-300" /> CANONICAL PLANETS POSITIONED
+              <Orbit size={13} className="text-cyan-300" /> TROPICAL PLANETS POSITIONED
             </span>
           </div>
           <p className="cg2050-help">
@@ -1134,7 +1150,7 @@ export function ChartObservatory2050({ chart }: { chart: ChartResult }) {
               <small>
                 {layer === "stars"
                   ? "Nearest archived fixed star beacon by divine separation."
-                  : `Permanent coordinate division sector corresponding to ${selectedRow?.name}'s canonical longitude.`}
+                  : `Permanent coordinate division sector corresponding to ${selectedRow?.name}'s tropical longitude.`}
               </small>
             </div>
           </div>
