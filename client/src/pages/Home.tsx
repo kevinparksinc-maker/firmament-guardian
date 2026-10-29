@@ -295,6 +295,32 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
       if (!result && !calculate.isPending) void calculateChart(worldview, readingMode, nextForm);
     }
   }, []);
+
+  useEffect(() => {
+    const onTransitUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        transitLocation: string;
+        transitLatitude: number;
+        transitLongitude: number;
+        transitTimezone: string;
+      }>).detail;
+      if (!detail) return;
+      setForm(prev => {
+        const next = {
+          ...prev,
+          transitLocation: detail.transitLocation,
+          transitLatitude: detail.transitLatitude,
+          transitLongitude: detail.transitLongitude,
+          transitTimezone: detail.transitTimezone,
+        };
+        void calculateChart(worldview, readingMode, next);
+        return next;
+      });
+      setTransitLocationQuery(detail.transitLocation);
+    };
+    window.addEventListener("fg:transit-location-updated", onTransitUpdate);
+    return () => window.removeEventListener("fg:transit-location-updated", onTransitUpdate);
+  }, [worldview, readingMode]);
   return (
     <div className="relative min-h-screen isolate bg-transparent text-slate-100 selection:bg-violet-400/30">
       <div

@@ -4,13 +4,14 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { calculateChart, geocodeLocation, type ChartResult } from "./astronomy";
+import { calculateChart, geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
 import {
   followUp,
   generateChapter,
   generateInterpretation,
   READING_CHAPTERS,
 } from "./interpretation";
+import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import { askHost } from "./host";
 import { horaryFollowUp, openHoraryQuestion, type HoraryChart } from "./horary";
 import { getZodiacSignReading } from "./zodiacHorary";
@@ -140,6 +141,9 @@ export const appRouter = router({
     geocode: publicProcedure
       .input(z.object({ query: z.string().min(2) }))
       .query(({ input }) => geocodeLocation(input.query)),
+    reverseGeocode: publicProcedure
+      .input(z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }))
+      .query(({ input }) => reverseGeocodeLocation(input.latitude, input.longitude)),
     calculate: publicProcedure
       .input(chartInput)
       .mutation(({ input }) => calculateChart(input)),

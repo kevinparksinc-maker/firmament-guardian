@@ -3,6 +3,7 @@ import { Activity, ArrowRight, Clock3, RefreshCw, Sparkles, Zap } from "lucide-r
 import { Link } from "wouter";
 import { calculatePlanetaryHours } from "../lib/planetaryHours";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
+import { TransitLocationBar } from "./TransitLocationBar";
 
 const MAX_ORB = 5;
 const aspectFlow: Record<TransitContact["aspect"], number> = {
@@ -48,7 +49,8 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
         <p className="mt-1 text-sm text-slate-300">Feel the Flow. See What’s Ahead.</p>
       </div><div className="rounded-full border border-amber-300/45 bg-amber-300/10 p-3 text-amber-200"><Activity size={25}/></div>
     </div>
-    {onRefresh && <button type="button" disabled={calculating} onClick={onRefresh} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-300/10 px-4 text-sm font-semibold text-amber-100 disabled:opacity-50"><RefreshCw size={15} className={calculating ? "animate-spin" : ""}/>Refresh current energy</button>}
+    <TransitLocationBar className="mt-4" />
+    {onRefresh && <button type="button" disabled={calculating} onClick={onRefresh} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-300/10 px-4 text-sm font-semibold text-amber-100 disabled:opacity-50"><RefreshCw size={15} className={calculating ? "animate-spin" : ""}/>Refresh current energy</button>}
     {!data ? <div className="mt-5 rounded-xl border border-amber-200/25 bg-white/[.035] p-4 text-sm text-slate-200">
       {calculating ? "Calculating your personal sky…" : "Your birth chart is ready for a personal energy forecast. Open Cosmic Weather to calculate current transit contacts with your natal chart."}
       <div className="mt-3"><Link className="text-amber-200 underline underline-offset-4" href="/guide?tab=weather#main-cosmos-tabs">Open Cosmic Weather →</Link></div>

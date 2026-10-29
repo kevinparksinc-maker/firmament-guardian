@@ -300,3 +300,36 @@ export async function geocodeLocation(query: string) {
   if (lastError instanceof Error && lastError.message === "No matching place found.") throw lastError;
   throw new Error("Location search is temporarily unavailable. Please try the pin again in a moment.");
 }
+
+export async function reverseGeocodeLocation(latitude: number, longitude: number) {
+  const timezone = tzLookup(latitude, longitude);
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: { "User-Agent": "Bible Believers AstrologyHybridZodiac/1.0", Accept: "application/json" },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (response.ok) {
+        const data: any = await response.json();
+        const address = data.address || {};
+        const city = address.city || address.town || address.village || address.municipality || address.county || "";
+        const state = address.state || address.region || "";
+        const country = address.country || "";
+        const parts = [city, state, country].filter(Boolean);
+        const label = parts.length > 0 ? parts.join(", ") : (data.display_name?.split(",").slice(0, 3).join(",") || `GPS (${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°)`);
+        return { label, latitude, longitude, timezone };
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+  return {
+    label: `GPS (${latitude.toFixed(3)}°, ${longitude.toFixed(3)}°)`,
+    latitude,
+    longitude,
+    timezone,
+  };
+}

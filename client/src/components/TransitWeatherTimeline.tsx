@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSovereignTier, SovereignTeaserLock } from "./SovereignTierModal";
 import type { ChartResult } from "../../../server/astronomy";
+import { TransitLocationBar } from "./TransitLocationBar";
 
 interface TransitWeatherTimelineProps {
   chart: ChartResult | null;
@@ -247,6 +248,8 @@ export function TransitWeatherTimeline({
             </div>
           </div>
         </div>
+
+        <TransitLocationBar className="mt-4" />
 
         {/* Filter Pills */}
         <div className="mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">

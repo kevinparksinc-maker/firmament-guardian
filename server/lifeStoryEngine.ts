@@ -10,9 +10,9 @@ import {
 import { calculateArabicLots, calculateLot, LOT_FORMULAS, type Sect } from "./utils/arabicLots";
 import { interpretDashaLord, interpretBindus } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
 import { DOUBLE_LETTERS, SIMPLE_LETTERS, MOTHER_LETTERS } from "./astrologyKnowledge/canon/seferYetzirah";
-import { DECANS_36 } from "./astrologyKnowledge/canon/decans36";
-import { MANAZIL_28 } from "./astrologyKnowledge/canon/manazil28";
-import { CHINESE_MANSIONS_28 } from "./astrologyKnowledge/canon/chineseMansions28";
+import { DECAN_CANON_RECORDS } from "./astrologyKnowledge/canon/decans36";
+import { MANZIL_CANON_RECORDS } from "./astrologyKnowledge/canon/manazil28";
+import { CHINESE_MANSIONS } from "./astrologyKnowledge/canon/chineseMansions28";
 import { invokeLLM } from "./_core/llm";
 import { buildAstrologyEvidencePacket, formatEvidencePacket } from "./astrologyKnowledge/evidencePacket";
 
@@ -1003,8 +1003,13 @@ export async function generateLifeStoryChapter(
     ],
   });
 
+  const rawContent = response.choices[0]?.message?.content;
   const content =
-    response.choices[0]?.message?.content ||
+    (typeof rawContent === "string"
+      ? rawContent
+      : Array.isArray(rawContent)
+        ? rawContent.map((c: any) => ("text" in c ? c.text : "")).join("\n")
+        : "") ||
     "The celestial narrative is temporarily unavailable. Please retry.";
 
   return {

@@ -1,28 +1,86 @@
 import { Link, useLocation } from "wouter";
-import { BookOpen, Compass, Diamond, House, UserRound } from "lucide-react";
-import { PROFILE_TABS } from "@/config/profileNavigation";
+import { BookOpen, CloudSun, Compass, Diamond, House, Menu, Sparkles, UserRound, Zap } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { trpc } from "@/lib/trpc";
 
-const tabIcons = { Home: House, Chart: Diamond, Reading: BookOpen, Guide: Compass, Profile: UserRound } as const;
-
-/** One persistent five-tab navigator shared across the entire observatory. */
 export function PrimaryProfileNavigation() {
   const { profile } = useProfileSession();
   const [path] = useLocation();
   const account = trpc.auth.me.useQuery(undefined, { retry: false });
   if (!profile || !account.data) return null;
 
-  return <nav aria-label="Primary profile navigation"
-    className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-amber-200/30 bg-[#061225]/95 p-1.5 pb-[max(8px,env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgba(0,0,0,.25)] backdrop-blur-lg md:sticky md:top-0 md:bottom-auto md:mx-auto md:mb-5 md:max-w-[1480px] md:rounded-2xl md:border">
-    {PROFILE_TABS.map(item => {
-      const Icon = tabIcons[item.label];
-      const active = path === item.href;
-      return <Link key={item.href} href={item.href}
-        aria-current={active ? "page" : undefined}
-        className={`flex min-h-12 sm:min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 sm:px-2 py-1.5 text-center text-[11px] sm:text-xs font-semibold transition-colors ${active ? "text-[#f5cd78] bg-amber-400/10" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
-        <Icon size={21} strokeWidth={active ? 2.3 : 1.7} aria-hidden="true"/><span>{item.label}</span>
-      </Link>;
-    })}
-  </nav>;
+  const isWeatherTab = path === "/guide" && typeof window !== "undefined" && window.location.href.includes("tab=weather");
+
+  const handleOpenExplore = () => {
+    window.dispatchEvent(new Event("fg:open-mobile-menu"));
+  };
+
+  const navItems = [
+    { href: "/", label: "Home", Icon: House, active: path === "/" },
+    { href: "/chart", label: "Chart", Icon: Diamond, active: path === "/chart" },
+    {
+      href: "/guide?tab=weather#main-cosmos-tabs",
+      label: "Energy",
+      Icon: Zap,
+      active: isWeatherTab,
+      onClick: (e: React.MouseEvent) => {
+        if (path === "/guide") {
+          e.preventDefault();
+          window.history.replaceState({}, "", "/guide?tab=weather#main-cosmos-tabs");
+          window.dispatchEvent(new CustomEvent("fg:select-tab", { detail: { tab: "weather" } }));
+          document.getElementById("main-cosmos-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      },
+    },
+    { href: "/reading", label: "Reading", Icon: BookOpen, active: path === "/reading" },
+    {
+      href: "#menu",
+      label: "Explore",
+      Icon: Menu,
+      active: false,
+      isAction: true,
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        handleOpenExplore();
+      },
+    },
+  ];
+
+  return (
+    <nav
+      aria-label="Mobile bottom navigation dock"
+      className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 border-t border-amber-200/25 bg-[#061022]/95 p-1 pb-[max(6px,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.4)] backdrop-blur-xl md:hidden"
+    >
+      {navItems.map((item) => {
+        const Icon = item.Icon;
+        if (item.isAction) {
+          return (
+            <button
+              key={item.label}
+              type="button"
+              onClick={item.onClick}
+              className="flex min-h-[50px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-center text-[10px] font-semibold text-slate-300 transition-colors hover:text-white active:scale-95"
+            >
+              <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+              <span>{item.label}</span>
+            </button>
+          );
+        }
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={item.onClick}
+            aria-current={item.active ? "page" : undefined}
+            className={`flex min-h-[50px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-center text-[10px] font-semibold transition-colors active:scale-95 ${
+              item.active ? "text-[#f5cd78] bg-amber-400/10 font-bold" : "text-slate-300 hover:text-white"
+            }`}
+          >
+            <Icon size={19} strokeWidth={item.active ? 2.3 : 1.8} aria-hidden="true" />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }

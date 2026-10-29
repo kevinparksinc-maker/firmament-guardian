@@ -16,8 +16,10 @@ import {
   Flame,
   Search,
   Loader2,
+  Navigation,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,6 +131,7 @@ export function NatalProfileBuilder({
   const [isSearchingCity, setIsSearchingCity] = useState(false);
   const [citySearchError, setCitySearchError] = useState("");
   const [currentCitySame, setCurrentCitySame] = useState(true);
+  const [isLocatingTransitGps, setIsLocatingTransitGps] = useState(false);
   const [formError, setFormError] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
   const trpcUtils = trpc.useUtils();
@@ -223,6 +226,48 @@ export function NatalProfileBuilder({
     } finally {
       setIsSearchingCity(false);
     }
+  };
+
+  const handleGpsTransitLocation = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+    setIsLocatingTransitGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await trpcUtils.hybrid.reverseGeocode.fetch({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
+          setFormData(prev => ({
+            ...prev,
+            transitLocation: res.label,
+            transitLatitude: res.latitude,
+            transitLongitude: res.longitude,
+            transitTimezone: res.timezone,
+          }));
+          toast.success(`Current sky locked to ${res.label} via GPS!`);
+        } catch {
+          setFormData(prev => ({
+            ...prev,
+            transitLocation: `GPS (${pos.coords.latitude.toFixed(2)}°, ${pos.coords.longitude.toFixed(2)}°)`,
+            transitLatitude: pos.coords.latitude,
+            transitLongitude: pos.coords.longitude,
+            transitTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          }));
+          toast.success(`Current sky locked to GPS coordinates!`);
+        } finally {
+          setIsLocatingTransitGps(false);
+        }
+      },
+      () => {
+        setIsLocatingTransitGps(false);
+        toast.error("GPS location permission was denied or timed out.");
+      },
+      { timeout: 10000 }
+    );
   };
 
   const handleNextStep = async () => {
@@ -347,13 +392,25 @@ export function NatalProfileBuilder({
       return;
     }
 
+    let transitLat = formData.transitLatitude;
+    let transitLng = formData.transitLongitude;
+    let transitTz = formData.transitTimezone;
+    if (formData.transitLocation && (!transitLat || !transitTz)) {
+      const preset = findPreset(formData.transitLocation);
+      if (preset) {
+        transitLat = preset.lat;
+        transitLng = preset.lng;
+        transitTz = preset.tz;
+      }
+    }
+
     const payload: UserProfileData = {
       ...formData,
       time: formData.birthTimeUnknown ? "12:00" : formData.time,
       transitLocation: formData.transitLocation || formData.location,
-      transitLatitude: formData.transitLatitude || formData.latitude,
-      transitLongitude: formData.transitLongitude || formData.longitude,
-      transitTimezone: formData.transitTimezone || formData.timezone,
+      transitLatitude: transitLat || formData.latitude,
+      transitLongitude: transitLng || formData.longitude,
+      transitTimezone: transitTz || formData.timezone,
     };
 
     onSaveProfile(payload);
@@ -659,13 +716,31 @@ export function NatalProfileBuilder({
             </div>
 
             {!currentCitySame && (
-              <div className="space-y-1.5 pt-1">
-                <Input
-                  placeholder="Enter current city (e.g. New York, London, Miami)"
-                  value={formData.transitLocation || ""}
-                  onChange={e => setFormData(prev => ({ ...prev, transitLocation: e.target.value }))}
-                  className="border-white/10 bg-black/40 text-slate-100 text-xs"
-                />
+              <div className="space-y-2 pt-1">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter current city (e.g. New York, London, Miami)"
+                    value={formData.transitLocation || ""}
+                    onChange={e => setFormData(prev => ({ ...prev, transitLocation: e.target.value }))}
+                    className="border-white/10 bg-black/40 text-slate-100 text-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGpsTransitLocation}
+                    disabled={isLocatingTransitGps}
+                    className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20 text-xs shrink-0"
+                  >
+                    {isLocatingTransitGps ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5 mr-1" />}
+                    <span>Use GPS</span>
+                  </Button>
+                </div>
+                {formData.transitLocation && formData.transitTimezone && (
+                  <p className="text-[11px] text-emerald-300 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>Active Sky locked: <strong>{formData.transitLocation}</strong></span>
+                  </p>
+                )}
               </div>
             )}
           </div>

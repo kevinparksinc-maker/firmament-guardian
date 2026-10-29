@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { BookOpen, Loader2, Sparkles } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { trpc } from "@/lib/trpc";

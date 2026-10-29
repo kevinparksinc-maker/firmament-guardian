@@ -34,6 +34,12 @@ type ProfileSession = {
   savedProfiles: UserProfileData[];
   deleteSavedProfile: (profile: UserProfileData) => void;
   setProfile: (next: UserProfileData | null) => void;
+  updateTransitLocation: (transit: {
+    transitLocation: string;
+    transitLatitude: number;
+    transitLongitude: number;
+    transitTimezone: string;
+  }) => void;
   setChart: Dispatch<SetStateAction<ChartResult | null>>;
 };
 
@@ -90,7 +96,40 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const value = useMemo(() => ({ profile, chart, savedProfiles, setProfile, setChart, deleteSavedProfile }), [profile, chart, savedProfiles, setProfile, deleteSavedProfile]);
+  const updateTransitLocation = useCallback((transit: {
+    transitLocation: string;
+    transitLatitude: number;
+    transitLongitude: number;
+    transitTimezone: string;
+  }) => {
+    updateProfile(current => {
+      if (!current) return current;
+      const next: UserProfileData = {
+        ...current,
+        transitLocation: transit.transitLocation,
+        transitLatitude: transit.transitLatitude,
+        transitLongitude: transit.transitLongitude,
+        transitTimezone: transit.transitTimezone,
+      };
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+          const existing = readSavedProfiles();
+          const withoutMatch = existing.filter(p => profileId(p) !== profileId(next));
+          const updated = [next, ...withoutMatch].slice(0, 100);
+          window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
+          setSavedProfiles(updated);
+        } catch {}
+      }
+      return next;
+    });
+    window.dispatchEvent(new CustomEvent("fg:transit-location-updated", { detail: transit }));
+  }, []);
+
+  const value = useMemo(
+    () => ({ profile, chart, savedProfiles, setProfile, updateTransitLocation, setChart, deleteSavedProfile }),
+    [profile, chart, savedProfiles, setProfile, updateTransitLocation, deleteSavedProfile]
+  );
   return <ProfileSessionContext.Provider value={value}>{children}</ProfileSessionContext.Provider>;
 }
 
