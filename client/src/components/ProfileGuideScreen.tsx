@@ -242,7 +242,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
             }`}
           >
             <Calendar className="h-4 w-4 text-cyan-300" />
-            <span>3. 30/90-Day Cosmic Weather</span>
+            <span>3. Immediate Cosmic Weather (Now–7 Days)</span>
           </button>
 
           <button
@@ -670,7 +670,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
           />
         )}
 
-        {/* 3. 30/90-Day Cosmic Weather Tab */}
+        {/* 3. Immediate Cosmic Weather (Now–7 Days) Tab */}
         {mainTab === "weather" && (
           <><div className="fg-module-banner"><p className="fg-module-eyebrow">03 / THE CELESTIAL WEATHER STATION</p><h2 className="fg-module-title">The sky in motion.</h2><p className="fg-module-desc">Follow calculated planetary movements through the same fixed-stellar and local chart framework. Current testimony and future sky positions remain distinct from guaranteed life events.</p></div>
           <TransitWeatherTimeline

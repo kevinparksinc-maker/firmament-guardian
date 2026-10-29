@@ -19,6 +19,21 @@ type ProfileHomeScreenProps = {
 };
 
 const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"] as const;
+const DEGREE = (longitude: number) => {
+  const normalized = ((longitude % 360) + 360) % 360;
+  const within = normalized % 30;
+  const degrees = Math.floor(within);
+  const minutes = Math.floor((within - degrees) * 60 + 0.00001);
+  return `${degrees}°${String(minutes).padStart(2, "0")}′`;
+};
+const ELEMENTAL_DECANS: Record<string, string[]> = {
+  Aries: ["Aries","Leo","Sagittarius"], Taurus: ["Taurus","Virgo","Capricorn"],
+  Gemini: ["Gemini","Libra","Aquarius"], Cancer: ["Cancer","Scorpio","Pisces"],
+  Leo: ["Leo","Sagittarius","Aries"], Virgo: ["Virgo","Capricorn","Taurus"],
+  Libra: ["Libra","Aquarius","Gemini"], Scorpio: ["Scorpio","Pisces","Cancer"],
+  Sagittarius: ["Sagittarius","Aries","Leo"], Capricorn: ["Capricorn","Taurus","Virgo"],
+  Aquarius: ["Aquarius","Gemini","Libra"], Pisces: ["Pisces","Cancer","Scorpio"],
+};
 function signAt(longitude: number | undefined): string {
   return typeof longitude === "number" && Number.isFinite(longitude)
     ? SIGNS[Math.floor((((longitude % 360) + 360) % 360) / 30)]
@@ -88,11 +103,27 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
         const selected = signals.find(signal => signal.title === activeSignal);
         if (!selected?.source) return null;
         const source = selected.source;
-        return <div role="region" aria-live="polite" className="mt-4 rounded-xl border border-[#D4AF37]/30 bg-black/25 p-3 text-sm text-slate-200">
-          <strong className="text-[#F3D38C]">{activeSignal} · {selected.value}</strong>
-          <p className="mt-2">Calculated longitude: {source.longitude.toFixed(2)}°{typeof source.house === "number" ? ` · House ${source.house}` : ""}</p>
-          <p className="mt-1 text-xs text-slate-400">{selected.caption} in the traditional chart interpretation. Explore the full chart for its aspects and supporting testimony.</p>
-          <Link href="/chart" className="mt-2 inline-block text-xs font-semibold text-amber-200 underline underline-offset-2">View on diamond chart →</Link>
+        const longitude = source.longitude;
+        const sign = signAt(longitude);
+        const decan = Math.min(2, Math.floor((((longitude % 360) + 360) % 30) / 10));
+        const details = [
+          ["Exact position", `${DEGREE(longitude)} ${sign}`],
+          ["Absolute longitude", `${longitude.toFixed(4)}°`],
+          ["Natal house", typeof source.house === "number" ? `House ${source.house}` : "Not calculated"],
+          ["Elemental-family decan", `Decan ${decan + 1} · ${ELEMENTAL_DECANS[sign]?.[decan] ?? "Unavailable"}`],
+          ["Decan interval", `${decan * 10}°–${(decan + 1) * 10}° ${sign}`],
+        ];
+        return <div role="region" aria-live="polite" className="mt-4 rounded-xl border border-[#D4AF37]/30 bg-black/25 p-4 text-sm text-slate-200">
+          <h3 className="font-serif text-lg text-[#F3D38C]">{activeSignal} · {DEGREE(longitude)} {sign}</h3>
+          <p className="mt-1 text-xs text-amber-100/80">Calculated placement dossier · tap any linked method to explore its meaning</p>
+          <dl className="mt-3 divide-y divide-white/10">
+            {details.map(([label,value]) => <div key={label} className="flex justify-between gap-4 py-2"><dt className="text-slate-400">{label}</dt><dd className="text-right text-white">{value}</dd></div>)}
+          </dl>
+          <p className="mt-3 text-xs leading-5 text-slate-300">Lunar mansions (Vedic, Arabic Manzil and Chinese), fixed-star contacts, planetary aspects and other doctrine results must be supplied by their respective calculated evidence resolvers. No mansion or star assignment is guessed from this longitude alone.</p>
+          <div className="mt-3 flex flex-wrap gap-4">
+            <Link href="/chart" className="text-xs font-semibold text-amber-200 underline underline-offset-2">Inspect full diamond chart →</Link>
+            <Link href="/reading" className="text-xs font-semibold text-cyan-200 underline underline-offset-2">Explore Master Interpreter →</Link>
+          </div>
         </div>;
       })()}
       {!chart && <p className="mt-4 text-center text-xs text-amber-200" role="status">{calculating ? "Calculating your divine signals…" : "Chart values unavailable; no illustrative placements are shown."}</p>}
