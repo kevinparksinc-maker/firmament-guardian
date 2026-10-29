@@ -1,4 +1,5 @@
 import sweph from "sweph";
+import { calculateEnergyRead } from "./energyReadV2";
 import { MAJOR_ASPECT_ORB_DEGREES } from "../shared/chartRules";
 import tzLookup from "tz-lookup";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
@@ -69,6 +70,8 @@ export type ChartResult = {
   momentPrecision: MomentPrecision;
   transitHouseFrame: TransitHouseFrame;
   transits: TransitRow[];
+  /** Eight-aspect weighted natal-to-transit energy calculation from the canonical chart positions. */
+  energyReadV2: ReturnType<typeof calculateEnergyRead>;
   validation: { passed: boolean; notes: string[] };
   /** Every longitude exposed by this result uses the same fixed reference frame. */
   referenceFrame: CoordinateFrame;
@@ -266,9 +269,13 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
   const transitRows = [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }];
+  const energyReadV2 = calculateEnergyRead(
+    movingBodies.map(body => ({ name: body.name, longitude: body.longitude, agentHouse: body.agentHouse, godHouse: body.godHouse })),
+    transits.map(body => ({ name: body.name, longitude: body.longitude, agentHouse: body.agentHouse, godHouse: body.godHouse })),
+  );
   const natalGeometry = calculateDomeFramework(domeInput([...movingBodies, northNode, southNode], asc));
   const transitGeometry = calculateDomeFramework(domeInput(transitRows, transitAsc ?? asc));
-  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: transitRows, validation, referenceFrame: REFERENCE_FRAME, firmament: { model: "zero-obliquity-visual-convention", horizonModel: hasAgentLocation ? "zero-tilt-local-sidereal" : "not-available", natal: natalGeometry, transit: transitGeometry } };
+  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: transitRows, energyReadV2, validation, referenceFrame: REFERENCE_FRAME, firmament: { model: "zero-obliquity-visual-convention", horizonModel: hasAgentLocation ? "zero-tilt-local-sidereal" : "not-available", natal: natalGeometry, transit: transitGeometry } };
 }
 
 export async function geocodeLocation(query: string) {
