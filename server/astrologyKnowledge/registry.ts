@@ -344,6 +344,17 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
       "Classical Parashari Bhinnashtakavarga and unreduced Sarvashtakavarga are calculated from Lahiri sidereal D1 positions, with per-planet and 337-total checksums; Trikona and Ekadhipatya reductions are not included.",
   },
   {
+    id: "vedic-ashtakavarga-classical",
+    tradition: "vedic",
+    technique: "ashtakavarga",
+    subject: "sign-strength",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "implemented",
+    statement:
+      "Classical Parashari Bhinnashtakavarga and unreduced Sarvashtakavarga are calculated from Lahiri sidereal D1 positions, with per-planet and 337-total checksums; Trikona and Ekadhipatya reductions are not included.",
+  },
+  {
     id: "vedic-dasha-architecture",
     tradition: "vedic",
     technique: "dasha",
