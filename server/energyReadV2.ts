@@ -20,7 +20,7 @@ export type EnergyContact = {
 };
 export function energyOrbIntensity(orb: number) {
   if (!Number.isFinite(orb) || orb < 0 || orb > 5) throw new Error("Invalid energy orb");
-  return Math.max(1, 6 - Math.ceil(orb));
+  return orb === 0 ? 5 : Math.max(1, 6 - Math.ceil(orb));
 }
 export function energySeparation(a: number, b: number) {
   if (!Number.isFinite(a) || !Number.isFinite(b)) throw new Error("Invalid planetary longitude");
