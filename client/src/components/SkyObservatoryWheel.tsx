@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import { angularDistance } from "../../../server/astrologyCore";
+import { isMinorAspect } from "../../../shared/chartRules";
 import {
   formatLongitude,
   normalizeLongitude,
@@ -36,7 +37,7 @@ type WheelAspect = {
   toName: string;
   toLon: number;
   toRadius: number;
-  aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition";
+  aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition" | "semisextile" | "semisquare" | "sesquiquadrate" | "quincunx";
   orb: number;
   receptionNote: string | null;
   ruleSummary: string;
@@ -434,6 +435,10 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
       [60, "sextile", "Sextile (60° · Nature of Venus): Cooperative opportunity and supportive communication."],
       [90, "square", "Square (90° · Nature of Mars): Dynamic friction, structural test, and decisive action."],
       [120, "trine", "Trine (120° · Nature of Jupiter): Harmonious flow, natural reception, and ease of integration."],
+      [30, "semisextile", "Semi-sextile (30°): A subtle developmental contact; supportive and counted at half weight."],
+      [45, "semisquare", "Semi-square (45°): Minor friction and adjustment; counted at half weight."],
+      [135, "sesquiquadrate", "Sesquiquadrate (135°): Minor friction and persistent adjustment; counted at half weight."],
+      [150, "quincunx", "Quincunx (150°): A dynamic adjustment contact; counted at half weight."],
       [180, "opposition", "Opposition (180° · Nature of Saturn): Polarity confrontation, mirror awareness, and negotiation."],
     ];
 
@@ -445,6 +450,7 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
         const b = coreNatal[j]!;
         const dist = angularDistance(a.longitude, b.longitude);
         for (const [deg, type, doctrine] of targets) {
+          if (isMinorAspect(type)) continue;
           const orb = Math.abs(dist - deg);
           if (orb <= 5) {
             const signA = signOf(a.longitude);
@@ -513,6 +519,7 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
         const b = horaryBodies[j]!;
         const dist = angularDistance(a.longitude, b.longitude);
         for (const [deg, type, doctrine] of targets) {
+          if (isMinorAspect(type)) continue;
           const orb = Math.abs(dist - deg);
           if (orb <= 6) {
             const signA = signOf(a.longitude);

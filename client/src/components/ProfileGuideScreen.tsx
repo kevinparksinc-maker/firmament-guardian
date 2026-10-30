@@ -175,7 +175,7 @@ function CalculationReveal({
                 ))
               ) : (
                 <div className="text-slate-500">
-                  No major contact within {MAJOR_ASPECT_ORB_DEGREES}°.
+                  No natal–transit aspect within its applicable orb.
                 </div>
               )}
             </div>

@@ -1,6 +1,6 @@
 import sweph from "sweph";
 import { calculateEnergyRead } from "./energyReadV2";
-import { MAJOR_ASPECT_ORB_DEGREES } from "../shared/chartRules";
+import { MAJOR_ASPECT_ORB_DEGREES, MINOR_ASPECT_ORB_DEGREES, MINOR_ASPECTS, aspectWeightMultiplier } from "../shared/chartRules";
 import tzLookup from "tz-lookup";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
 import { agentHouseFor, angularDistance, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship, type ReadingScope, type Worldview, type DualPlacement } from "./astrologyCore";
@@ -48,7 +48,13 @@ export type ChartRow = {
   overlay: Overlay;
   uncertainty?: MoonUncertainty;
 };
-export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition"; orb: number };
+export type TransitContact = {
+  natalName: string;
+  aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition" | (typeof MINOR_ASPECTS)[number];
+  orb: number;
+  /** Present on contacts calculated after minor-aspect weighting was introduced. */
+  weightMultiplier?: number;
+};
 export type TransitRow = ChartRow & { natalContacts: TransitContact[] };
 export type ChartResult = {
   input: ChartInput;
@@ -174,10 +180,25 @@ function topocentricMoonLongitude(jd: number, longitude: number, latitude: numbe
 function planetaryTopocentric(planet: number, locationAvailable: boolean) {
   return locationAvailable && planet === 1;
 }
-export function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number } | null {
+export function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number; weightMultiplier: number } | null {
   // angularDistance correctly wraps across 0°/360° (for example, 359° and 1° are 2° apart).
-  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
-  const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= MAJOR_ASPECT_ORB_DEGREES ? best : null;
+  const separation = angularDistance(a, b);
+  const targets: Array<{ target: number; aspect: TransitContact["aspect"]; maxOrb: number }> = [
+    { target: 0, aspect: "conjunction", maxOrb: MAJOR_ASPECT_ORB_DEGREES },
+    { target: 30, aspect: "semisextile", maxOrb: MINOR_ASPECT_ORB_DEGREES },
+    { target: 45, aspect: "semisquare", maxOrb: MINOR_ASPECT_ORB_DEGREES },
+    { target: 60, aspect: "sextile", maxOrb: MAJOR_ASPECT_ORB_DEGREES },
+    { target: 90, aspect: "square", maxOrb: MAJOR_ASPECT_ORB_DEGREES },
+    { target: 120, aspect: "trine", maxOrb: MAJOR_ASPECT_ORB_DEGREES },
+    { target: 135, aspect: "sesquiquadrate", maxOrb: MINOR_ASPECT_ORB_DEGREES },
+    { target: 150, aspect: "quincunx", maxOrb: MINOR_ASPECT_ORB_DEGREES },
+    { target: 180, aspect: "opposition", maxOrb: MAJOR_ASPECT_ORB_DEGREES },
+  ];
+  const best = targets
+    .map(({ target, aspect, maxOrb }) => ({ aspect, orb: Math.abs(separation - target), maxOrb }))
+    .filter(candidate => candidate.orb <= candidate.maxOrb)
+    .sort((x, y) => x.orb - y.orb)[0];
+  return best ? { aspect: best.aspect, orb: best.orb, weightMultiplier: aspectWeightMultiplier(best.aspect) } : null;
 }
 function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope, transit = false) {
   const date = transit ? input.transitDate : input.date;

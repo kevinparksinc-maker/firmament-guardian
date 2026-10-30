@@ -4,10 +4,12 @@ import { Link } from "wouter";
 import { calculatePlanetaryHours } from "../lib/planetaryHours";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
 import { TransitLocationBar } from "./TransitLocationBar";
+import { aspectWeightMultiplier, isMinorAspect, MINOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
 
 const MAX_ORB = 5;
 const aspectFlow: Record<TransitContact["aspect"], number> = {
   trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 0,
+  semisextile: 1, semisquare: -1, sesquiquadrate: -1, quincunx: 0,
 };
 const percentWeight = (orb: number) =>
   orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
@@ -19,7 +21,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
     if (!chart || chart.readingScope === "natal") return null;
     const contacts = chart.transits.flatMap(body =>
       body.natalContacts.filter(contact => Number.isFinite(contact.orb) && contact.orb <= MAX_ORB)
-        .map(contact => ({ ...contact, transit: body.name, strength: percentWeight(contact.orb) }))
+        .map(contact => ({ ...contact, transit: body.name, strength: Math.round(percentWeight(contact.orb) * (contact.weightMultiplier ?? aspectWeightMultiplier(contact.aspect))) }))
     );
     const flow = contacts.filter(c => aspectFlow[c.aspect] === 1).reduce((sum,c) => sum+c.strength,0);
     const friction = contacts.filter(c => aspectFlow[c.aspect] === -1).reduce((sum,c) => sum+c.strength,0);
@@ -85,11 +87,11 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
             <div className="space-y-4">
               <div><div className="mb-2 flex justify-between text-xs"><span className="text-emerald-200">Harmonious contacts</span><strong className="text-white">{data.flow}</strong></div><div className="h-2.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.4)]" style={{width:`${flowShare*100}%`}}/></div></div>
               <div><div className="mb-2 flex justify-between text-xs"><span className="text-rose-200">Friction contacts</span><strong className="text-white">{data.friction}</strong></div><div className="h-2.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-rose-400" style={{width:`${total ? (1-flowShare)*100 : 0}%`}}/></div></div>
-              <div className="flex flex-wrap gap-2 text-[11px]"><span className="rounded-lg border border-violet-300/20 bg-violet-300/10 px-2 py-1 text-violet-200">{data.neutral.length} conjunctions</span><span className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-amber-100">{data.contacts.filter(c=>c.orb<=1.25).length} tight contacts</span></div>
+              <div className="flex flex-wrap gap-2 text-[11px]"><span className="rounded-lg border border-violet-300/20 bg-violet-300/10 px-2 py-1 text-violet-200">{data.neutral.length} dynamic contacts</span><span className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-amber-100">{data.contacts.filter(c=>c.orb<=1.25).length} tight contacts</span></div>
             </div>
           </div>;
         })()}
-        <p className="mt-4 border-t border-white/10 pt-3 text-[11px] leading-5 text-slate-400">The dial compares actual calculated natal–transit aspect weights, not a prediction of outcomes. Conjunctions are counted separately. Future energy curves require new timed chart calculations.</p>
+        <p className="mt-4 border-t border-white/10 pt-3 text-[11px] leading-5 text-slate-400">The dial compares calculated natal–transit aspect weights, not a prediction of outcomes. Minor aspects have a 2° orb and half weight; dynamic contacts are counted separately. Future energy curves require new timed chart calculations.</p>
       </div>
       <div className="mt-4 rounded-2xl border border-violet-300/20 bg-[linear-gradient(135deg,rgba(24,34,67,.94),rgba(10,15,32,.98))] p-4 sm:p-5">
         <div className="flex items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-violet-200">Planetary Contributors</p><h3 className="mt-1 font-serif text-lg text-white">What is shaping your energy?</h3></div><Sparkles size={19} className="text-amber-200"/></div>
@@ -98,10 +100,10 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
           return <div key={`${contact.transit}-${contact.natalName}-${index}`}>
             <div className="mb-2 flex items-center justify-between gap-2 text-xs"><span className="text-slate-100">{contact.transit} {contact.aspect} {contact.natalName}</span><span className={mode>0?"text-emerald-200":mode<0?"text-rose-200":"text-violet-200"}>{contact.strength}% · {mode>0?"Flow":mode<0?"Friction":"Conjunction"}</span></div>
             <div className="h-2 overflow-hidden rounded-full bg-white/10"><div className={`h-full rounded-full shadow-[0_0_12px_rgba(255,255,255,.13)] ${mode>0?"bg-gradient-to-r from-cyan-400 to-emerald-300":mode<0?"bg-gradient-to-r from-amber-400 to-rose-400":"bg-gradient-to-r from-violet-400 to-fuchsia-300"}`} style={{width:`${contact.strength}%`}}/></div>
-            <p className="mt-1 text-[10px] text-slate-400">{contact.orb.toFixed(2)}° exact orb · within 5°</p>
+            <p className="mt-1 text-[10px] text-slate-400">{contact.orb.toFixed(2)}° orb · {isMinorAspect(contact.aspect) ? `${MINOR_ASPECT_ORB_DEGREES}° minor limit · half weight` : "5° major limit"}</p>
           </div>;
         })}</div>
-        {!data.strongest.length && <p className="mt-3 text-xs text-slate-400">No major natal–transit contacts within the 5° orb.</p>}
+        {!data.strongest.length && <p className="mt-3 text-xs text-slate-400">No close natal–transit contacts within the applicable major or minor orb.</p>}
       </div>
       <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-[#0b1730] p-4">
         <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-cyan-200">Harmonic Energy Wave</p><h3 className="mt-1 font-serif text-lg text-white">Next 24 hours</h3></div><Clock3 size={18} className="text-cyan-200"/></div>
@@ -134,10 +136,10 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
           return <div key={id} className="rounded-lg border border-white/10 bg-white/[.035] p-3 text-sm text-slate-200">
             <button type="button" className="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200" aria-expanded={selectedContact === id} onClick={() => setSelectedContact(current => current === id ? null : id)}>
               <span className="font-medium text-white">Transit {c.transit} {c.aspect} natal {c.natalName}</span>
-              <span className="mt-1 block text-xs text-amber-100">{c.orb.toFixed(2)}° orb · {c.strength}% weight · {aspectFlow[c.aspect] === 1 ? "Flow" : aspectFlow[c.aspect] === -1 ? "Friction" : "Conjunction / context dependent"}</span>
+              <span className="mt-1 block text-xs text-amber-100">{c.orb.toFixed(2)}° orb · {c.strength}% weight · {isMinorAspect(c.aspect) ? "Minor · half weight" : "Major"} · {aspectFlow[c.aspect] === 1 ? "Flow" : aspectFlow[c.aspect] === -1 ? "Friction" : "Dynamic / context dependent"}</span>
             </button>
             {selectedContact === id && <div className="mt-3 border-t border-white/10 pt-3 text-xs leading-5 text-slate-300">
-              <p>Exact chart testimony: transiting {c.transit} forms a {c.aspect} with natal {c.natalName}, separated by {c.orb.toFixed(2)}°. This contact contributes {c.strength} weighted points under the configured 5° orb.</p>
+              <p>Exact chart testimony: transiting {c.transit} forms a {c.aspect} with natal {c.natalName}, separated by {c.orb.toFixed(2)}°. This contact contributes {c.strength} weighted points under the {isMinorAspect(c.aspect) ? `${MINOR_ASPECT_ORB_DEGREES}° minor orb and half-weight rule` : "5° major orb rule"}.</p>
               <p className="mt-2">A complete judgment requires the planets’ signs, houses, rulerships, relevant mansions and other calculated Canon evidence. Open the Master Interpreter for chart-level synthesis; this card does not invent those missing results.</p>
               <Link href="/reading" className="mt-2 inline-block font-semibold text-cyan-200 underline underline-offset-2">Ask the Master Interpreter →</Link>
             </div>}

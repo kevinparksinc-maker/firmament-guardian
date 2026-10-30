@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { ChartResult, ChartRow, TransitContact } from "../../../server/astronomy";
 
 const colors: Record<string, string> = { Sun: "#e4b83f", Moon: "#f4f1e8", Mercury: "#55b9bd", Venus: "#e78eb4", Mars: "#de5f58", Jupiter: "#b7a2dc", Saturn: "#9299a6", Uranus: "#58bda7", Neptune: "#8997dc", Pluto: "#c68bc9", "North Node": "#63b890", "South Node": "#d38b52" };
-const aspectColors: Record<TransitContact["aspect"], string> = { conjunction: "#dcae3f", sextile: "#57b981", square: "#d95b58", trine: "#4eaf79", opposition: "#dc6960" };
+const aspectColors: Record<TransitContact["aspect"], string> = { conjunction: "#dcae3f", sextile: "#57b981", square: "#d95b58", trine: "#4eaf79", opposition: "#dc6960", semisextile: "#75b8a0", semisquare: "#bf7373", sesquiquadrate: "#bf7373", quincunx: "#ab91c8" };
 const zodiacGlyphs = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"];
 const shortName = (name: string) => name === "North Node" ? "NN" : name === "South Node" ? "SN" : name === "Ascendant" ? "ASC" : name === "Descendant" ? "DSC" : name.slice(0, 2);
 const point = (longitude: number, radius: number, center: number) => { const angle = (longitude - 90) * Math.PI / 180; return { x: center + Math.cos(angle) * radius, y: center + Math.sin(angle) * radius }; };

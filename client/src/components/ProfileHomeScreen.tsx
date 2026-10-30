@@ -31,6 +31,7 @@ import { AbsoluteTheme, EnergyStatusCard, StatePanel } from "@/components/absolu
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import type { UserProfileData } from "@/components/NatalProfileBuilder";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
+import { aspectWeightMultiplier } from "../../../shared/chartRules";
 
 type ProfileHomeScreenProps = {
   profile: UserProfileData;
@@ -88,6 +89,10 @@ const aspectFlow: Record<TransitContact["aspect"], number> = {
   square: -1,
   opposition: -1,
   conjunction: 0,
+  semisextile: 1,
+  semisquare: -1,
+  sesquiquadrate: -1,
+  quincunx: 0,
 };
 
 const percentWeight = (orb: number) =>
@@ -152,7 +157,7 @@ export function ProfileHomeScreen({
         .map((contact) => ({
           ...contact,
           transit: body.name,
-          strength: percentWeight(contact.orb),
+          strength: Math.round(percentWeight(contact.orb) * (contact.weightMultiplier ?? aspectWeightMultiplier(contact.aspect))),
         }))
     );
 
