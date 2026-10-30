@@ -27,6 +27,7 @@ import { ChartWheel } from "@/components/ChartWheel";
 import { TransitLocationBar } from "@/components/TransitLocationBar";
 import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarousel";
 import { ProfileSwitcherModal } from "@/components/ProfileSwitcherModal";
+import { AbsoluteTheme, EnergyStatusCard, StatePanel } from "@/components/absolute-ui";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import type { UserProfileData } from "@/components/NatalProfileBuilder";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
@@ -359,94 +360,57 @@ export function ProfileHomeScreen({
       </section>
 
       {/* SECTION 2: LIVE ENERGY READ CENTERPIECE */}
-      <section
-        aria-label="Live Energy Read Centerpiece"
-        className="relative overflow-hidden rounded-3xl border border-cyan-400/35 bg-[linear-gradient(145deg,#080B14_0%,#09152C_60%,#0A1D3A_100%)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] sm:p-8"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#22D3EE]" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300">
-                Live Planetary Transits
-              </span>
-            </div>
-            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-              Daily Cosmic Energy Read
-            </h2>
-          </div>
-          <TransitLocationBar variant="compact" />
-        </div>
-
+      <AbsoluteTheme>
         {energySnapshot ? (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+          <EnergyStatusCard
+            eyebrow="Live Planetary Transits"
+            title="Daily Cosmic Energy Read"
+            statusLabel={energySnapshot.signal}
+            statusTone={
+              energySnapshot.signal === "Harmonious Flow"
+                ? "good"
+                : energySnapshot.signal === "Dynamic Friction"
+                  ? "friction"
+                  : "mixed"
+            }
+            windowLabel={`${energySnapshot.contactsCount} Active Planetary Contacts`}
+            nextShiftLabel={energySnapshot.nextShiftDesc}
+            action={<TransitLocationBar variant="compact" />}
+          >
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-bold ${
-                    energySnapshot.signal === "Harmonious Flow"
-                      ? "bg-teal-950/70 text-[#2DD4BF] border border-teal-400/40 shadow-[0_0_12px_rgba(45,212,191,0.25)]"
-                      : energySnapshot.signal === "Dynamic Friction"
-                      ? "bg-rose-950/70 text-[#FB7185] border border-rose-400/40 shadow-[0_0_12px_rgba(251,113,133,0.25)]"
-                      : "bg-cyan-950/70 text-cyan-300 border border-cyan-400/40 shadow-[0_0_12px_rgba(34,211,238,0.25)]"
-                  }`}
+              <div>
+                <div className="abs-between text-xs font-semibold">
+                  <span style={{ color: "var(--abs-good)" }}>Harmony {energySnapshot.flowPct}%</span>
+                  <span style={{ color: "var(--abs-friction)" }}>Friction {energySnapshot.frictionPct}%</span>
+                </div>
+                <div
+                  className="abs-meter"
+                  role="img"
+                  aria-label={`Harmony ${energySnapshot.flowPct}%; Friction ${energySnapshot.frictionPct}%`}
                 >
-                  {energySnapshot.signal}
-                </span>
-                <span className="text-xs font-mono text-slate-300">
-                  {energySnapshot.contactsCount} Active Planetary Contacts
-                </span>
-              </div>
-
-              {/* High-Class Dual Harmony / Friction Energy Bar */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-[#2DD4BF] flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-[#2DD4BF]" />
-                    Harmony {energySnapshot.flowPct}%
-                  </span>
-                  <span className="text-[#FB7185] flex items-center gap-1.5">
-                    Friction {energySnapshot.frictionPct}%
-                    <span className="h-2 w-2 rounded-full bg-[#FB7185]" />
-                  </span>
-                </div>
-                <div className="h-3.5 w-full overflow-hidden rounded-full bg-slate-900 border border-white/10 flex">
-                  <div
-                    style={{ width: `${energySnapshot.flowPct}%` }}
-                    className="h-full bg-gradient-to-r from-teal-500 to-[#2DD4BF] transition-all duration-700 shadow-[0_0_12px_rgba(45,212,191,0.5)]"
-                  />
-                  <div
-                    style={{ width: `${energySnapshot.frictionPct}%` }}
-                    className="h-full bg-gradient-to-r from-rose-500 to-[#FB7185] transition-all duration-700 shadow-[0_0_12px_rgba(251,113,133,0.5)]"
-                  />
+                  <span className="abs-meter-good" style={{ width: `${energySnapshot.flowPct}%` }} />
+                  <span className="abs-meter-friction" style={{ width: `${energySnapshot.frictionPct}%` }} />
                 </div>
               </div>
-
-              <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-slate-300 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                  Upcoming Calculated Energy Shift
-                </span>
-                <p className="font-mono text-cyan-200">{energySnapshot.nextShiftDesc}</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 justify-center">
-              <Link
-                href="/energy"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-400/60 bg-cyan-500/20 px-5 py-3 text-xs font-bold text-cyan-100 hover:bg-cyan-500/30 transition-all shadow-[0_0_20px_rgba(34,211,238,0.25)] active:scale-95 shrink-0"
-              >
-                <Zap size={15} />
+              <Link href="/energy" className="abs-link-button">
+                <Zap size={15} aria-hidden="true" />
                 <span>Explore Full Energy Read</span>
-                <ArrowRight size={14} />
+                <ArrowRight size={14} aria-hidden="true" />
               </Link>
             </div>
-          </div>
+          </EnergyStatusCard>
         ) : (
-          <div className="mt-4 text-xs text-slate-400">
-            {calculating ? "Synthesizing planetary ephemeris..." : "Transits calculating. Open the Energy tab to explore."}
-          </div>
+          <section aria-label="Live Energy Read Centerpiece">
+            <StatePanel
+              kind={calculating ? "loading" : "empty"}
+              title={calculating ? "Energy read is loading" : "Energy read unavailable"}
+              message={calculating
+                ? "Synthesizing planetary ephemeris..."
+                : "Transits calculating. Open the Energy tab to explore."}
+            />
+          </section>
         )}
-      </section>
+      </AbsoluteTheme>
 
       {/* SECTION 3: TWO DISTINCTIVE FEATURE CARDS (HORARY & SYNASTRY) */}
       <section aria-label="Featured Astrological Chambers" className="space-y-4">

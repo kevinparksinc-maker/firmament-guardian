@@ -23,6 +23,7 @@ import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { TransitLocationBar } from "@/components/TransitLocationBar";
 import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
+import { AbsoluteTheme, EnergyStatusCard } from "@/components/absolute-ui";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
 
 const MAX_ORB = 5;
@@ -218,10 +219,19 @@ export default function EnergyPage() {
 
       {/* SECTION 2: MAIN ENERGY GAUGE — RESPONSIVE SEMICIRCULAR GAUGE */}
       {energyData && (
-        <section
-          aria-label="Main Cosmic Energy Gauge"
-          className="relative overflow-hidden rounded-3xl border border-cyan-400/30 bg-[linear-gradient(135deg,#080B14_0%,#101628_60%,#092138_100%)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.6)] sm:p-8"
-        >
+        <AbsoluteTheme>
+          <EnergyStatusCard
+            eyebrow="Main Cosmic Energy Gauge"
+            statusLabel={energyData.signal}
+            statusTone={
+              energyData.signal === "Effortless Flow"
+                ? "good"
+                : energyData.signal === "Growth Crucible"
+                  ? "friction"
+                  : "mixed"
+            }
+            windowLabel={`Current Telemetry Time: ${currentTimeStr}`}
+          >
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
             {/* Semicircular SVG Gauge */}
             <div className="relative flex flex-col items-center justify-center">
@@ -266,23 +276,6 @@ export default function EnergyPage() {
                   HARMONY INDEX
                 </text>
               </svg>
-
-              <div className="mt-2 text-center">
-                <span
-                  className={`rounded-full px-4 py-1 text-xs font-bold ${
-                    energyData.signal === "Effortless Flow"
-                      ? "bg-teal-950/70 text-[#2DD4BF] border border-teal-400/40 shadow-[0_0_12px_rgba(45,212,191,0.3)]"
-                      : energyData.signal === "Growth Crucible"
-                      ? "bg-rose-950/70 text-[#FB7185] border border-rose-400/40 shadow-[0_0_12px_rgba(251,113,133,0.3)]"
-                      : "bg-cyan-950/70 text-cyan-300 border border-cyan-400/40 shadow-[0_0_12px_rgba(34,211,238,0.3)]"
-                  }`}
-                >
-                  {energyData.signal}
-                </span>
-                <p className="mt-1 font-mono text-[11px] text-slate-400 tabular-nums">
-                  Current Telemetry Time: {currentTimeStr}
-                </p>
-              </div>
             </div>
 
             {/* Metrics Breakdown */}
@@ -337,7 +330,8 @@ export default function EnergyPage() {
               </div>
             </div>
           </div>
-        </section>
+          </EnergyStatusCard>
+        </AbsoluteTheme>
       )}
 
       {/* SECTION 3: PLANETARY ASPECT LEDGER */}
