@@ -219,7 +219,7 @@ function OverlayMap({
         </div>
 
         {/* Interactive Tradition Selector */}
-        <div className="flex gap-1.5 rounded-xl border border-slate-800 bg-[#0b101b] p-1">
+        <div className="flex max-w-full min-w-0 flex-wrap gap-1.5 rounded-xl border border-slate-800 bg-[#0b101b] p-1">
           {OVERLAY_MAP_SPECS.map(item => (
             <button
               key={item.name}
@@ -228,7 +228,7 @@ function OverlayMap({
                 setActive(item.name);
                 setSelectedSegment(null);
               }}
-              className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${
+              className={`min-h-11 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${
                 item.name === active
                   ? "text-slate-950 shadow-sm"
                   : "text-slate-400 hover:text-white"
@@ -615,11 +615,11 @@ export default function SkyHomePrototype() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 selection:bg-cyan-400/25">
+    <div className="min-h-screen w-full min-w-0 max-w-full bg-[#07090e] text-slate-100 selection:bg-cyan-400/25">
       <ObservatorySoundscape />
 
       {/* 3-Zone Top Bar Contract */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-800/90 bg-[#07090e]/95 px-5 py-3.5 backdrop-blur-md md:px-10">
+      <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-slate-800/90 bg-[#07090e]/95 px-3 py-3.5 backdrop-blur-md sm:px-5 md:px-10">
         <Link
           href="/"
           className="font-serif text-lg font-semibold tracking-tight text-white"
@@ -647,7 +647,7 @@ export default function SkyHomePrototype() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2.5">
+        <div className="ml-auto flex max-w-full flex-wrap items-center gap-2.5">
           <button
             type="button"
             onClick={() => setScreen("guide")}
@@ -664,7 +664,7 @@ export default function SkyHomePrototype() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1440px] space-y-8 px-4 pb-24 pt-6 sm:px-6 md:px-10 md:pb-16">
+      <main className="mx-auto w-full min-w-0 max-w-[1440px] space-y-8 pb-24 pt-6 md:pb-16">
         {/* Observatory Calibration & Personal Profile Bar */}
         <section className="rounded-2xl border border-slate-800 bg-[#0b101b] p-5 sm:p-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
