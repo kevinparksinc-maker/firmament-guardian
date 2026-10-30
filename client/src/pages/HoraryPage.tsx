@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Clock3, Loader2, MapPin, MessageCircle, Moon, Orbit, Sparkles, Sun } from "lucide-react";
+import { ArrowLeft, Clock3, Loader2, MapPin, MessageCircle, Moon, Navigation, Orbit, Sparkles, Sun } from "lucide-react";
 import { Link } from "wouter";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,16 @@ import { TraditionalHoraryEvidence } from "@/components/TraditionalHoraryEvidenc
 import { HoraryChamber2050 } from "@/components/HoraryChamber2050";
 import { formatLongitude } from "@shared/hybrid";
 import type { HoraryChart } from "../../../server/horary";
+
+const QUICK_TOPICS = [
+  { label: "💼 Career / Job", house: 10, placeholder: "Will I secure the job promotion I interviewed for?" },
+  { label: "💖 Love / Partner", house: 7, placeholder: "Will my relationship with my partner grow deeper?" },
+  { label: "💰 Money / Deal", house: 2, placeholder: "Will my financial investment yield a profitable return?" },
+  { label: "🏡 Home / Move", house: 4, placeholder: "Should I purchase or move into this property?" },
+  { label: "🩺 Health / Recovery", house: 6, placeholder: "Will my health condition improve with this treatment?" },
+  { label: "✈️ Travel / Study", house: 9, placeholder: "Will my long-distance travel and visa application succeed?" },
+  { label: "🔑 Lost Property", house: 2, placeholder: "Will I recover the missing item I recently misplaced?" },
+];
 
 function localDateTime() {
   const now = new Date();
@@ -41,6 +51,8 @@ export default function HoraryPage() {
   const [topicHouse, setTopicHouse] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [place, setPlace] = useState<ResolvedPlace | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
   const [birthLocationQuery, setBirthLocationQuery] = useState("");
   const [birthPlace, setBirthPlace] = useState<ResolvedPlace | null>(null);
   const [birthDate, setBirthDate] = useState("");
@@ -50,6 +62,7 @@ export default function HoraryPage() {
   const [horary, setHorary] = useState<HoraryResult | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
+  const trpcUtils = trpc.useUtils();
   const geocode = trpc.hybrid.geocode.useQuery({ query: locationQuery }, { enabled: false, retry: false });
   const birthGeocode = trpc.hybrid.geocode.useQuery({ query: birthLocationQuery }, { enabled: false, retry: false });
   const cast = trpc.horary.open.useMutation({
@@ -61,6 +74,42 @@ export default function HoraryPage() {
   const followUp = trpc.horary.followUp.useMutation({
     onSuccess: answer => setMessages(current => [...current, { role: "assistant", content: answer }]),
   });
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setGpsError("Geolocation is not supported by your browser.");
+      return;
+    }
+    setIsLocating(true);
+    setGpsError(null);
+    navigator.geolocation.getCurrentPosition(
+      async position => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+          const res = await trpcUtils.hybrid.reverseGeocode.fetch({ latitude, longitude }).catch(() => null);
+          const resolvedPlace: ResolvedPlace = {
+            query: res?.label ?? `GPS (${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°)`,
+            label: res?.label ?? `GPS (${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°)`,
+            latitude,
+            longitude,
+            timezone: res?.timezone ?? tz,
+          };
+          setPlace(resolvedPlace);
+          setLocationQuery(resolvedPlace.label);
+        } catch {
+          setGpsError("Could not resolve GPS place name. Coordinates recorded.");
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      err => {
+        setIsLocating(false);
+        setGpsError(err.message || "Location access was denied or timed out.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   const resolvePlace = async () => {
     if (locationQuery.trim().length < 2) return;
@@ -139,11 +188,56 @@ export default function HoraryPage() {
           <Card className="border-white/10 bg-white/[0.045] text-slate-100 shadow-2xl shadow-black/20">
             <CardHeader><CardTitle className="flex items-center gap-2 font-serif text-2xl"><Sparkles className="h-5 w-5 text-cyan-200"/>Ask your horary question</CardTitle><p className="text-sm leading-6 text-slate-400">Use the time and place where the question became clear and important to you. Keep it to one sincere question.</p></CardHeader>
             <CardContent className="space-y-5">
-              <div className="space-y-2"><Label htmlFor="horary-question" className="text-slate-200">Your question</Label><textarea id="horary-question" value={question} onChange={event => setQuestion(event.target.value)} maxLength={1000} placeholder="For example: Is this the right time to accept the job offer I received?" className="min-h-28 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50"/><p className="text-xs text-slate-500">One specific question works better than several questions combined. {question.trim().length < 10 ? "Enter at least 10 characters." : ""}</p></div>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <Label htmlFor="horary-question" className="text-slate-200">Your question</Label>
+                  <span className="text-[11px] text-amber-200/80">Tap topic to pre-select house & prompt:</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pb-1">
+                  {QUICK_TOPICS.map(item => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => {
+                        setTopicHouse(String(item.house));
+                        setSubject("querent");
+                        if (!question.trim()) {
+                          setQuestion(item.placeholder);
+                        }
+                      }}
+                      className={`rounded-lg border px-2.5 py-1 text-xs transition ${
+                        topicHouse === String(item.house)
+                          ? "border-cyan-400/50 bg-cyan-900/40 text-cyan-200"
+                          : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-cyan-300/40 hover:bg-cyan-950/30 hover:text-cyan-100"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                <textarea id="horary-question" value={question} onChange={event => setQuestion(event.target.value)} maxLength={1000} placeholder="For example: Is this the right time to accept the job offer I received?" className="min-h-28 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50"/>
+                <p className="text-xs text-slate-500">One specific question works better than several questions combined. {question.trim().length < 10 ? "Enter at least 10 characters." : ""}</p>
+              </div>
               <div className="space-y-2"><Label htmlFor="horary-subject" className="text-slate-200">Who is the question about?</Label><select id="horary-subject" value={subject} onChange={event => setSubject(event.target.value as "querent" | "other")} className="h-11 w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50"><option value="querent">Me — I am the person in the question</option><option value="other">Another person — I am asking about them</option></select><p className="text-xs text-slate-500">You remain the querent (House 1). If the question concerns a specific relative or role, identify them below so the app can turn the correct houses.</p></div>
               {subject === "other" && <div className="space-y-2"><Label htmlFor="horary-subject-house" className="text-slate-200">Who is the other person?</Label><select id="horary-subject-house" value={subjectHouse} onChange={event => setSubjectHouse(event.target.value)} className="h-11 w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50"><option value="">Infer from the question (default House 7)</option><option value="3">Sibling — House 3</option><option value="4">Mother / parent / family — House 4</option><option value="5">Child — House 5</option><option value="7">Partner / counterpart — House 7</option><option value="10">Father / boss / authority — House 10</option><option value="11">Friend / group — House 11</option><option value="12">Other relationship / hidden matter — House 12</option></select><p className="text-xs text-slate-500">Leave inference on to use question wording, or choose the person’s house explicitly.</p></div>}
               <div className="space-y-2"><Label htmlFor="horary-topic" className="text-slate-200">What area relative to {subject === "querent" ? "me" : "this person"}?</Label><select id="horary-topic" value={topicHouse} onChange={event => setTopicHouse(event.target.value)} className="h-11 w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50"><option value="">Choose the relevant topic house</option>{HORARY_TOPICS.map(topic => <option key={topic.house} value={topic.house}>House {topic.house} from {subject === "querent" ? "me" : "this person"} — {topic.label}</option>)}</select><p className="text-xs text-slate-500">The asker remains House 1. The other person’s house is inferred from the question or selected above; the chosen topic house is then turned from that person.</p></div>
-              <div className="space-y-2"><Label htmlFor="horary-location" className="text-slate-200">Where were you when you asked?</Label><div className="flex gap-2"><Input id="horary-location" value={locationQuery} onChange={event => setLocationQuery(event.target.value)} placeholder="City, region, country" className="border-white/10 bg-black/20 text-white"/><Button type="button" variant="outline" onClick={resolvePlace} disabled={geocode.isFetching || locationQuery.trim().length < 2} className="shrink-0 border-white/10 bg-white/[0.04] text-cyan-100 hover:bg-white/[0.08]"><MapPin className="mr-2 h-4 w-4"/>{geocode.isFetching ? "Resolving" : "Resolve"}</Button></div>{locationIsResolved && place && <p className="text-xs text-emerald-200">{place.latitude.toFixed(4)}°, {place.longitude.toFixed(4)}° · {place.timezone}</p>}{geocode.error && <p className="text-xs text-rose-300">{geocode.error.message}</p>}{place && !locationIsResolved && <p className="text-xs text-amber-200">Resolve this location again before casting the question chart.</p>}</div>
+              <div className="space-y-2">
+                <Label htmlFor="horary-location" className="text-slate-200">Where were you when you asked?</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Input id="horary-location" value={locationQuery} onChange={event => setLocationQuery(event.target.value)} placeholder="City, region, country" className="min-w-[180px] flex-1 border-white/10 bg-black/20 text-white"/>
+                  <Button type="button" variant="outline" onClick={resolvePlace} disabled={geocode.isFetching || locationQuery.trim().length < 2} className="shrink-0 border-white/10 bg-white/[0.04] text-cyan-100 hover:bg-white/[0.08]">
+                    <MapPin className="mr-2 h-4 w-4"/>{geocode.isFetching ? "Resolving" : "Resolve"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={useCurrentLocation} disabled={isLocating} className="shrink-0 border-cyan-400/30 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20">
+                    {isLocating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Navigation className="mr-2 h-4 w-4"/>}
+                    {isLocating ? "Locating..." : "Use GPS"}
+                  </Button>
+                </div>
+                {gpsError && <p className="text-xs text-rose-300">{gpsError}</p>}
+                {locationIsResolved && place && <p className="text-xs text-emerald-200">{place.label} · {place.latitude.toFixed(4)}°, {place.longitude.toFixed(4)}° · {place.timezone}</p>}
+                {geocode.error && <p className="text-xs text-rose-300">{geocode.error.message}</p>}
+                {place && !locationIsResolved && <p className="text-xs text-amber-200">Resolve this location again before casting the question chart.</p>}
+              </div>
               <div className="space-y-3 rounded-xl border border-amber-200/15 bg-amber-100/[0.035] p-4"><div><p className="text-xs uppercase tracking-[.18em] text-amber-200">Optional natal layer</p><p className="mt-1 text-xs leading-5 text-slate-500">Add the person’s birth details to compare the question-time transit against their natal chart. Leave blank for a horary + God View reading without a personal natal layer.</p></div><div className="flex gap-2"><Input id="birth-location" value={birthLocationQuery} onChange={event => setBirthLocationQuery(event.target.value)} placeholder="Birth city, region, country" className="border-white/10 bg-black/20 text-white"/><Button type="button" variant="outline" onClick={resolveBirthPlace} disabled={birthGeocode.isFetching || birthLocationQuery.trim().length < 2} className="shrink-0 border-white/10 bg-white/[0.04] text-amber-100 hover:bg-white/[0.08]"><MapPin className="mr-2 h-4 w-4"/>{birthGeocode.isFetching ? "Resolving" : "Resolve"}</Button></div>{birthLocationIsResolved && birthPlace && <p className="text-xs text-emerald-200">{birthPlace.latitude.toFixed(4)}°, {birthPlace.longitude.toFixed(4)}° · {birthPlace.timezone}</p>}<div className="grid gap-3 sm:grid-cols-2"><Input aria-label="Birth date" type="date" value={birthDate} onChange={event => setBirthDate(event.target.value)} className="border-white/10 bg-black/20 text-white"/><Input aria-label="Birth time" type="time" value={birthTime} onChange={event => setBirthTime(event.target.value)} className="border-white/10 bg-black/20 text-white"/></div>{birthLocationQuery && !hasCompleteNatal && <p className="text-xs text-amber-200">Resolve the birth place and enter both birth date and time to enable the natal layer.</p>}</div>
               <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="horary-date" className="text-slate-200">Local date asked</Label><Input id="horary-date" type="date" value={date} onChange={event => setDate(event.target.value)} className="border-white/10 bg-black/20 text-white"/></div><div className="space-y-2"><Label htmlFor="horary-time" className="text-slate-200">Local time asked</Label><Input id="horary-time" type="time" value={time} onChange={event => setTime(event.target.value)} className="border-white/10 bg-black/20 text-white"/></div></div>
               {cast.error && <div role="alert" className="rounded-xl border border-rose-300/20 bg-rose-400/[0.08] p-3 text-sm text-rose-200">{cast.error.message}</div>}

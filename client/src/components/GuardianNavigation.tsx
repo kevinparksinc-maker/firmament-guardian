@@ -23,24 +23,35 @@ import {
 import { Link, useLocation } from "wouter";
 import { TransitLocationBar } from "./TransitLocationBar";
 import { AccountControl } from "./AccountControl";
+import { ProfileSwitcherModal } from "./ProfileSwitcherModal";
+import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import "./GuardianNavigation.css";
 
-const PRIMARY_LINKS = [
+const PRIMARY_LINKS: Array<{
+  href: string;
+  label: string;
+  Icon: any;
+  matchPrefix?: string;
+  matchExact?: string;
+}> = [
   { href: "/", label: "Home", Icon: Compass },
   { href: "/chart", label: "Chart", Icon: Diamond },
-  { href: "/reading", label: "Reading", Icon: BookOpen },
-  { href: "/guide?tab=weather", label: "Energy & Weather", Icon: CloudSun, matchPrefix: "/guide?tab=weather" },
-  { href: "/life-story", label: "Life Story", Icon: BookOpenText },
-  { href: "/zodiac-readings", label: "12 Gates", Icon: Sparkles },
+  { href: "/energy", label: "Energy", Icon: CloudSun },
+  { href: "/reading", label: "Readings", Icon: BookOpen },
+  { href: "/explore", label: "Explore", Icon: Layers },
   { href: "/horary", label: "Horary", Icon: MoonStar },
+  { href: "/synastry", label: "Synastry", Icon: Heart },
+  { href: "/life-story", label: "Life Story", Icon: BookOpenText },
   { href: "/sky", label: "Sky Map", Icon: Orbit },
-  { href: "/guide", label: "Guide & Synastry", Icon: Layers, matchExact: "/guide" },
-  { href: "/history", label: "Library", Icon: BookOpenText },
 ];
+
+
 
 export function GuardianNavigation() {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const { profile, savedProfiles } = useProfileSession();
 
   useEffect(() => {
     setOpen(false);
@@ -94,7 +105,7 @@ export function GuardianNavigation() {
 
         {/* Desktop Navigation Links */}
         <div className="guardian-global-desktop-links">
-          {PRIMARY_LINKS.slice(0, 7).map(({ href, label, Icon, matchPrefix, matchExact }) => {
+          {PRIMARY_LINKS.map(({ href, label, Icon, matchPrefix, matchExact }) => {
             const active = isActive(href, matchPrefix, matchExact);
             return (
               <Link
@@ -112,6 +123,21 @@ export function GuardianNavigation() {
         </div>
 
         <div className="flex items-center gap-2">
+          {profile && (
+            <button
+              type="button"
+              onClick={() => setIsSwitcherOpen(true)}
+              className="flex items-center gap-1.5 rounded-full border border-[#D9B66F]/40 bg-[#D9B66F]/10 px-2.5 py-1 text-xs font-semibold text-[#D9B66F] hover:bg-[#D9B66F]/20 transition-all active:scale-95 shadow-[0_0_12px_rgba(217,182,111,0.15)]"
+              title="Switch or load saved seeker profile"
+            >
+              <UserRound className="h-3.5 w-3.5 text-[#D9B66F]" />
+              <span className="max-w-[75px] sm:max-w-[110px] truncate">{profile.name}</span>
+              <span className="rounded-full bg-[#D9B66F]/25 px-1.5 py-0.2 text-[10px] font-bold text-amber-200">
+                {savedProfiles.length}
+              </span>
+            </button>
+          )}
+
           <div className="hidden md:block">
             <AccountControl />
           </div>
@@ -138,106 +164,127 @@ export function GuardianNavigation() {
           className="guardian-global-mobile-links animate-in fade-in slide-in-from-top-3 duration-200"
           aria-label="The Absolute directory navigation"
         >
+          {/* Active Seeker Banner inside mobile menu */}
+          {profile && (
+            <div className="px-4 py-3 border-b border-white/10 bg-white/[0.02] flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-[#D9B66F] block">Active Seeker</span>
+                <p className="text-sm font-semibold text-white truncate">{profile.name}</p>
+                <p className="text-[11px] text-slate-400 truncate">{profile.date} · {profile.location}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  setIsSwitcherOpen(true);
+                }}
+                className="shrink-0 rounded-xl border border-[#D9B66F]/50 bg-[#D9B66F]/15 px-3 py-1.5 text-xs font-semibold text-[#D9B66F] hover:bg-[#D9B66F]/25 active:scale-95 transition-all"
+              >
+                Switch Profile ({savedProfiles.length})
+              </button>
+            </div>
+          )}
+
           {/* Active GPS Sky Banner inside mobile menu */}
           <div className="px-3 pt-2 pb-3 border-b border-white/10 sm:hidden">
             <TransitLocationBar variant="compact" />
           </div>
 
           <div className="grid gap-6 p-4 max-w-4xl mx-auto md:grid-cols-3">
-            {/* Group 1: Core Personal Journey */}
+            {/* Group 1: 5 Primary Destinations */}
             <div className="space-y-1.5">
               <span className="text-[10px] font-bold uppercase tracking-widest text-amber-300 block mb-2 px-2">
-                Personal Observatory
+                Primary Observatory
               </span>
               <Link href="/" className={`fg-nav-card ${location === "/" ? "active" : ""}`} onClick={() => setOpen(false)}>
                 <Compass className="h-4 w-4 text-amber-300 shrink-0" />
                 <div className="min-w-0">
-                  <div className="font-semibold text-sm text-white">Home & Overview</div>
-                  <div className="text-[11px] text-slate-400">Three divine signals & forecast</div>
+                  <div className="font-semibold text-sm text-white">Home Dashboard</div>
+                  <div className="text-[11px] text-slate-400">Big 3 signals & quick tools</div>
                 </div>
               </Link>
               <Link href="/chart" className={`fg-nav-card ${location === "/chart" ? "active" : ""}`} onClick={() => setOpen(false)}>
                 <Diamond className="h-4 w-4 text-amber-300 shrink-0" />
                 <div className="min-w-0">
                   <div className="font-semibold text-sm text-white">Diamond Chart</div>
-                  <div className="text-[11px] text-slate-400">God & Agent houses, fixed stars</div>
+                  <div className="text-[11px] text-slate-400">God & Agent houses, 10 drawers</div>
+                </div>
+              </Link>
+              <Link href="/energy" className={`fg-nav-card ${location === "/energy" ? "active" : ""}`} onClick={() => setOpen(false)}>
+                <CloudSun className="h-4 w-4 text-cyan-300 shrink-0" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm text-white">Energy & Transits</div>
+                  <div className="text-[11px] text-slate-400">Live GPS horizon & aspect flow</div>
                 </div>
               </Link>
               <Link href="/reading" className={`fg-nav-card ${location === "/reading" ? "active" : ""}`} onClick={() => setOpen(false)}>
-                <BookOpen className="h-4 w-4 text-amber-300 shrink-0" />
+                <BookOpen className="h-4 w-4 text-violet-300 shrink-0" />
                 <div className="min-w-0">
-                  <div className="font-semibold text-sm text-white">Master Reading</div>
+                  <div className="font-semibold text-sm text-white">Readings Center</div>
                   <div className="text-[11px] text-slate-400">Esoteric synthesis & life guidance</div>
+                </div>
+              </Link>
+              <Link href="/explore" className={`fg-nav-card ${location === "/explore" ? "active" : ""}`} onClick={() => setOpen(false)}>
+                <Layers className="h-4 w-4 text-emerald-300 shrink-0" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm text-white">Explore Directory</div>
+                  <div className="text-[11px] text-slate-400">All ancient systems & tools</div>
+                </div>
+              </Link>
+            </div>
+
+            {/* Group 2: Featured Interactive Tools */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-300 block mb-2 px-2">
+                Divination & Resonance
+              </span>
+              <Link href="/horary" className={`fg-nav-card ${location === "/horary" ? "active" : ""}`} onClick={() => setOpen(false)}>
+                <MoonStar className="h-4 w-4 text-indigo-300 shrink-0" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm text-white">Horary Chamber</div>
+                  <div className="text-[11px] text-slate-400">Real-time question divination</div>
+                </div>
+              </Link>
+              <Link href="/synastry" className={`fg-nav-card ${location === "/synastry" ? "active" : ""}`} onClick={() => setOpen(false)}>
+                <Heart className="h-4 w-4 text-rose-300 shrink-0" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm text-white">Synastry Studio</div>
+                  <div className="text-[11px] text-slate-400">Two-chart relationship overlays</div>
                 </div>
               </Link>
               <Link href="/life-story" className={`fg-nav-card ${location === "/life-story" ? "active" : ""}`} onClick={() => setOpen(false)}>
                 <BookOpenText className="h-4 w-4 text-fuchsia-300 shrink-0" />
                 <div className="min-w-0">
                   <div className="font-semibold text-sm text-white">Life Story Suite</div>
-                  <div className="text-[11px] text-slate-400">Biographical chapters & cycles</div>
-                </div>
-              </Link>
-            </div>
-
-            {/* Group 2: Timing, Weather & Chambers */}
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-300 block mb-2 px-2">
-                Timing & Divine Chambers
-              </span>
-              <Link
-                href="/guide?tab=weather#main-cosmos-tabs"
-                className="fg-nav-card"
-                onClick={(e) => {
-                  openModule(e, "/guide?tab=weather#main-cosmos-tabs");
-                  setOpen(false);
-                }}
-              >
-                <CloudSun className="h-4 w-4 text-cyan-300 shrink-0" />
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm text-white">Cosmic Weather</div>
-                  <div className="text-[11px] text-slate-400">Live transits & 30/90-day cycles</div>
-                </div>
-              </Link>
-              <Link href="/zodiac-readings" className={`fg-nav-card ${location === "/zodiac-readings" ? "active" : ""}`} onClick={() => setOpen(false)}>
-                <Sparkles className="h-4 w-4 text-cyan-300 shrink-0" />
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm text-white">Twelve Divine Gates</div>
-                  <div className="text-[11px] text-slate-400">Sign-by-sign daily illumination</div>
-                </div>
-              </Link>
-              <Link href="/horary" className={`fg-nav-card ${location === "/horary" ? "active" : ""}`} onClick={() => setOpen(false)}>
-                <MoonStar className="h-4 w-4 text-indigo-300 shrink-0" />
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm text-white">Horary Chamber</div>
-                  <div className="text-[11px] text-slate-400">Real-time question astrology</div>
+                  <div className="text-[11px] text-slate-400">Biographical chapters & profections</div>
                 </div>
               </Link>
               <Link href="/sky" className={`fg-nav-card ${location === "/sky" ? "active" : ""}`} onClick={() => setOpen(false)}>
                 <Orbit className="h-4 w-4 text-cyan-300 shrink-0" />
                 <div className="min-w-0">
                   <div className="font-semibold text-sm text-white">3D Divine Sky Map</div>
-                  <div className="text-[11px] text-slate-400">Interactive celestial dome</div>
+                  <div className="text-[11px] text-slate-400">Interactive celestial sphere</div>
+                </div>
+              </Link>
+              <Link href="/zodiac-readings" className={`fg-nav-card ${location === "/zodiac-readings" ? "active" : ""}`} onClick={() => setOpen(false)}>
+                <Sparkles className="h-4 w-4 text-amber-300 shrink-0" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm text-white">Twelve Divine Gates</div>
+                  <div className="text-[11px] text-slate-400">Sign-by-sign daily illumination</div>
                 </div>
               </Link>
             </div>
 
-            {/* Group 3: Relational & Settings */}
+            {/* Group 3: Relational & Archives */}
             <div className="space-y-1.5">
               <span className="text-[10px] font-bold uppercase tracking-widest text-violet-300 block mb-2 px-2">
-                Relational & Archive
+                Archives & Community
               </span>
-              <Link
-                href="/guide?tab=synastry#main-cosmos-tabs"
-                className="fg-nav-card"
-                onClick={(e) => {
-                  openModule(e, "/guide?tab=synastry#main-cosmos-tabs");
-                  setOpen(false);
-                }}
-              >
-                <Heart className="h-4 w-4 text-pink-300 shrink-0" />
+              <Link href="/history" className={`fg-nav-card ${location === "/history" ? "active" : ""}`} onClick={() => setOpen(false)}>
+                <BookOpenText className="h-4 w-4 text-slate-300 shrink-0" />
                 <div className="min-w-0">
-                  <div className="font-semibold text-sm text-white">Synastry & Chemistry</div>
-                  <div className="text-[11px] text-slate-400">Dual orrery & partner overlay</div>
+                  <div className="font-semibold text-sm text-white">Archival History</div>
+                  <div className="text-[11px] text-slate-400">Past Horary questions & logs</div>
                 </div>
               </Link>
               <Link
@@ -255,31 +302,17 @@ export function GuardianNavigation() {
                 </div>
               </Link>
               <Link
-                href="/guide?tab=podcast#main-cosmos-tabs"
+                href="/guide?tab=blueprint#main-cosmos-tabs"
                 className="fg-nav-card"
                 onClick={(e) => {
-                  openModule(e, "/guide?tab=podcast#main-cosmos-tabs");
+                  openModule(e, "/guide?tab=blueprint#main-cosmos-tabs");
                   setOpen(false);
                 }}
               >
-                <Headphones className="h-4 w-4 text-violet-300 shrink-0" />
+                <ShieldCheck className="h-4 w-4 text-cyan-300 shrink-0" />
                 <div className="min-w-0">
-                  <div className="font-semibold text-sm text-white">Audio Observatory</div>
-                  <div className="text-[11px] text-slate-400">Spoken briefings & 528Hz soundscape</div>
-                </div>
-              </Link>
-              <Link href="/history" className={`fg-nav-card ${location === "/history" ? "active" : ""}`} onClick={() => setOpen(false)}>
-                <BookOpenText className="h-4 w-4 text-slate-300 shrink-0" />
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm text-white">Reading Library</div>
-                  <div className="text-[11px] text-slate-400">Saved charts & historical readings</div>
-                </div>
-              </Link>
-              <Link href="/profile" className={`fg-nav-card ${location === "/profile" ? "active" : ""}`} onClick={() => setOpen(false)}>
-                <UserRound className="h-4 w-4 text-amber-200 shrink-0" />
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm text-white">Birth Profile Details</div>
-                  <div className="text-[11px] text-slate-400">Edit birth time, city & focus</div>
+                  <div className="font-semibold text-sm text-white">Divine Blueprint</div>
+                  <div className="text-[11px] text-slate-400">Complete astronomical tables</div>
                 </div>
               </Link>
             </div>
@@ -300,6 +333,12 @@ export function GuardianNavigation() {
           </div>
         </div>
       )}
+
+      <ProfileSwitcherModal
+        isOpen={isSwitcherOpen}
+        onClose={() => setIsSwitcherOpen(false)}
+      />
     </header>
   );
 }
+

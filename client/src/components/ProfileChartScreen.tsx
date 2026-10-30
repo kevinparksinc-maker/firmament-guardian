@@ -1,23 +1,33 @@
+import React, { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { useState } from "react";
+import {
+  BookOpen,
+  ChevronDown,
+  CircleDot,
+  Compass,
+  Diamond,
+  Eye,
+  Flame,
+  Globe,
+  Grid,
+  Layers,
+  Moon,
+  Orbit,
+  Scale,
+  Sparkles,
+  Star,
+  Sun,
+  UserRound,
+  Zap,
+} from "lucide-react";
+import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
+import { ChartWheel } from "@/components/ChartWheel";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
-import { UserRound } from "lucide-react";
-import { ChartObservatory2050 } from "@/components/ChartObservatory2050";
 import { FixedStarIntensityVisualizer } from "@/components/FixedStarIntensityVisualizer";
-import type { ChartResult } from "../../../server/astronomy";
+import { SystematicDeconstruction } from "@/components/SystematicDeconstruction";
+import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
-
-const frames: ReadonlyArray<{ value: Worldview; label: string }> = [
-  { value: "god", label: "God View" },
-  { value: "agent", label: "Agent View" },
-  { value: "agent-vs-god", label: "God's View of the Agent" },
-];
-
-const scopes: ReadonlyArray<{ value: ReadingScope; label: string }> = [
-  { value: "natal", label: "Natal Chart" },
-  { value: "transit", label: "Transit Chart" },
-  { value: "combined", label: "Natal + Transit" },
-];
+import { FIXED_STARS } from "../../../shared/hybrid";
 
 export type ProfileChartScreenProps = {
   chart: ChartResult | null;
@@ -29,64 +39,280 @@ export type ProfileChartScreenProps = {
   error?: string;
 };
 
+const SIGNS = [
+  "Aries", "Taurus", "Gemini", "Cancer",
+  "Leo", "Virgo", "Libra", "Scorpio",
+  "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+] as const;
+
+const SIGN_GLYPHS = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"];
+
+const ELEMENT_MAP: Record<string, "Fire" | "Earth" | "Air" | "Water"> = {
+  Aries: "Fire", Taurus: "Earth", Gemini: "Air", Cancer: "Water",
+  Leo: "Fire", Virgo: "Earth", Libra: "Air", Scorpio: "Water",
+  Sagittarius: "Fire", Capricorn: "Earth", Aquarius: "Air", Pisces: "Water",
+};
+
+const MODALITY_MAP: Record<string, "Cardinal" | "Fixed" | "Mutable"> = {
+  Aries: "Cardinal", Taurus: "Fixed", Gemini: "Mutable", Cancer: "Cardinal",
+  Leo: "Fixed", Virgo: "Mutable", Libra: "Cardinal", Scorpio: "Fixed",
+  Sagittarius: "Mutable", Capricorn: "Cardinal", Aquarius: "Fixed", Pisces: "Mutable",
+};
+
+const DIGNITY_TABLE: Record<string, { domicile: string[]; exaltation: string; fall: string; detriment: string[] }> = {
+  Sun: { domicile: ["Leo"], exaltation: "Aries", fall: "Libra", detriment: ["Aquarius"] },
+  Moon: { domicile: ["Cancer"], exaltation: "Taurus", fall: "Scorpio", detriment: ["Capricorn"] },
+  Mercury: { domicile: ["Gemini", "Virgo"], exaltation: "Virgo", fall: "Pisces", detriment: ["Sagittarius", "Pisces"] },
+  Venus: { domicile: ["Taurus", "Libra"], exaltation: "Pisces", fall: "Virgo", detriment: ["Aries", "Scorpio"] },
+  Mars: { domicile: ["Aries", "Scorpio"], exaltation: "Capricorn", fall: "Cancer", detriment: ["Taurus", "Libra"] },
+  Jupiter: { domicile: ["Sagittarius", "Pisces"], exaltation: "Cancer", fall: "Capricorn", detriment: ["Gemini", "Virgo"] },
+  Saturn: { domicile: ["Capricorn", "Aquarius"], exaltation: "Libra", fall: "Aries", detriment: ["Cancer", "Leo"] },
+};
+
+const SABIAN_SYMBOLS: Record<string, string> = {
+  "0": "A woman rises out of the water; a seal rises and embraces her",
+  "1": "A comedian revealing human nature",
+  "2": "A cameo profile of a man in the outline of his country",
+  "3": "Two lovers strolling on a secluded walk",
+  "4": "A triangle with golden wings",
+  "5": "A square brightly lighted on one side",
+  "6": "A man expressing himself successfully in two realms at once",
+  "7": "A large hat with streamers flying, facing east",
+  "8": "A crystal gazer concentrated on visions",
+  "9": "A teacher giving new symbolic forms to traditional images",
+  "10": "A flock of white geese flying high",
+  "15": "An Indian weaving a ceremonial blanket",
+  "20": "A pugilist entering the ring",
+  "25": "A man possessed of more gifts than he can hold",
+  "29": "A celestial choir singing in harmonious unison",
+};
+
+function signAt(lon: number | undefined): string {
+  if (typeof lon !== "number" || !Number.isFinite(lon)) return "Unavailable";
+  const norm = ((lon % 360) + 360) % 360;
+  return SIGNS[Math.floor(norm / 30)];
+}
+
+function degreeFmt(lon: number): string {
+  const norm = ((lon % 360) + 360) % 360;
+  const within = norm % 30;
+  const deg = Math.floor(within);
+  const min = Math.floor((within - deg) * 60);
+  return `${deg}°${String(min).padStart(2, "0")}′`;
+}
+
 export function ProfileChartScreen({
-  chart, calculating, worldview, readingMode, onWorldviewChange, onReadingModeChange, error,
+  chart,
+  calculating,
+  worldview,
+  readingMode,
+  onWorldviewChange,
+  onReadingModeChange,
+  error,
 }: ProfileChartScreenProps) {
+  // Toggle between North Indian Diamond (Default) and Circular Wheel
+  const [chartViewMode, setChartViewMode] = useState<"diamond" | "wheel">("diamond");
   const [interpretBody, setInterpretBody] = useState<string | null>(null);
+
+  const allBodies = useMemo(() => {
+    if (!chart) return [];
+    return [...chart.movingBodies, chart.ascendant, chart.descendant, chart.northNode, chart.southNode].filter(
+      (b): b is ChartRow => Boolean(b && Number.isFinite(b.longitude))
+    );
+
+  }, [chart]);
+
+  const sun = chart?.movingBodies.find(b => b.name === "Sun");
+  const moon = chart?.movingBodies.find(b => b.name === "Moon");
+  const asc = chart?.ascendant;
+
+  // Elemental & Modality counts
+  const balance = useMemo(() => {
+    if (!chart) return null;
+    const elements = { Fire: 0, Earth: 0, Air: 0, Water: 0 };
+    const modalities = { Cardinal: 0, Fixed: 0, Mutable: 0 };
+    chart.movingBodies.forEach(b => {
+      if (!b) return;
+      const sign = signAt(b.longitude);
+      const el = ELEMENT_MAP[sign];
+      const mod = MODALITY_MAP[sign];
+      if (el) elements[el]++;
+      if (mod) modalities[mod]++;
+    });
+    return { elements, modalities };
+  }, [chart]);
+
+  // Fixed Star contacts within 2.0 degrees
+  const starContacts = useMemo(() => {
+    if (!chart) return [];
+    const contacts: Array<{ star: string; planet: string; orb: number; meaning: string }> = [];
+    allBodies.forEach(b => {
+      FIXED_STARS.forEach(([starName, starLon]) => {
+        const diff = Math.abs(b.longitude - starLon);
+        const dist = Math.min(diff, 360 - diff);
+        if (dist <= 2.0) {
+          contacts.push({
+            star: starName,
+            planet: b.name,
+            orb: dist,
+            meaning: `Galactic fixed star beacon providing high spiritual or leadership charge.`,
+          });
+        }
+      });
+    });
+    return contacts.sort((a, b) => a.orb - b.orb);
+  }, [chart, allBodies]);
+
+
   if (!chart) {
-    return <section role="status" className="rounded-2xl border border-amber-300/30 bg-slate-950/80 p-6 text-amber-100">
-      <h1 className="font-serif text-xl">Your calculated diamond chart</h1>
-      <p className="mt-2 text-sm">{calculating
-        ? "Calculating real planetary positions…"
-        : "Calculated positions are unavailable. This screen will not show illustrative placements as calculated evidence."}</p>
-      {error && <p role="alert" className="mt-2 text-sm">{error}</p>}
-    </section>;
+    return (
+      <section role="status" className="mx-auto max-w-4xl rounded-2xl border border-amber-300/30 bg-slate-950/80 p-8 text-center text-amber-100">
+        <h1 className="font-serif text-2xl font-bold">Your Calculated Diamond Chart</h1>
+        <p className="mt-2 text-sm text-slate-300">
+          {calculating ? "Calculating exact Swiss Ephemeris astronomical positions…" : "Chart data currently unavailable."}
+        </p>
+        {error && <p className="mt-3 text-xs text-rose-300">{error}</p>}
+      </section>
+    );
   }
 
-  return <section id="chart-observatory" className="mb-8 scroll-mt-24 space-y-6" aria-label="Primary calculated divine diamond observatory">
-    <ChartObservatory2050 key={`${chart.worldview}:${chart.utc}`} chart={chart} onInterpretBody={setInterpretBody} />
-    {interpretBody && (
-      <section className="rounded-2xl border border-violet-300/30 bg-slate-950/80 p-4 sm:p-6" aria-label={`${interpretBody} full esoteric interpretation`}>
-        <div className="mb-4 flex items-center justify-between gap-3">
+  return (
+    <div className="mx-auto max-w-5xl space-y-8 pb-20 pt-2 text-slate-100">
+      {/* Header & Controls */}
+      <section aria-label="Chart Controls" className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
           <div>
-            <h2 className="font-serif text-xl text-violet-100">{interpretBody} — Master Interpreter</h2>
-            <p className="mt-1 text-sm text-slate-300">Explore this placement, its aspects, both reference frames, and applicable traditional evidence through the existing full-depth interpreter.</p>
+            <div className="flex items-center gap-2">
+              <Diamond className="h-4 w-4 text-amber-300" />
+              <span className="text-[10px] font-bold uppercase tracking-[.24em] text-amber-300">
+                Natal Celestial Observatory
+              </span>
+            </div>
+            <h1 className="font-serif text-3xl font-semibold text-white sm:text-4xl">
+              Natal Chart Workspace
+            </h1>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Precise 360° celestial geometry anchored to your birth moment
+            </p>
           </div>
-          <button type="button" onClick={() => setInterpretBody(null)} className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white">Close</button>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/profile"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300/40 bg-amber-400/10 px-3.5 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-400/20"
+            >
+              <UserRound size={14} />
+              <span>Edit Birth Data</span>
+            </Link>
+            <Link
+              href="/reading"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-violet-400/40 bg-violet-400/15 px-3.5 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-400/25"
+            >
+              <BookOpen size={14} />
+              <span>Full Reading</span>
+            </Link>
+          </div>
         </div>
-        <InterpretationPanel
-          key={`${chart.utc}:${interpretBody}:${readingMode}`}
-          chart={chart}
-          initialMode={readingMode === "transit" ? "transit" : readingMode === "natal" ? "natal" : "combined"}
-          initialQuestion={`Give me a detailed, chart-specific esoteric interpretation of ${interpretBody}: its exact zodiac degree, God View and Agent View houses, dispositors, geometric aspects and orbs, fixed stars, Nakshatra and pada, Arabic Manzil, elemental-family decan, applicable Chinese mansion, dignities, Arabic Lots, Vedic and Kabbalistic correspondences. Explain WHAT, WHY, HOW, CONSEQUENCE and MEANING; identify sources and channels of power, tensions, shadow expressions, and concrete self-awareness lessons. Use only calculated evidence and clearly identify unsupported methods.`}
-        />
+
+        {/* View Switchers: Diamond vs Wheel & God vs Agent */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#080B14]/90 p-3 shadow-md">
+          {/* Chart Wheel Projection Mode Toggle */}
+          <div className="flex items-center gap-1 bg-[#101628] p-1 rounded-xl border border-white/10">
+            <button
+              type="button"
+              onClick={() => setChartViewMode("diamond")}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+                chartViewMode === "diamond"
+                  ? "bg-[#D9B66F]/20 text-[#D9B66F] border border-[#D9B66F]/40 shadow-[0_0_12px_rgba(217,182,111,0.2)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Diamond size={15} />
+              <span>North Indian Diamond (Default)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartViewMode("wheel")}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+                chartViewMode === "wheel"
+                  ? "bg-cyan-400/20 text-cyan-200 border border-cyan-300/40 shadow-[0_0_12px_rgba(34,211,238,0.2)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Orbit size={15} />
+              <span>Circular Wheel</span>
+            </button>
+          </div>
+
+          {/* God View vs Agent View Toggle */}
+          <div className="flex items-center gap-1 bg-[#101628] p-1 rounded-xl border border-white/10">
+            <span className="text-[10px] uppercase font-bold text-slate-500 px-2 font-mono">Frame:</span>
+            <button
+              type="button"
+              onClick={() => onWorldviewChange("agent")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                worldview === "agent"
+                  ? "bg-indigo-500/25 text-indigo-200 border border-indigo-400/30 shadow-[0_0_12px_rgba(139,92,246,0.2)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Agent View (Ascendant Houses)
+            </button>
+            <button
+              type="button"
+              onClick={() => onWorldviewChange("god")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                worldview === "god"
+                  ? "bg-[#D9B66F]/25 text-[#D9B66F] border border-[#D9B66F]/40 shadow-[0_0_12px_rgba(217,182,111,0.2)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              God View (Cosmic Invariant)
+            </button>
+          </div>
+        </div>
       </section>
-    )}
-    <div className="mt-3 flex flex-wrap gap-3">
-      <Link href="/profile" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-400/10 px-5 text-sm font-semibold text-amber-200 hover:bg-amber-400/20">
-        <UserRound size={16} />
-        <span>Edit Birth Profile</span>
-      </Link>
-      <Link href="/reading" className="inline-flex min-h-11 items-center rounded-xl border border-violet-300/40 bg-violet-300/10 px-5 text-sm font-semibold text-violet-100">Open the Master Interpreter →</Link>
-      <Link href="/guide?tab=blueprint" className="inline-flex min-h-11 items-center rounded-xl border border-cyan-300/30 px-5 text-sm font-semibold text-cyan-100">Inspect all chart evidence →</Link>
+
+      {/* Main Chart Graphic Display */}
+      <section aria-label="Main Chart Visualizer">
+        {chartViewMode === "diamond" ? (
+          <GuardianDiamondCharts chart={chart} />
+        ) : (
+          <ChartWheel chart={chart} />
+        )}
+      </section>
+
+      {/* Esoteric Placement Interpretation Modal/Section */}
+      {interpretBody && (
+        <section className="rounded-2xl border border-violet-400/40 bg-slate-950/90 p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div>
+              <h2 className="font-serif text-xl font-bold text-violet-100">{interpretBody} — Master Interpretation</h2>
+              <p className="text-xs text-slate-400">Deep esoteric synthesis across both reference frames</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInterpretBody(null)}
+              className="rounded-lg border border-white/20 px-3 py-1 text-xs text-slate-300 hover:text-white"
+            >
+              Close
+            </button>
+          </div>
+          <InterpretationPanel
+            chart={chart}
+            initialMode={readingMode}
+            initialQuestion={`Provide a comprehensive esoteric interpretation of ${interpretBody} in my chart: exact degrees, dispositors, sacred geometry, Nakshatra, decan, and real-life manifestations.`}
+          />
+        </section>
+      )}
+
+      {/* 25 EXPANDABLE SYSTEMATIC DECONSTRUCTION DRAWERS */}
+      <SystematicDeconstruction chart={chart} onInterpretBody={setInterpretBody} />
+
+      {/* Fixed Star Intensity Visualizer */}
+      <section aria-label="Fixed Star Visualizer">
+        <FixedStarIntensityVisualizer chart={chart} />
+      </section>
     </div>
-    <div className="mt-6">
-      <FixedStarIntensityVisualizer chart={chart} />
-    </div>
-    <details className="mt-4 rounded-xl border border-cyan-200/20 bg-black/30 p-4">
-      <summary className="cursor-pointer text-sm font-semibold text-cyan-100">Chart and reading settings</summary>
-      <p className="mb-3 mt-2 text-xs text-slate-400">Choose a calculation frame and reading scope. The saved birth profile remains unchanged.</p>
-      <div className="grid gap-2 sm:grid-cols-3">
-        {frames.map(item => <button key={item.value} type="button" aria-pressed={worldview === item.value}
-          className={`min-h-11 rounded-lg border p-3 text-left text-xs ${worldview === item.value ? "border-cyan-300/70 bg-cyan-300/15 text-white" : "border-white/15 text-slate-300"}`}
-          onClick={() => onWorldviewChange(item.value)}>{item.label}</button>)}
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        {scopes.map(item => <button key={item.value} type="button" aria-pressed={readingMode === item.value}
-          className={`min-h-11 rounded-lg border p-3 text-left text-xs ${readingMode === item.value ? "border-violet-300/70 bg-violet-300/15 text-white" : "border-white/15 text-slate-300"}`}
-          onClick={() => onReadingModeChange(item.value)}>{item.label}</button>)}
-      </div>
-      {error && <p role="alert" className="mt-3 text-sm text-amber-200">{error}</p>}
-    </details>
-  </section>;
+  );
 }

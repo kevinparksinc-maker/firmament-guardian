@@ -189,14 +189,29 @@ describe("horary astrology", () => {
     expect(result.chart.canonEvidenceText).toContain("Condition:");
   });
 
-  it("returns a deterministic core judgment when optional language synthesis fails", async () => {
+  it("returns a deterministic core judgment when optional language synthesis fails with all traditional layers", async () => {
     mocked.invokeLLM.mockRejectedValueOnce(new Error("provider unavailable"));
 
     const result = await openHoraryQuestion(sampleInput);
 
     expect(result.reading).toContain("## Judgment");
     expect(result.reading).toContain(result.chart.traditional.judgment.verdict);
+    expect(result.reading).toContain("Significator condition:");
+    expect(result.reading).toContain("Arabic Lots:");
+    expect(result.reading).toContain("Part of Fortune");
+    expect(result.reading).toContain("Part of Spirit");
+    expect(result.reading).toContain("Part of Eros");
+    expect(result.reading).toContain("Part of Necessity");
+    expect(result.reading).toContain("Lunar stations & Decans:");
+    expect(result.reading).toContain("Timing estimate:");
     expect(result.reading).toContain("deterministic chart");
+
+    // Also verify judgmentEvidenceText contains the compact traditional layers
+    expect(result.chart.judgmentEvidenceText).toContain("SIGNIFICATOR DIGNITIES & DEBILITIES:");
+    expect(result.chart.judgmentEvidenceText).toContain("ARABIC PARTS / LOTS:");
+    expect(result.chart.judgmentEvidenceText).toContain("FIXED STARS WITHIN 1° ORB:");
+    expect(result.chart.judgmentEvidenceText).toContain("TRADITIONAL TIMING ESTIMATE:");
+    expect(result.chart.judgmentEvidenceText).toContain("LUNAR MANSION / MANZIL / DECAN OVERLAYS:");
   });
 
   it("adds a person natal layer while keeping transit and God View at the question moment", async () => {

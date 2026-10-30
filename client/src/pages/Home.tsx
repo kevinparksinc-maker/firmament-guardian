@@ -9,6 +9,7 @@ import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
 import type { GuideTab } from "@/components/ProfileGuideScreen";
 import { CosmicShareCard } from "@/components/CosmicShareCard";
 import { NatalProfileBuilder, type UserProfileData, SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
+import { SavedProfilePicker } from "@/components/SavedProfilePicker";
 import type { Worldview } from "../../../server/astrologyCore";
 import { Link, useLocation } from "wouter";
 import { startLogin } from "@/const";
@@ -16,6 +17,8 @@ import { startLogin } from "@/const";
 const ProfileChartScreen = lazy(() => import("@/components/ProfileChartScreen").then(module => ({ default: module.ProfileChartScreen })));
 const ProfileReadingScreen = lazy(() => import("@/components/ProfileReadingScreen").then(module => ({ default: module.ProfileReadingScreen })));
 const ProfileGuideScreen = lazy(() => import("@/components/ProfileGuideScreen").then(module => ({ default: module.ProfileGuideScreen })));
+const EnergyPage = lazy(() => import("@/pages/EnergyPage"));
+const ExplorePage = lazy(() => import("@/pages/ExplorePage"));
 
 const exampleChart = {
   location: "Dallas, Texas, USA",
@@ -400,6 +403,8 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
               </div>
             </div>
 
+            <SavedProfilePicker onLoad={handleSaveProfile} />
+
             <NatalProfileBuilder
               mode="inline-gate"
               currentProfile={activeProfile}
@@ -477,11 +482,15 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
                 handleAskMasterInterpreter={handleAskMasterInterpreter}
               />
             )}
-
           </>
         )}
+        {activeProfile && section === "energy" && <EnergyPage />}
+        {activeProfile && section === "explore" && <ExplorePage />}
         </Suspense>
       </main>
+
+
+
 
       {/* 1-Tap Cosmic Share Card & Social Export Modal */}
       <CosmicShareCard

@@ -45,3 +45,45 @@ export function overlay(longitude: number): Overlay {
 }
 export function formatLongitude(longitude: number) { const L = normalizeLongitude(longitude); const sign = ZODIAC_SIGNS[Math.floor(L / 30)]; const deg = L % 30; const d = Math.floor(deg); const m = Math.round((deg - d) * 60); return `${sign} ${String(d).padStart(2, "0")}°${String(m % 60).padStart(2, "0")}′`; }
 export function normalizeLongitude(value: number) { const wrapped = value % 360; return wrapped < 0 ? wrapped + 360 : wrapped; }
+
+export type Varga = "D2" | "D3" | "D9" | "D10";
+
+export function vargaPlacement(longitude: number, division: Varga) {
+  const lon = normalizeLongitude(longitude), sign = Math.floor(lon / 30), degree = lon % 30;
+  const n = Number(division.slice(1)), part = Math.min(n - 1, Math.floor(degree / (30 / n)));
+  let result: number;
+  if (division === "D2") {
+    const sunHora = (sign % 2 === 0) === (part === 0);
+    result = sunHora ? 4 : 3;
+  } else if (division === "D3") {
+    result = (sign + 4 * part) % 12;
+  } else if (division === "D9") {
+    const start = sign % 3 === 0 ? sign : sign % 3 === 1 ? (sign + 8) % 12 : (sign + 4) % 12;
+    result = (start + part) % 12;
+  } else {
+    result = ((sign % 2 === 0 ? sign : (sign + 8) % 12) + part) % 12;
+  }
+  return {
+    division,
+    part: part + 1,
+    sourceSign: ZODIAC_SIGNS[sign],
+    sign: ZODIAC_SIGNS[result],
+    signIndex: result,
+    degreeInPart: degree - part * (30 / n),
+    coordinateFrame: "guardian-fixed-zero-reference" as const,
+  };
+}
+
+export function grahaDrishtiTargetHouses(planet: string, fromHouse: number): number[] {
+  const aspectCounts: Record<string, readonly number[]> = {
+    Mars: [4, 7, 8],
+    Jupiter: [5, 7, 9],
+    Saturn: [3, 7, 10],
+  };
+  const counts = aspectCounts[planet];
+  if (!counts) return [];
+  if (!Number.isInteger(fromHouse) || fromHouse < 1 || fromHouse > 12)
+    throw new RangeError("Graha drishti requires a valid occupied house 1–12");
+  return counts.map((count) => ((fromHouse + count - 2) % 12) + 1);
+}
+

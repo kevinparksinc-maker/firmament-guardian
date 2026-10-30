@@ -352,12 +352,18 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Ascendant: ${ascendant.display}; Moon: ${moon.display}, ${moon.sign}, House ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
     `Core placements:\n${corePlacementLines}`,
     `Relevant major aspects supplied by the calculator (maximum 5° orb):\n${aspectLines}`,
+    `TRADITIONAL PERFECTION & VERDICT:\n- Verdict: ${traditional.judgment.verdict} (Score: ${traditional.judgment.score})\n- Perfection: ${traditional.perfection.length ? traditional.perfection.map(p => `${p.type.toUpperCase()} (${p.strength}): ${p.description}`).join("; ") : "No direct perfection, translation, collection, or prohibition."}\n- Moon: ${traditional.moonStatus.explanation}`,
+    `SIGNIFICATOR DIGNITIES & DEBILITIES:\n${dignityLines}`,
+    `RECEPTIONS (HOST-GUEST):\n${receptionLines}`,
+    `ARABIC PARTS / LOTS:\n${lotLines}`,
+    `FIXED STARS WITHIN 1° ORB:\n${starLines}`,
+    `TRADITIONAL TIMING ESTIMATE:\n${timingLines}`,
+    `LUNAR MANSION / MANZIL / DECAN OVERLAYS:\n${overlayLines}`,
     `LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED FOR THE RELEVANT SIGNIFICATORS:\n${canonEvidenceText}`,
     `SEFER YETZIRAH SYMBOLIC CORRESPONDENCES FOR THE QUESTION MOMENT (never override the core horary verdict):\n${kabbalahEvidenceText}`,
     natalQuestionEvidence,
     transitQuestionEvidence,
     `Radicality / considerations before judgment: status ${traditional.radicality.status}; ${traditional.radicality.explanation}${traditional.radicality.considerations.length ? `\n- ${traditional.radicality.considerations.join("\n- ")}` : ""}`,
-    `Configured traditional support: ${traditional.receptions.length ? traditional.receptions.map(row => row.description).join("; ") : "No configured reception found."}`,
     "This is the compact judgment evidence. The complete technical appendix follows, including dignity/debility, Lots, receptions, timing, fixed stars, lunar mansion/Manzil/Decan/Nakshatra overlays, and the Moon/perfection testimony. Use all supplied layers in clear English, keeping traditional horary significators and perfection as the primary judgment, with natal and transit charts as context.",
   ].join("\n\n");
 
@@ -433,6 +439,40 @@ function deterministicHoraryReading(chart: HoraryChart) {
     ? `${directAspect.first} ${directAspect.aspect} ${directAspect.second} with a ${directAspect.orb}° orb (${directAspect.phase}).`
     : "The supplied significators do not form a configured major aspect within the 5° orb.";
   const traditionalSummary = chart.traditional.judgment.testimonies.join(" ");
+
+  // Significator Dignities
+  const querentDignity = chart.traditional.dignities.find(d => d.planet === primaryRuler);
+  const topicDignity = chart.traditional.dignities.find(d => d.planet === chart.topicRuler);
+  const dignitySentence = `Significator condition: ${primaryRuler} (inquirant) is in ${querentDignity?.sign ?? ""}, house ${querentDignity?.house ?? ""}, essential dignity: ${querentDignity?.essential.length ? querentDignity.essential.join(", ") : "peregrine"} (${querentDignity?.essentialScore ?? 0} pts), accidental: ${querentDignity?.accidental.join(", ") ?? "neutral"}${querentDignity?.debilities.length ? `; debilities: ${querentDignity.debilities.join(", ")}` : ""}; ${chart.topicRuler} (matter) is in ${topicDignity?.sign ?? ""}, house ${topicDignity?.house ?? ""}, essential: ${topicDignity?.essential.length ? topicDignity.essential.join(", ") : "peregrine"} (${topicDignity?.essentialScore ?? 0} pts), accidental: ${topicDignity?.accidental.join(", ") ?? "neutral"}${topicDignity?.debilities.length ? `; debilities: ${topicDignity.debilities.join(", ")}` : ""}.`;
+
+  // Arabic Lots
+  const fortuneLot = chart.traditional.lots.find(l => l.name === "Fortune");
+  const spiritLot = chart.traditional.lots.find(l => l.name === "Spirit");
+  const erosLot = chart.traditional.lots.find(l => l.name === "Eros");
+  const necessityLot = chart.traditional.lots.find(l => l.name === "Necessity");
+  const lotsSentence = `Arabic Lots: Part of Fortune is in ${fortuneLot?.display ?? ""} (House ${fortuneLot?.house ?? ""}), indicating material conditions; Part of Spirit is in ${spiritLot?.display ?? ""} (House ${spiritLot?.house ?? ""}), indicating deliberate agency; Part of Eros is in ${erosLot?.display ?? ""} (House ${erosLot?.house ?? ""}); Part of Necessity is in ${necessityLot?.display ?? ""} (House ${necessityLot?.house ?? ""}).`;
+
+  // Receptions
+  const keyReceptions = chart.traditional.receptions.filter(r => [primaryRuler, chart.topicRuler].includes(r.from) && [primaryRuler, chart.topicRuler].includes(r.to));
+  const receptionSentence = keyReceptions.length
+    ? `Significator reception: ${keyReceptions.map(r => r.description).join("; ")}.`
+    : "No mutual or direct reception between primary significators was calculated.";
+
+  // Fixed Stars (< 1°)
+  const starSentence = chart.traditional.fixedStars.length
+    ? `Fixed Star contacts (within 1°): ${chart.traditional.fixedStars.map(s => `${s.planet} conjunct ${s.star} (${s.orb}° orb, nature ${s.nature}) — ${s.meaning}`).join("; ")}.`
+    : "No classical planet or Ascendant is conjunct a major fixed star within 1°.";
+
+  // Traditional Timing Aid
+  const timingSentence = chart.traditional.timing.length
+    ? `Timing estimate: ${chart.traditional.timing.map(t => `${t.from} ${t.aspect} ${t.to}: ${t.degreesToPerfection}° to perfection (${t.estimatedUnits})`).join("; ")}.`
+    : "Timing estimate: No direct key-significator perfection timing estimate was computed.";
+
+  // Lunar divisions
+  const querentOverlay = chart.traditional.overlays.find(o => o.body === primaryRuler);
+  const topicOverlay = chart.traditional.overlays.find(o => o.body === chart.topicRuler);
+  const overlaySentence = `Lunar stations & Decans: ${primaryRuler} resides in Nakshatra ${querentOverlay?.nakshatra ?? "unassigned"} (Manzil ${querentOverlay?.manzil ?? ""}, ${querentOverlay?.decan ?? ""}); ${chart.topicRuler} resides in Nakshatra ${topicOverlay?.nakshatra ?? "unassigned"} (Manzil ${topicOverlay?.manzil ?? ""}, ${topicOverlay?.decan ?? ""}).`;
+
   const complication = chart.traditional.radicality.considerations.length
     ? chart.traditional.radicality.considerations.join(" ")
     : directAspect?.phase === "separating"
@@ -446,12 +486,13 @@ function deterministicHoraryReading(chart: HoraryChart) {
       .flatMap(row => row.natalContacts.map(contact => `${row.name} ${contact.aspect} natal ${contact.natalName} (${contact.orb}°)`))
       .slice(0, 4)
     : [];
+
   return [
     "## What I hear beneath your question",
     `You are asking: “${chart.question}” The chart is being used to examine that specific matter at the place and moment you supplied.`,
     "",
     "## What this means for you",
-    `The question is assigned to ${chart.topicLabel}, with ${chart.querentRuler} representing the querent, ${chart.subjectRuler} representing the person in question, and ${chart.topicRuler} representing the matter. The traditional judgment compares ${chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler} with the matter ruler; the other layers refine, rather than replace, that judgment.`,
+    `The question is assigned to ${chart.topicLabel}, with ${chart.querentRuler} representing the querent, ${chart.subjectRuler} representing the person in question, and ${chart.topicRuler} representing the matter. The traditional judgment compares ${primaryRuler} with the matter ruler; the other layers refine, rather than replace, that judgment.`,
     "",
     "## Judgment",
     `**${judgment}** — this is the calibrated category supported by the configured horary testimony.`,
@@ -459,6 +500,12 @@ function deterministicHoraryReading(chart: HoraryChart) {
     "## The astrological picture",
     aspectSentence,
     `Traditional testimony: ${traditionalSummary}`,
+    dignitySentence,
+    receptionSentence,
+    lotsSentence,
+    starSentence,
+    overlaySentence,
+    timingSentence,
     `The Moon is ${chart.moon.display}, ${chart.moon.sign}, in House ${chart.moon.house}. ${chart.canonEvidenceText.split("\n").slice(0, 6).join(" ")}`,
     natalSummary,
     transitSummary.length

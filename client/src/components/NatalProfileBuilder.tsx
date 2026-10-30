@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
+import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import type { ChartResult } from "../../../server/astronomy";
 
 export interface UserProfileData {
@@ -134,6 +135,7 @@ export function NatalProfileBuilder({
   const [isLocatingTransitGps, setIsLocatingTransitGps] = useState(false);
   const [formError, setFormError] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
+  const { savedProfiles } = useProfileSession();
   const trpcUtils = trpc.useUtils();
 
   const geocode = trpc.hybrid.geocode.useQuery(
@@ -460,6 +462,46 @@ export function NatalProfileBuilder({
 
       {step === 1 && (
         <div className="space-y-5 animate-in fade-in duration-200">
+          {/* Quick Saved Profile Loader */}
+          {savedProfiles && savedProfiles.length > 0 && (
+            <div className="rounded-2xl border border-[#D9B66F]/30 bg-[#D9B66F]/5 p-3.5">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-[11px] font-semibold text-[#D9B66F] uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles size={13} />
+                  Load Saved Profile ({savedProfiles.length})
+                </span>
+                <span className="text-[10px] text-slate-400">Tap to autofill</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {savedProfiles.map((p, idx) => {
+                  const isSelected = formData.name.trim().toLowerCase() === p.name.trim().toLowerCase() && formData.date === p.date;
+                  return (
+                    <button
+                      key={`${p.name}-${p.date}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        setFormData(p);
+                        setCitySearch(p.location);
+                        setFormError("");
+                        setCitySearchError("");
+                        toast.success(`Loaded saved data for ${p.name}`);
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
+                        isSelected
+                          ? "border-[#D9B66F] bg-[#D9B66F]/20 text-[#D9B66F] shadow-sm font-semibold"
+                          : "border-white/10 bg-black/40 text-slate-300 hover:border-cyan-300/40 hover:text-white"
+                      }`}
+                    >
+                      <User size={12} />
+                      <span>{p.name}</span>
+                      <span className="text-[10px] opacity-60">({p.date.slice(0, 4)})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Name Field */}
           <div className="space-y-1.5">
             <Label htmlFor="profile-name" className="text-xs font-medium text-slate-200 flex items-center gap-1.5">
