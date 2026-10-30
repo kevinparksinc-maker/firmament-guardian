@@ -4,7 +4,7 @@ import { withCurrentQuestion } from "./_core/conversation";
 import { invokeLLM, type Message } from "./_core/llm";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
 import type { FrameRelationship } from "./astrologyCore";
-import { HORARY_TOPICS } from "../shared/horary";
+import { resolveHoraryQuestion, type HoraryHouseSelection } from "./horaryQuestionIntelligence";
 import { calculateLookahead, type Lookahead } from "./horaryLookahead";
 import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
 import { HORARY_SYSTEM as HORARY_SPECIALIZED_SYSTEM } from "./horary-instructions";
@@ -16,10 +16,12 @@ import { seferYetzirahEvidence, KABBALAH_SYNTHESIS_STANDARD } from "./astrologyK
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
-  subject: "querent" | "other";
-  topicHouse: number;
+  subject?: "querent" | "other";
+  topicHouse?: number;
   /** House of the person asked about, counted from the querent. */
   subjectHouse?: number;
+  /** Optional advanced override. Ordinary question intake leaves this unset. */
+  manualOverrides?: boolean;
   natal?: Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time">;
 };
 
@@ -69,6 +71,7 @@ export type HoraryChart = {
   transitChart: Awaited<ReturnType<typeof calculateChart>>;
   godChart: Awaited<ReturnType<typeof calculateChart>>;
   traditional: TraditionalHoraryEvidence;
+  houseSelection: HoraryHouseSelection;
   canonEvidenceText: string;
   evidenceText: string;
   judgmentEvidenceText: string;
@@ -85,18 +88,6 @@ const ASPECT_TARGETS: Array<[number, HoraryAspect["aspect"]]> = [
 ];
 const ASPECT_ORB_DEGREES = 5;
 
-function inferSubjectHouse(input: HoraryInput) {
-  if (input.subject === "querent") return 1;
-  if (input.subjectHouse && Number.isInteger(input.subjectHouse) && input.subjectHouse >= 1 && input.subjectHouse <= 12) return input.subjectHouse;
-  const q = input.question.toLowerCase();
-  if (/\b(my|our)\s+(child|son|daughter|kid)\b|\b(child|son|daughter)\s+of\s+mine\b/.test(q)) return 5;
-  if (/\b(my|our)\s+(brother|sister|sibling)\b/.test(q)) return 3;
-  if (/\b(my|our)\s+(mother|mum|mom|father|dad|parent)\b/.test(q)) return /\b(father|dad)\b/.test(q) ? 10 : 4;
-  if (/\b(my|our)\s+(boss|manager|employer)\b/.test(q)) return 10;
-  if (/\b(my|our)\s+(friend|group|team)\b/.test(q)) return 11;
-  if (/\b(my|our)\s+(partner|spouse|husband|wife|boyfriend|girlfriend)\b/.test(q)) return 7;
-  return 7;
-}
 function signOf(longitude: number) {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
 }
@@ -203,17 +194,29 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     const sign = signOf(longitude);
     return { house: index + 1, longitude, sign, ruler: TRADITIONAL_RULERS[sign] };
   });
-  const topic = HORARY_TOPICS.find(item => item.house === input.topicHouse);
-  if (!topic) throw new Error("Choose a valid topic house before casting the horary chart.");
-
   const querentRuler = houses[0].ruler;
-  const subjectHouse = inferSubjectHouse(input);
+  const legacyOrExpertOverride = input.manualOverrides ?? (input.topicHouse !== undefined || input.subjectHouse !== undefined);
+  const legacyUnspecifiedOtherHouse = input.subject === "other" && input.subjectHouse === undefined &&
+    !/\bmy\s+(?:child|children|son|daughter|kid|sibling|brother|sister|mother|mum|mom|father|dad|parent|partner|spouse|husband|wife|boyfriend|girlfriend|friend|boss|manager|employer|employee|colleague|coworker|co-worker)\b/i.test(input.question)
+    ? 7 : undefined;
+  const houseSelection = resolveHoraryQuestion(input.question, houses, {
+    enabled: legacyOrExpertOverride,
+    ...(input.subjectHouse !== undefined ? { subjectHouse: input.subjectHouse } : legacyUnspecifiedOtherHouse ? { subjectHouse: legacyUnspecifiedOtherHouse } : {}),
+    ...(input.topicHouse !== undefined ? { topicHouse: input.topicHouse } : {}),
+  });
+  if (houseSelection.status === "clarification_needed") throw new Error(houseSelection.clarificationQuestion ?? "Please clarify who the question refers to.");
+  const personAssignment = houseSelection.assignments.find(row => row.role === "person");
+  const matterAssignment = houseSelection.assignments.find(row => row.id === houseSelection.primaryMatterId);
+  if (!matterAssignment) throw new Error("The question-intelligence layer could not resolve a matter house.");
+  const subjectHouse = personAssignment?.house ?? 1;
   const subjectRuler = houses[subjectHouse - 1].ruler;
-  const actualTopicHouse = ((subjectHouse - 1 + input.topicHouse - 1) % 12) + 1;
+  const actualTopicHouse = matterAssignment.house;
+  const topicHouse = matterAssignment.relativeHouse ?? actualTopicHouse;
+  const topicLabel = matterAssignment.label;
   const topicRuler = houses[actualTopicHouse - 1].ruler;
   const moon = placements.find(row => row.name === "Moon");
   if (!moon) throw new Error("The Moon position is not available in the calculated question chart.");
-  const aspectNames = Array.from(new Set([querentRuler, subjectRuler, topicRuler, "Moon"]));
+  const aspectNames = Array.from(new Set([...houseSelection.significators.map(row => row.planet), querentRuler, subjectRuler, topicRuler, "Moon"]));
   const relevantAspects = uniquePairs(placements, aspectNames)
     .map(([first, second]) => aspectBetween(first, second))
     .filter((aspect): aspect is HoraryAspect => Boolean(aspect));
@@ -283,7 +286,21 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   const stationLines = lookahead.stations.length
     ? lookahead.stations.map(row => `- ${row.planet} turns ${row.turns} on ${row.atLocal}`).join("\n")
     : "- No planet changes direction in the window.";
-  const traditional = calculateTraditionalHorary({ ascendant: { name: "Ascendant", longitude: ascendant.longitude, house: 1 }, houses, placements, topicRuler, subjectRuler, querentRuler, questionRuler: input.subject === "querent" ? querentRuler : subjectRuler, lookahead, referenceUtc: askedAt });
+  const matterAssignments = houseSelection.assignments.filter(row => row.role === "matter" || row.role === "supporting");
+  const comparisonPeople = [
+    { label: "querent", ruler: querentRuler },
+    ...houseSelection.assignments.filter(row => row.role === "person").map(row => ({ label: row.label, ruler: row.ruler })),
+  ];
+  const significatorPairs = matterAssignments.flatMap(matter => [
+    ...comparisonPeople.map(person => ({ from: person.ruler, to: matter.ruler, label: `${person.label} ↔ ${matter.label}` })),
+    { from: "Moon", to: matter.ruler, label: `Moon co-significator ↔ ${matter.label}` },
+  ]);
+  const traditional = calculateTraditionalHorary({
+    ascendant: { name: "Ascendant", longitude: ascendant.longitude, house: 1 }, houses, placements,
+    topicRuler, subjectRuler, querentRuler, questionRuler: personAssignment ? subjectRuler : querentRuler,
+    additionalSignificators: houseSelection.significators.map(row => row.planet), significatorPairs,
+    lookahead, referenceUtc: askedAt,
+  });
   const lotLines = traditional.lots.map(lot => `- ${lot.name}: ${lot.display}; house ${lot.house}; ${lot.formula}; ${lot.meaning}`).join("\n");
   const dignityLines = traditional.dignities.map(row => `- ${row.planet}: ${row.sign}, house ${row.house}; essential ${row.essential.length ? row.essential.join(", ") : "none"} (${row.essentialScore}); accidental ${row.accidental.join(", ")} (${row.accidentalScore}); debilities ${row.debilities.length ? row.debilities.join(", ") : "none"}`).join("\n");
   const receptionLines = traditional.receptions.length ? traditional.receptions.map(row => `- ${row.description}`).join("\n") : "- No configured reception found among the classical planets.";
@@ -312,11 +329,12 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Question asked at: ${askedAt} UTC (${input.date} ${input.time} local; ${input.timezone})`,
     `Location: ${input.location} (${input.latitude.toFixed(4)}, ${input.longitude.toFixed(4)})`,
     `House system: Equal House, with 30-degree cusps from the calculated Ascendant. Planetary longitudes are geocentric; a separate topocentric (parallax-corrected) Moon longitude is available but is not used for houses or aspects.`,
-    `Question topic: ${topic.label} (${ordinal(input.topicHouse)} house from the ${input.subject === "querent" ? "querent" : "other person"}).`,
+    `Question topic: ${topicLabel} (${ordinal(topicHouse)} relative house; radical chart house ${actualTopicHouse}).`,
     `Ascendant: ${ascendant.display} (${ascendantSign}); querent's primary ruler: ${querentRuler}.`,
-    `Person asked about: ${input.subject === "querent" ? "the querent (House 1)" : "another person (House 7)"}; that person's ruler: ${subjectRuler}.`,
-    `Topic house: house ${input.topicHouse} counted from the person asked about is actual chart house ${actualTopicHouse}; cusp sign ${houses[actualTopicHouse - 1].sign}; topic ruler ${topicRuler}.`,
-    `Significator roles: querent = House 1 ruler ${querentRuler}; person asked about = House ${subjectHouse} ruler ${subjectRuler}; matter = actual chart House ${actualTopicHouse} ruler ${topicRuler}. Traditional judgment compares ${input.subject === "querent" ? `the querent ruler ${querentRuler}` : `the subject ruler ${subjectRuler}`} with matter ruler ${topicRuler}; retain the querent ruler as context. Do not interchange these roles.`,
+    `Person asked about: ${personAssignment ? `${personAssignment.label} (radical House ${subjectHouse})` : "the querent (House 1)"}; ruler ${subjectRuler}.`,
+    `Topic house: radical chart House ${actualTopicHouse}; cusp sign ${houses[actualTopicHouse - 1].sign}; topic ruler ${topicRuler}.`,
+    `AUTOMATIC HORARY QUESTION INTELLIGENCE — each house assignment includes the exact question wording, radical/turned-house derivation, ruler, and doctrine: ${houseSelection.assignments.map(row => `${row.label}: radical House ${row.house}, ruled by ${row.ruler}; wording “${row.wording}”; ${row.reasoning}`).join(" | ")}`,
+    `Significator roles: ${houseSelection.significators.map(row => `${row.planet} for ${row.roles.join(", ")}`).join("; ")}. The querent remains House 1 ruler ${querentRuler}; the selected primary matter ruler is ${topicRuler}.`,
     `Moon: ${moon.display}, ${moon.sign}, house ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
     `Traditional planetary placements:\n${placementLines}`,
     `House cusps and traditional rulers:\n${houseLines}`,
@@ -342,13 +360,15 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     transitEvidence,
     godEvidence,
     "Three-layer reading rule: keep the NATAL / AGENT, TRANSIT / QUESTION-MOMENT, and GOD VIEW / GEOCENTRIC evidence sets explicitly separate. Use natal houses only for the person layer; use transit contacts to describe activation; use God View for the whole-sky context. Never turn God View into local houses or a personal Ascendant.",
-    "Method boundary: the traditional layer now calculates configured Lots, dignity/debility indicators, reception, close fixed-star testimony, radicality cautions, a non-deterministic perfection timing aid, and lunar mansion/Manzil/Decan overlays. It still does not calculate every traditional doctrine, including prohibition, collection/translation of light, all sect/ruler conditions, or a complete traditional timing judgment; do not invent those factors.",
+    "Method boundary: the traditional layer calculates configured direct perfection and bounded translation, collection, possible-prohibition, reception, Moon-course, dignity/debility, and other testimony heuristics for the resolved significator pairs. These are configured rule checks, not an exhaustive reconstruction of every classical condition; each output carries its scope and should be judged in chart context.",
   ].join("\n\n");
   const judgmentEvidenceText = [
     `Question: ${input.question}`,
     `Question asked at: ${askedAt} UTC (${input.date} ${input.time} local; ${input.timezone})`,
-    `Question topic: ${topic.label}; the selected relative House ${input.topicHouse} is actual chart House ${actualTopicHouse}.`,
-    `Roles: querent = House 1 ruler ${querentRuler}; person asked about = House ${subjectHouse} ruler ${subjectRuler}; matter = actual House ${actualTopicHouse} ruler ${topicRuler}. Traditional judgment compares ${input.subject === "querent" ? querentRuler : subjectRuler} with ${topicRuler}; keep the roles separate.`,
+    `Question topic: ${topicLabel}; relative House ${topicHouse} is radical chart House ${actualTopicHouse}.`,
+    `Roles: querent = House 1 ruler ${querentRuler}; ${personAssignment ? `${personAssignment.label} = House ${subjectHouse} ruler ${subjectRuler}` : "no separate person is named"}; matter = actual House ${actualTopicHouse} ruler ${topicRuler}.`,
+    `AUTOMATIC HOUSE SELECTION: ${houseSelection.assignments.map(row => `${row.label} → radical House ${row.house} → ${row.ruler}; wording “${row.wording}”; ${row.reasoning}`).join("\n")}`,
+    `Resolved significators: ${houseSelection.significators.map(row => `${row.planet} (${row.roles.join(", ")})`).join("; ")}.`,
     `Ascendant: ${ascendant.display}; Moon: ${moon.display}, ${moon.sign}, House ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
     `Core placements:\n${corePlacementLines}`,
     `Relevant major aspects supplied by the calculator (maximum 5° orb):\n${aspectLines}`,
@@ -369,12 +389,12 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
 
   return {
     question: input.question,
-    subject: input.subject,
+    subject: personAssignment ? "other" : "querent",
     subjectHouse,
     subjectRuler,
-    topicHouse: input.topicHouse,
+    topicHouse,
     actualTopicHouse,
-    topicLabel: topic.label,
+    topicLabel,
     askedAt,
     location: input.location,
     timezone: input.timezone,
@@ -392,6 +412,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     transitChart,
     godChart,
     traditional,
+    houseSelection,
     canonEvidenceText,
     evidenceText,
     judgmentEvidenceText,

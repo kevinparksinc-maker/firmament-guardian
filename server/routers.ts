@@ -90,9 +90,10 @@ const placeInput = z.object({
 });
 const horaryQuestionInput = placeInput.extend({
   question: z.string().trim().min(10).max(1000),
-  subject: z.enum(["querent", "other"]),
-  topicHouse: z.number().int().min(1).max(12),
+  subject: z.enum(["querent", "other"]).optional(),
+  topicHouse: z.number().int().min(1).max(12).optional(),
   subjectHouse: z.number().int().min(1).max(12).optional(),
+  manualOverrides: z.boolean().optional(),
   natal: placeInput.optional(),
 });
 export const appRouter = router({

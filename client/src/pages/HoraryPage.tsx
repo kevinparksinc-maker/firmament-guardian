@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Clock3, Loader2, MapPin, MessageCircle, Moon, Navigation, Orbit, Sparkles, Sun } from "lucide-react";
 import { Link } from "wouter";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { HORARY_TOPICS } from "@shared/horary";
 import { HoraryLookaheadEvidence } from "@/components/HoraryLookaheadEvidence";
 import { HoraryOrrery } from "@/components/HoraryOrrery";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
@@ -16,20 +15,12 @@ import { HoraryChamber2050 } from "@/components/HoraryChamber2050";
 import { formatLongitude } from "@shared/hybrid";
 import type { HoraryChart } from "../../../server/horary";
 
-const QUICK_TOPICS = [
-  { label: "💼 Career / Job", house: 10, placeholder: "Will I secure the job promotion I interviewed for?" },
-  { label: "💖 Love / Partner", house: 7, placeholder: "Will my relationship with my partner grow deeper?" },
-  { label: "💰 Money / Deal", house: 2, placeholder: "Will my financial investment yield a profitable return?" },
-  { label: "🏡 Home / Move", house: 4, placeholder: "Should I purchase or move into this property?" },
-  { label: "🩺 Health / Recovery", house: 6, placeholder: "Will my health condition improve with this treatment?" },
-  { label: "✈️ Travel / Study", house: 9, placeholder: "Will my long-distance travel and visa application succeed?" },
-  { label: "🔑 Lost Property", house: 2, placeholder: "Will I recover the missing item I recently misplaced?" },
-];
-
-function localDateTime() {
+function localDateTime(timezone?: string) {
   const now = new Date();
-  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const parts = new Intl.DateTimeFormat("en-CA", { ...(timezone ? { timeZone: timezone } : {}), year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const value = (type: string) => parts.find(part => part.type === type)?.value ?? "00";
+  const date = `${value("year")}-${value("month")}-${value("day")}`;
+  const time = `${value("hour")}:${value("minute")}`;
   return { date, time };
 }
 
@@ -44,27 +35,20 @@ type ResolvedPlace = {
 type HoraryResult = { chart: HoraryChart; reading: string };
 
 export default function HoraryPage() {
-  const initialMoment = localDateTime();
   const [question, setQuestion] = useState("");
-  const [subject, setSubject] = useState<"querent" | "other">("querent");
+  const [expertOverrides, setExpertOverrides] = useState(false);
   const [subjectHouse, setSubjectHouse] = useState("");
   const [topicHouse, setTopicHouse] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [place, setPlace] = useState<ResolvedPlace | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
-  const [birthLocationQuery, setBirthLocationQuery] = useState("");
-  const [birthPlace, setBirthPlace] = useState<ResolvedPlace | null>(null);
-  const [birthDate, setBirthDate] = useState("");
-  const [birthTime, setBirthTime] = useState("");
-  const [date, setDate] = useState(initialMoment.date);
-  const [time, setTime] = useState(initialMoment.time);
+  const [clarificationAnswer, setClarificationAnswer] = useState("");
   const [horary, setHorary] = useState<HoraryResult | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
   const trpcUtils = trpc.useUtils();
   const geocode = trpc.hybrid.geocode.useQuery({ query: locationQuery }, { enabled: false, retry: false });
-  const birthGeocode = trpc.hybrid.geocode.useQuery({ query: birthLocationQuery }, { enabled: false, retry: false });
   const cast = trpc.horary.open.useMutation({
     onSuccess: result => {
       setHorary(result);
@@ -120,38 +104,34 @@ export default function HoraryPage() {
     setLocationQuery(result.data.label);
   };
 
-  const resolveBirthPlace = async () => {
-    if (birthLocationQuery.trim().length < 2) return;
-    const result = await birthGeocode.refetch();
-    if (!result.data) return;
-    const resolved = { ...result.data, query: result.data.label.trim() };
-    setBirthPlace(resolved);
-    setBirthLocationQuery(result.data.label);
-  };
+  useEffect(() => {
+    useCurrentLocation();
+    // Request the question location once; manual city entry remains the fallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const locationIsResolved = Boolean(place && place.query === locationQuery.trim());
-  const birthLocationIsResolved = Boolean(birthPlace && birthPlace.query === birthLocationQuery.trim());
-  const hasCompleteNatal = birthLocationIsResolved && birthDate.length === 10 && birthTime.length === 5;
-  const canCast = question.trim().length >= 10 && topicHouse !== "" && locationIsResolved && date.length === 10 && time.length === 5 && !cast.isPending;
+  const canCast = question.trim().length >= 10 && locationIsResolved && !cast.isPending;
 
   const castQuestion = () => {
     if (!canCast || !place) return;
+    const timezone = place.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    const moment = localDateTime(timezone);
     cast.reset();
     setHorary(null);
     setMessages([]);
     followUp.reset();
     cast.mutate({
       question: question.trim(),
-      subject,
-      ...(subject === "other" && subjectHouse ? { subjectHouse: Number(subjectHouse) } : {}),
-      topicHouse: Number(topicHouse),
+      manualOverrides: expertOverrides,
+      ...(expertOverrides && subjectHouse ? { subjectHouse: Number(subjectHouse) } : {}),
+      ...(expertOverrides && topicHouse ? { topicHouse: Number(topicHouse) } : {}),
       location: place.label,
       latitude: place.latitude,
       longitude: place.longitude,
-      timezone: place.timezone,
-      date,
-      time,
-      ...(hasCompleteNatal && birthPlace ? { natal: { location: birthPlace.label, latitude: birthPlace.latitude, longitude: birthPlace.longitude, timezone: birthPlace.timezone, date: birthDate, time: birthTime } } : {}),
+      timezone,
+      date: moment.date,
+      time: moment.time,
     });
   };
 
@@ -183,45 +163,30 @@ export default function HoraryPage() {
           <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">Ask a clear, present-tense question. Firmament Guardian will cast a chart for the moment and place you provide, explain the testimony in connected plain language, and keep follow-up chat anchored to that same chart.</p>
         </header>
 
-        <section className="mb-7 rounded-2xl border border-amber-200/25 bg-gradient-to-r from-[#27243c]/80 via-[#14273c]/80 to-[#102038]/70 p-4 shadow-xl shadow-black/20 sm:p-6" aria-label="Your Horary question readiness"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber-200">YOUR QUESTION · GUIDED SETUP</p><span className="text-xs text-cyan-100">${[question.trim().length>=10,topicHouse!=="",locationIsResolved,date.length===10&&time.length===5].filter(Boolean).length} / 4 ready</span></div><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{([{title:"Ask one question",done:question.trim().length>=10,description:"Write what you want to understand."},{title:"Choose the topic",done:topicHouse!=="",description:"Identify the house of the matter."},{title:"Resolve the location",done:locationIsResolved,description:"Use the place where you asked."},{title:"Set the question moment",done:date.length===10&&time.length===5,description:"Confirm date and local time."}]).map((step,index)=><div key={step.title} className={`rounded-xl border p-3 ${step.done?"border-emerald-200/30 bg-emerald-100/[0.06]":"border-white/10 bg-white/[0.035]"}`}><p className={`text-xs font-semibold ${step.done?"text-emerald-100":"text-slate-200"}`}><span className="mr-2 text-amber-200">{index+1}.</span>{step.title} <span aria-label={step.done?"Ready":"Not ready"}>{step.done?"✓":"○"}</span></p><p className="mt-1 text-[11px] leading-5 text-slate-400">{step.description}</p></div>)}</div><p className="mt-4 text-xs leading-6 text-slate-400">When all four essentials are ready, cast the chart below. An optional natal chart adds personal context but is not required for traditional Horary judgment.</p></section>
+        <section className="mb-7 rounded-2xl border border-amber-200/25 bg-gradient-to-r from-[#27243c]/80 via-[#14273c]/80 to-[#102038]/70 p-4 shadow-xl shadow-black/20 sm:p-6" aria-label="Horary question readiness">
+          <p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber-200">QUESTION INTAKE · AUTOMATIC HOUSE INTELLIGENCE</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">Write your question in your own words. The Absolute identifies the people, matter, radical and turned houses, and significators. The question moment is captured when you cast.</p>
+          <p className="mt-2 text-xs text-cyan-100">{locationIsResolved && place ? `Location detected: ${place.label}` : isLocating ? "Detecting question location…" : "Location permission unavailable? Enter the city where you are asking below."}</p>
+        </section>
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,.75fr)]">
           <Card className="border-white/10 bg-white/[0.045] text-slate-100 shadow-2xl shadow-black/20">
             <CardHeader><CardTitle className="flex items-center gap-2 font-serif text-2xl"><Sparkles className="h-5 w-5 text-cyan-200"/>Ask your horary question</CardTitle><p className="text-sm leading-6 text-slate-400">Use the time and place where the question became clear and important to you. Keep it to one sincere question.</p></CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-1">
-                  <Label htmlFor="horary-question" className="text-slate-200">Your question</Label>
-                  <span className="text-[11px] text-amber-200/80">Tap topic to pre-select house & prompt:</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pb-1">
-                  {QUICK_TOPICS.map(item => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => {
-                        setTopicHouse(String(item.house));
-                        setSubject("querent");
-                        if (!question.trim()) {
-                          setQuestion(item.placeholder);
-                        }
-                      }}
-                      className={`rounded-lg border px-2.5 py-1 text-xs transition ${
-                        topicHouse === String(item.house)
-                          ? "border-cyan-400/50 bg-cyan-900/40 text-cyan-200"
-                          : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-cyan-300/40 hover:bg-cyan-950/30 hover:text-cyan-100"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-                <textarea id="horary-question" value={question} onChange={event => setQuestion(event.target.value)} maxLength={1000} placeholder="For example: Is this the right time to accept the job offer I received?" className="min-h-28 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50"/>
-                <p className="text-xs text-slate-500">One specific question works better than several questions combined. {question.trim().length < 10 ? "Enter at least 10 characters." : ""}</p>
+                <Label htmlFor="horary-question" className="text-slate-200">Your question</Label>
+                <textarea id="horary-question" value={question} onChange={event => setQuestion(event.target.value)} maxLength={1000} placeholder="Ask in your own words—for example, ‘Will my sister find a new job?’" className="min-h-36 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50"/>
+                <p className="text-xs text-slate-500">Be specific about who is involved and what you want to know. {question.trim().length < 10 ? "Enter at least 10 characters." : ""}</p>
               </div>
-              <div className="space-y-2"><Label htmlFor="horary-subject" className="text-slate-200">Who is the question about?</Label><select id="horary-subject" value={subject} onChange={event => setSubject(event.target.value as "querent" | "other")} className="h-11 w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50"><option value="querent">Me — I am the person in the question</option><option value="other">Another person — I am asking about them</option></select><p className="text-xs text-slate-500">You remain the querent (House 1). If the question concerns a specific relative or role, identify them below so the app can turn the correct houses.</p></div>
-              {subject === "other" && <div className="space-y-2"><Label htmlFor="horary-subject-house" className="text-slate-200">Who is the other person?</Label><select id="horary-subject-house" value={subjectHouse} onChange={event => setSubjectHouse(event.target.value)} className="h-11 w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50"><option value="">Infer from the question (default House 7)</option><option value="3">Sibling — House 3</option><option value="4">Mother / parent / family — House 4</option><option value="5">Child — House 5</option><option value="7">Partner / counterpart — House 7</option><option value="10">Father / boss / authority — House 10</option><option value="11">Friend / group — House 11</option><option value="12">Other relationship / hidden matter — House 12</option></select><p className="text-xs text-slate-500">Leave inference on to use question wording, or choose the person’s house explicitly.</p></div>}
-              <div className="space-y-2"><Label htmlFor="horary-topic" className="text-slate-200">What area relative to {subject === "querent" ? "me" : "this person"}?</Label><select id="horary-topic" value={topicHouse} onChange={event => setTopicHouse(event.target.value)} className="h-11 w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50"><option value="">Choose the relevant topic house</option>{HORARY_TOPICS.map(topic => <option key={topic.house} value={topic.house}>House {topic.house} from {subject === "querent" ? "me" : "this person"} — {topic.label}</option>)}</select><p className="text-xs text-slate-500">The asker remains House 1. The other person’s house is inferred from the question or selected above; the chosen topic house is then turned from that person.</p></div>
-              <div className="space-y-2">
+              {(cast.error?.message.toLowerCase().includes("who does") || cast.error?.message.toLowerCase().includes("clarify") || cast.error?.message.toLowerCase().includes("which person")) && <div role="alert" className="space-y-3 rounded-xl border border-amber-200/25 bg-amber-100/[0.05] p-4"><p className="text-sm text-amber-100">{cast.error.message}</p><Input aria-label="Clarification" value={clarificationAnswer} onChange={event => setClarificationAnswer(event.target.value)} placeholder="For example: my brother or mother" className="border-white/10 bg-black/20 text-white"/><Button type="button" onClick={() => { if (!clarificationAnswer.trim()) return; const answer = clarificationAnswer.trim().replace(/^my\s+/i, ""); setQuestion(current => `${current} [Clarification: my ${answer}]`); setClarificationAnswer(""); cast.reset(); }} disabled={!clarificationAnswer.trim()} className="bg-amber-200 text-slate-950 hover:bg-amber-100">Add clarification</Button></div>}
+              <details className="rounded-xl border border-white/10 bg-black/10 p-4">
+                <summary className="cursor-pointer text-sm text-slate-300">Advanced · manual house overrides (optional)</summary>
+                <p className="mt-2 text-xs leading-5 text-slate-500">Automatic assignments remain the default. Experts may override the person’s radical house and the matter house relative to that person.</p>
+                <label className="mt-3 block text-xs text-slate-300"><input type="checkbox" checked={expertOverrides} onChange={event => setExpertOverrides(event.target.checked)} className="mr-2"/>Enable manual house overrides</label>
+                {expertOverrides && <div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-xs text-slate-300">Person’s radical house<select value={subjectHouse} onChange={event => setSubjectHouse(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-sm text-white"><option value="">Automatic</option>{Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>House {i+1}</option>)}</select></label><label className="text-xs text-slate-300">Matter house from that person<select value={topicHouse} onChange={event => setTopicHouse(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-sm text-white"><option value="">Automatic</option>{Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>House {i+1}</option>)}</select></label></div>}
+              </details>
+              <details open={!locationIsResolved} className="rounded-xl border border-white/10 bg-black/10 p-4">
+                <summary className="cursor-pointer text-sm text-slate-300">Question location {locationIsResolved ? "· detected" : "· enter city if location access is unavailable"}</summary>
+              <div className="mt-3 space-y-2">
                 <Label htmlFor="horary-location" className="text-slate-200">Where were you when you asked?</Label>
                 <div className="flex flex-wrap gap-2">
                   <Input id="horary-location" value={locationQuery} onChange={event => setLocationQuery(event.target.value)} placeholder="City, region, country" className="min-w-[180px] flex-1 border-white/10 bg-black/20 text-white"/>
@@ -238,8 +203,7 @@ export default function HoraryPage() {
                 {geocode.error && <p className="text-xs text-rose-300">{geocode.error.message}</p>}
                 {place && !locationIsResolved && <p className="text-xs text-amber-200">Resolve this location again before casting the question chart.</p>}
               </div>
-              <div className="space-y-3 rounded-xl border border-amber-200/15 bg-amber-100/[0.035] p-4"><div><p className="text-xs uppercase tracking-[.18em] text-amber-200">Optional natal layer</p><p className="mt-1 text-xs leading-5 text-slate-500">Add the person’s birth details to compare the question-time transit against their natal chart. Leave blank for a horary + God View reading without a personal natal layer.</p></div><div className="flex gap-2"><Input id="birth-location" value={birthLocationQuery} onChange={event => setBirthLocationQuery(event.target.value)} placeholder="Birth city, region, country" className="border-white/10 bg-black/20 text-white"/><Button type="button" variant="outline" onClick={resolveBirthPlace} disabled={birthGeocode.isFetching || birthLocationQuery.trim().length < 2} className="shrink-0 border-white/10 bg-white/[0.04] text-amber-100 hover:bg-white/[0.08]"><MapPin className="mr-2 h-4 w-4"/>{birthGeocode.isFetching ? "Resolving" : "Resolve"}</Button></div>{birthLocationIsResolved && birthPlace && <p className="text-xs text-emerald-200">{birthPlace.latitude.toFixed(4)}°, {birthPlace.longitude.toFixed(4)}° · {birthPlace.timezone}</p>}<div className="grid gap-3 sm:grid-cols-2"><Input aria-label="Birth date" type="date" value={birthDate} onChange={event => setBirthDate(event.target.value)} className="border-white/10 bg-black/20 text-white"/><Input aria-label="Birth time" type="time" value={birthTime} onChange={event => setBirthTime(event.target.value)} className="border-white/10 bg-black/20 text-white"/></div>{birthLocationQuery && !hasCompleteNatal && <p className="text-xs text-amber-200">Resolve the birth place and enter both birth date and time to enable the natal layer.</p>}</div>
-              <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="horary-date" className="text-slate-200">Local date asked</Label><Input id="horary-date" type="date" value={date} onChange={event => setDate(event.target.value)} className="border-white/10 bg-black/20 text-white"/></div><div className="space-y-2"><Label htmlFor="horary-time" className="text-slate-200">Local time asked</Label><Input id="horary-time" type="time" value={time} onChange={event => setTime(event.target.value)} className="border-white/10 bg-black/20 text-white"/></div></div>
+              </details>
               {cast.error && <div role="alert" className="rounded-xl border border-rose-300/20 bg-rose-400/[0.08] p-3 text-sm text-rose-200">{cast.error.message}</div>}
               <Button type="button" onClick={castQuestion} disabled={!canCast} className="h-12 w-full bg-cyan-300 font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50">{cast.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Casting the question chart and preparing your reading…</> : <><Orbit className="mr-2 h-4 w-4"/>Cast chart & interpret</>}</Button>
             </CardContent>
@@ -247,7 +211,7 @@ export default function HoraryPage() {
 
           <Card className="border-cyan-200/15 bg-gradient-to-br from-cyan-100/[0.07] to-violet-100/[0.035] text-slate-100">
             <CardHeader><CardTitle className="flex items-center gap-2 font-serif text-xl"><Clock3 className="h-5 w-5 text-cyan-200"/>How the judgment works</CardTitle></CardHeader>
-            <CardContent className="space-y-4 text-sm leading-6 text-slate-400"><p>The chart is calculated for the question’s local date, time, and resolved location using Bible Believers Astrology’s tropical ephemeris with geocentric planetary longitudes and Equal House cusps from the calculated Ascendant. The Moon may also expose a separate topocentric, parallax-corrected longitude; houses and aspects use the canonical geocentric value.</p><p>The chart distinguishes you (House 1), the person asked about (House 1 or 7), and the selected topic house counted from that person. It calculates their rulers, the Moon, and close major aspects. The expanded evidence also lists upcoming exact planetary contacts and stations; those are astronomical dates, not predictions of real-world events.</p><p className="rounded-xl border border-white/10 bg-black/15 p-3 text-xs leading-5 text-slate-500">This is reflective astrological interpretation—not certainty, a guarantee, or a substitute for medical, legal, or financial advice. The feature will say when a traditional factor has not been calculated rather than inventing it.</p></CardContent>
+            <CardContent className="space-y-4 text-sm leading-6 text-slate-400"><p>The chart is calculated for the question’s local date, time, and resolved location using Bible Believers Astrology’s tropical ephemeris with geocentric planetary longitudes and Equal House cusps from the calculated Ascendant. The Moon may also expose a separate topocentric, parallax-corrected longitude; houses and aspects use the canonical geocentric value.</p><p>The question-intelligence layer identifies each person and matter from context, then applies radical and turned-house rules independently. It records the exact supporting wording and each house ruler; it does not force every question into a 1st-versus-7th-house pattern. The expanded evidence also lists upcoming exact planetary contacts and stations; those are astronomical dates, not predictions of real-world events.</p><p className="rounded-xl border border-white/10 bg-black/15 p-3 text-xs leading-5 text-slate-500">This is reflective astrological interpretation—not certainty, a guarantee, or a substitute for medical, legal, or financial advice. The feature will say when a traditional factor has not been calculated rather than inventing it.</p></CardContent>
           </Card>
         </section>
 
@@ -255,7 +219,8 @@ export default function HoraryPage() {
           <Card className="order-2 border-cyan-200/15 bg-white/[0.035] text-slate-100">
             <CardHeader className="border-b border-white/10"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p className="text-xs uppercase tracking-[0.22em] text-cyan-200">Question chart evidence</p><CardTitle className="mt-2 max-w-3xl font-serif text-2xl text-white">{horary.chart.question}</CardTitle></div><span className="inline-flex items-center gap-2 text-xs text-slate-400"><Clock3 className="h-4 w-4"/>{new Date(horary.chart.askedAt).toLocaleString(undefined, { timeZone: horary.chart.timezone })} local</span></div><p className="mt-2 text-xs text-slate-500">{horary.chart.location} · {horary.chart.houseSystem}</p></CardHeader>
             <CardContent className="space-y-5 p-5 sm:p-6">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Querent · House 1</p><p className="mt-2 text-lg font-medium text-cyan-100">{horary.chart.querentRuler}</p><p className="text-xs text-slate-500">Ascendant {horary.chart.ascendant.display} · {horary.chart.ascendant.sign}</p></div><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Person asked about · House {horary.chart.subjectHouse}</p><p className="mt-2 text-lg font-medium text-amber-100">{horary.chart.subjectRuler}</p><p className="text-xs text-slate-500">{horary.chart.subject === "querent" ? "Same as the querent" : "Turned House 7 person"}</p></div><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Matter · chart House {horary.chart.actualTopicHouse}</p><p className="mt-2 text-lg font-medium text-violet-100">{horary.chart.topicRuler}</p><p className="text-xs text-slate-500">Relative House {horary.chart.topicHouse} · {horary.chart.topicLabel}</p></div><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Moon · co-significator</p><p className="mt-2 text-lg font-medium text-amber-100">{horary.chart.moon.display}</p><p className="text-xs text-slate-500">{horary.chart.moon.sign} · House {horary.chart.moon.house}{horary.chart.moon.retrograde ? " · retrograde" : ""}</p></div></div>
+              <details className="rounded-xl border border-cyan-200/20 bg-cyan-100/[0.035] p-4"><summary className="cursor-pointer text-sm font-medium text-cyan-100">Why these houses?</summary><p className="mt-2 text-xs leading-5 text-slate-400">Each assignment below is based on traditional radical-house doctrine, with turned houses counted from the identified person where needed. The quoted wording shows what in your question triggered the assignment.</p><p className="mt-3 text-xs leading-5 text-slate-300"><strong className="text-white">Interpreted action:</strong> {horary.chart.houseSelection.questionIntent.action}. <strong className="text-white">Desired outcome:</strong> {horary.chart.houseSelection.questionIntent.desiredOutcome}</p><p className="mt-1 text-xs text-slate-400"><strong className="text-white">Events and objects:</strong> {[...horary.chart.houseSelection.questionIntent.events, ...horary.chart.houseSelection.questionIntent.objects].join(" · ")}</p><div className="mt-3 space-y-3">{horary.chart.houseSelection.assignments.map(row=><div key={row.id} className="rounded-lg border border-white/10 bg-black/15 p-3"><p className="text-sm font-medium text-white">{row.label} · House {row.house} · ruler {row.ruler}</p><p className="mt-1 text-xs text-amber-100">Question wording: “{row.wording}”</p><p className="mt-1 text-xs leading-5 text-slate-400">{row.reasoning}</p></div>)}</div><p className="mt-3 text-xs text-slate-400">Other resolved significators: {horary.chart.houseSelection.significators.map(row=>`${row.planet} (${row.roles.join(", ")})`).join("; ")}</p></details>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Querent · House 1</p><p className="mt-2 text-lg font-medium text-cyan-100">{horary.chart.querentRuler}</p><p className="text-xs text-slate-500">Ascendant {horary.chart.ascendant.display} · {horary.chart.ascendant.sign}</p></div><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Person asked about · House {horary.chart.subjectHouse}</p><p className="mt-2 text-lg font-medium text-amber-100">{horary.chart.subjectRuler}</p><p className="text-xs text-slate-500">{horary.chart.subject === "querent" ? "Same as the querent" : horary.chart.houseSelection.assignments.find(row => row.role === "person")?.reasoning}</p></div><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Matter · chart House {horary.chart.actualTopicHouse}</p><p className="mt-2 text-lg font-medium text-violet-100">{horary.chart.topicRuler}</p><p className="text-xs text-slate-500">Relative House {horary.chart.topicHouse} · {horary.chart.topicLabel}</p></div><div className="rounded-xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.18em] text-slate-500">Moon · co-significator</p><p className="mt-2 text-lg font-medium text-amber-100">{horary.chart.moon.display}</p><p className="text-xs text-slate-500">{horary.chart.moon.sign} · House {horary.chart.moon.house}{horary.chart.moon.retrograde ? " · retrograde" : ""}</p></div></div>
               <details className="group rounded-xl border border-white/10 bg-black/10 p-4"><summary className="cursor-pointer text-sm font-medium text-slate-200">Inspect calculated placements, houses, and major contacts</summary><div className="mt-4 grid gap-5 xl:grid-cols-2"><div><p className="mb-2 text-xs uppercase tracking-[.16em] text-slate-500">Classical planets</p><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="text-slate-500"><tr><th className="py-2 pr-3">Planet</th><th className="py-2 pr-3">Position</th><th className="py-2">House</th></tr></thead><tbody className="divide-y divide-white/5">{horary.chart.placements.filter(row => ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"].includes(row.name)).map(row => <tr key={row.name}><td className="py-2 pr-3 text-slate-200">{row.name}{row.retrograde ? " ℞" : ""}</td><td className="py-2 pr-3 font-mono text-cyan-100">{row.display}</td><td className="py-2 text-slate-400">{row.house}</td></tr>)}</tbody></table></div></div><div><p className="mb-2 text-xs uppercase tracking-[.16em] text-slate-500">House cusps and rulers</p><div className="grid grid-cols-2 gap-2">{horary.chart.houses.map(row => <div key={row.house} className="rounded-lg border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-xs text-slate-400"><span className="text-slate-200">H{row.house}</span> {row.sign} · {row.ruler}<span className="block font-mono text-[10px] text-slate-600">{formatLongitude(row.longitude)}</span></div>)}</div><p className="mb-2 mt-5 text-xs uppercase tracking-[.16em] text-slate-500">Relevant major aspects · 5° orb</p>{horary.chart.relevantAspects.length ? <div className="flex flex-wrap gap-2">{horary.chart.relevantAspects.map((aspect, index) => <span key={`${aspect.first}-${aspect.second}-${index}`} className="rounded-full border border-cyan-200/10 bg-cyan-100/[0.04] px-2.5 py-1 text-[11px] text-cyan-100">{aspect.first} {aspect.aspect} {aspect.second} · {aspect.orb}° {aspect.phase}</span>)}</div> : <p className="text-xs text-slate-500">No close major contact among these significators was calculated.</p>}</div></div><HoraryLookaheadEvidence chart={horary.chart} /></details>
               <p className="text-xs text-slate-500">Technical evidence is optional; the answer above is the primary reading. Interpretation remains symbolic and provisional, and the same question chart stays fixed for this conversation.</p>
               <TraditionalHoraryEvidence chart={horary.chart} />

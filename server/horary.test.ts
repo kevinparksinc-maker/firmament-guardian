@@ -128,7 +128,7 @@ describe("horary astrology", () => {
     expect(chart.evidenceText).toContain("not a prediction of when an event will happen");
     expect(chart.evidenceText).toContain("Planetary stations");
     expect(chart.evidenceText).toContain("Method boundary");
-    expect(chart.evidenceText).toContain("traditional layer now calculates configured Lots");
+    expect(chart.evidenceText).toContain("configured direct perfection and bounded translation");
     expect(chart.traditional.lots).toHaveLength(4);
     expect(chart.traditional.dignities.length).toBeGreaterThan(0);
     expect(typeof chart.traditional.moonStatus.voidOfCourse).toBe("boolean");
@@ -145,8 +145,8 @@ describe("horary astrology", () => {
     expect(chart.subjectRuler).toBe(chart.houses[6].ruler);
     expect(chart.actualTopicHouse).toBe(4); // 10th from the 7th
     expect(chart.topicRuler).toBe(chart.houses[3].ruler);
-    expect(chart.evidenceText).toContain("another person (House 7)");
-    expect(chart.evidenceText).toContain("actual chart house 4");
+    expect(chart.evidenceText).toContain("Expert-selected person: radical House 7");
+    expect(chart.evidenceText).toContain("radical House 4");
   });
 
   it("uses the child's turned house when the question names the querent's child", async () => {
