@@ -29,6 +29,39 @@
   --soft-platinum: #E8EDF7;
   --harmony-teal: #2DD4BF;
   --friction-coral: #FB7185;
+  --layout-max: 1680px;
+  --page-gutter: clamp(12px, 2.5vw, 32px);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --radius-panel: 24px;
+  --target-size: 44px;
+  --fg-night: #05080F;
+  --fg-surface: #0A0E17;
+  --fg-gold: #D4AF37;
+  --fg-gold-bright: #FFDF73;
+  --fg-aqua: #53f4ff;
+  --fg-ink: #f2f5ff;
+  --fg-edge: rgba(212, 175, 55, .28);
+  --fg-neon-cyan: #53f4ff;
+  --fg-neon-violet: #b275ff;
+  --fg-neon-pink: #ff67d8;
+  --fg-neon-lime: #a9ff86;
+  --fg-dome: radial-gradient(ellipse at 80% 2%, rgba(212,175,55,.14), transparent 34%), radial-gradient(ellipse at 8% 36%, rgba(144,50,210,.16), transparent 38%), linear-gradient(180deg, #05080F, #080E1C 63%, #040713);
+  --guardian-gold: #ffe180;
+  --guardian-cyan: #53f4ff;
+  --guardian-ivory: #f4f6ff;
+  --guardian-muted: #bdcdec;
+  --guardian-surface: #0a1531;
+  --neon-violet: #b275ff;
+  --neon-pink: #ff67d8;
+  --neon-lime: #a9ff86;
   --ease-out: cubic-bezier(.23, 1, .32, 1);
 }
 
@@ -45,7 +78,6 @@ body {
     linear-gradient(180deg, rgba(8, 11, 20, 0.72) 0%, rgba(8, 11, 20, 0.94) 60%, #080B14 100%),
     url('/assets/firmament-starfield.png') center top / cover fixed no-repeat,
     #080B14;
-  overflow-x: hidden;
 }
 body::before {
   content: '';
@@ -113,20 +145,13 @@ main.guardian-home-main table tbody tr:hover { background: linear-gradient(90deg
   main.guardian-home-main { padding-top: 1.25rem; }
   main.guardian-home-main > header { padding-top: 1rem; }
   main.guardian-home-main > header h1 { font-size: clamp(2.8rem, 14vw, 4.8rem); }
-  main.guardian-home-main > header::before { right: -7rem; top: 2rem; opacity: .45; }
+  main.guardian-home-main > header::before { right: 0; top: 2rem; opacity: .45; }
   .chart-wheel-shell { border-radius: 1.25rem; padding: .75rem; }
   .chart-wheel-shell > div > aside { order: 2; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 
 /* Guardian 2050 completion: consistent readable touch targets and responsive media */
-:root{
-  --guardian-gold:#e9d09e;
-  --guardian-cyan:#a4e5f0;
-  --guardian-ivory:#f4f2ec;
-  --guardian-muted:#b3c4d4;
-  --guardian-surface:#0d172b;
-}
 html{scroll-padding-top:1.25rem}
 body{overflow-wrap:break-word}
 svg[role="img"]{max-width:100%}
@@ -156,16 +181,6 @@ svg[role="img"]{max-width:100%}
 
 
 /* 12 Gates: Neon Observatory visual hierarchy. No astronomical or interpretive changes. */
-:root{
-  --guardian-gold:#ffe180;
-  --guardian-cyan:#53f4ff;
-  --guardian-ivory:#f4f6ff;
-  --guardian-muted:#bdcdec;
-  --guardian-surface:#0a1531;
-  --neon-violet:#b275ff;
-  --neon-pink:#ff67d8;
-  --neon-lime:#a9ff86;
-}
 main.guardian-home-main > header { border-bottom:1px solid rgba(83,244,255,.3); }
 main.guardian-home-main > header::after {
   background:linear-gradient(90deg,#53f4ff,#b275ff 55%,#ff67d8,transparent);
