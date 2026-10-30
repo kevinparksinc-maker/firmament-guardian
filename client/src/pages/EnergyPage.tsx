@@ -25,6 +25,7 @@ import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { AbsoluteTheme, EnergyStatusCard } from "@/components/absolute-ui";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
+import { aspectWeightMultiplier, isMinorAspect, MINOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
 
 const MAX_ORB = 5;
 const aspectFlow: Record<TransitContact["aspect"], number> = {
@@ -33,6 +34,10 @@ const aspectFlow: Record<TransitContact["aspect"], number> = {
   square: -1,
   opposition: -1,
   conjunction: 0,
+  semisextile: 1,
+  semisquare: -1,
+  sesquiquadrate: -1,
+  quincunx: 0,
 };
 
 const ASPECT_SYMBOLS: Record<TransitContact["aspect"], string> = {
@@ -41,6 +46,10 @@ const ASPECT_SYMBOLS: Record<TransitContact["aspect"], string> = {
   square: "□",
   trine: "△",
   opposition: "☍",
+  semisextile: "⚺",
+  semisquare: "∠",
+  sesquiquadrate: "⚼",
+  quincunx: "⚻",
 };
 
 const percentWeight = (orb: number) =>
@@ -95,7 +104,7 @@ export default function EnergyPage() {
           ...contact,
           transit: body.name,
           natal: contact.natalName,
-          strength: percentWeight(contact.orb),
+          strength: Math.round(percentWeight(contact.orb) * (contact.weightMultiplier ?? aspectWeightMultiplier(contact.aspect))),
           id: `${body.name}-${contact.aspect}-${contact.natalName}`,
         }))
     );
@@ -294,7 +303,7 @@ export default function EnergyPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-[11px] text-slate-300">
-                    Trines & sextiles lubricating creative execution and smooth diplomacy.
+                    Trines, sextiles & subtle semi-sextiles support creative execution and diplomacy.
                   </p>
                 </div>
 
@@ -311,10 +320,14 @@ export default function EnergyPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-[11px] text-slate-300">
-                    Squares & oppositions building structural discipline and grit.
+                    Squares, oppositions, semi-squares & sesquiquadrates mark friction and adjustment.
                   </p>
                 </div>
               </div>
+
+              <p className="text-[11px] leading-5 text-slate-400">
+                Minor aspects (semi-sextile, semi-square, sesquiquadrate, quincunx) use a 2° orb and contribute half the strength of a major aspect. Quincunxes are shown as dynamic context rather than flow or friction.
+              </p>
 
               <div className="rounded-2xl border border-white/10 bg-black/40 p-4 space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9B66F]">
@@ -394,7 +407,7 @@ export default function EnergyPage() {
                       {PLANET_GLYPHS[c.transit] || c.transit.slice(0, 2)}
                     </span>
                     <span className="text-xs font-bold text-white">{c.transit}</span>
-                    <span className="font-mono text-sm text-[#D9B66F]">{symbol}</span>
+              <span className="font-mono text-sm text-[#D9B66F]" aria-label={c.aspect}>{symbol}</span>
                     <span className="font-mono text-base text-[#D9B66F]">
                       {PLANET_GLYPHS[c.natal] || c.natal.slice(0, 2)}
                     </span>
@@ -415,12 +428,13 @@ export default function EnergyPage() {
                 </div>
 
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-400 font-mono">
-                  <span>Exact Orb: {c.orb.toFixed(2)}°</span>
+                  <span>{isMinorAspect(c.aspect) ? `Minor · ${MINOR_ASPECT_ORB_DEGREES}° max orb` : "Major · 5° max orb"} · {c.orb.toFixed(2)}°</span>
                   <span>Strength: {c.strength}%</span>
                 </div>
 
                 {isExpanded && (
                   <div className="mt-3 border-t border-white/10 pt-3 space-y-2 animate-in fade-in duration-200">
+                    <p className="text-xs font-semibold text-[#D9B66F]">{c.aspect} · {isMinorAspect(c.aspect) ? "Minor aspect · half weight" : "Major aspect"}</p>
                     <p className="text-xs font-semibold text-[#D9B66F]">{interpretation.theme}</p>
                     <p className="text-xs text-slate-300 leading-relaxed">{interpretation.advice}</p>
                     <div className="flex justify-end pt-1">

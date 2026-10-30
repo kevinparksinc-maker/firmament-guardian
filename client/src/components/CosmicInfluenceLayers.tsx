@@ -1,15 +1,26 @@
 import { useMemo } from "react";
 import type { ChartResult, ChartRow, TransitContact } from "../../../server/astronomy";
 import { ELEMENTAL_DECAN_SIGNS, ZODIAC_SIGNS } from "../../../shared/hybrid";
+import { MAJOR_ASPECT_ORB_DEGREES, MINOR_ASPECT_ORB_DEGREES, isMinorAspect } from "../../../shared/chartRules";
 
 const RULERS: Record<string,string> = {Aries:"Mars",Taurus:"Venus",Gemini:"Mercury",Cancer:"Moon",Leo:"Sun",Virgo:"Mercury",Libra:"Venus",Scorpio:"Mars",Sagittarius:"Jupiter",Capricorn:"Saturn",Aquarius:"Saturn",Pisces:"Jupiter"};
-const ANGLES: Record<TransitContact["aspect"],number> = {conjunction:0,sextile:60,square:90,trine:120,opposition:180};
+const ANGLES: Record<TransitContact["aspect"],{degrees:number;maxOrb:number}> = {
+  conjunction:{degrees:0,maxOrb:MAJOR_ASPECT_ORB_DEGREES},
+  semisextile:{degrees:30,maxOrb:MINOR_ASPECT_ORB_DEGREES},
+  semisquare:{degrees:45,maxOrb:MINOR_ASPECT_ORB_DEGREES},
+  sextile:{degrees:60,maxOrb:MAJOR_ASPECT_ORB_DEGREES},
+  square:{degrees:90,maxOrb:MAJOR_ASPECT_ORB_DEGREES},
+  trine:{degrees:120,maxOrb:MAJOR_ASPECT_ORB_DEGREES},
+  sesquiquadrate:{degrees:135,maxOrb:MINOR_ASPECT_ORB_DEGREES},
+  quincunx:{degrees:150,maxOrb:MINOR_ASPECT_ORB_DEGREES},
+  opposition:{degrees:180,maxOrb:MAJOR_ASPECT_ORB_DEGREES},
+};
 const geometry = (a:number,b:number) => {
   const delta=Math.abs(((a-b)%360+360)%360),distance=Math.min(delta,360-delta);
-  const candidates=(Object.entries(ANGLES) as [TransitContact["aspect"],number][]).map(([aspect,angle])=>({aspect,orb:Math.abs(distance-angle)}));
-  return candidates.sort((x,y)=>x.orb-y.orb)[0];
+  const candidates=(Object.entries(ANGLES) as [TransitContact["aspect"],{degrees:number;maxOrb:number}][]).map(([aspect,rule])=>({aspect,orb:Math.abs(distance-rule.degrees),maxOrb:rule.maxOrb}));
+  return candidates.filter(candidate=>candidate.orb<=candidate.maxOrb).sort((x,y)=>x.orb-y.orb)[0] ?? null;
 };
-const tone = (aspect:TransitContact["aspect"]) => aspect==="trine"||aspect==="sextile"?"Flow":aspect==="square"||aspect==="opposition"?"Friction":"Contextual";
+const tone = (aspect:TransitContact["aspect"]) => aspect==="trine"||aspect==="sextile"||aspect==="semisextile"?"Flow":aspect==="square"||aspect==="opposition"||aspect==="semisquare"||aspect==="sesquiquadrate"?"Friction":"Contextual";
 function decanRuler(longitude:number) {
   const normalized=((longitude%360)+360)%360,sign=Math.floor(normalized/30),decan=Math.floor((normalized%30)/10);
   const family=ELEMENTAL_DECAN_SIGNS[sign][decan];
@@ -41,7 +52,7 @@ export function CosmicInfluenceLayers({chart}:{chart:ChartResult}) {
       lunar.push({key:"arabic",title:"Arabic lunar mansion",detail:`Transit Moon: ${moon.overlay.manzil}. Natal Moon: ${natalMoon?.overlay.manzil??"unavailable"}.`,mode:"Position"});
       for(const target of chart.movingBodies) {
         const aspect=geometry(moon.longitude,target.longitude);
-        if(aspect.orb<=5) lunar.push({key:`moon-${target.name}`,title:`Moon ${aspect.aspect} natal ${target.name}`,detail:`${moon.overlay.nakshatra} / ${moon.overlay.manzil} Moon at ${moon.display}; natal ${target.name} at ${target.display}. Mansion is positional context, not a separate aspecting planet.`,mode:tone(aspect.aspect),orb:aspect.orb});
+        if(aspect) lunar.push({key:`moon-${target.name}`,title:`Moon ${aspect.aspect} natal ${target.name}`,detail:`${moon.overlay.nakshatra} / ${moon.overlay.manzil} Moon at ${moon.display}; natal ${target.name} at ${target.display}. Mansion is positional context, not a separate aspecting planet. ${isMinorAspect(aspect.aspect)?"Minor aspect; half weight in Energy Read.":"Major aspect."}`,mode:tone(aspect.aspect),orb:aspect.orb});
       }
     }
     const decans:LayerEvent[]=[];
@@ -51,12 +62,12 @@ export function CosmicInfluenceLayers({chart}:{chart:ChartResult}) {
       const rulerTransit=transit.get(d.ruler);
       if(rulerTransit) for(const natalPlanet of chart.movingBodies) {
         const aspect=geometry(rulerTransit.longitude,natalPlanet.longitude);
-        if(aspect.orb<=5) decans.push({key:`ruler-${p.name}-${natalPlanet.name}`,title:`${p.name} decan ruler ${d.ruler} ${aspect.aspect} natal ${natalPlanet.name}`,detail:`${d.ruler} ${rulerTransit.display} to natal ${natalPlanet.name} ${natalPlanet.display}. The aspect belongs to the ruler, not the decan sector.`,mode:tone(aspect.aspect),orb:aspect.orb});
+        if(aspect) decans.push({key:`ruler-${p.name}-${natalPlanet.name}`,title:`${p.name} decan ruler ${d.ruler} ${aspect.aspect} natal ${natalPlanet.name}`,detail:`${d.ruler} ${rulerTransit.display} to natal ${natalPlanet.name} ${natalPlanet.display}. The aspect belongs to the ruler, not the decan sector. ${isMinorAspect(aspect.aspect)?"Minor aspect; half weight in Energy Read.":"Major aspect."}`,mode:tone(aspect.aspect),orb:aspect.orb});
       }
     }
     const unique=Array.from(new Map(decans.map(x=>[x.title,x])).values());
     return {lunar,decans:unique,aspectContexts};
   },[chart]);
-  const render=(title:string,items:LayerEvent[]) => <div className="rounded-xl border border-white/10 bg-white/[.035] p-3"><h4 className="font-semibold text-amber-100">{title}</h4><p className="mt-1 text-xs text-slate-400">{items.filter(x=>x.mode==="Flow").length} supportive · {items.filter(x=>x.mode==="Friction").length} challenging · {items.filter(x=>x.mode==="Contextual").length} conjunctions</p><div className="mt-3 space-y-2">{items.slice(0,6).map(item=><div key={item.key} className="border-t border-white/10 pt-2"><div className="flex justify-between gap-2 text-xs"><strong className="text-slate-100">{item.title}</strong><span className={item.mode==="Flow"?"text-emerald-200":item.mode==="Friction"?"text-rose-200":"text-violet-200"}>{item.mode}{item.orb!=null?` · ${item.orb.toFixed(2)}°`:""}</span></div><p className="mt-1 text-xs leading-5 text-slate-400">{item.detail}</p></div>)}</div><details className="mt-3 text-xs text-cyan-200"><summary className="cursor-pointer">All {items.length} entries</summary><div className="mt-2 space-y-2">{items.slice(6).map(item=><p key={item.key} className="border-t border-white/10 pt-2">{item.title} — {item.detail}</p>)}</div></details></div>;
+  const render=(title:string,items:LayerEvent[]) => <div className="rounded-xl border border-white/10 bg-white/[.035] p-3"><h4 className="font-semibold text-amber-100">{title}</h4><p className="mt-1 text-xs text-slate-400">{items.filter(x=>x.mode==="Flow").length} supportive · {items.filter(x=>x.mode==="Friction").length} challenging · {items.filter(x=>x.mode==="Contextual").length} dynamic</p><div className="mt-3 space-y-2">{items.slice(0,6).map(item=><div key={item.key} className="border-t border-white/10 pt-2"><div className="flex justify-between gap-2 text-xs"><strong className="text-slate-100">{item.title}</strong><span className={item.mode==="Flow"?"text-emerald-200":item.mode==="Friction"?"text-rose-200":"text-violet-200"}>{item.mode}{item.orb!=null?` · ${item.orb.toFixed(2)}°`:""}</span></div><p className="mt-1 text-xs leading-5 text-slate-400">{item.detail}</p></div>)}</div><details className="mt-3 text-xs text-cyan-200"><summary className="cursor-pointer">All {items.length} entries</summary><div className="mt-2 space-y-2">{items.slice(6).map(item=><p key={item.key} className="border-t border-white/10 pt-2">{item.title} — {item.detail}</p>)}</div></details></div>;
   return <section className="mt-4 rounded-2xl border border-violet-300/30 bg-[#101a31] p-4 text-white"><p className="text-[10px] font-bold uppercase tracking-widest text-violet-200">Expanded energetic evidence</p><h3 className="mt-1 font-serif text-xl text-white">Mansions & Elemental Decans</h3><p className="mt-2 text-xs leading-5 text-slate-300">Calculated from the same natal and transit longitudes as your aspects. Flow and friction labels describe geometry; they are not independent mansion or decan scores.</p><div className="mt-4 grid gap-3 lg:grid-cols-2">{render("All planetary aspects · mansion context",result.aspectContexts)}{render("Lunar mansion influences",result.lunar)}{render("Elemental-family decan influences",result.decans)}</div><p className="mt-3 text-xs text-slate-400">Chinese mansions are not included until their specific longitude boundaries and reference frame are implemented and validated.</p></section>;
 }

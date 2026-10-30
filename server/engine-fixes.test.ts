@@ -1,12 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { calculateChart } from "./astronomy";
 import { calculateHoraryChart } from "./horary";
+import { MAJOR_ASPECT_ORB_DEGREES, MINOR_ASPECT_ORB_DEGREES } from "../shared/chartRules";
 
 const dallas = { location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797, timezone: "America/Chicago", date: "1986-11-20", time: "10:06" };
 
 describe("aspect wraparound", () => {
   it("finds every transit-to-natal contact, including pairs that cross 0°/360°", async () => {
-    const right = (a: number, b: number) => { let d = Math.abs(a - b) % 360; if (d > 180) d = 360 - d; return [0, 60, 90, 120, 180].some(t => Math.abs(d - t) <= 5); };
+    const aspectTargets = [
+      [0, MAJOR_ASPECT_ORB_DEGREES], [30, MINOR_ASPECT_ORB_DEGREES], [45, MINOR_ASPECT_ORB_DEGREES],
+      [60, MAJOR_ASPECT_ORB_DEGREES], [90, MAJOR_ASPECT_ORB_DEGREES], [120, MAJOR_ASPECT_ORB_DEGREES],
+      [135, MINOR_ASPECT_ORB_DEGREES], [150, MINOR_ASPECT_ORB_DEGREES], [180, MAJOR_ASPECT_ORB_DEGREES],
+    ];
+    const right = (a: number, b: number) => {
+      let d = Math.abs(a - b) % 360;
+      if (d > 180) d = 360 - d;
+      return aspectTargets.some(([target, orb]) => Math.abs(d - target) <= orb);
+    };
     let truth = 0, found = 0;
     for (let i = 0; i < 365; i += 5) {
       const transitDate = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10);
