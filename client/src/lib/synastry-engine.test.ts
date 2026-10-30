@@ -5,7 +5,7 @@ import { computeSynastry } from "./synastry-engine";
 function chart(points: Array<[string,number]>,asc?:number): ChartResult {
  return {
   movingBodies:points.map(([name,longitude])=>({name,longitude})),
-  ascendant:asc==null?null:{longitude},
+  ascendant:asc==null?null:{longitude:asc},
  } as ChartResult;
 }
 describe("Synastry calculation integrity",()=>{

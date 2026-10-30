@@ -3,10 +3,10 @@ import { PROFILE_TABS, isProfileRoute } from "./profileNavigation";
 import { MAJOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
 
 describe("post-profile information architecture", () => {
-  it("uses exactly four unique navigable destinations", () => {
-    expect(PROFILE_TABS.map(tab => tab.label)).toEqual(["Home", "Chart", "Reading", "Guide"]);
-    expect(new Set(PROFILE_TABS.map(tab => tab.href)).size).toBe(4);
-    expect(new Set(PROFILE_TABS.map(tab => tab.section)).size).toBe(4);
+  it("uses exactly five unique navigable destinations", () => {
+    expect(PROFILE_TABS.map(tab => tab.label)).toEqual(["Home", "Chart", "Energy", "Readings", "Explore"]);
+    expect(new Set(PROFILE_TABS.map(tab => tab.href)).size).toBe(5);
+    expect(new Set(PROFILE_TABS.map(tab => tab.section)).size).toBe(5);
   });
 
   it("keeps the specialized engines outside the primary tab routes", () => {
