@@ -1,3 +1,4 @@
+import { EvidenceById, CalculationCertificate } from "./calculation-transparency";
 import React, { useState, useMemo } from "react";
 import { Link } from "wouter";
 import {
@@ -178,6 +179,13 @@ export function ProfileChartScreen({
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-20 pt-2 text-slate-100">
+      <CalculationCertificate envelope={chart.calculationEvidence} />
+      <section aria-label="Chart calculation evidence" className="rounded-xl border border-white/10 p-3">
+        <h2 className="font-serif text-lg">Chart calculation evidence</h2>
+        {chart.movingBodies.map(body => <EvidenceById key={body.name} envelope={chart.calculationEvidence} objectId={`natal:${body.name}`} />)}
+        {chart.houses.map((_,index)=><EvidenceById key={index} envelope={chart.calculationEvidence} objectId={`natal:house-cusp-${index+1}`} />)}
+        {chart.ascendant && <EvidenceById envelope={chart.calculationEvidence} objectId="natal:Ascendant" />}
+      </section>
       {/* Header & Controls */}
       <section aria-label="Chart Controls" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
