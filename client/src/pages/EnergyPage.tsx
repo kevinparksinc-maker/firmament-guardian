@@ -1,3 +1,4 @@
+import { EvidenceById, CalculationCertificate } from "@/components/calculation-transparency";
 import React, { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import {
@@ -156,6 +157,15 @@ export default function EnergyPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-24 pt-2 text-[#E8EDF7]">
+      {chart && <section aria-label="Energy calculation provenance" className="rounded-xl border border-white/10 p-3">
+        <h2 className="font-serif text-lg">Energy calculation evidence</h2>
+        <p className="text-sm text-slate-300">Aspect geometry traces are shown below. Energy scoring weights are not yet recorded in the evidence envelope.</p>
+        {(chart.transits || []).flatMap(body=>body.natalContacts.map(contact=>
+          <EvidenceById key={`${body.name}-${contact.aspect}-${contact.natalName}`} envelope={chart.calculationEvidence}
+            objectId={`contact:${body.name}:${contact.aspect}:${contact.natalName}`} />
+        ))}
+        <CalculationCertificate envelope={chart.calculationEvidence}/>
+      </section>}
       {/* SECTION 1: TOP TELEMETRY RIBBON & LOCATION DUALITY */}
       <section
         aria-label="Transit Location & Horizon Status"
