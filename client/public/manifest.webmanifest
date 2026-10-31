@@ -1,23 +1,23 @@
 {
-  "id": "/",
-  "name": "Firmament Guardian",
-  "short_name": "Firmament",
+  "id": "./",
+  "name": "The Absolute",
+  "short_name": "The Absolute",
   "description": "Your personal celestial observatory, chart and Master Interpreter.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#05080f",
   "theme_color": "#05080f",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/firmament-icon.png",
+      "src": "./firmament-icon.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/favicon.png",
+      "src": "./favicon.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any"
