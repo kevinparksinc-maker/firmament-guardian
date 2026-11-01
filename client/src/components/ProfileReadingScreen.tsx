@@ -20,6 +20,7 @@ import { ChartOverview } from "@/components/ChartOverview";
 import { LifeStoryInterpreter } from "@/components/LifeStoryInterpreter";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { WelcomeHost } from "@/components/WelcomeHost";
+import { MasterSynthesizerPanel } from "@/components/MasterSynthesizerPanel";
 import type { ChartResult } from "../../../server/astronomy";
 import type { ReadingScope } from "../../../server/astrologyCore";
 
@@ -62,7 +63,7 @@ export function ProfileReadingScreen({
   onOpenProfileBuilder,
   onReadingModeChange,
 }: ProfileReadingScreenProps) {
-  const [activeReadingTab, setActiveReadingTab] = useState<"natal" | "lifestory" | "blueprint" | "transits">("natal");
+  const [activeReadingTab, setActiveReadingTab] = useState<"synthesizer" | "natal" | "lifestory" | "blueprint" | "transits">("synthesizer");
   const [expandedLayer, setExpandedLayer] = useState<number | null>(1);
 
   const sun = chart.movingBodies.find((b) => b.name === "Sun");
@@ -240,13 +241,14 @@ export function ProfileReadingScreen({
         </div>
       </div>
 
-      {/* 4 Primary Reading Navigation Tabs */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 bg-[#080B14]/90 p-1.5 rounded-2xl border border-white/10 shadow-lg">
+      {/* 5 Primary Reading Navigation Tabs */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 bg-[#080B14]/90 p-1.5 rounded-2xl border border-white/10 shadow-lg">
         {[
-          { id: "natal", label: "Full Natal Reading", Icon: Diamond, desc: "5-Layer Synthesis" },
+          { id: "synthesizer", label: "Master Synthesizer", Icon: Sparkles, desc: "Cross-System Unity" },
+          { id: "natal", label: "Natal Deconstruction", Icon: Diamond, desc: "5-Tier Progression" },
           { id: "lifestory", label: "Life Story & Chapters", Icon: BookOpenText, desc: "Profections & Epochs" },
-          { id: "blueprint", label: "Guide & Blueprint", Icon: Layers, desc: "Ancient Mansions" },
-          { id: "transits", label: "Current Transits & Q&A", Icon: Zap, desc: "Live Skies & Dialog" },
+          { id: "blueprint", label: "Mansions & Stars", Icon: Layers, desc: "Ancient Blueprints" },
+          { id: "transits", label: "Live Skies & Q&A", Icon: Zap, desc: "Active Transits" },
         ].map((tab) => {
           const Icon = tab.Icon;
           const active = activeReadingTab === tab.id;
@@ -257,17 +259,24 @@ export function ProfileReadingScreen({
               onClick={() => setActiveReadingTab(tab.id as any)}
               className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all ${
                 active
-                  ? "bg-[#8B5CF6]/20 text-white border border-[#8B5CF6]/50 shadow-[0_0_16px_rgba(139,92,246,0.25)] font-bold"
+                  ? "bg-amber-400/20 text-white border border-amber-400/50 shadow-[0_0_16px_rgba(251,191,36,0.25)] font-bold"
                   : "text-slate-400 hover:text-white hover:bg-white/5 font-medium"
               }`}
             >
-              <Icon size={18} className={active ? "text-[#8B5CF6]" : "text-slate-500"} />
+              <Icon size={18} className={active ? "text-amber-300" : "text-slate-500"} />
               <span className="text-xs mt-1 text-center">{tab.label}</span>
               <span className="text-[10px] text-slate-500 hidden sm:inline">{tab.desc}</span>
             </button>
           );
         })}
       </div>
+
+      {/* TAB 0: MASTER SYNTHESIZER (CROSS-SYSTEM HARMONY & RECONCILIATION) */}
+      {activeReadingTab === "synthesizer" && (
+        <section className="space-y-6 animate-in fade-in duration-200" aria-label="Master Synthesizer Reading">
+          <MasterSynthesizerPanel chart={chart} initialQuestion={readingQuestion} />
+        </section>
+      )}
 
       {/* TAB 1: FULL NATAL READING WITH 5-LAYER PROGRESSION */}
       {activeReadingTab === "natal" && (

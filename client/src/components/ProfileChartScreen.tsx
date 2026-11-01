@@ -25,6 +25,7 @@ import { ChartWheel } from "@/components/ChartWheel";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { FixedStarIntensityVisualizer } from "@/components/FixedStarIntensityVisualizer";
 import { SystematicDeconstruction } from "@/components/SystematicDeconstruction";
+import { MasterChartObservatory } from "@/components/MasterChartObservatory";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
 import { FIXED_STARS } from "../../../shared/hybrid";
@@ -110,8 +111,8 @@ export function ProfileChartScreen({
   onReadingModeChange,
   error,
 }: ProfileChartScreenProps) {
-  // Toggle between North Indian Diamond (Default) and Circular Wheel
-  const [chartViewMode, setChartViewMode] = useState<"diamond" | "wheel">("diamond");
+  // Toggle between Master Chart (Default 16 Layers), North Indian Diamond, and Circular Wheel
+  const [chartViewMode, setChartViewMode] = useState<"master" | "diamond" | "wheel">("master");
   const [interpretBody, setInterpretBody] = useState<string | null>(null);
 
   const allBodies = useMemo(() => {
@@ -216,24 +217,36 @@ export function ProfileChartScreen({
 
         {/* View Switchers: Diamond vs Wheel & God vs Agent */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#080B14]/90 p-3 shadow-md">
-          {/* Chart Wheel Projection Mode Toggle */}
-          <div className="flex items-center gap-1 bg-[#101628] p-1 rounded-xl border border-white/10">
+          {/* Chart Projection Mode Toggle */}
+          <div className="flex flex-wrap items-center gap-1 bg-[#101628] p-1 rounded-xl border border-white/10">
+            <button
+              type="button"
+              onClick={() => setChartViewMode("master")}
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
+                chartViewMode === "master"
+                  ? "bg-amber-400/25 text-amber-200 border border-amber-300/40 shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Orbit size={15} className="text-amber-300" />
+              <span>Master Chart (16 Layers)</span>
+            </button>
             <button
               type="button"
               onClick={() => setChartViewMode("diamond")}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
                 chartViewMode === "diamond"
                   ? "bg-[#D9B66F]/20 text-[#D9B66F] border border-[#D9B66F]/40 shadow-[0_0_12px_rgba(217,182,111,0.2)]"
                   : "text-slate-400 hover:text-white"
               }`}
             >
               <Diamond size={15} />
-              <span>North Indian Diamond (Default)</span>
+              <span>Diamond Chart</span>
             </button>
             <button
               type="button"
               onClick={() => setChartViewMode("wheel")}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
                 chartViewMode === "wheel"
                   ? "bg-cyan-400/20 text-cyan-200 border border-cyan-300/40 shadow-[0_0_12px_rgba(34,211,238,0.2)]"
                   : "text-slate-400 hover:text-white"
@@ -275,7 +288,9 @@ export function ProfileChartScreen({
 
       {/* Main Chart Graphic Display */}
       <section aria-label="Main Chart Visualizer">
-        {chartViewMode === "diamond" ? (
+        {chartViewMode === "master" ? (
+          <MasterChartObservatory chart={chart} onSelectBody={setInterpretBody} />
+        ) : chartViewMode === "diamond" ? (
           <GuardianDiamondCharts chart={chart} />
         ) : (
           <ChartWheel chart={chart} />

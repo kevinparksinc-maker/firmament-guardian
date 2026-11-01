@@ -12,6 +12,8 @@ import {
   READING_CHAPTERS,
 } from "./interpretation";
 import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { buildUnifiedMasterChart } from "./masterChart";
+import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
 import { askHost } from "./host";
 import { horaryFollowUp, openHoraryQuestion, type HoraryChart } from "./horary";
 import { getZodiacSignReading } from "./zodiacHorary";
@@ -148,6 +150,13 @@ export const appRouter = router({
     calculate: publicProcedure
       .input(chartInput)
       .mutation(({ input }) => calculateChart(input)),
+    masterChart: publicProcedure
+      .input(
+        chartInput.extend({
+          mode: z.enum(["natal", "transit", "combined"]).default("natal"),
+        })
+      )
+      .mutation(({ input }) => buildUnifiedMasterChart(input)),
   }),
   astrologyKnowledge: router({
     behavioralReport: publicProcedure
@@ -215,6 +224,25 @@ export const appRouter = router({
       .mutation(({ input }) =>
         generateInterpretation(input.chart, input.mode, input.question)
       ),
+    masterSynthesize: publicProcedure
+      .input(
+        chartInput.extend({
+          mode: z.enum(["natal", "transit", "combined"]).default("natal"),
+          question: z
+            .string()
+            .trim()
+            .max(2000)
+            .default("What is the core life purpose and integrated trajectory of this chart?"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const snapshot = await buildUnifiedMasterChart(input);
+        return synthesizeMasterReading({
+          snapshot,
+          readingMode: input.mode,
+          userQuestion: input.question,
+        });
+      }),
     chapter: publicProcedure
       .input(
         z.object({
