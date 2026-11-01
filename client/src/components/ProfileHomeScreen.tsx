@@ -142,6 +142,7 @@ export function ProfileHomeScreen({
     },
   ];
 
+
   // Comprehensive Energy Snapshot calculation
   const energySnapshot = useMemo(() => {
     if (!chart || chart.readingScope === "natal") return null;
@@ -154,6 +155,7 @@ export function ProfileHomeScreen({
           strength: percentWeight(contact.orb),
         }))
     );
+
 
     const flowContacts = contacts.filter((c) => aspectFlow[c.aspect] === 1);
     const frictionContacts = contacts.filter((c) => aspectFlow[c.aspect] === -1);
@@ -206,7 +208,7 @@ export function ProfileHomeScreen({
   }, [chart, sun, moon]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 pb-24 pt-2 text-[#E8EDF7]">
+    <div className="fg-profile-home mx-auto max-w-5xl space-y-8 pb-24 pt-2 text-[#E8EDF7]">
       {/* SECTION 1: HERO — THE OBSERVATORY EXPERIENCE */}
       <section
         aria-label="Welcome and Celestial Identity"
@@ -226,16 +228,18 @@ export function ProfileHomeScreen({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#D9B66F]">
-                THE ABSOLUTE · CELESTIAL OBSERVATORY
+                THE ABSOLUTE · PERSONAL OBSERVATORY
               </span>
               <span className="text-slate-500">·</span>
               <span className="text-xs font-mono text-cyan-300">Aldebaran Fixed Framework</span>
             </div>
 
             <div>
-              <h1 className="font-serif text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                Welcome, {profile.name}
+              <h1 className="fg-home-hero-title font-serif text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                Believe your Eyes
               </h1>
+              <p className="fg-home-hero-subtitle">As Above, So Below.</p>
+              <p className="mt-2 text-xs text-slate-300 sm:text-sm">Welcome, {profile.name} · Aldebaran-anchored personal observatory</p>
               <p className="mt-1 text-xs text-slate-300 sm:text-sm">
                 Natal anchor: {profile.date} at {profile.birthTimeUnknown ? "12:00 PM (Untimed)" : profile.time} in{" "}
                 <strong className="text-white">{profile.location}</strong>

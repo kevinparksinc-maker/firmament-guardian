@@ -1002,7 +1002,7 @@ export function ChartObservatory2050({ chart, onInterpretBody }: { chart: ChartR
               <Eye size={13} className="text-amber-300" /> FIXED STARS PRESERVED
             </span>
             <span>
-              <Orbit size={13} className="text-cyan-300" /> TROPICAL PLANETS POSITIONED
+              <Orbit size={13} className="text-cyan-300" /> MOVING PLANETS POSITIONED
             </span>
           </div>
           <p className="cg2050-help">

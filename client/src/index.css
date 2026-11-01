@@ -154,6 +154,31 @@ svg[role="img"]{max-width:100%}
   .guardian-home-main .animate-pulse,.hc2050 .animate-pulse{animation:none!important}
 }
 
+/* Profile home polish: quiet luxury, clear hierarchy, and a compact mobile hero. */
+.fg-profile-home .fg-home-brand-header{border-bottom:1px solid rgba(255,255,255,.08);}
+.fg-profile-home .fg-home-brand-mark{background:radial-gradient(circle,rgba(255,225,128,.16),transparent 68%);}
+.fg-profile-home .fg-home-hero{isolation:isolate;min-height:238px;border-color:rgba(83,244,255,.36);background-position:center;box-shadow:inset 4px 0 #53f4ff,0 22px 70px rgba(0,0,0,.34),0 0 36px rgba(83,244,255,.06);}
+.fg-profile-home .fg-home-hero::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(4,11,27,.96) 0%,rgba(4,11,27,.72) 54%,rgba(4,11,27,.18) 100%);}
+.fg-profile-home .fg-home-hero-copy{max-width:88%;}
+.fg-home-hero-kicker{margin:0;color:#73f5ff;font-size:10px;font-weight:800;letter-spacing:.18em;line-height:1.5;}
+.fg-home-hero-title{margin:12px 0 0;color:#fff9ef;font-size:clamp(2.65rem,10vw,4.8rem);font-weight:600;letter-spacing:-.06em;line-height:.98;text-wrap:balance;text-shadow:0 0 30px rgba(83,244,255,.14);}
+.fg-home-hero-subtitle{margin:10px 0 0;color:#ffe8b2;font-family:'Playfair Display',Georgia,serif;font-size:clamp(1.2rem,4vw,1.65rem);font-style:italic;line-height:1.2;}
+.fg-home-hero-detail{max-width:35rem;margin:14px 0 0;color:rgba(226,232,240,.82);font-size:13px;line-height:1.65;}
+.fg-home-hero-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:18px;color:#b6f8ff;font-size:9px;font-weight:800;letter-spacing:.12em;}
+.fg-home-hero-meta i{width:3px;height:3px;border-radius:999px;background:#ff67d8;box-shadow:0 0 8px #ff67d8;}
+.fg-home-hero-orbit{width:170px;height:170px;border:1px solid rgba(83,244,255,.2);border-radius:50%;box-shadow:0 0 0 18px rgba(178,117,255,.035),0 0 0 42px rgba(83,244,255,.025),inset 0 0 30px rgba(83,244,255,.08);}
+.fg-home-hero-orbit::before,.fg-home-hero-orbit::after{content:"";position:absolute;inset:18px;border:1px solid rgba(178,117,255,.2);border-radius:50%;transform:rotate(52deg) scaleX(.46);}
+.fg-home-hero-orbit::after{inset:30px;transform:rotate(-52deg) scaleX(.46);border-color:rgba(255,103,216,.2);}
+.fg-home-hero-orbit span{position:absolute;right:24px;top:16px;color:#ffe180;font-size:22px;text-shadow:0 0 18px rgba(255,225,128,.95);}
+@media(max-width:520px){
+  .fg-profile-home .fg-home-hero{min-height:270px;padding:22px 20px;}
+  .fg-profile-home .fg-home-hero-copy{max-width:100%;}
+  .fg-home-hero-title{max-width:8ch;font-size:clamp(2.7rem,14vw,4rem);}
+  .fg-home-hero-detail{max-width:19rem;font-size:12px;}
+  .fg-home-hero-meta{max-width:18rem;line-height:1.8;}
+  .fg-home-hero-orbit{right:-58px!important;top:78px!important;opacity:.58;}
+}
+
 
 /* 12 Gates: Neon Observatory visual hierarchy. No astronomical or interpretive changes. */
 :root{
