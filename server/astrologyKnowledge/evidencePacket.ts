@@ -284,16 +284,16 @@ export function buildAstrologyEvidencePacket(
     ["nakshatra", "manzil"].includes(item.technique)
   );
   const lunarRows = mode === "natal" ? chart.movingBodies : [...chart.movingBodies, ...chart.transits];
-  lunarEvidence.push(...lunarRows.map((row, index) => {
+  const overlayEvidence: EvidenceItem[] = lunarRows.flatMap((row, index) => {
     const lunarOverlay = row.overlay ?? (Number.isFinite(row.longitude) ? canonicalOverlay(row.longitude) : null);
-    if (!lunarOverlay) return null;
-    return {
+    if (!lunarOverlay) return [];
+    return [{
       id: `fixed-frame-lunar-overlay-${index}-${row.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       tradition: "firmament" as const,
       category: "source-correspondence" as const,
       technique: "fixed-frame-lunar-overlay",
       subject: row.name,
-      statement: `${row.name} at ${row.display}: Nakshatra ${lunarOverlay.nakshatra}, Pada ${lunarOverlay.pada}, ruler ${lunarOverlay.nakshatraRuler}; Arabic Manzil ${lunarOverlay.manzil}; Chinese Xiu ${lunarOverlay.chineseMansion}, determinative star ${lunarOverlay.chineseDeterminativeStar}. Chinese assignment uses the ${lunarOverlay.chineseBoundaryModel} in the ${chart.referenceFrame} frame. This overlay is derived from canonical longitude and does not apply another ayanamsha.`,
+      statement: `${row.name} at ${row.display}: Nakshatra ${lunarOverlay.nakshatra}, Pada ${lunarOverlay.pada}, ruler ${lunarOverlay.nakshatraRuler}; Arabic Manzil ${lunarOverlay.manzil}; Chinese Xiu ${lunarOverlay.chineseMansion}, determinative star ${lunarOverlay.chineseDeterminativeStar}. Chinese assignment uses the ${lunarOverlay.chineseBoundaryModel} in the firmament-aldebaran-15-taurus frame. This overlay is derived from canonical longitude and does not apply another ayanamsha.`,
       concepts: ["nakshatra", "nakshatra-ruler", "manzil", "chinese-xiu", "determinative-star", row.name.toLowerCase()],
       polarity: "neutral" as const,
       strength: 1,
@@ -307,12 +307,13 @@ export function buildAstrologyEvidencePacket(
         confidence: "high" as const,
         calculationSettings: {
           longitude: row.longitude,
-          referenceFrame: chart.referenceFrame,
+          referenceFrame: "firmament-aldebaran-15-taurus",
           chineseBoundaryModel: lunarOverlay.chineseBoundaryModel,
         },
       },
-    };
-  }).filter((item): item is EvidenceItem => item !== null));
+    }];
+  });
+  lunarEvidence.push(...overlayEvidence);
   const fixedStarEvidence: EvidenceItem[] = chart.frozenStars.flatMap(star =>
     (star.royalStarContacts ?? [])
       .filter(contact => contact.contact)
