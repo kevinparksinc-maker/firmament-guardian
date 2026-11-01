@@ -14,7 +14,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: pnpm install --frozen-lockfile
+      # The repository currently has no pnpm-lock.yaml. Allow dependency resolution
+      # until a generated lockfile is committed; then restore --frozen-lockfile.
+      - run: pnpm install --no-frozen-lockfile
       - run: pnpm check
       - run: pnpm test
       - run: pnpm build
