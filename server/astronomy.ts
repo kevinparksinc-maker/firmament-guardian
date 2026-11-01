@@ -42,8 +42,8 @@ export type ChartRow = {
   overlay: Overlay;
   uncertainty?: MoonUncertainty;
 };
-export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition"; orb: number };
-export type MinorTransitContact = { natalName: string; aspect: "semisquare" | "sesquiquadrate" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "friction" | "contextual" };
+export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "semisquare" | "square" | "trine" | "opposition"; orb: number };
+export type MinorTransitContact = { natalName: string; aspect: "quintile" | "sesquiquadrate" | "biquintile" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "flow" | "friction" };
 export type TransitRow = ChartRow & { natalContacts: TransitContact[]; minorNatalContacts: MinorTransitContact[] };
 export type ChartResult = {
   input: ChartInput;
@@ -105,19 +105,21 @@ function planetaryTopocentric(planet: number, locationAvailable: boolean) {
 }
 export function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number } | null {
   // angularDistance correctly wraps across 0°/360° (for example, 359° and 1° are 2° apart).
-  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
+  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [45, "semisquare"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
   const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= 5 ? best : null;
 }
 /** Secondary contacts are not part of the five-major-aspect Energy Read score.
- * Semi-sextile is intentionally excluded per the primary Energy Read specification.
+ * Two flow and two friction minors are equally weighted at half of major strength.
+ * Semi-sextile is excluded; semi-square is a full-weight major friction aspect.
  * A separate list prevents double counting and keeps conjunctions harmonious in primary scoring.
  */
 export function minorAspectBetween(a: number, b: number): Omit<MinorTransitContact, "natalName"> | null {
   const separation = angularDistance(a, b);
   const targets = [
-    { target: 45, aspect: "semisquare" as const, classification: "friction" as const },
+    { target: 72, aspect: "quintile" as const, classification: "flow" as const },
     { target: 135, aspect: "sesquiquadrate" as const, classification: "friction" as const },
-    { target: 150, aspect: "quincunx" as const, classification: "contextual" as const },
+    { target: 144, aspect: "biquintile" as const, classification: "flow" as const },
+    { target: 150, aspect: "quincunx" as const, classification: "friction" as const },
   ];
   const best = targets.map(({ target, aspect, classification }) => ({ aspect, classification, orb: Math.abs(separation - target) }))
     .filter(contact => contact.orb <= 2)
