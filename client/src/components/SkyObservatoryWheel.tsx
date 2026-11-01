@@ -36,7 +36,7 @@ type WheelAspect = {
   toName: string;
   toLon: number;
   toRadius: number;
-  aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition";
+  aspect: "conjunction" | "sextile" | "semisquare" | "square" | "trine" | "opposition";
   orb: number;
   receptionNote: string | null;
   ruleSummary: string;
