@@ -328,20 +328,9 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
     subject: "divisional-chart",
     kind: "deterministic-rule",
     sourceId: "local-vedic-rules",
-    status: "implemented",
+    status: "incomplete",
     statement:
-      "D2, D3, D9 and D10 fixed-coordinate Parashari subdivision projections are calculated for each body. These are NOT yet Lahiri-sidereal Vedic charts; the coordinate mode is explicitly labeled.",
-  },
-  {
-    id: "vedic-ashtakavarga-classical",
-    tradition: "vedic",
-    technique: "ashtakavarga",
-    subject: "sign-strength",
-    kind: "deterministic-rule",
-    sourceId: "local-vedic-rules",
-    status: "implemented",
-    statement:
-      "Classical Parashari Bhinnashtakavarga and unreduced Sarvashtakavarga are calculated from Lahiri sidereal D1 positions, with per-planet and 337-total checksums; Trikona and Ekadhipatya reductions are not included.",
+      "D2, D3, D9, and D10 contracts are reserved; chart-specific varga calculation is not yet enabled.",
   },
   {
     id: "vedic-ashtakavarga-classical",
@@ -405,9 +394,9 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
     subject: "timing",
     kind: "deterministic-rule",
     sourceId: "canopy-arabian",
-    status: "implemented",
+    status: "incomplete",
     statement:
-      "Chaldean planetary hours are calculated where valid observer/time data permit NOAA approximate sunrise/sunset; polar conditions and missing data report unavailable.",
+      "Planetary-hour calculation requires local sunrise and sunset data and is not inferred without those inputs.",
   },
   {
     id: "arabic-twelfth-parts",
@@ -416,9 +405,9 @@ export const ASTROLOGY_RULES: AstrologyRule[] = [
     subject: "planet",
     kind: "deterministic-rule",
     sourceId: "canopy-arabian",
-    status: "implemented",
+    status: "incomplete",
     statement:
-      "Hellenistic sign-start dodecatemoria (12 times degree within sign plus parent sign start) are calculated; distinct 13x point-origin variant is not combined.",
+      "Twelfth-parts methodology is reserved pending an explicit house/sign doctrine setting.",
   },
   {
     id: "firmament-canon-dossier",

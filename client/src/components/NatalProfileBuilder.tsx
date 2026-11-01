@@ -16,10 +16,8 @@ import {
   Flame,
   Search,
   Loader2,
-  Navigation,
   X,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +30,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
-import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import type { ChartResult } from "../../../server/astronomy";
 
 export interface UserProfileData {
@@ -87,22 +84,6 @@ export const SAMPLE_PROFILE: UserProfileData = {
   primaryFocus: "love",
 };
 
-export const DEFAULT_BUILDER_PROFILE: UserProfileData = {
-  name: "Jordan",
-  date: "1990-06-21",
-  time: "12:00",
-  birthTimeUnknown: false,
-  location: "Dallas, Texas, USA",
-  latitude: 32.7767,
-  longitude: -96.797,
-  timezone: "America/Chicago",
-  transitLocation: "Dallas, Texas, USA",
-  transitLatitude: 32.7767,
-  transitLongitude: -96.797,
-  transitTimezone: "America/Chicago",
-  primaryFocus: "purpose",
-};
-
 interface NatalProfileBuilderProps {
   currentProfile: UserProfileData | null;
   onSaveProfile: (profile: UserProfileData) => Promise<void> | void;
@@ -123,20 +104,31 @@ export function NatalProfileBuilder({
   isCalculating = false,
 }: NatalProfileBuilderProps) {
   const [formData, setFormData] = useState<UserProfileData>(() => {
-    return currentProfile || DEFAULT_BUILDER_PROFILE;
+    return (
+      currentProfile || {
+        name: "",
+        date: "",
+        time: "",
+        birthTimeUnknown: false,
+        location: "",
+        latitude: 0,
+        longitude: 0,
+        timezone: "",
+        transitLocation: "",
+        transitLatitude: 0,
+        transitLongitude: 0,
+        transitTimezone: "",
+        primaryFocus: "purpose",
+      }
+    );
   });
 
-  const [citySearch, setCitySearch] = useState(
-    formData.location || DEFAULT_BUILDER_PROFILE.location
-  );
+  const [citySearch, setCitySearch] = useState(formData.location || "");
   const [isSearchingCity, setIsSearchingCity] = useState(false);
   const [citySearchError, setCitySearchError] = useState("");
   const [currentCitySame, setCurrentCitySame] = useState(true);
-  const [isLocatingTransitGps, setIsLocatingTransitGps] = useState(false);
   const [formError, setFormError] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
-  const { savedProfiles } = useProfileSession();
-  const trpcUtils = trpc.useUtils();
 
   const geocode = trpc.hybrid.geocode.useQuery(
     { query: citySearch },
@@ -150,26 +142,42 @@ export function NatalProfileBuilder({
     }
   }, [currentProfile]);
 
-  const findPreset = (text: string) => {
-    const q = text.trim().toLowerCase();
-    if (!q) return null;
-    return (
-      CITY_PRESETS.find(
-        p =>
-          p.label.toLowerCase() === q ||
-          p.full.toLowerCase() === q ||
-          p.label.toLowerCase().startsWith(q) ||
-          p.full.toLowerCase().toLowerCase().startsWith(q) ||
-          q.includes(p.label.toLowerCase().split(",")[0].trim()) ||
-          p.label.toLowerCase().split(",")[0].trim().includes(q)
-      ) || null
-    );
+  const handleResolveCity = async () => {
+    if (!citySearch.trim()) return;
+    setIsSearchingCity(true);
+    setCitySearchError("");
+    try {
+      const res = await geocode.refetch();
+      if (res.data) {
+        setFormData(prev => ({
+          ...prev,
+          location: res.data.label,
+          latitude: res.data.latitude,
+          longitude: res.data.longitude,
+          timezone: res.data.timezone,
+          ...(currentCitySame
+            ? {
+                transitLocation: res.data.label,
+                transitLatitude: res.data.latitude,
+                transitLongitude: res.data.longitude,
+                transitTimezone: res.data.timezone,
+              }
+            : {}),
+        }));
+        setCitySearch(res.data.label);
+      } else if (res.error) {
+        setCitySearchError(res.error.message || "Could not find coordinates for this city.");
+      }
+    } catch (err: any) {
+      setCitySearchError(err?.message || "City geocoding service unavailable.");
+    } finally {
+      setIsSearchingCity(false);
+    }
   };
 
-  const handleSelectPreset = (preset: (typeof CITY_PRESETS)[0]) => {
+  const handleSelectPreset = (preset: typeof CITY_PRESETS[0]) => {
     setCitySearch(preset.full);
     setCitySearchError("");
-    setFormError("");
     setFormData(prev => ({
       ...prev,
       location: preset.full,
@@ -187,232 +195,34 @@ export function NatalProfileBuilder({
     }));
   };
 
-  const handleResolveCity = async () => {
-    const query = citySearch.trim();
-    if (!query) return;
-    setIsSearchingCity(true);
-    setCitySearchError("");
-    setFormError("");
-
-    const preset = findPreset(query);
-    if (preset) {
-      handleSelectPreset(preset);
-      setIsSearchingCity(false);
-      return;
-    }
-
-    try {
-      const res = await trpcUtils.hybrid.geocode.fetch({ query });
-      if (res && res.latitude && res.longitude && res.timezone) {
-        setFormData(prev => ({
-          ...prev,
-          location: res.label,
-          latitude: res.latitude,
-          longitude: res.longitude,
-          timezone: res.timezone,
-          ...(currentCitySame
-            ? {
-                transitLocation: res.label,
-                transitLatitude: res.latitude,
-                transitLongitude: res.longitude,
-                transitTimezone: res.timezone,
-              }
-            : {}),
-        }));
-        setCitySearch(res.label);
-      } else {
-        setCitySearchError("Could not find coordinates for this city. Please select a Quick Preset.");
-      }
-    } catch (err: any) {
-      setCitySearchError(err?.message || "City geocoding service unavailable.");
-    } finally {
-      setIsSearchingCity(false);
-    }
-  };
-
-  const handleGpsTransitLocation = () => {
-    if (typeof window === "undefined" || !navigator.geolocation) {
-      toast.error("Geolocation is not supported by your browser");
-      return;
-    }
-    setIsLocatingTransitGps(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res = await trpcUtils.hybrid.reverseGeocode.fetch({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          });
-          setFormData(prev => ({
-            ...prev,
-            transitLocation: res.label,
-            transitLatitude: res.latitude,
-            transitLongitude: res.longitude,
-            transitTimezone: res.timezone,
-          }));
-          toast.success(`Current sky locked to ${res.label} via GPS!`);
-        } catch {
-          setFormData(prev => ({
-            ...prev,
-            transitLocation: `GPS (${pos.coords.latitude.toFixed(2)}°, ${pos.coords.longitude.toFixed(2)}°)`,
-            transitLatitude: pos.coords.latitude,
-            transitLongitude: pos.coords.longitude,
-            transitTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-          }));
-          toast.success(`Current sky locked to GPS coordinates!`);
-        } finally {
-          setIsLocatingTransitGps(false);
-        }
-      },
-      () => {
-        setIsLocatingTransitGps(false);
-        toast.error("GPS location permission was denied or timed out.");
-      },
-      { timeout: 10000 }
-    );
-  };
-
-  const handleNextStep = async () => {
-    setFormError("");
-    setCitySearchError("");
-
-    const finalName = formData.name.trim() || DEFAULT_BUILDER_PROFILE.name;
-    const finalDate = formData.date || DEFAULT_BUILDER_PROFILE.date;
-    const finalTime = formData.birthTimeUnknown ? "12:00" : (formData.time || DEFAULT_BUILDER_PROFILE.time);
-    const rawCity = (citySearch || formData.location).trim();
-
-    // 1. Check if coordinates already resolved and match current city query
-    if (
-      formData.latitude &&
-      formData.longitude &&
-      formData.timezone &&
-      (formData.location === rawCity || !rawCity || formData.location.toLowerCase().includes(rawCity.toLowerCase()))
-    ) {
-      setFormData(prev => ({
-        ...prev,
-        name: finalName,
-        date: finalDate,
-        time: finalTime,
-      }));
-      setStep(2);
-      return;
-    }
-
-    // 2. Check instant preset match
-    const queryForPreset = rawCity || DEFAULT_BUILDER_PROFILE.location;
-    const preset = findPreset(queryForPreset);
-    if (preset) {
-      handleSelectPreset(preset);
-      setFormData(prev => ({
-        ...prev,
-        name: finalName,
-        date: finalDate,
-        time: finalTime,
-        location: preset.full,
-        latitude: preset.lat,
-        longitude: preset.lng,
-        timezone: preset.tz,
-      }));
-      setStep(2);
-      return;
-    }
-
-    // 3. Auto-resolve city via geocoder
-    setIsSearchingCity(true);
-    try {
-      const res = await trpcUtils.hybrid.geocode.fetch({ query: rawCity });
-      if (res && res.latitude && res.longitude && res.timezone) {
-        setFormData(prev => ({
-          ...prev,
-          name: finalName,
-          date: finalDate,
-          time: finalTime,
-          location: res.label,
-          latitude: res.latitude,
-          longitude: res.longitude,
-          timezone: res.timezone,
-          ...(currentCitySame
-            ? {
-                transitLocation: res.label,
-                transitLatitude: res.latitude,
-                transitLongitude: res.longitude,
-                transitTimezone: res.timezone,
-              }
-            : {}),
-        }));
-        setCitySearch(res.label);
-        setStep(2);
-      } else {
-        // Fall back gracefully to Dallas preset so the flow never breaks
-        const fallback = CITY_PRESETS[0];
-        handleSelectPreset(fallback);
-        setFormData(prev => ({
-          ...prev,
-          name: finalName,
-          date: finalDate,
-          time: finalTime,
-        }));
-        setStep(2);
-      }
-    } catch {
-      const fallback = CITY_PRESETS[0];
-      handleSelectPreset(fallback);
-      setFormData(prev => ({
-        ...prev,
-        name: finalName,
-        date: finalDate,
-        time: finalTime,
-      }));
-      setStep(2);
-    } finally {
-      setIsSearchingCity(false);
-    }
-  };
-
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setFormError("");
 
     if (!formData.name.trim()) {
-      setStep(1);
       setFormError("Please enter your name or cosmic moniker.");
       return;
     }
     if (!formData.date) {
-      setStep(1);
       setFormError("Please enter your birth date.");
       return;
     }
     if (!formData.birthTimeUnknown && !formData.time) {
-      setStep(1);
-      setFormError("Please provide your birth time or check 'Time unknown'.");
+      setFormError("Please provide your birth time or check 'Exact birth time unknown'.");
       return;
     }
     if (!formData.latitude || !formData.longitude || !formData.timezone) {
-      setStep(1);
       setFormError("Please resolve your birth city to lock exact coordinates and timezone.");
       return;
-    }
-
-    let transitLat = formData.transitLatitude;
-    let transitLng = formData.transitLongitude;
-    let transitTz = formData.transitTimezone;
-    if (formData.transitLocation && (!transitLat || !transitTz)) {
-      const preset = findPreset(formData.transitLocation);
-      if (preset) {
-        transitLat = preset.lat;
-        transitLng = preset.lng;
-        transitTz = preset.tz;
-      }
     }
 
     const payload: UserProfileData = {
       ...formData,
       time: formData.birthTimeUnknown ? "12:00" : formData.time,
       transitLocation: formData.transitLocation || formData.location,
-      transitLatitude: transitLat || formData.latitude,
-      transitLongitude: transitLng || formData.longitude,
-      transitTimezone: transitTz || formData.timezone,
+      transitLatitude: formData.transitLatitude || formData.latitude,
+      transitLongitude: formData.transitLongitude || formData.longitude,
+      transitTimezone: formData.transitTimezone || formData.timezone,
     };
 
     onSaveProfile(payload);
@@ -462,46 +272,6 @@ export function NatalProfileBuilder({
 
       {step === 1 && (
         <div className="space-y-5 animate-in fade-in duration-200">
-          {/* Quick Saved Profile Loader */}
-          {savedProfiles && savedProfiles.length > 0 && (
-            <div className="rounded-2xl border border-[#D9B66F]/30 bg-[#D9B66F]/5 p-3.5">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-[11px] font-semibold text-[#D9B66F] uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles size={13} />
-                  Load Saved Profile ({savedProfiles.length})
-                </span>
-                <span className="text-[10px] text-slate-400">Tap to autofill</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {savedProfiles.map((p, idx) => {
-                  const isSelected = formData.name.trim().toLowerCase() === p.name.trim().toLowerCase() && formData.date === p.date;
-                  return (
-                    <button
-                      key={`${p.name}-${p.date}-${idx}`}
-                      type="button"
-                      onClick={() => {
-                        setFormData(p);
-                        setCitySearch(p.location);
-                        setFormError("");
-                        setCitySearchError("");
-                        toast.success(`Loaded saved data for ${p.name}`);
-                      }}
-                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
-                        isSelected
-                          ? "border-[#D9B66F] bg-[#D9B66F]/20 text-[#D9B66F] shadow-sm font-semibold"
-                          : "border-white/10 bg-black/40 text-slate-300 hover:border-cyan-300/40 hover:text-white"
-                      }`}
-                    >
-                      <User size={12} />
-                      <span>{p.name}</span>
-                      <span className="text-[10px] opacity-60">({p.date.slice(0, 4)})</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {/* Name Field */}
           <div className="space-y-1.5">
             <Label htmlFor="profile-name" className="text-xs font-medium text-slate-200 flex items-center gap-1.5">
@@ -591,15 +361,11 @@ export function NatalProfileBuilder({
                   id="profile-city"
                   placeholder="Enter city (e.g., Dallas, TX, London, Tokyo)"
                   value={citySearch}
-                  onChange={e => {
-                    setCitySearch(e.target.value);
-                    if (formError) setFormError("");
-                    if (citySearchError) setCitySearchError("");
-                  }}
+                  onChange={e => setCitySearch(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      void handleNextStep();
+                      handleResolveCity();
                     }
                   }}
                   className="border-white/10 bg-black/40 text-slate-100 pr-10 focus:border-cyan-400/50"
@@ -659,14 +425,6 @@ export function NatalProfileBuilder({
             </div>
           </div>
 
-          {/* Form validation feedback in Step 1 */}
-          {formError && (
-            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3.5 text-xs text-rose-200 flex items-center gap-2.5 shadow-lg shadow-rose-950/20 animate-in fade-in slide-in-from-top-1">
-              <X className="h-4 w-4 text-rose-400 shrink-0" />
-              <span className="font-medium">{formError}</span>
-            </div>
-          )}
-
           <div className="flex items-center justify-between pt-2">
             <button
               type="button"
@@ -679,21 +437,17 @@ export function NatalProfileBuilder({
 
             <Button
               type="button"
-              disabled={isSearchingCity}
-              onClick={() => void handleNextStep()}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:from-cyan-400 hover:to-blue-500 shadow-md shadow-cyan-900/30"
+              onClick={() => {
+                if (!formData.name.trim() || !formData.date || (!formData.birthTimeUnknown && !formData.time) || !formData.latitude) {
+                  handleSubmit();
+                  return;
+                }
+                setStep(2);
+              }}
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:from-cyan-400 hover:to-blue-500"
             >
-              {isSearchingCity ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                  <span>Locking City Coordinates...</span>
-                </>
-              ) : (
-                <>
-                  <span>Next: Cosmic Focus</span>
-                  <ArrowRight className="h-4 w-4 ml-1.5" />
-                </>
-              )}
+              <span>Next: Cosmic Focus</span>
+              <ArrowRight className="h-4 w-4 ml-1.5" />
             </Button>
           </div>
         </div>
@@ -758,31 +512,13 @@ export function NatalProfileBuilder({
             </div>
 
             {!currentCitySame && (
-              <div className="space-y-2 pt-1">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter current city (e.g. New York, London, Miami)"
-                    value={formData.transitLocation || ""}
-                    onChange={e => setFormData(prev => ({ ...prev, transitLocation: e.target.value }))}
-                    className="border-white/10 bg-black/40 text-slate-100 text-xs"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGpsTransitLocation}
-                    disabled={isLocatingTransitGps}
-                    className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20 text-xs shrink-0"
-                  >
-                    {isLocatingTransitGps ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5 mr-1" />}
-                    <span>Use GPS</span>
-                  </Button>
-                </div>
-                {formData.transitLocation && formData.transitTimezone && (
-                  <p className="text-[11px] text-emerald-300 flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>Active Sky locked: <strong>{formData.transitLocation}</strong></span>
-                  </p>
-                )}
+              <div className="space-y-1.5 pt-1">
+                <Input
+                  placeholder="Enter current city (e.g. New York, London, Miami)"
+                  value={formData.transitLocation || ""}
+                  onChange={e => setFormData(prev => ({ ...prev, transitLocation: e.target.value }))}
+                  className="border-white/10 bg-black/40 text-slate-100 text-xs"
+                />
               </div>
             )}
           </div>

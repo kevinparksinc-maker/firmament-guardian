@@ -107,25 +107,13 @@ async function startServer() {
     res.status(404).json({ error: `No API route ${req.method} ${req.originalUrl}` });
   });
   // development mode uses Vite, production mode uses static files
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  const port = 3000;
-
-  server.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
-      console.warn(`[Server] Port ${port} is in use, retrying in 1s...`);
-      setTimeout(() => {
-        server.close();
-        server.listen(port, "0.0.0.0");
-      }, 1000);
-    } else {
-      console.error("[Server] Unhandled server error:", err);
-    }
-  });
+  const port = parseInt(process.env.PORT || "3000", 10);
 
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);

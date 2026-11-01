@@ -128,7 +128,7 @@ describe("horary astrology", () => {
     expect(chart.evidenceText).toContain("not a prediction of when an event will happen");
     expect(chart.evidenceText).toContain("Planetary stations");
     expect(chart.evidenceText).toContain("Method boundary");
-    expect(chart.evidenceText).toContain("configured direct perfection and bounded translation");
+    expect(chart.evidenceText).toContain("traditional layer now calculates configured Lots");
     expect(chart.traditional.lots).toHaveLength(4);
     expect(chart.traditional.dignities.length).toBeGreaterThan(0);
     expect(typeof chart.traditional.moonStatus.voidOfCourse).toBe("boolean");
@@ -145,8 +145,8 @@ describe("horary astrology", () => {
     expect(chart.subjectRuler).toBe(chart.houses[6].ruler);
     expect(chart.actualTopicHouse).toBe(4); // 10th from the 7th
     expect(chart.topicRuler).toBe(chart.houses[3].ruler);
-    expect(chart.evidenceText).toContain("Expert-selected person: radical House 7");
-    expect(chart.evidenceText).toContain("radical House 4");
+    expect(chart.evidenceText).toContain("another person (House 7)");
+    expect(chart.evidenceText).toContain("actual chart house 4");
   });
 
   it("uses the child's turned house when the question names the querent's child", async () => {
@@ -189,29 +189,14 @@ describe("horary astrology", () => {
     expect(result.chart.canonEvidenceText).toContain("Condition:");
   });
 
-  it("returns a deterministic core judgment when optional language synthesis fails with all traditional layers", async () => {
+  it("returns a deterministic core judgment when optional language synthesis fails", async () => {
     mocked.invokeLLM.mockRejectedValueOnce(new Error("provider unavailable"));
 
     const result = await openHoraryQuestion(sampleInput);
 
     expect(result.reading).toContain("## Judgment");
     expect(result.reading).toContain(result.chart.traditional.judgment.verdict);
-    expect(result.reading).toContain("Significator condition:");
-    expect(result.reading).toContain("Arabic Lots:");
-    expect(result.reading).toContain("Part of Fortune");
-    expect(result.reading).toContain("Part of Spirit");
-    expect(result.reading).toContain("Part of Eros");
-    expect(result.reading).toContain("Part of Necessity");
-    expect(result.reading).toContain("Lunar stations & Decans:");
-    expect(result.reading).toContain("Timing estimate:");
     expect(result.reading).toContain("deterministic chart");
-
-    // Also verify judgmentEvidenceText contains the compact traditional layers
-    expect(result.chart.judgmentEvidenceText).toContain("SIGNIFICATOR DIGNITIES & DEBILITIES:");
-    expect(result.chart.judgmentEvidenceText).toContain("ARABIC PARTS / LOTS:");
-    expect(result.chart.judgmentEvidenceText).toContain("FIXED STARS WITHIN 1° ORB:");
-    expect(result.chart.judgmentEvidenceText).toContain("TRADITIONAL TIMING ESTIMATE:");
-    expect(result.chart.judgmentEvidenceText).toContain("LUNAR MANSION / MANZIL / DECAN OVERLAYS:");
   });
 
   it("adds a person natal layer while keeping transit and God View at the question moment", async () => {

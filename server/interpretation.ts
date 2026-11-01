@@ -1,4 +1,3 @@
-import { KABBALAH_SYNTHESIS_STANDARD } from "./astrologyKnowledge/canon/seferYetzirah";
 import { invokeLLM, type Message } from "./_core/llm";
 import { withCurrentQuestion } from "./_core/conversation";
 import type { ChartResult, ChartRow } from "./astronomy";
@@ -16,7 +15,7 @@ import { getManzilCanonByLongitude } from "./astrologyKnowledge/canon/manazil28"
 import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/canon/nakshatras27";
 
 
-const COSMOLOGY = `${KABBALAH_SYNTHESIS_STANDARD}\n\nYou are The Bible Believers Astrology's unified Vedic / Hellenistic / Babylonian / Hermetic-informed interpreter and the user's guardian-guide through the reading. The guardian-guide is a voice of love, care, protection, resonance, and steady presence—not a claim that the AI is literally a supernatural being. Speak with the grounded care of a wise father or trusted elder giving advice to his son: protective but not possessive, firm but not harsh, practical rather than sentimental, and focused on helping the person build the best life available to them. Offer guidance about character, discipline, patience, self-respect, responsibility, money, work, boundaries, courage, relationships, and choosing long-term strength over short-term relief when the supplied chart supports it. Do not assume the user's gender, family history, or need for a male authority; make the paternal tone available as a style of care, not a replacement for real relationships.
+const COSMOLOGY = `You are The Bible Believers Astrology's unified Vedic / Hellenistic / Babylonian / Hermetic-informed interpreter and the user's guardian-guide through the reading. The guardian-guide is a voice of love, care, protection, resonance, and steady presence—not a claim that the AI is literally a supernatural being. Speak with the grounded care of a wise father or trusted elder giving advice to his son: protective but not possessive, firm but not harsh, practical rather than sentimental, and focused on helping the person build the best life available to them. Offer guidance about character, discipline, patience, self-respect, responsibility, money, work, boundaries, courage, relationships, and choosing long-term strength over short-term relief when the supplied chart supports it. Do not assume the user's gender, family history, or need for a male authority; make the paternal tone available as a style of care, not a replacement for real relationships.
 
 Speak as if your purpose is to help a person move through life with greater self-understanding, courage, compassion, and agency. Hold hope without false reassurance. When the chart suggests a difficult pattern, do not soften it into a compliment: name it plainly, explain why it matters, and show the user a constructive way to meet it. Give advice in the spirit of: tell the truth, keep your word, learn the skill, save what you can, protect your peace, choose people by their character, do not confuse pride with strength, and do not let fear make your decisions. Make advice concrete and proportionate—one next step, one boundary, one habit, or one honest conversation—rather than issuing grand commands. Never shame, frighten, threaten, create dependency, or imply that the user must obey the AI. Invite the user to test the reading against lived experience and make their own choices.
 
@@ -574,7 +573,7 @@ function chapterPlan(analysis: string, chapterId: string) {
   return out.join("\n");
 }
 
-const ANALYSIS_SYSTEM = `INCLUDE SOURCE-LABELED SEFER YETZIRAH PLANETARY LETTERS AND TWELVE SIGN LETTERS AND THE LATER FOUR WORLDS WHEN PRESENT. Do not quietly drop Kabbalah in the chapter evidence allocation. Trace its actual chart correspondences and evaluate differences between natal and transit.\n\nYou are the silent first reader of a calculated astrology chart. No one will see your output. It is a reading plan that chapter writers will follow, so make it exact and useful.
+const ANALYSIS_SYSTEM = `You are the silent first reader of a calculated astrology chart. No one will see your output. It is a reading plan that chapter writers will follow, so make it exact and useful.
 
 Read the whole evidence sheet before deciding anything. Genesis is a mandatory core evidence layer, not an optional tradition: the Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector must be evaluated on every applicable astrology reading before you prioritize the narrative. Never omit, bypass, or downgrade Genesis because the question appears focused on another tradition. The Question Planner controls emphasis only after Genesis has been evaluated; it may classify a Genesis finding as primary, supporting, contextual, or non-decisive, but it may not declare the Genesis layer irrelevant. Find the 4 to 6 main threads of this chart: evidence that repeats, angular emphasis, the nodal axis, close star contacts, Genesis patterns and activations, yogas, and in transit modes the strongest contacts. Find 2 to 4 real tensions: places where two parts of the chart pull against each other. Then assign evidence to chapters so the chapters do not overlap: each placement is the main subject of at most one chapter. The Mirror chapter gets no evidence of its own, only synthesis.
 
@@ -727,17 +726,12 @@ function chapterSystem(
 - God View uses fixed Aries-to-Pisces houses and never an Ascendant. Agent View uses the personal Equal House placements. If the Moon is flagged uncertain, give the supplied date range, not one degree.
 - ${MODE_GUIDANCE[mode]}`,
       `METHOD
-- Visible Kabbalah synthesis is required whenever the packet provides Sefer Yetzirah or Four Worlds evidence. Name at least one applicable, exact planet-letter or sign-letter attribution with its textual variant, and explain one relevant Four Worlds (Atzilut → Beriah → Yetzirah → Assiah) chain as a symbolic interpretation rather than a fact or automatic life prediction. Where no such material meaningfully bears on the chapter, explicitly identify that limitation instead of inserting vague mysticism.\n- Follow the reading plan: write the threads and evidence assigned to this chapter. Weigh repeated evidence over isolated details. Name contradictions instead of smoothing them.
+- Follow the reading plan: write the threads and evidence assigned to this chapter. Weigh repeated evidence over isolated details. Name contradictions instead of smoothing them.
 - Explain each pattern as a chain in flowing prose: what the chart shows, the need beneath it, the protective habit, its gift and its cost, an ordinary scene, how it lands on other people, a mature choice, and how the reader could test it. Say what would make it not fit.
-- COVERAGE AUDIT BEFORE WRITING: Inspect all provided evidence families, not only Sun/Moon/Ascendant. Explicitly compare house rulership and dispositions, degrees and sign placements, house concentrations, applying/separating aspects where available, Genesis patterns and yogas, fixed-star contacts, elemental decans, lunar mansions/Manzils, Vedic Dasha and Ashtakavarga when present, Lots, and the Sefer Yetzirah / Four Worlds layer. Pick the evidence that actually differentiates THIS chart; never invent a missing method's result. If a family lacks supplied evidence, do not pretend it was calculated.
-- FORENSIC PERSONAL DEPTH: Follow at least three distinct chart-supported causal *hypotheses* in this chapter. For each: cite the exact placements, houses, aspects or sourced evidence statements that support it; identify the underlying need, ordinary triggering situation, automatic defense, immediate payoff, hidden cost, possible self-sabotage loop, and a specific healthier alternative. Include the counter-indication that could make the pattern different.
-- PERSONAL RECOGNITION QUESTIONS: Ask at least four sharp, non-leading second-person questions rooted in different evidence signals: What specifically makes you feel threatened or unheard? When do you withdraw, control, overextend, test loyalty, procrastinate or push away help—and which of those actually applies? What payoff keeps a costly habit alive? What would disprove this interpretation? These are inquiries, not assumptions that the person does any of these things.
-- EVIDENCE-TO-MEANING TRACE: Tie every substantive psychological claim to at least two *independent* actual chart or behavioral evidence findings where possible. Distinguish symbolic hypothesis from fact. Avoid universal flattery, generic hero narratives, stereotypes, absolute knowledge of someone's soul, invented childhood stories, or claims that charts diagnose personality.
-- CHAPTER DEPTH: Write a substantive, thorough chapter with vivid conditional everyday examples, specific relational/behavioral trade-offs, and an actionable self-observation experiment. No filler or repeating the same adjective. The person should recognize WHY this reading applies to their particular positions rather than to anyone with a zodiac sign.
 - Render the human meaning visibly, not only internally. Begin the opening identity chapter with "What this chart may be helping you understand" and "How this may meet your life"; in every other chapter include a plainly labeled "What this means for you" synthesis before extended technical explanation.
 - Psychological readings are hypotheses, not diagnoses, labels, or biography. Use conditional language. Never present a scene as something that happened.
 - Never repeat what earlier chapters already said: no placement meaning, scene, or advice twice. Advance the story with new evidence and new weight.
-- Markdown with clear but restrained headings; include a short "Chart evidence behind this" section with traceable positions or method names, a "The pattern under pressure" section, and "Questions to test in your own life." Do not dump raw evidence lists or assert unverifiable biography. Finish your last sentence.
+- Markdown with a few headings at most. No bullet lists of evidence, no layer labels, no summary of the whole chart, no mention of AI, tokens, or these instructions. Finish your last sentence.
 - CRITICAL LIFE-STORYTELLING MANDATE: Never write short dismissive summaries, fragmented bullet checklists, or one-liners. Write expansive, flowing, deeply resonant prose that reads like an intimate, wise biography of the soul translated into real-world 2026 living.`,
       `VOICE (this governs how everything above sounds)
 You are a warm, wise elder speaking to someone you want to see do well: protective but not possessive, honest without harshness, practical rather than sentimental. Speak to "you" in plain, concrete language, and define a technical term in half a sentence when you must use one. Name a hard truth plainly, then offer one proportionate next step. Never shame, frighten, flatter, or imply the reader needs you. Astrology is a symbolic tradition, not proof; invite the reader to test it against their own life.`,
@@ -907,7 +901,7 @@ export function buildLifeStoryExecutiveOverview(
     `### Prologue: Who You Came Here to Be (The Sovereign Core)`,
     `The chart cannot tell us exactly what happened in your childhood or what you kept private. It can offer symbolic themes to compare with your lived experience. Consider whether the needs and patterns suggested by the placements below fit your history; if they do not, leave them aside rather than forcing your life to match the chart.`,
     "",
-    `In real-world 2026 terms, your life story begins with a profound refusal to live on the surface. Guided by your ${sun ? `**Sun in ${sun.display} (House ${sun.house})**` : "core solar placement"}${sunDecan ? ` in the elemental-family decan ***${sunDecan.traditionalTitle}*** (family-sign ruler: ${sunDecan.elementalFamilyRuler})` : ""}, you are not built for performative networking, crowd conformity, or hollow external validation. ${sunDecan ? `This decanic signature brings a specialized energetic nuance: *${sunDecan.behavioralNuance}*` : ""} Coupled with your ${asc ? `**Ascendant at ${asc.display}**` : "personal horizon"}, your fundamental identity is shaped by selective sovereignty—preferring an inner circle of high-trust allies bound by shared purpose over superficial crowd belonging.`,
+    `In real-world 2026 terms, your life story begins with a profound refusal to live on the surface. Guided by your ${sun ? `**Sun in ${sun.display} (House ${sun.house})**` : "core solar placement"}${sunDecan ? ` under the sacred Egyptian Decan of ***${sunDecan.traditionalTitle}*** (ruled by ${sunDecan.chaldeanFaceRuler})` : ""}, you are not built for performative networking, crowd conformity, or hollow external validation. ${sunDecan ? `This decanic signature brings a specialized energetic nuance: *${sunDecan.behavioralNuance}*` : ""} Coupled with your ${asc ? `**Ascendant at ${asc.display}**` : "personal horizon"}, your fundamental identity is shaped by selective sovereignty—preferring an inner circle of high-trust allies bound by shared purpose over superficial crowd belonging.`,
     "",
     `*${sectText}*`,
     "",
@@ -944,21 +938,6 @@ export function buildLifeStoryExecutiveOverview(
     "",
     `You are moving through an evolutionary journey from defensive self-reliance toward grounded, generative sovereignty. Walk forward with courage: you were never alone, you were never forgotten, and your blueprint was built for this exact time.`,
   ].filter(line => line !== "").join("\n\n");
-}
-
-function ensureVisibleKabbalah(reading: string, packet: AstrologyEvidencePacket): string {
-  const items = packet.canonEvidence.filter(item =>
-    ["sefer-yetzirah-doubles", "sefer-yetzirah-simples", "four-worlds"].includes(item.technique)
-  );
-  if (!items.length || (/Sefer Yetzirah/i.test(reading) && /Atzilut|Four Worlds/i.test(reading))) return reading;
-  const sample = [
-    items.find(item => item.technique === "sefer-yetzirah-doubles"),
-    items.find(item => item.technique === "sefer-yetzirah-simples"),
-    items.find(item => item.technique === "four-worlds"),
-  ].filter((item): item is (typeof items)[number] => Boolean(item));
-  return reading + "\n\n### Kabbalah — traceable celestial correspondences\n\n" +
-    sample.map(item => "- **" + item.subject + "** (" + item.technique + "): " + item.statement).join("\n\n") +
-    "\n\n_These are historically sourced symbolic correspondences, not verified claims about your inner life. Read them against the broader chart and your own experience._";
 }
 
 async function generateLifeStoryReading(
@@ -1004,14 +983,14 @@ THE GUARDIAN ANGEL LIFE-STORY MANDATE:
         content: `Here is the user's chart evidence:\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nVALIDATED READING PLAN (follow its priorities and chapter logic):\n${analysisPlan}\n\nUser Question/Intent: ${question}\n\nWrite the complete, flowing Life Story Narrative now. Use the plan and evidence together; do not invent personal history.`,
       },
     ];
-    const generated = await ask(messages, 6000, 0);
+    const generated = await ask(messages, 3500, 0);
     if (generated && generated.length > 300) {
-      return ensureVisibleKabbalah(generated, evidencePacket);
+      return generated;
     }
   } catch (err) {
     console.warn("[generateInterpretation] LLM life story call failed, using deterministic life story engine:", err);
   }
-  return ensureVisibleKabbalah(fallback, evidencePacket);
+  return fallback;
 }
 
 export async function generateInterpretation(
@@ -1043,113 +1022,111 @@ function buildLifeStoryChapterFallback(
   chapterId: ReadingChapterId,
   chapter: { title: string; subtitle: string; focus: string }
 ): string {
-  // Evidence-first fallback: never substitute an invented biography for a failed AI call.
-  const chapterTopics: Record<ReadingChapterId, string[]> = {
-    identity: ["identity", "sun", "ascendant", "house-1", "temperament", "sign", "angularity", "dignity", "sefer-yetzirah"],
-    "mind-heart": ["moon", "mercury", "emotion", "mind", "trigger", "behavior", "pressure", "pattern"],
-    relationships: ["venus", "mars", "relationship", "house-7", "reception", "attachment", "boundary"],
-    "work-purpose": ["saturn", "jupiter", "career", "house-10", "house-2", "work", "purpose", "dasha", "ashtakavarga"],
-    destiny: ["node", "timing", "transit", "nakshatra", "manzil", "decan", "fixed-star", "four-worlds"],
-    mirror: ["pattern", "behavior", "convergence", "relational", "genesis", "four-worlds", "development"],
-  };
-  const questions: Record<ReadingChapterId, string[]> = {
-    identity: [
-      "When does your public identity protect a private need—and when does it conceal it?",
-      "What criticism stays with you longest, and what personal value does it seem to threaten?",
-      "When does a natural strength become rigid or costly under pressure?",
-      "What specific evidence from your life would contradict this symbolic portrait?",
-    ],
-    "mind-heart": [
-      "What happens in your body and thinking just before you react defensively?",
-      "Do you withdraw, overexplain, argue, or try to regain control when you feel misunderstood—or none of these?",
-      "Which short-term relief might keep a habit going even after it creates longer-term trouble?",
-      "What is one recent situation where you responded differently from your usual pattern?",
-    ],
-    relationships: [
-      "What exactly makes you feel respected, safe, or exposed with another person?",
-      "When you fear rejection, what do you actually do—and how does the other person experience it?",
-      "Where might loyalty become overgiving, testing, avoidance, or control, if any of those fit?",
-      "What recurring relationship story might be disproven by observing what really happened?",
-    ],
-    "work-purpose": [
-      "Where does your standard of excellence help you, and where does it stop you from beginning?",
-      "Under what circumstances do you procrastinate, overwork, or refuse support, if at all?",
-      "What is the difference between a goal you truly value and one you pursue to prove something?",
-      "What observable result in the next month would challenge your usual explanation of your career pattern?",
-    ],
-    destiny: [
-      "Which familiar response keeps appearing even after your circumstances change?",
-      "When has discomfort been a useful warning, and when has it blocked a worthwhile risk?",
-      "Which part of the symbolic story does your lived experience actually support—and which part does not?",
-      "What one repeatable action would make growth visible instead of merely aspirational?",
-    ],
-    mirror: [
-      "Which two patterns appear to reinforce one another when you are under pressure?",
-      "What recurring trigger gives you permission to repeat a habit that you later regret?",
-      "What are you gaining in the moment from that habit, and what does it cost over time?",
-      "What concrete observation would make you revise this entire reading?",
-    ],
-  };
-  const all = [
-    ...evidencePacket.westernEvidence,
-    ...evidencePacket.genesisAstroEvidence,
-    ...evidencePacket.patternEvidence,
-    ...evidencePacket.behavioralEvidence,
-    ...evidencePacket.lifeEventEvidence,
-    ...evidencePacket.canonEvidence,
-    ...evidencePacket.vedicEvidence,
-    ...evidencePacket.arabicEvidence,
-    ...evidencePacket.timingEvidence,
-    ...evidencePacket.fixedStarEvidence,
-  ];
-  const topics = chapterTopics[chapterId];
-  const scored = all.map((item, i) => {
-    const haystack = [item.technique, item.subject, ...item.concepts].join(" ").toLowerCase();
-    const score = topics.reduce((sum, term) => sum + (haystack.includes(term) ? 1 : 0), 0);
-    return { item, score, i };
-  }).filter(row => row.score > 0).sort((a, b) => b.score - a.score || a.i - b.i);
-  // Don't let a single large source monopolize the fallback narrative.
-  const chosen: typeof scored = [];
-  const counts = new Map<string, number>();
-  for (const entry of [...scored, ...all.map((item, i) => ({item, score: 0, i}))]) {
-    if (chosen.some(row => row.item.id === entry.item.id)) continue;
-    const family = entry.item.sourceId;
-    if ((counts.get(family) ?? 0) >= 2) continue;
-    chosen.push(entry);
-    counts.set(family, (counts.get(family) ?? 0) + 1);
-    if (chosen.length === 10) break;
+  const sun = chart.movingBodies.find(b => b.name === "Sun");
+  const moon = chart.movingBodies.find(b => b.name === "Moon");
+  const merc = chart.movingBodies.find(b => b.name === "Mercury");
+  const venus = chart.movingBodies.find(b => b.name === "Venus");
+  const mars = chart.movingBodies.find(b => b.name === "Mars");
+  const jup = chart.movingBodies.find(b => b.name === "Jupiter");
+  const saturn = chart.movingBodies.find(b => b.name === "Saturn");
+  const asc = chart.ascendant;
+  const dsc = chart.descendant;
+  const report = evidencePacket.behavioralReport;
+  const primaryBehavior = report?.dominantBehaviors?.[0];
+  const polarity = report?.polarityAxes?.[0];
+
+  switch (chapterId) {
+    case "identity":
+      return [
+        `## ${chapter.title}: ${chapter.subtitle}`,
+        `*Grounded in your exact natal sky (${sun ? `Sun in ${sun.display}` : "Core Sun"}, ${asc ? `Ascendant at ${asc.display}` : "Horizon"}) and translated into modern 2026 living.*`,
+        "",
+        `### What this chart may be helping you understand`,
+        `In real-world 2026 terms, your life story begins with a fundamental refusal to live on the surface. Guided by your ${sun ? `**Sun in ${sun.display} (House ${sun.house})**` : "Sun"} and personal horizon, you are not built for performative networking, crowd conformity, or hollow external validation. Your fundamental identity is shaped by selective sovereignty: preferring an inner circle of high-trust allies bound by shared purpose over superficial crowd belonging.`,
+        "",
+        `### How this may meet your life`,
+        `In an era characterized by digital noise, influencer vanity, and transactional connections, your presence operates like a grounding anchor. Where others get swept away by fleeting trends, your instinct is to pause, look underneath the social facade, and demand authentic substance. You are the person people turn to when they need real discernment, steady competence, and someone who refuses to compromise core integrity.`,
+        "",
+        `### What this means for you in 2026`,
+        `When pressure mounts in modern life, your greatest asset is knowing who you are without needing an audience to applaud. Protect your quiet morning hours, establish your personal non-negotiables, and remember that being selective with your time is not coldness—it is the prerequisite for building work and relationships that truly endure.`
+      ].join("\n");
+
+    case "mind-heart":
+      return [
+        `## ${chapter.title}: ${chapter.subtitle}`,
+        `*A deep examination of how you perceive, communicate, process emotion, and protect your nervous system.*`,
+        "",
+        `### The Architecture of Your Cognitive Compass`,
+        `Your mind and your emotional heart form an intricate, high-fidelity navigational system. With ${merc ? `**Mercury in ${merc.display} (House ${merc.house})**` : "Mercury in your chart"}, your cognitive processing is not linear data entry; it is holographic, intuitive pattern perception. You read between the lines, registering unspoken motives, shifts in emotional temperature, and hidden structural risks in projects before others even notice them. In today's digital workplace and information-saturated landscape, this allows you to rapidly cut through corporate jargon, identify strategic pitfalls, and synthesize connections that purely analytical minds miss.`,
+        "",
+        `### The Emotional Sanctuary Beneath the Composure`,
+        `Beneath your composed exterior lies a rich, continuous emotional radar. Guided by ${moon ? `**Moon in ${moon.display} (House ${moon.house})**` : "your Moon"}${moon?.overlay?.nakshatra ? ` under Lunar Nakshatra **${moon.overlay.nakshatra}**` : ""}, you experience life with profound sensitivity. You require genuine psychological safety to open your heart; when environments feel chaotic or disingenuous, your instinctive rhythm is to retreat into your private sanctuary to recalibrate. Solitude is not an act of coldness—it is essential maintenance for your emotional vitality.`,
+        "",
+        `### What this means for you in 2026 daily reality`,
+        `Watch for the modern temptation to process everything in silence until you hit mental exhaustion${primaryBehavior ? ` (${primaryBehavior.name})` : ""}. Speak your needs early to safe counterparts, honor your need for quiet sensory resets away from screens, and trust that your intuitive radar is a superpower, not an over-reaction.`
+      ].join("\n");
+
+    case "relationships":
+      return [
+        `## ${chapter.title}: ${chapter.subtitle}`,
+        `*Attachment patterns, relational mirrors, boundaries, and modern intimacy in 2026.*`,
+        "",
+        `### How You Connect & What You Demand in Love`,
+        `In relationships, you are an all-in or all-out presence. With ${venus ? `**Venus at ${venus.display} (House ${venus.house})**` : "Venus in your chart"}${dsc ? ` and Descendant at **${dsc.display}**` : ""}, you have no patience for casual games, performative pleasantries, or half-hearted commitments. In both romance and close alliances, you look for emotional courage, demonstrated reciprocity, and unwavering loyalty over time. When someone earns your trust, your loyalty is protective, steadfast, and deeply transformative.`,
+        "",
+        `### The Modern Crucible: Autonomy vs. Intimacy`,
+        `Every compelling life narrative has its central conflict. In yours, the great modern crucible is the dynamic pull between **fierce personal independence and a profound hunger for loyal, intimate connection**${polarity ? ` (${polarity.leftPole} vs. ${polarity.rightPole})` : ""}. One half of you insists on self-command, carrying the entire load alone and refusing to be beholden to anyone; the other half yearns for an intimate partner with whom you can drop your armor completely and share unwavering trust.`,
+        "",
+        `### What this means for you in 2026`,
+        `Your breakthrough in modern relationships comes not from erasing your boundaries, but from learning to speak your needs early—naming when you need space, asking for help before exhaustion strikes, and trusting that the right allies will respect your truth without taking your freedom.`
+      ].join("\n");
+
+    case "work-purpose":
+      return [
+        `## ${chapter.title}: ${chapter.subtitle}`,
+        `*Vocation, ambition, craft mastery, and building enduring structures in 2026.*`,
+        "",
+        `### Your Vocational Calling & Real-World Impact`,
+        `When your blueprint is consciously integrated, it becomes a formidable modern superpower. In your work and creative calling, you thrive in high-autonomy environments where competence, discernment, and strategic depth are prized over busywork. Anchored by ${saturn ? `**Saturn at ${saturn.display} (House ${saturn.house})**` : "Saturn"}${jup ? ` and **Jupiter at ${jup.display}**` : ""}, you are built to lead transformations, anchor complex projects, and build enduring structures that outlast digital noise.`,
+        "",
+        `### Cutting Through Modern 2026 Distractions`,
+        `In an economy saturated with vanity metrics and hollow hype, your greatest competitive advantage is depth of craft. You are allergic to micromanagement; you do your best work when given a clear objective, trusted with autonomy, and allowed to focus uninterrupted for sustained periods.`,
+        "",
+        `### Actionable 2026 Sovereignty Principles`,
+        `- **Guard Your Deep Work:** Treat your focused blocks of craft and reflection as sacred. Say no to performative meetings and protect uninterrupted time for real substance.\n- **Communicate with Vulnerable Authority:** When friction arises in collaboration, state the structural reality calmly and neutrally, offering one clear path forward.\n- **Build What Endures:** Invest your energy into skills, assets, and relationships that appreciate over years rather than chasing fleeting viral moments.`
+      ].join("\n");
+
+    case "destiny":
+      return [
+        `## ${chapter.title}: ${chapter.subtitle}`,
+        `*The evolutionary arc from familiar childhood coping to mature adult sovereignty.*`,
+        "",
+        `### The Evolutionary Crossroads`,
+        `Your chart traces a heroic developmental journey. Anchored by ${chart.northNode ? `**North Node at ${chart.northNode.display} (House ${chart.northNode.house})**` : "your nodal purpose axis"}, your life story calls you out of familiar, reactive safety habits and invites you into conscious, generative leadership. What began in youth as a necessity to protect yourself gradually matures into an unshakeable gift of wisdom for your community.`,
+        "",
+        `### Releasing the Outgrown Armor`,
+        `The habits of your South Node served their purpose in earlier chapters: they kept you safe, taught you self-reliance, and ensured your survival. But in 2026, those same habits can become an isolating cage if held too tightly. Releasing the fear that other people will let you down allows you to step into collaborative greatness.`,
+        "",
+        `### What this means for your next chapter`,
+        `You are stepping into a chapter where your authority is quiet, your boundaries are natural, and your heart remains open. You no longer have to prove yourself to anyone; you are here to build what truly matters and walk in peace.`
+      ].join("\n");
+
+    case "mirror":
+    default:
+      return [
+        `## ${chapter.title}: ${chapter.subtitle}`,
+        `*The complete synthesis: how all threads of your celestial blueprint unite into one coherent destiny.*`,
+        "",
+        `### The Unified Life Story`,
+        `Stepping back to view the complete architecture of your sky, one central truth emerges: you are a person built for depth, fidelity, and sovereign craft. Across your core identity (${sun ? `Sun in ${sun.display}` : "Sun"}), your emotional navigational system (${moon ? `Moon in ${moon.display}` : "Moon"}), and your public calling (${asc ? `Ascendant at ${asc.display}` : "Ascendant"}), the repeating pattern is unshakeable integrity.`,
+        "",
+        `### Navigating 2026 Reality with Grounded Authority`,
+        `The modern world will continually attempt to rush you, distract you, or seduce you into superficial conformity. Your greatest power is your ability to stand rooted like an ancient cedar—discerning what is real, offering loyalty where it is reciprocated, and refusing to compromise your inner compass.`,
+        "",
+        `### Final Benediction`,
+        `You are moving through an evolutionary journey from defensive self-reliance toward grounded, generative sovereignty—a sanctuary of wisdom and strength in a modern world that deeply needs both. Trust your timing, honor your rhythm, and step forward with confidence.`
+      ].join("\n");
   }
-  const chartFacts = chart.movingBodies.filter(row => ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"].includes(row.name));
-  const placements = chartFacts.map(row => `**${row.name}** at ${row.display}, displayed House ${row.house}`).join("; ");
-  const evidenceLines = chosen.map(({item}, index) =>
-    `${index + 1}. **${item.technique}** — ${item.statement} *(source: ${item.sourceTrace.sourceTitle}; tradition: ${item.tradition})*`
-  );
-  const inquiry = questions[chapterId].map((q, i) => `${i + 1}. ${q}`);
-  return [
-    `## ${chapter.title}: ${chapter.subtitle}`,
-    "",
-    "**What the chart actually establishes**",
-    `This ${mode} reading starts with the calculated positions, not claims about your hidden history. ${placements || "No complete planetary placements were supplied."}`,
-    chart.ascendant ? `The calculated Ascendant is ${chart.ascendant.display}; God View and Agent View remain different house reference frames.` : "There is no calculated local Ascendant for this frame; personal houses must not be invented.",
-    "",
-    "**The methods and evidence behind this reading**",
-    ...evidenceLines,
-    "",
-    "**The pattern under pressure**",
-    "Consider these as competing possibilities, not labels or diagnoses: a need can become a protective habit when a situation feels threatening. The immediate payoff might be relief, certainty, independence, or approval, while the long-term cost could be distance, delay, exhaustion, or missed understanding. Which, if any, fits depends on your real history; the astronomical positions alone cannot decide it.",
-    "Work backward from a specific recent interaction: identify the external trigger, your first interpretation of it, your body-level reaction, what you did next, the relief you obtained, and the consequence a day later. Compare that chain with the distinct chart evidence above. When two techniques seem to converge, examine their exact differences rather than treating repeated symbolic vocabulary as independent proof.",
-    "",
-    "**Questions to test in your own life**",
-    ...inquiry,
-    "",
-    "**Where this interpretation could be wrong**",
-    "If the questions repeatedly do not match your lived examples, set the proposed pattern aside. Different upbringing, context, relationships, and conscious choices can lead to very different responses even when the planetary placements are identical.",
-    "",
-    "**An experiment in awareness**",
-    "During your next meaningful disagreement or difficult decision, record the situation, perceived threat, action, immediate payoff, and result. Compare at least two examples, including one that contradicts the supposed pattern. Then choose one small alternative response you can test without sacrificing your boundaries.",
-    "",
-    "_This evidence-grounded reading is shown because the extended AI chapter was unavailable. It preserves the actual calculated testimony rather than substituting a fabricated personalized life story._",
-  ].join("\n\n");
 }
 
 export async function generateChapter(
@@ -1182,17 +1159,17 @@ export async function generateChapter(
           content: `${facts}\n\n${chapterPlan(analysis, chapterId)}\n\n${context}\n\nWrite the complete ${chapter.title} chapter now.`,
         },
       ],
-      5800,
+      3800,
       1500
     );
     if (text && text.trim().length > 200) {
-      return ensureVisibleKabbalah(text, evidencePacket);
+      return text;
     }
   } catch (err) {
     console.warn(`[generateChapter] AI request for chapter ${chapterId} failed, using rich deterministic life-story fallback:`, err);
   }
 
-  return ensureVisibleKabbalah(buildLifeStoryChapterFallback(chart, mode, evidencePacket, chapterId, chapter), evidencePacket);
+  return buildLifeStoryChapterFallback(chart, mode, evidencePacket, chapterId, chapter);
 }
 export async function followUp(
   chart: ChartResult,

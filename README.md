@@ -1,4 +1,4 @@
-# 12 Gates of the Firmament
+# Bible Believers Astrology
 
 A TypeScript astrology and interpretation app: a dark, interactive observatory for natal charts, transit readings, and AI-guided chart interpretation, including Horary charts.
 
@@ -13,16 +13,14 @@ A TypeScript astrology and interpretation app: a dark, interactive observatory f
 ## Project layout
 
 ```text
-client/    React frontend (pages, components, hooks, contexts, config, tRPC client helpers)
-server/    Express backend, API composition, domain engines, knowledge, and persistence helpers
-shared/    Cross-layer contracts, schemas, rules, and browser-safe helpers
+client/    React frontend (pages, components, hooks, tRPC client helpers)
+server/    Express backend: chart calculation, horary flows, interpretation prompts, DB access
+shared/    Shared types and helpers (including horary logic)
 drizzle/   DB schema and migrations
-docs/      Architecture and design guidance
+docs/      Design guidance (mobile visual system)
 ```
 
-See [the architecture map](docs/architecture-map.md) for current module ownership, runtime entry points, dependency direction, test conventions, and an incremental cleanup sequence. This guide describes the current structure; it does not authorize bulk file moves or deletions.
-
-Key server entry points: `server/_core/index.ts` (Express/tRPC setup), `routers.ts` (API composition), `astronomy.ts` / `astrologyCore.ts` (chart calculations), `astrologyKnowledge/` (doctrine and knowledge), and `master-interpreter.ts` (interpretation orchestration and prompts).
+Key server files: `astronomy.ts` (chart calculation), `astrologyCore.ts` (core astrology logic), `master-interpreter.ts` (interpretation prompts), `host.ts` (host persona), `routers.ts` (API routes).
 
 ## Getting started
 

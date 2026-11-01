@@ -4,16 +4,13 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { calculateChart, geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
+import { calculateChart, geocodeLocation, type ChartResult } from "./astronomy";
 import {
   followUp,
   generateChapter,
   generateInterpretation,
   READING_CHAPTERS,
 } from "./interpretation";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
-import { buildUnifiedMasterChart } from "./masterChart";
-import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
 import { askHost } from "./host";
 import { horaryFollowUp, openHoraryQuestion, type HoraryChart } from "./horary";
 import { getZodiacSignReading } from "./zodiacHorary";
@@ -21,21 +18,12 @@ import { ZODIAC_SIGNS } from "../shared/hybrid";
 import { horaryFollowUpHistorySchema } from "./horary-input";
 import {
   diagnoseAstrologyEvidence,
-  buildAstrologyEvidencePacket,
-  formatEvidencePacket,
   evaluateBehavioralIntelligence,
 } from "./astrologyKnowledge";
 import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
 import { invokeLLM } from "./_core/llm";
+import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
-import {
-  calculatePersonAge,
-  calculateAnnualProfection,
-  generatePlanetaryCycles,
-  compileLifeStoryChapters,
-  runAstrologyEngineAudit,
-  generateLifeStoryChapter,
-} from "./lifeStoryEngine";
 
 
 const chartInput = z.object({
@@ -92,10 +80,9 @@ const placeInput = z.object({
 });
 const horaryQuestionInput = placeInput.extend({
   question: z.string().trim().min(10).max(1000),
-  subject: z.enum(["querent", "other"]).optional(),
-  topicHouse: z.number().int().min(1).max(12).optional(),
+  subject: z.enum(["querent", "other"]),
+  topicHouse: z.number().int().min(1).max(12),
   subjectHouse: z.number().int().min(1).max(12).optional(),
-  manualOverrides: z.boolean().optional(),
   natal: placeInput.optional(),
 });
 export const appRouter = router({
@@ -144,19 +131,9 @@ export const appRouter = router({
     geocode: publicProcedure
       .input(z.object({ query: z.string().min(2) }))
       .query(({ input }) => geocodeLocation(input.query)),
-    reverseGeocode: publicProcedure
-      .input(z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }))
-      .query(({ input }) => reverseGeocodeLocation(input.latitude, input.longitude)),
     calculate: publicProcedure
       .input(chartInput)
       .mutation(({ input }) => calculateChart(input)),
-    masterChart: publicProcedure
-      .input(
-        chartInput.extend({
-          mode: z.enum(["natal", "transit", "combined"]).default("natal"),
-        })
-      )
-      .mutation(({ input }) => buildUnifiedMasterChart(input)),
   }),
   astrologyKnowledge: router({
     behavioralReport: publicProcedure
@@ -224,25 +201,6 @@ export const appRouter = router({
       .mutation(({ input }) =>
         generateInterpretation(input.chart, input.mode, input.question)
       ),
-    masterSynthesize: publicProcedure
-      .input(
-        chartInput.extend({
-          mode: z.enum(["natal", "transit", "combined"]).default("natal"),
-          question: z
-            .string()
-            .trim()
-            .max(2000)
-            .default("What is the core life purpose and integrated trajectory of this chart?"),
-        })
-      )
-      .mutation(async ({ input }) => {
-        const snapshot = await buildUnifiedMasterChart(input);
-        return synthesizeMasterReading({
-          snapshot,
-          readingMode: input.mode,
-          userQuestion: input.question,
-        });
-      }),
     chapter: publicProcedure
       .input(
         z.object({
@@ -417,7 +375,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `You are the Master Interpreter in LIFE STORYTELLING MODE for 12 Gates of the Firmament.
+        const prompt = `You are the Master Interpreter in LIFE STORYTELLING MODE for Bible Believers Astrology.
 The user is asking: "${input.question}".
 Natal context: ${input.natalPlacements || "Calculated Natal Horizon"}
 Transit context: ${input.transitPlacements || "Current transit moment"}
@@ -493,7 +451,7 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
-          messages: [{ role: "system", content: buildAstrologyInterpreterSystem(prompt) }, { role: "user", content: "Generate soulmate prediction." }],
+          messages: [{ role: "system", content: prompt }, { role: "user", content: "Generate soulmate prediction." }],
           maxTokens: 2000,
           responseFormat: { type: "json_object" },
         });
@@ -544,7 +502,7 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
-          messages: [{ role: "system", content: buildAstrologyInterpreterSystem(prompt) }, { role: "user", content: "Analyze synastry." }],
+          messages: [{ role: "system", content: prompt }, { role: "user", content: "Analyze synastry." }],
           maxTokens: 2500,
           responseFormat: { type: "json_object" },
         });
@@ -578,12 +536,8 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         })
       )
       .mutation(({ input }) => {
-        const evidence = buildAstrologyEvidencePacket(input.chart, input.question || input.focusArea, input.chart.readingScope ?? "combined");
-        if (!evidence.canonDossier || !evidence.canonEvidence.length) {
-          throw new Error("Genesis requires evaluated Firmament Canon evidence.");
-        }
         const pipeline = runGenesisPatternPipeline(input.chart);
-        const reading = generateReading(
+        return generateReading(
           pipeline.analysis,
           {
             question: input.question,
@@ -594,72 +548,6 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
           input.chart.input?.time || "12:00",
           input.chart.input?.date || new Date().toISOString().split("T")[0]
         );
-        return { ...reading, formattedReading: reading.formattedReading + "\n\n## Firmament Canon — Chart Evidence\n\n" + formatEvidencePacket(evidence) };
-      }),
-  }),
-  lifeStory: router({
-    calculateCycles: publicProcedure
-      .input(
-        chartResultInput.extend({
-          targetAge: z.number().min(0).max(120).optional(),
-        })
-      )
-      .query(({ input }) => {
-        const birthDate = input.chart.input?.date || "1990-01-01";
-        const currentAge = calculatePersonAge(birthDate);
-        const selectedAge = input.targetAge ?? currentAge;
-        const profection = calculateAnnualProfection(selectedAge, input.chart);
-        const cycles = generatePlanetaryCycles(input.chart, currentAge);
-        const chapters = compileLifeStoryChapters(input.chart, currentAge, cycles);
-        const audit = runAstrologyEngineAudit(input.chart);
-
-        return {
-          currentAge,
-          selectedAge,
-          profection,
-          cycles,
-          chapters,
-          audit,
-        };
-      }),
-
-    generateChapter: publicProcedure
-      .input(
-        chartResultInput.extend({
-          chapterKey: z.enum([
-            "birth_origins",
-            "childhood",
-            "adolescence",
-            "early_adulthood",
-            "adult_development",
-            "later_life",
-            "turning_points",
-            "future_chapters",
-          ]),
-          selectedAge: z.number().min(0).max(120).optional(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        return generateLifeStoryChapter(
-          input.chart,
-          input.chapterKey,
-          input.selectedAge
-        );
-      }),
-
-    audit: publicProcedure
-      .input(chartResultInput)
-      .query(({ input }) => {
-        const layers = runAstrologyEngineAudit(input.chart);
-        const verifiedCount = layers.filter(
-          l => l.status === "implemented-verified"
-        ).length;
-        return {
-          layers,
-          totalLayers: layers.length,
-          verifiedCount,
-          isFullyOperational: verifiedCount >= 19,
-        };
       }),
   }),
 });

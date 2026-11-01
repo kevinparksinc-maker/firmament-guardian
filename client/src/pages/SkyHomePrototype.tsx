@@ -1,4 +1,3 @@
-import { CelestialDomeChart } from "@/components/CelestialDomeChart";
 import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
@@ -920,8 +919,6 @@ export default function SkyHomePrototype() {
               <ThreeLayerOrrery chart={activeChart} />
             </section>
 
-            {activeChart && <CelestialDomeChart chart={activeChart} />}
-
             {/* Synchronized 4-Band Overlay Map */}
             <OverlayMap moonLongitude={moonLongitude} chart={activeChart} />
 
@@ -1006,7 +1003,6 @@ export default function SkyHomePrototype() {
         {screen === "maps" && (
           <div className="space-y-8">
             <OverlayMap moonLongitude={moonLongitude} chart={activeChart} />
-            {activeChart && <CelestialDomeChart chart={activeChart} />}
             {activeChart && (
               <LiveTransitFeed
                 chart={activeChart}

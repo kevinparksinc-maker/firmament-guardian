@@ -14,8 +14,6 @@ import {
 import { HOUSE_CANON_RECORDS, synthesizePlanetInHouse } from "./housesAndFrames";
 import { getManzilCanonByLongitude } from "./manazil28";
 import { getNakshatraCanonByLongitude } from "./nakshatras27";
-import { CHINESE_MANSIONS, CHINESE_MANSION_HISTORICAL_SOURCE } from "./chineseMansions28";
-import { describeJyotishHouse, getJyotishHouseGroups, JYOTISH_HOUSE_GROUP_PROVENANCE } from "./jyotishHouseGroups";
 import { getPlanetInHouseKnowledge } from "./planetInHouseInterpretations";
 import {
   PLANET_CANON_RECORDS,
@@ -27,7 +25,6 @@ import type {
   RetrievedPlacementDossier,
   VedicAyanamsaMode,
 } from "./types";
-import { evaluateShaniDoctrine, SHANI_DOCTRINE_SOURCE } from "./shaniDoctrine";
 import { evaluateVedicJyotishSystem } from "./vedicJyotishCanon";
 import {
   buildDispositorChains,
@@ -62,10 +59,7 @@ export function retrievePlacementDossier(
     getNakshatraCanonByLongitude(lon);
   const fixedStarContacts = findFixedStarContactsForLongitude(lon);
 
-  // Ancient Chinese Xiu are defined by unequal historical determinative-star divisions.
-  // Do not assign positions using a modern reference epoch without a sourced ancient boundary table.
   return {
-
     body: row.name,
     display: row.display,
     longitude: lon,
@@ -136,7 +130,6 @@ export function retrieveChartCanonDossier(
     options?.vedicCoordinateMode ?? "firmament-tropical-hybrid"
   );
   const arabicPersianSystem = evaluateArabicPersianTradition(chart, isDayChart);
-  const shaniDoctrine = evaluateShaniDoctrine(chart, options?.vedicCoordinateMode ?? "firmament-tropical-hybrid");
   const relationalChains = buildRelationalHouseChains(
     chart,
     isDayChart,
@@ -157,7 +150,6 @@ export function retrieveChartCanonDossier(
     lines.push(`  - [Sign & Dignity] ${p.planetInSignSynthesis}`);
     lines.push(`  - [Condition & Bounds] ${p.dignityAndCondition.conditionSummary} | ${p.dignityAndCondition.sectAlignment}`);
     lines.push(`  - [House Doctrine] ${p.planetInHouseSynthesis}`);
-    lines.push(`  - [Jyotish overlapping bhava categories · TRADITION] ${describeJyotishHouse(p.displayedHouse)} Coordinate caution: use traditional Jyotish Lagna framing for school-specific judgments.`);
     if (p.planetInHouseKnowledge) {
       const k = p.planetInHouseKnowledge;
       lines.push(`  - [Planet-in-House Library · ${k.epistemicStatus}] Domain: ${k.domain}. ${k.core}`);
@@ -172,7 +164,7 @@ export function retrieveChartCanonDossier(
     }
     if (p.decanRecord) {
       lines.push(
-        `  - [Decan ${p.decanRecord.index}/36: ${p.decanRecord.label} — "${p.decanRecord.traditionalTitle}"] Elemental family: ${p.decanRecord.elementalFamilySign} | Family sign ruler: ${p.decanRecord.elementalFamilyRuler}. ${p.decanRecord.behavioralNuance}`
+        `  - [Decan ${p.decanRecord.index}/36: ${p.decanRecord.label} — "${p.decanRecord.traditionalTitle}"] Chaldean Face: ${p.decanRecord.chaldeanFaceRuler} | Triplicity Sub-ruler: ${p.decanRecord.triplicitySubRuler}. ${p.decanRecord.behavioralNuance}`
       );
     }
     if (p.manzilRecord) {
@@ -248,7 +240,7 @@ export function retrieveChartCanonDossier(
       "",
       `--- VEDIC JYOTISH INTERPRETIVE SYSTEM (Coordinate Frame: ${vedicJyotishSystem.coordinateMode}, Ayanamsa Offset: ${vedicJyotishSystem.ayanamsaDegreesApplied}°) ---`,
       `• [Panchanga] Tithi: ${vedicJyotishSystem.panchanga.tithi.name} (${vedicJyotishSystem.panchanga.tithi.paksha}, Lord: ${vedicJyotishSystem.panchanga.tithi.ruler}) | Vara: ${vedicJyotishSystem.panchanga.vara.name} | Nitya Yoga: ${vedicJyotishSystem.panchanga.yoga.name} | Karana: ${vedicJyotishSystem.panchanga.karana.name}`,
-      `• [Vimshottari Dasha cross-check only] Additional Jyotish canon timing engine is retained as secondary doctrine. The universal timingAndAshtakavarga evidence is the primary interpreted timeline; do not present two conflicting active period sequences. Canon mode: ${vedicJyotishSystem.coordinateMode}, source offset ${vedicJyotishSystem.ayanamsaDegreesApplied}°.`,
+      `• [Vimshottari Dasha] ${vedicJyotishSystem.vimshottariDasha.interpretation}`,
       `• [Jaimini Chara Karakas] ${vedicJyotishSystem.charaKarakas.map(k => `${k.karaka}: ${k.planet} (${k.degreeInSign}°)`).join(" | ")}`,
       `• [Arudha Padas] ${vedicJyotishSystem.arudhaLagnaview.interpretation}`
     );
@@ -258,8 +250,6 @@ export function retrieveChartCanonDossier(
       );
     }
   }
-
-  lines.push("", "--- SHANI / SATURN CONDITIONAL JYOTISH DOCTRINE ---", shaniDoctrine.explanation);
 
   if (arabicPersianSystem) {
     lines.push(
@@ -293,7 +283,6 @@ export function retrieveChartCanonDossier(
     dispositorChains,
     westernTimingActivations,
     vedicJyotishSystem,
-    shaniDoctrine,
     arabicPersianSystem,
     relationalChains,
     formattedSummaryForInterpreter: lines.join("\n"),
@@ -329,7 +318,7 @@ export function canonDossierToEvidenceItems(
       category: "deterministic-rule",
       technique: "canon-placement-dossier",
       subject: p.body,
-      statement: `[FIRMAMENT CANON + TRADITION] ${p.planetInSignSynthesis} ${p.planetInHouseSynthesis} (${p.dignityAndCondition.conditionSummary}). Decan: ${p.decanRecord?.label} ("${p.decanRecord?.traditionalTitle}"). Manzil: ${p.manzilRecord?.name} (${p.manzilRecord?.englishTranslation}). Nakshatra: ${p.nakshatraRecord?.name} Pada ${p.activePada?.pada} (${p.nakshatraRecord?.deity}). Chinese Xiu: ancient catalog contains ${CHINESE_MANSIONS.length} mansions; natal mansion assignment pending historically sourced fixed unequal boundaries (not guessed or modern-epoch adjusted).`,
+      statement: `[FIRMAMENT CANON + TRADITION] ${p.planetInSignSynthesis} ${p.planetInHouseSynthesis} (${p.dignityAndCondition.conditionSummary}). Decan: ${p.decanRecord?.label} ("${p.decanRecord?.traditionalTitle}"). Manzil: ${p.manzilRecord?.name} (${p.manzilRecord?.englishTranslation}). Nakshatra: ${p.nakshatraRecord?.name} Pada ${p.activePada?.pada} (${p.nakshatraRecord?.deity}).`,
       concepts: [
         p.body.toLowerCase(),
         p.sign.toLowerCase(),
@@ -357,54 +346,6 @@ export function canonDossierToEvidenceItems(
     });
   }
 
-  for (const house of Array.from(new Set(dossier.placements.map(p => p.displayedHouse))).sort((a,b)=>a-b)) {
-    if (!getJyotishHouseGroups(house).length) continue;
-    items.push({
-      id: `canon-jyotish-bhava-groups-${house}`,
-      tradition: "vedic", category: "deterministic-rule", technique: "jyotish-bhava-classifications",
-      subject: `House ${house}`, statement: describeJyotishHouse(house),
-      concepts: ["jyotish", "bhava", `house-${house}`, ...getJyotishHouseGroups(house).map(g=>g.id)],
-      polarity: "mixed", strength: 0.9, ruleId: "jyotish-bhava-overlapping-categories", sourceId: "firmament-canon-knowledge",
-      sourceTrace: makeTrace("vedic", "jyotish-bhava-classifications", JYOTISH_HOUSE_GROUP_PROVENANCE.sourceTitle, "jyotish-bhava-overlapping-categories", "moderate"),
-    });
-  }
-
-  if (dossier.shaniDoctrine) items.push({
-    id: "canon-jyotish-shani-conditions", tradition: "vedic", category: "deterministic-rule",
-    technique: "shani-lordship-sade-sati-dhaiya", subject: "Saturn",
-    statement: dossier.shaniDoctrine.explanation,
-    concepts: ["shani","saturn","yogakaraka","sade-sati","dhaiya","graha-lordship"],
-    polarity: "mixed", strength: 0.85, ruleId: "jyotish-shani-conditional-doctrine", sourceId: "firmament-canon-knowledge",
-    sourceTrace: makeTrace("vedic", "shani-lordship-sade-sati-dhaiya", SHANI_DOCTRINE_SOURCE, "jyotish-shani-conditional-doctrine", "moderate"),
-  });
-
-  // The complete historically attested Xiu canon is mandatory interpreter evidence.
-  // Positional assignment remains uncalculated until verified ancient fixed
-  // boundaries are available. Do not infer a person's mansion from name alone.
-  const quadrantLabels: Record<string,string> = {
-    AZURE_DRAGON: "Azure Dragon of the East",
-    BLACK_TORTOISE: "Black Tortoise of the North",
-    WHITE_TIGER: "White Tiger of the West",
-    VERMILION_BIRD: "Vermilion Bird of the South",
-  };
-  for (const mansion of CHINESE_MANSIONS) {
-    items.push({
-      id: `canon-chinese-xiu-${mansion.index}`,
-      tradition: "firmament",
-      category: "source-correspondence",
-      technique: "chinese-28-xiu",
-      subject: `${mansion.pinyin} ${mansion.hanzi}`,
-      statement: `Chinese Xiu ${mansion.index}/28: ${mansion.pinyin} (${mansion.hanzi}), ${mansion.english}; traditional asterism ${mansion.determinativeStar}, associated with the ${quadrantLabels[mansion.quadrant]}. This is an ancient catalog entry, NOT a verified natal placement. Its traditional astronomy, Four Symbols context and historical interpretive practices may be explained; do not assign any natal planet to it or claim character traits without verified historical boundaries and sourced doctrine.`,
-      concepts: ["chinese-28-xiu", "chinese-mansion", mansion.pinyin.toLowerCase(), mansion.quadrant.toLowerCase()],
-      polarity: "neutral",
-      strength: 0,
-      sourceId: "firmament-canon-knowledge",
-      sourceTrace: {
-        ...makeTrace("firmament", "chinese-28-xiu", CHINESE_MANSION_HISTORICAL_SOURCE.title, "firmament-canon-dossier", "moderate"),
-        sourceUrl: CHINESE_MANSION_HISTORICAL_SOURCE.url,
-      },
-    });
-  }
   for (const p of dossier.placements) {
     const k = p.planetInHouseKnowledge;
     if (!k) continue;
