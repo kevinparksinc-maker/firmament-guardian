@@ -13,6 +13,7 @@ import { generateReading } from "./genesisBackup/readingEngine";
 import { getDecanCanonByLongitude } from "./astrologyKnowledge/canon/decans36";
 import { getManzilCanonByLongitude } from "./astrologyKnowledge/canon/manazil28";
 import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/canon/nakshatras27";
+import { overlay as canonicalOverlay } from "../shared/hybrid";
 
 
 const COSMOLOGY = `You are The Bible Believers Astrology's unified Vedic / Hellenistic / Babylonian / Hermetic-informed interpreter and the user's guardian-guide through the reading. The guardian-guide is a voice of love, care, protection, resonance, and steady presence—not a claim that the AI is literally a supernatural being. Speak with the grounded care of a wise father or trusted elder giving advice to his son: protective but not possessive, firm but not harsh, practical rather than sentimental, and focused on helping the person build the best life available to them. Offer guidance about character, discipline, patience, self-respect, responsibility, money, work, boundaries, courage, relationships, and choosing long-term strength over short-term relief when the supplied chart supports it. Do not assume the user's gender, family history, or need for a male authority; make the paternal tone available as a style of care, not a replacement for real relationships.
@@ -200,8 +201,10 @@ function buildChartMap(chart: ChartResult, mode: ReadingMode) {
   const body = chart.movingBodies;
   const placements = body
     .map(
-      row =>
-        `- **${row.name}** — ${row.display}, displayed house ${row.house}, God House ${row.godHouse ?? "not supplied"}${row.agentHouse == null ? "" : `, Agent House ${row.agentHouse}`}${row.retrograde ? ", retrograde" : ""}${row.uncertainty ? `; Moon uncertainty: ${row.uncertainty.label}` : ""}`
+      row => {
+        const lunarOverlay = row.overlay ?? canonicalOverlay(row.longitude);
+        return `- **${row.name}** — ${row.display}, displayed house ${row.house}, God House ${row.godHouse ?? "not supplied"}${row.agentHouse == null ? "" : `, Agent House ${row.agentHouse}`}; Nakshatra ${lunarOverlay.nakshatra} Pada ${lunarOverlay.pada} (ruler ${lunarOverlay.nakshatraRuler}); Arabic Manzil ${lunarOverlay.manzil}; Chinese Xiu ${lunarOverlay.chineseMansion} (determinative ${lunarOverlay.chineseDeterminativeStar}, ${lunarOverlay.chineseBoundaryModel})${row.retrograde ? ", retrograde" : ""}${row.uncertainty ? `; Moon uncertainty: ${row.uncertainty.label}` : ""}`;
+      }
     )
     .join("\n");
   const includeTransit = mode !== "natal";
@@ -301,7 +304,20 @@ export type ReadingChapterId = (typeof READING_CHAPTERS)[number]["id"];
 const NODE_NAME = /node/i;
 
 function rowLine(row: ChartRow, label = row.name) {
-  const parts = [`${label} — ${row.display}`, `displayed house ${row.house}`];
+  const lunarOverlay = Number.isFinite(row.longitude)
+    ? row.overlay ?? canonicalOverlay(row.longitude)
+    : null;
+  const parts = [
+    `${label} — ${row.display}`,
+    `displayed house ${row.house}`,
+    lunarOverlay
+      ? `Nakshatra ${lunarOverlay.nakshatra} Pada ${lunarOverlay.pada} (ruler ${lunarOverlay.nakshatraRuler})`
+      : "Lunar overlays unavailable because canonical longitude was not supplied",
+    ...(lunarOverlay ? [
+      `Arabic Manzil ${lunarOverlay.manzil}`,
+      `Chinese Xiu ${lunarOverlay.chineseMansion} (determinative ${lunarOverlay.chineseDeterminativeStar}; ${lunarOverlay.chineseBoundaryModel})`,
+    ] : []),
+  ];
   if (row.godHouse != null) parts.push(`God House ${row.godHouse}`);
   if (row.agentHouse != null) parts.push(`Agent House ${row.agentHouse}`);
   if (row.retrograde && !NODE_NAME.test(row.name)) parts.push("retrograde");

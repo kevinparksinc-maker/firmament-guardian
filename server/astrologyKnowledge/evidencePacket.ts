@@ -19,6 +19,7 @@ import {
   retrieveChartCanonDossier,
 } from "./canon";
 import type { AstrologyEvidencePacket, EvidenceItem } from "./types";
+import { overlay as canonicalOverlay } from "../../shared/hybrid";
 
 function genesisEvidence(
   genesis: ReturnType<typeof analyzeGenesisPatterns>
@@ -282,6 +283,36 @@ export function buildAstrologyEvidencePacket(
   const lunarEvidence = [...vedicEvidence, ...arabicEvidence].filter(item =>
     ["nakshatra", "manzil"].includes(item.technique)
   );
+  const lunarRows = mode === "natal" ? chart.movingBodies : [...chart.movingBodies, ...chart.transits];
+  lunarEvidence.push(...lunarRows.map((row, index) => {
+    const lunarOverlay = row.overlay ?? (Number.isFinite(row.longitude) ? canonicalOverlay(row.longitude) : null);
+    if (!lunarOverlay) return null;
+    return {
+      id: `fixed-frame-lunar-overlay-${index}-${row.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "source-correspondence" as const,
+      technique: "fixed-frame-lunar-overlay",
+      subject: row.name,
+      statement: `${row.name} at ${row.display}: Nakshatra ${lunarOverlay.nakshatra}, Pada ${lunarOverlay.pada}, ruler ${lunarOverlay.nakshatraRuler}; Arabic Manzil ${lunarOverlay.manzil}; Chinese Xiu ${lunarOverlay.chineseMansion}, determinative star ${lunarOverlay.chineseDeterminativeStar}. Chinese assignment uses the ${lunarOverlay.chineseBoundaryModel} in the ${chart.referenceFrame} frame. This overlay is derived from canonical longitude and does not apply another ayanamsha.`,
+      concepts: ["nakshatra", "nakshatra-ruler", "manzil", "chinese-xiu", "determinative-star", row.name.toLowerCase()],
+      polarity: "neutral" as const,
+      strength: 1,
+      sourceId: "firmament-fixed-frame-lunar-overlays",
+      sourceTrace: {
+        sourceId: "firmament-fixed-frame-lunar-overlays",
+        tradition: "firmament" as const,
+        technique: "fixed-frame-lunar-overlay",
+        sourceTitle: "Firmament canonical lunar overlay calculation",
+        retrievedAt: new Date().toISOString(),
+        confidence: "high" as const,
+        calculationSettings: {
+          longitude: row.longitude,
+          referenceFrame: chart.referenceFrame,
+          chineseBoundaryModel: lunarOverlay.chineseBoundaryModel,
+        },
+      },
+    };
+  }).filter((item): item is EvidenceItem => item !== null));
   const fixedStarEvidence: EvidenceItem[] = chart.frozenStars.flatMap(star =>
     (star.royalStarContacts ?? [])
       .filter(contact => contact.contact)
