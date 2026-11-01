@@ -24,6 +24,8 @@ import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
 import { invokeLLM } from "./_core/llm";
 import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
+import { buildUnifiedMasterChart } from "./masterChart";
+import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
 
 
 const chartInput = z.object({
@@ -134,6 +136,25 @@ export const appRouter = router({
     calculate: publicProcedure
       .input(chartInput)
       .mutation(({ input }) => calculateChart(input)),
+    masterChart: publicProcedure
+      .input(
+        chartInput.extend({
+          mode: z.enum(["natal", "transit", "combined"]).default("natal"),
+        })
+      )
+      .mutation(({ input }) =>
+        buildUnifiedMasterChart({
+          location: input.location,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          timezone: input.timezone,
+          date: input.date,
+          time: input.time,
+          transitDate: input.transitDate,
+          transitTime: input.transitTime,
+          mode: input.mode,
+        })
+      ),
   }),
   astrologyKnowledge: router({
     behavioralReport: publicProcedure
@@ -201,6 +222,35 @@ export const appRouter = router({
       .mutation(({ input }) =>
         generateInterpretation(input.chart, input.mode, input.question)
       ),
+    masterSynthesize: publicProcedure
+      .input(
+        chartInput.extend({
+          mode: z.enum(["natal", "transit", "combined"]).default("natal"),
+          question: z
+            .string()
+            .trim()
+            .max(2000)
+            .default("What is the core life purpose and integrated trajectory of this chart?"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const snapshot = await buildUnifiedMasterChart({
+          location: input.location,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          timezone: input.timezone,
+          date: input.date,
+          time: input.time,
+          transitDate: input.transitDate,
+          transitTime: input.transitTime,
+          mode: input.mode,
+        });
+        return synthesizeMasterReading({
+          snapshot,
+          readingMode: input.mode,
+          userQuestion: input.question,
+        });
+      }),
     chapter: publicProcedure
       .input(
         z.object({

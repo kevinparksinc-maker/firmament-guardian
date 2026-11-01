@@ -27,6 +27,8 @@ import { Guardian2050Welcome } from "@/components/Guardian2050Welcome";
 import { FrameRelationshipPanel } from "@/components/FrameRelationshipPanel";
 import { ChartOverview } from "@/components/ChartOverview";
 import { ChartObservatory2050 } from "@/components/ChartObservatory2050";
+import { MasterChartObservatory } from "@/components/MasterChartObservatory";
+import { MasterSynthesizerPanel } from "@/components/MasterSynthesizerPanel";
 import {
   HoverCard,
   HoverCardContent,
@@ -1318,6 +1320,22 @@ export default function Home() {
                   </CardContent>
                 </Card>
                 <ChartObservatory2050 chart={result} />
+                <section className="space-y-5" aria-labelledby="master-chart-heading">
+                  <div className="fg-module-banner">
+                    <p className="fg-module-eyebrow">06 / THE MASTER LAYERS</p>
+                    <h2 id="master-chart-heading" className="fg-module-title">
+                      One chart, fully synthesized.
+                    </h2>
+                    <p className="fg-module-desc">
+                      Inspect the unified God View and Agent View calculation, then ask the Master Synthesizer to turn the evidence into a coherent human reading.
+                    </p>
+                  </div>
+                  <MasterChartObservatory chart={result} />
+                  <MasterSynthesizerPanel
+                    chart={result}
+                    initialQuestion={readingQuestion}
+                  />
+                </section>
                 <AdvancedChartInstruments chart={result} />
                 {result.worldview === "god" && (
                   <div className="rounded-2xl border border-violet-300/25 bg-violet-950/20 p-5 text-sm text-slate-200">
