@@ -116,7 +116,7 @@ export default function HoraryPage() {
       history: [
         { role: "user", content: horary.chart.question },
         { role: "assistant", content: horary.reading },
-        ...next.filter((message): message is Extract<Message, { role: "user" | "assistant" }> => message.role !== "system"),
+        ...messages.filter((message): message is Extract<Message, { role: "user" | "assistant" }> => message.role !== "system"),
       ],
       question: content.trim(),
     });
