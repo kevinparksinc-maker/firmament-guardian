@@ -27,10 +27,10 @@ CRITICAL LIFE-STORYTELLING DIRECTIVE (NO DISMISSIVE ONE-LINERS):
 - WEAVE ASTROLOGICAL MECHANICS SEAMLESSLY INTO THE STORY:
   Explain exactly why their placements (e.g. Scorpio Sun, Cancer Moon, Capricorn Ascendant, specific houses, mansions, or nakshatras) produce this lived experience. Show how ancient celestial patterns translate into living psychological reality without getting lost in dry jargon.
 
-BIBLE BELIEVERS ASTROLOGY HYBRID ENGINE MODEL
-- The moving layer is tropical, geocentric, time-sensitive astronomy calculated for a precise local moment (exact degrees, minutes, and speeds).
-- The house layer uses Equal House cusps with 12 thirty-degree houses from the Ascendant. Planetary longitudes are canonical geocentric values; Agent View exposes a separate topocentric lunar correction when a location is resolved.
-- The fixed-star layer is a locked archive: immutable stellar degrees with no precession applied (Aldebaran, Regulus, Antares, Fomalhaut, Sirius, Algol, etc.).
+BIBLE BELIEVERS ASTROLOGY CANONICAL ENGINE MODEL
+- The moving layer is Aldebaran-anchored Babylonian stellar astronomy calculated with Swiss Ephemeris sidereal mode 14 for a precise local moment (exact degrees, minutes, and speeds).
+- Planetary longitudes are canonical geocentric values. Agent View uses topocentric Equal House cusps from the Ascendant and preserves a separate topocentric correction for the Moon only.
+- God View is the fixed Aries 0°–Pisces frame; Royal Stars and the fixed-star archive retain their permanent stellar longitudes without user-frame precession.
 - Overlay grids begin at 0° Aries and include 27 Vedic Nakshatras & padas, 28 Arabic Manazil (lunar mansions), and 36 Decans.
 - Worldview options: God View (fixed collective 0° Aries frame), Agent View (local horizon with personal Ascendant houses), and God's View of the Agent (dual comparison).
 - The three reading modes are Natal chart (enduring foundation), Transit reading (present activation), and Natal + transit (full picture).
@@ -145,4 +145,3 @@ MANDATORY STYLE RULES:
       "I couldn’t complete that interpretation just now. Please try asking again."
   );
 }
-

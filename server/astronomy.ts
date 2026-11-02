@@ -20,6 +20,8 @@ export type ChartInput = {
   readingScope?: ReadingScope;
   birthTimeKnown?: boolean;
   elevation?: number;
+  /** External Cartesian coordinates in the canonical fixed zodiac plane; x points at 0° Aries, y at 90° Cancer. */
+  xyzPositions?: Record<string, { x: number; y: number; z: number }>;
 };
 
 export type MoonUncertainty = { from: number; to: number; label: string };
@@ -31,6 +33,8 @@ export type ChartRow = {
   longitude: number;
   /** Observer-specific (parallax-corrected) longitude. Present for the Moon only, and only when a location is resolved. */
   topocentricLongitude?: number;
+  xyz?: { x: number; y: number; z: number };
+  coordinateSource?: "external-xyz" | "swiss-ephemeris";
   display: string;
   house: number;
   godHouse?: number;
@@ -80,9 +84,16 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
 }
 
 const MOSHIER_FLAGS = 4 | 256;
+const SIDEREAL_FLAG = 65536;
 const TOPOCENTRIC_FLAG = 32768;
+const CANONICAL_SIDEREAL_MODE = 14;
+function ensureCanonicalReferenceFrame() {
+  const sw = sweph as any;
+  sw.set_sid_mode?.(sw.constants?.SE_SIDM_ALDEBARAN_15TAU ?? CANONICAL_SIDEREAL_MODE, 0, 0);
+}
 function rawCalc(jd: number, planet: number, flags: number) {
-  const result: any = (sweph as any).calc_ut(jd, planet, flags); const data = result?.data ?? result;
+  ensureCanonicalReferenceFrame();
+  const result: any = (sweph as any).calc_ut(jd, planet, flags | SIDEREAL_FLAG); const data = result?.data ?? result;
   if (!data || Number.isNaN(Number(data[0]))) throw new Error("Swiss Ephemeris failed to calculate a planetary position.");
   return { longitude: normalizeLongitude(Number(data[0])), speed: Number(data[3] ?? 0) };
 }
@@ -94,11 +105,20 @@ function safeCalc(jd: number, planet: number) {
 function topocentricMoonLongitude(jd: number, longitude: number, latitude: number, elevation = 0) {
   const sw = sweph as any;
   try {
+    ensureCanonicalReferenceFrame();
     sw.set_topo?.(longitude, latitude, elevation);
     return rawCalc(jd, 1, MOSHIER_FLAGS | TOPOCENTRIC_FLAG).longitude;
   } finally {
     sw.set_topo?.(0, 0, 0);
   }
+}
+/** Longitude from externally supplied XYZ. The supplied frame must already be aligned to the fixed 360° zodiac. */
+export function longitudeFromXYZ(vector: { x: number; y: number; z: number }): number {
+  const { x, y, z } = vector;
+  if (![x, y, z].every(Number.isFinite) || Math.hypot(x, y) === 0) {
+    throw new Error("Invalid XYZ coordinates: finite values and nonzero XY radius required.");
+  }
+  return normalizeLongitude(Math.atan2(y, x) * 180 / Math.PI);
 }
 function planetaryTopocentric(planet: number, locationAvailable: boolean) {
   return locationAvailable && planet === 1;
@@ -164,14 +184,15 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview === "god" && readingScope !== "transit" && !input.date) throw new Error("God View Natal readings require a birth date; birth time and location are optional.");
   const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
-  const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, 0, input.latitude, input.longitude, "E") : null;
+  ensureCanonicalReferenceFrame();
+  const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, SIDEREAL_FLAG, input.latitude, input.longitude, "E") : null;
   const asc = hasAgentLocation ? Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0]) : null;
   const mc = hasAgentLocation ? Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]) : null;
   if (hasAgentLocation && Number.isNaN(asc)) throw new Error("Swiss Ephemeris failed to calculate the Ascendant for Equal House.");
   const houses = fixedHouseRows(worldview, asc);
   const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
   const planetNames = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
-  const movingBodies = planetNames.map((name, i) => { const p = safeCalc(jd, i); const topocentricLongitude = planetaryTopocentric(i, hasAgentLocation) ? topocentricMoonLongitude(jd, input.longitude, input.latitude, input.elevation ?? 0) : undefined; return row(name, p.longitude, houseFor(p.longitude), worldview, asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }), ...(worldview === "god" && name === "Moon" && input.birthTimeKnown === false ? { uncertainty: moonRange(input.date) } : {}) }); });
+  const movingBodies = planetNames.map((name, i) => { const xyz = input.xyzPositions?.[name]; const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : safeCalc(jd, i); const topocentricLongitude = !xyz && planetaryTopocentric(i, hasAgentLocation) ? topocentricMoonLongitude(jd, input.longitude, input.latitude, input.elevation ?? 0) : undefined; return row(name, p.longitude, houseFor(p.longitude), worldview, asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", ...(xyz ? { xyz } : {}), ...(topocentricLongitude == null ? {} : { topocentricLongitude }), ...(worldview === "god" && name === "Moon" && input.birthTimeKnown === false ? { uncertainty: moonRange(input.date) } : {}) }); });
   const ascRow = asc == null ? null : row("Ascendant", asc, 1, worldview, asc);
   const descLongitude = asc == null ? null : normalizeLongitude(asc + 180); const descendant = descLongitude == null ? null : row("Descendant", descLongitude, 7, worldview, asc);
   const mcRow = mc == null ? null : row("Midheaven", mc, houseFor(mc), worldview, asc);
@@ -182,8 +203,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Source calculation success is distinct from an optional historical reference fixture.
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
-    "Chart calculated in the requested Equal House frame with tropical moving planetary positions.",
-    "Stellar archive and 27/28/36 divisions remain at their permanent Firmament coordinates.",
+    "Chart calculated with Swiss Ephemeris sidereal mode 14, anchored to Aldebaran at 15° Taurus.",
+    input.xyzPositions ? "Supplied XYZ vectors override matching natal planetary longitudes in the fixed 360° plane; missing bodies retain Swiss Ephemeris positions." : "Planetary longitudes are canonical geocentric values; only the Moon receives a separate topocentric correction.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
   const transitInputsPresent = Boolean(input.transitDate?.trim() || input.transitTime?.trim() || input.transitTimezone?.trim() || input.transitLocation?.trim() || transitCoordinatesPresent);
@@ -191,7 +212,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview !== "god" && transitInputsPresent && !transitLocationResolved) throw new Error("Transit location must be resolved before calculating transit houses.");
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
-  const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, 0, input.transitLatitude, input.transitLongitude, "E") : null;
+  ensureCanonicalReferenceFrame();
+  const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, SIDEREAL_FLAG, input.transitLatitude, input.transitLongitude, "E") : null;
   const transitAsc = transitHasLocation ? Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0]) : null;
   if (transitHasLocation && Number.isNaN(transitAsc)) throw new Error("Swiss Ephemeris failed to calculate the transit Ascendant for Equal House.");
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
@@ -205,7 +227,9 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
 
 export async function geocodeLocation(query: string) {
   const normalizedQuery = query.trim();
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(normalizedQuery)}`;
+  // Resolve explicit US state names within the United States rather than accepting an unrelated worldwide first match.
+  const explicitlyUS = /\b(?:USA|United States|Texas|Nevada|California|Florida|New York|Illinois|Arizona|Colorado)\b/i.test(normalizedQuery);
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5${explicitlyUS ? "&countrycodes=us" : ""}&q=${encodeURIComponent(normalizedQuery)}`;
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -216,7 +240,9 @@ export async function geocodeLocation(query: string) {
       if (!response.ok) throw new Error(`geocoder returned ${response.status}`);
       const data: any[] = await response.json();
       if (!data[0]) throw new Error("No matching place found.");
-      const item = data[0]; const lat = Number(item.lat); const lon = Number(item.lon); const timezone = tzLookup(lat, lon); return { label: item.display_name, latitude: lat, longitude: lon, timezone };
+      const item = data.find(candidate => !explicitlyUS || candidate.address?.country_code === "us");
+      if (!item) throw new Error("No matching place found in the specified country. Please enter city, state and country.");
+      const lat = Number(item.lat); const lon = Number(item.lon); const timezone = tzLookup(lat, lon); return { label: item.display_name, latitude: lat, longitude: lon, timezone };
     } catch (error) {
       lastError = error;
       if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 250));

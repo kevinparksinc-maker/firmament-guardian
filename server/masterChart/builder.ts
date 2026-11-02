@@ -43,9 +43,15 @@ function computeSnapshotId(input: MasterChartInput, version: string): string {
     tz: input.timezone,
     d: input.date,
     t: input.time,
+    tl: input.transitLocation ?? "",
+    tlat: input.transitLatitude?.toFixed(4) ?? "",
+    tlon: input.transitLongitude?.toFixed(4) ?? "",
+    ttz: input.transitTimezone ?? "",
     td: input.transitDate ?? "",
     tt: input.transitTime ?? "",
     m: input.mode ?? "natal",
+    w: input.worldview ?? "agent-vs-god",
+    xyz: input.xyzPositions ? Object.entries(input.xyzPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
     v: version,
   });
   return "umc-" + crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
@@ -73,12 +79,13 @@ export async function buildUnifiedMasterChart(
     time: input.time,
     transitDate: input.transitDate,
     transitTime: input.transitTime,
-    transitLocation: input.location,
-    transitLatitude: input.latitude,
-    transitLongitude: input.longitude,
-    transitTimezone: input.timezone,
+    transitLocation: input.transitLocation,
+    transitLatitude: input.transitLatitude,
+    transitLongitude: input.transitLongitude,
+    transitTimezone: input.transitTimezone,
     readingScope: mode,
-    worldview: "agent-vs-god",
+    worldview: input.worldview ?? "agent-vs-god",
+    xyzPositions: input.xyzPositions,
   });
 
   const basePlanets = chart.movingBodies;
@@ -187,11 +194,11 @@ export async function buildUnifiedMasterChart(
         const diff = Math.abs(normalizeLongitude(p1.longitude) - normalizeLongitude(p2.longitude));
         const angle = diff > 180 ? 360 - diff : diff;
         const aspectDefs = [
-          { name: "Conjunction", deg: 0, maxOrb: 8 },
+          { name: "Conjunction", deg: 0, maxOrb: 5 },
           { name: "Sextile", deg: 60, maxOrb: 5 },
-          { name: "Square", deg: 90, maxOrb: 7 },
-          { name: "Trine", deg: 120, maxOrb: 7 },
-          { name: "Opposition", deg: 180, maxOrb: 8 },
+          { name: "Square", deg: 90, maxOrb: 5 },
+          { name: "Trine", deg: 120, maxOrb: 5 },
+          { name: "Opposition", deg: 180, maxOrb: 5 },
         ];
         for (const def of aspectDefs) {
           const orb = Math.abs(angle - def.deg);
@@ -286,7 +293,7 @@ export async function buildUnifiedMasterChart(
     id: "fixed-stars-royal-watchers",
     tradition: "babylonian",
     technique: "fixed-stars-and-royal-watchers",
-    name: "Polaris & Royal Star Fixed Frames",
+    name: "Fixed Stars & Royal Watchers",
     status: "computed-with-result",
     frame: "god",
     prerequisites: ["firmament-fixed-frame"],
@@ -626,11 +633,11 @@ export async function buildUnifiedMasterChart(
       mode,
     },
     frameConfig: {
-      zodiacMode: "hybrid-fixed-star-tropical",
-      firmamentAnchorVersion: "polaris-spica-fixed-frame-v2",
-      obliquityMode: "zero-tilt-equatorial-aligned",
-      precessionMode: "none-fixed-firmament",
-      houseSystem: "equal-house-ascendant",
+      zodiacMode: "aldebaran-anchored-babylonian-stellar",
+      firmamentAnchorVersion: "aldebaran-15-taurus-swiss-mode-14",
+      obliquityMode: "swiss-ephemeris-sidereal-longitudes",
+      precessionMode: "none-user-frame-fixed-anchor",
+      houseSystem: "topocentric-equal-house-ascendant",
       engineVersion,
     },
     baseCelestialState: {
@@ -645,15 +652,15 @@ export async function buildUnifiedMasterChart(
       houses: baseHouses,
     },
     godView: {
-      description: "Fixed Aries 1 to Pisces 12 universal frame with Polaris as immovable cosmic center",
+      description: "Fixed Aries 1 to Pisces 12 universal frame anchored to the Aldebaran 15° Taurus stellar zodiac",
       cosmicFrame: "fixed-aries-1-to-pisces-12",
-      polarisCenter: true,
+      polarisCenter: false,
       placements: godPlacements,
     },
     agentView: {
-      description: "Geocentric Equal House frame anchored directly to the rising Ascendant degree",
+      description: "Geocentric planetary longitudes with a separate topocentric lunar correction and Equal House cusps anchored directly to the rising Ascendant degree",
       ascendantAnchor: ascendant.display,
-      houseSystem: "equal-house-from-ascendant",
+      houseSystem: "topocentric-equal-house-from-ascendant",
       placements: agentPlacements,
       frameRelationships,
     },

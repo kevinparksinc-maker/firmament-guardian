@@ -45,6 +45,7 @@ const chartInput = z.object({
   readingScope: z.enum(["natal", "transit", "combined"]).default("combined"),
   birthTimeKnown: z.boolean().optional(),
   elevation: z.number().optional(),
+  xyzPositions: z.record(z.string(), z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() })).optional(),
 });
 const chartRowPayload = z.object({
   name: z.string().min(1).max(100),
@@ -150,9 +151,15 @@ export const appRouter = router({
           timezone: input.timezone,
           date: input.date,
           time: input.time,
+          transitLocation: input.transitLocation,
+          transitLatitude: input.transitLatitude,
+          transitLongitude: input.transitLongitude,
+          transitTimezone: input.transitTimezone,
           transitDate: input.transitDate,
           transitTime: input.transitTime,
           mode: input.mode,
+          worldview: input.worldview,
+          xyzPositions: input.xyzPositions,
         })
       ),
   }),
@@ -241,9 +248,14 @@ export const appRouter = router({
           timezone: input.timezone,
           date: input.date,
           time: input.time,
+          transitLocation: input.transitLocation,
+          transitLatitude: input.transitLatitude,
+          transitLongitude: input.transitLongitude,
+          transitTimezone: input.transitTimezone,
           transitDate: input.transitDate,
           transitTime: input.transitTime,
           mode: input.mode,
+          worldview: input.worldview,
         });
         return synthesizeMasterReading({
           snapshot,

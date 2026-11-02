@@ -8,6 +8,10 @@ const SAMPLE_INPUT = {
   timezone: "Africa/Cairo",
   date: "1988-08-08",
   time: "12:00",
+  transitLocation: "Alexandria, Egypt",
+  transitLatitude: 31.2001,
+  transitLongitude: 29.9187,
+  transitTimezone: "Africa/Cairo",
   mode: "natal" as const,
 };
 
@@ -22,6 +26,8 @@ describe("Unified Master Chart Architecture", () => {
     expect(snapshot.validation.errors).toHaveLength(0);
     expect(snapshot.validation.totalMethods).toBe(16);
     expect(snapshot.validation.computedWithResultCount).toBeGreaterThanOrEqual(10);
+    expect(snapshot.frameConfig.zodiacMode).toBe("aldebaran-anchored-babylonian-stellar");
+    expect(snapshot.frameConfig.firmamentAnchorVersion).toBe("aldebaran-15-taurus-swiss-mode-14");
   });
 
   it("produces identical snapshot IDs for identical inputs (deterministic stability)", async () => {
@@ -45,10 +51,10 @@ describe("Unified Master Chart Architecture", () => {
     const snapshot = await buildUnifiedMasterChart(SAMPLE_INPUT);
 
     expect(snapshot.godView.cosmicFrame).toBe("fixed-aries-1-to-pisces-12");
-    expect(snapshot.godView.polarisCenter).toBe(true);
+    expect(snapshot.godView.polarisCenter).toBe(false);
     expect(snapshot.godView.placements.length).toBeGreaterThanOrEqual(7);
 
-    expect(snapshot.agentView.houseSystem).toBe("equal-house-from-ascendant");
+    expect(snapshot.agentView.houseSystem).toBe("topocentric-equal-house-from-ascendant");
     expect(snapshot.agentView.ascendantAnchor).toBeDefined();
     expect(snapshot.agentView.placements.length).toBeGreaterThanOrEqual(7);
 
@@ -121,5 +127,33 @@ describe("Unified Master Chart Architecture", () => {
     expect(transitLayer?.frame).toBe("transit");
     expect(transitLayer?.status).toBe("computed-with-result");
     expect(snapshot.transit).toBeDefined();
+  });
+
+  it("preserves transit observer and worldview in the authoritative snapshot", async () => {
+    const snapshot = await buildUnifiedMasterChart({
+      ...SAMPLE_INPUT,
+      mode: "combined",
+      worldview: "god",
+      transitLocation: "Las Vegas, Nevada, USA",
+      transitLatitude: 36.1699,
+      transitLongitude: -115.1398,
+      transitTimezone: "America/Los_Angeles",
+      transitDate: "2026-11-02",
+      transitTime: "12:00",
+    });
+
+    expect(snapshot.natal?.worldview).toBe("god");
+    expect(snapshot.natal?.transitHouseFrame).toBe("god-fixed");
+    expect(snapshot.snapshotId).not.toBe((await buildUnifiedMasterChart({
+      ...SAMPLE_INPUT,
+      mode: "combined",
+      worldview: "god",
+      transitLocation: "New York, New York, USA",
+      transitLatitude: 40.7128,
+      transitLongitude: -74.006,
+      transitTimezone: "America/New_York",
+      transitDate: "2026-11-02",
+      transitTime: "12:00",
+    })).snapshotId);
   });
 });
