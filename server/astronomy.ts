@@ -143,12 +143,12 @@ function planetaryTopocentric(planet: number, locationAvailable: boolean) {
 }
 export function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number } | null {
   // angularDistance correctly wraps across 0°/360° (for example, 359° and 1° are 2° apart).
-  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [45, "semisquare"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
+  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
   const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= 5 ? best : null;
 }
 /** Secondary contacts are not part of the five-major-aspect Energy Read score.
  * Two flow and two friction minors are equally weighted at half of major strength.
- * Semi-sextile is excluded; semi-square is a full-weight major friction aspect.
+ * Semi-sextile and semi-square are excluded from major scoring; quintile remains secondary.
  * A separate list prevents double counting and keeps conjunctions harmonious in primary scoring.
  */
 export function minorAspectBetween(a: number, b: number): Omit<MinorTransitContact, "natalName"> | null {
