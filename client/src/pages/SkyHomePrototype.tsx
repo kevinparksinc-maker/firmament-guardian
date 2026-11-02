@@ -526,6 +526,7 @@ export default function SkyHomePrototype() {
       if (!xyzText.trim()) {
         setXyzPositions(undefined);
         setXyzError("");
+        loadSky(worldview, readingScope, profile, null);
         return;
       }
       const value: unknown = JSON.parse(xyzText);
@@ -541,6 +542,7 @@ export default function SkyHomePrototype() {
       if (!Object.keys(parsed).length) throw new Error("At least one planetary vector is required.");
       setXyzPositions(parsed);
       setXyzError("");
+      loadSky(worldview, readingScope, profile, parsed);
     } catch (error) {
       setXyzError(error instanceof Error ? error.message : "Invalid XYZ JSON");
     }
@@ -557,7 +559,8 @@ export default function SkyHomePrototype() {
   const loadSky = (
     nextWorldview: Worldview = worldview,
     nextScope: ReadingScope = readingScope,
-    nextProfile = profile
+    nextProfile = profile,
+    nextXYZ: typeof xyzPositions | null = xyzPositions
   ) => {
     const now = new Date();
     const transitDate = now.toISOString().slice(0, 10);
@@ -579,7 +582,7 @@ export default function SkyHomePrototype() {
         transitTime,
         worldview: "god",
         readingScope: nextScope,
-        ...(xyzPositions ? { xyzPositions } : {}),
+        ...(nextXYZ ? { xyzPositions: nextXYZ } : {}),
         birthTimeKnown: Boolean(nextProfile.time),
       });
     } else {
@@ -593,7 +596,7 @@ export default function SkyHomePrototype() {
         transitTime,
         worldview: nextWorldview,
         readingScope: nextScope,
-        ...(xyzPositions ? { xyzPositions } : {}),
+        ...(nextXYZ ? { xyzPositions: nextXYZ } : {}),
         birthTimeKnown: Boolean(nextProfile.time),
       });
     }
