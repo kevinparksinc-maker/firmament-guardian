@@ -52,7 +52,9 @@ function getReadingCacheKey(chart: ChartResult, mode: ReadingMode): string {
   const loc = chart.input.location || "god-view";
   const date = chart.input.date || "live";
   const time = chart.input.time || "none";
-  return `firmament-reading-v3:${loc}:${date}:${time}:${chart.worldview}:${mode}`;
+  const natalSignature = chart.movingBodies.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
+  const transitSignature = chart.transits.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
+  return `absolute-reading-v4:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${natalSignature}:${transitSignature}`;
 }
 
 function loadCachedReading(
