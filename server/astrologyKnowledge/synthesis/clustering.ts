@@ -68,6 +68,9 @@ export function clusterPropositionsIntoThemes(
   const domainGroups = new Map<HumanDomain, InterpretedProposition[]>();
 
   for (const prop of propositions) {
+    // Ledger coverage is evidence bookkeeping, not an independent interpretation.
+    // Keep it out of domain themes and corroboration scoring.
+    if (prop.id.startsWith("prop-method-ledger-")) continue;
     const list = domainGroups.get(prop.domain) ?? [];
     list.push(prop);
     domainGroups.set(prop.domain, list);
@@ -91,7 +94,7 @@ export function clusterPropositionsIntoThemes(
     // Corroboration level calculation
     let corroborationLevel: SynthesizedTheme["convergenceAssessment"]["corroborationLevel"] = "singular";
     if (traditions.length >= 3) {
-      corroborationLevel = "unanimous";
+      corroborationLevel = "strong-corroboration";
     } else if (traditions.length === 2) {
       corroborationLevel = "strong-corroboration";
     } else if (props.length > 1) {
