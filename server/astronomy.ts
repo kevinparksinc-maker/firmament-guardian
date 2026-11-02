@@ -1,4 +1,5 @@
 import sweph from "sweph";
+import { ascendantFromSunrise, type FixedVector } from "./sunriseAscendant";
 import tzLookup from "tz-lookup";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
 import { agentHouseFor, angularDistance, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship, type ReadingScope, type Worldview, type DualPlacement } from "./astrologyCore";
@@ -20,6 +21,9 @@ export type ChartInput = {
   readingScope?: ReadingScope;
   birthTimeKnown?: boolean;
   elevation?: number;
+  /** Verified historical sunrise anchor in the fixed EQUATORIAL frame. Optional until provider validation is complete. */
+  sunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: FixedVector };
+  transitSunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: FixedVector };
   /** External Cartesian coordinates in the canonical fixed zodiac plane; x points at 0° Aries, y at 90° Cancer. */
   xyzPositions?: Record<string, { x: number; y: number; z: number }>;
   /** Optional independently sampled transit vectors at the transit instant. */
@@ -204,7 +208,9 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
   ensureCanonicalReferenceFrame();
   const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, SIDEREAL_FLAG, input.latitude, input.longitude, "E") : null;
-  const asc = hasAgentLocation ? Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0]) : null;
+  const asc = hasAgentLocation ? (input.sunriseAnchor
+    ? ascendantFromSunrise({ ...input.sunriseAnchor, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
+    : Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0])) : null;
   const mc = hasAgentLocation ? Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]) : null;
   if (hasAgentLocation && Number.isNaN(asc)) throw new Error("Swiss Ephemeris failed to calculate the Ascendant for Equal House.");
   const houses = fixedHouseRows(worldview, asc);
@@ -232,7 +238,9 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
   ensureCanonicalReferenceFrame();
   const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, SIDEREAL_FLAG, input.transitLatitude, input.transitLongitude, "E") : null;
-  const transitAsc = transitHasLocation ? Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0]) : null;
+  const transitAsc = transitHasLocation ? (input.transitSunriseAnchor
+    ? ascendantFromSunrise({ ...input.transitSunriseAnchor, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant
+    : Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0])) : null;
   if (transitHasLocation && Number.isNaN(transitAsc)) throw new Error("Swiss Ephemeris failed to calculate the transit Ascendant for Equal House.");
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
