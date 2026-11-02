@@ -161,6 +161,7 @@ export const appRouter = router({
           mode: input.mode,
           worldview: input.worldview,
           xyzPositions: input.xyzPositions,
+          transitXYZPositions: input.transitXYZPositions,
         })
       ),
   }),
