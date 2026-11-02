@@ -55,6 +55,8 @@ export interface MasterChartInput {
   transitTime?: string;
   mode?: "natal" | "transit" | "combined";
   worldview?: "god" | "agent" | "agent-vs-god";
+  sunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: { x: number; y: number; z: number } };
+  transitSunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: { x: number; y: number; z: number } };
   xyzPositions?: Record<string, { x: number; y: number; z: number }>;
   transitXYZPositions?: Record<string, { x: number; y: number; z: number }>;
 }
