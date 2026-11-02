@@ -302,5 +302,44 @@ export function extractPropositionsFromSnapshot(
     }
   }
 
+  // Complete coverage pass: preserve every calculated layer in the proposition/evidence stream.
+  // Domain-specific interpretation above remains primary; these findings prevent silent omission.
+  const coveredIds = new Set(propositions.flatMap(p => p.supportingEvidenceIds));
+  const domains: Record<string, InterpretedProposition["domain"]> = {
+    "western-aspects-and-orbs": "choices_obstacles",
+    "western-essential-dignities": "identity",
+    "elemental-decans": "identity",
+    "vedic-dasha-and-ashtakavarga": "timing",
+    "genesis-behavioral-patterns": "choices_obstacles",
+    "vedic-vargas-divisional": "purpose_work",
+    "vedic-graha-drishti": "autonomy_power",
+    "arabic-lunar-manazil": "identity",
+    "vedic-nakshatras-and-padas": "identity",
+  };
+  for (const layer of snapshot.methodExecutionLedger) {
+    if (layer.status !== "computed-with-result") continue;
+    const missingIds = layer.evidenceIds.filter(id => !coveredIds.has(id));
+    if (missingIds.length === 0) continue;
+    // Raw computed findings are retained verbatim in the evidence snapshot.
+    // This bounded summary avoids inventing symbolic conclusions from unknown schemas.
+    const findings = Array.isArray(layer.results) ? layer.results : layer.results == null ? [] : [layer.results];
+    const evidencePreview = findings.slice(0, 3).map(item => JSON.stringify(item).slice(0, 260)).join("; ");
+    propositions.push({
+      id: `prop-coverage-${layer.id}`,
+      themeTitle: `${layer.name}: computed evidence`,
+      plainLanguageMeaning: `${layer.name} produced ${findings.length} recorded result(s). ${evidencePreview || "Review the underlying evidence for details."}`,
+      domain: domains[layer.id] ?? "identity",
+      causalMechanism: `${layer.technique} (version ${layer.calculationVersion})`,
+      valence: "neutral",
+      strength: "moderate",
+      tradition: layer.tradition,
+      frame: layer.frame === "transit" ? "transit" : layer.frame === "god" ? "god" : layer.frame === "agent" ? "agent" : "shared",
+      supportingEvidenceIds: missingIds,
+      opposingEvidenceIds: [],
+      sourceDoctrineIds: layer.sourceIds,
+    });
+    missingIds.forEach(id => coveredIds.add(id));
+  }
+
   return propositions;
 }
