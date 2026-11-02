@@ -7,6 +7,7 @@
 - `interpretation.followUp`: injects the complete synthesis into the follow-up chart intelligence.
 - `interpretation.host`: injects the synthesis for chart-grounded Host conversations. Chartless general questions cannot claim calculated doctrine coverage.
 - `interpretation.masterSynthesize`: remains the direct structured synthesis API.
+- `lifeStory.generateChapter`: now supplies the same canonical method findings to the Life Story chapter generator.
 - Every `computed-with-result` layer produces individual method propositions; reference-only, failed, and not-applicable layers are not promoted to findings. Evidence coverage is measured in linked themes, not ledger bookkeeping.
 
 ## Existing 16-layer ledger — coverage is not proof of doctrinal completeness
@@ -17,7 +18,7 @@ The registered ledger currently includes planets/signs, equal houses/angles, maj
 
 - `horary.open` and `horary.followUp`: specialized question-time significator and traditional rules; not yet adapted to the canonical synthesis ledger.
 - `zodiacHorary.read`: sign-as-Agent-H1 special chart; not yet adapted.
-- `social.systemIntersect`, synastry, Life Story chapter APIs, Energy Read, Simulation Lab, and standalone `ai.*` endpoints: independent engines or text-only inputs; they are not yet guaranteed to consume the same complete method ledger.
+- `social.systemIntersect`, synastry, Life Story cycle/audit APIs, Energy Read, Simulation Lab, and standalone `ai.*` endpoints: independent engines or text-only inputs; they are not yet guaranteed to consume the same complete method ledger.
 - Full Shadbala, Bhava Bala, Rasi Drishti, Yoga, planetary war, receptions, translation/collection of light, and activated lunar-mansion aspect engines must be separately audited and registered with actual calculation records before any completeness claim.
 - God/Agent chart consistency, sunrise-anchor provenance, the interpretation prompt token budget, and live Render/Android behavior still need end-to-end verification.
 
