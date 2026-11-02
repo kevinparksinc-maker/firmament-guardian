@@ -17,6 +17,22 @@ export async function synthesizeChartForReading(
     const difference = Math.abs(((canonical.longitude - body.longitude + 540) % 360) - 180);
     if (difference > 0.01) throw new Error(`Master Chart mismatch for ${body.name}: ${difference.toFixed(4)}°. Refresh the chart before reading.`);
   }
+  const angularDifference = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
+  if (chart.ascendant && angularDifference(snapshot.baseCelestialState.ascendant.longitude, chart.ascendant.longitude) > 0.01) {
+    throw new Error("Master Chart Ascendant mismatch. Refresh the chart before reading.");
+  }
+  if (chart.houses.length !== snapshot.baseCelestialState.houses.length ||
+      chart.houses.some((cusp, index) => angularDifference(cusp, snapshot.baseCelestialState.houses[index].cusp) > 0.01)) {
+    throw new Error("Master Chart equal-house cusp mismatch. Refresh the chart before reading.");
+  }
+  if (mode !== "natal" && chart.transits.length) {
+    for (const transit of chart.transits) {
+      const canonical = snapshot.transit?.planets.find(row => row.name === transit.name);
+      if (!canonical || angularDifference(canonical.longitude, transit.longitude) > 0.01) {
+        throw new Error(`Master Chart transit mismatch for ${transit.name}. Refresh the chart before reading.`);
+      }
+    }
+  }
   const synthesis = await synthesizeMasterReading({ snapshot, readingMode: mode, userQuestion: question });
   const context = [
     `UNIFIED MASTER SYNTHESIS — SNAPSHOT ${synthesis.snapshotId}`,
