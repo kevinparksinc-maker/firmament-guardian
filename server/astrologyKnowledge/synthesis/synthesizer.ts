@@ -103,12 +103,25 @@ export async function synthesizeMasterReading(
     failed: ledger.filter(l => l.status === "failed").length,
   };
 
-  // 7. Quality Audit (Guarantees all claims trace to evidence IDs)
+  // 7. Evidence coverage audit. Do not claim a perfect score without checking.
+  const expectedEvidenceIds = new Set(
+    ledger.filter(l => l.status === "computed-with-result").flatMap(l => l.evidenceIds)
+  );
+  const tracedEvidenceIds = new Set(propositions.flatMap(p => p.supportingEvidenceIds));
+  const missingEvidenceIds = [...expectedEvidenceIds].filter(id => !tracedEvidenceIds.has(id));
+  const groundedRatio = expectedEvidenceIds.size === 0
+    ? 1
+    : (expectedEvidenceIds.size - missingEvidenceIds.length) / expectedEvidenceIds.size;
   const qualityAudit = {
-    groundedRatio: 1.0,
-    unsupportedClaims: [],
-    passed: true,
+    groundedRatio,
+    unsupportedClaims: missingEvidenceIds.map(id => `Unrepresented computed evidence: ${id}`),
+    passed: missingEvidenceIds.length === 0,
   };
+  // Report method coverage explicitly; reference-only or unavailable layers are never
+  // described as calculated. The raw evidence remains available in the snapshot.
+  integratedNarrative.push(
+    `Calculation coverage: ${ledger.filter(l => l.status === "computed-with-result").length} methods returned results, ${methodLedgerSummary.referenceOnly} are reference-only, ${methodLedgerSummary.notApplicable} are not applicable, and ${methodLedgerSummary.failed} failed. ${missingEvidenceIds.length === 0 ? "All recorded computed evidence IDs are represented in the proposition stream." : `${missingEvidenceIds.length} computed evidence IDs are not represented.`}`
+  );
 
   return {
     snapshotId: snapshot.snapshotId,
