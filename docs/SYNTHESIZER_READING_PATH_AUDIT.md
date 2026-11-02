@@ -16,7 +16,7 @@ The registered ledger currently includes planets/signs, equal houses/angles, maj
 
 ## Still separate or incomplete — do not call all readings unified yet
 
-- `horary.open` and `horary.followUp`: specialized question-time significator and traditional rules; not yet adapted to the canonical synthesis ledger.
+- `horary.open` and `horary.followUp`: now attach canonical question-moment method evidence alongside the specialized significator and traditional judgment. The latter remains the authoritative Horary verdict.
 - `zodiacHorary.read`: sign-as-Agent-H1 special chart; not yet adapted.
 - `social.systemIntersect`, synastry, Life Story cycle/audit APIs, Energy Read, Simulation Lab, and standalone `ai.*` endpoints: independent engines or text-only inputs; they are not yet guaranteed to consume the same complete method ledger.
 - Full Shadbala, Bhava Bala, Rasi Drishti, Yoga, planetary war, receptions, translation/collection of light, and activated lunar-mansion aspect engines must be separately audited and registered with actual calculation records before any completeness claim.
