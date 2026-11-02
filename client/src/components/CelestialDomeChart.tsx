@@ -49,7 +49,7 @@ export function CelestialDomeChart({chart}:{chart:ChartResult}){
      <input aria-label="Rotate dome longitude reference" type="range" min="0" max="359" step="1" value={rotate} onChange={e=>setRotate(Number(e.target.value))} className="w-full accent-cyan-300"/>
    </label>
    <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200" aria-live="polite">{chosen?<><strong>{chosen.name}</strong> · {chosen.display} · House {chosen.house} · {chosen.longitude.toFixed(4)}° longitude</>:<>Select any divine body to inspect its calculated position.</>}</div>
-   <div className="mt-2 grid gap-2 text-xs text-slate-300 sm:grid-cols-2"><div>Lot of Fortune · {framework.lots.fortune.toFixed(4)}° · House {Math.floor(normalizeLongitude(framework.lots.fortune-framework.houseCusps[0])/30)+1}</div><div>Lot of Spirit · {framework.lots.spirit.toFixed(4)}° · House {Math.floor(normalizeLongitude(framework.lots.spirit-framework.houseCusps[0])/30)+1}</div></div>
+   <p className="mt-2 text-xs text-slate-400">Lots of Fortune and Spirit are shown only when calculated by the Master Chart; this dome does not invent their positions.</p>
    <p className="mt-3 text-xs leading-5 text-amber-100/80">Projection note: The planetary longitudes are taken from the chart; the dome elevation is illustrative. Physical horizon/zenith positions require calculated local altitude and azimuth, which are not yet part of this chart data. This is not a claim about the physical shape of Earth.</p>
  </section>;
 }
