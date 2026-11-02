@@ -46,7 +46,7 @@ async function startServer() {
   app.get("/ready", (_req, res) => {
     const checks = {
       sessionSigning: Boolean((process.env.MANUS_JWT_SECRET ?? process.env.JWT_SECRET)?.length),
-      interpreterKey: Boolean(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY),
+      interpreterKey: Boolean(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY),
       databaseConfigured: Boolean(process.env.DATABASE_URL),
     };
     res.status(checks.sessionSigning ? 200 : 503).json({ ready: checks.sessionSigning, checks });
