@@ -25,6 +25,6 @@ export async function synthesizeChartForReading(
     ...synthesis.integratedNarrative,
     "CALCULATED METHOD FINDINGS (never present reference-only methods as calculated):",
     ...synthesis.methodFindings.map(method => `${method.id} [${method.status}; ${method.frame}; ${method.tradition}]: ${method.findings.map(f => `${f.label}: ${f.details}`).join("; ")}; evidence ${method.evidenceIds.join(", ")}`),
-  ].join("\\n");
+  ].join("\n");
   return { synthesis, context };
 }
