@@ -6,10 +6,9 @@ describe("balanced Energy Read aspect classifications", () => {
     [0, "conjunction"],
     [60, "sextile"],
     [120, "trine"],
-    [45, "semisquare"],
     [90, "square"],
     [180, "opposition"],
-  ] as const)("recognizes full-weight major %s° %s", (angle, aspect) => {
+  ] as const)("recognizes canonical major %s° %s", (angle, aspect) => {
     expect(aspectBetween(0, angle)).toEqual({ aspect, orb: 0 });
   });
 
@@ -23,8 +22,8 @@ describe("balanced Energy Read aspect classifications", () => {
   });
 
   it("limits major orbs to five degrees and minor orbs to two degrees", () => {
-    expect(aspectBetween(0, 50)).toMatchObject({ aspect: "semisquare", orb: 5 });
-    expect(aspectBetween(0, 50.01)).toBeNull();
+    expect(aspectBetween(0, 65)).toMatchObject({ aspect: "sextile", orb: 5 });
+    expect(aspectBetween(0, 65.01)).toBeNull();
     expect(minorAspectBetween(0, 74)).toMatchObject({ aspect: "quintile", orb: 2 });
     expect(minorAspectBetween(0, 74.01)).toBeNull();
   });
@@ -32,12 +31,12 @@ describe("balanced Energy Read aspect classifications", () => {
   it("excludes the semi-sextile and does not double-count semi-square as minor", () => {
     expect(aspectBetween(0, 30)).toBeNull();
     expect(minorAspectBetween(0, 30)).toBeNull();
-    expect(aspectBetween(0, 45)?.aspect).toBe("semisquare");
+    expect(aspectBetween(0, 45)).toBeNull();
     expect(minorAspectBetween(0, 45)).toBeNull();
   });
 
   it("wraps angular positions across zero", () => {
     expect(minorAspectBetween(350, 62)?.aspect).toBe("quintile");
-    expect(aspectBetween(350, 35)?.aspect).toBe("semisquare");
+    expect(aspectBetween(350, 50)?.aspect).toBe("sextile");
   });
 });

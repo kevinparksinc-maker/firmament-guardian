@@ -22,7 +22,7 @@ describe("Unified Master Chart Architecture", () => {
     expect(snapshot).toBeDefined();
     expect(snapshot.snapshotId).toMatch(/^umc-[a-f0-9]{16}$/);
     expect(snapshot.schemaVersion).toBe("1.0.0");
-    expect(snapshot.validation.complete).toBe(true);
+    expect(snapshot.validation.complete).toBe(false); // Chinese Xiu remains reference-only, not computed.\n    expect(snapshot.validation.warnings.some(w => w.includes("Chinese"))).toBe(true);
     expect(snapshot.validation.errors).toHaveLength(0);
     expect(snapshot.validation.totalMethods).toBe(16);
     expect(snapshot.validation.computedWithResultCount).toBeGreaterThanOrEqual(10);

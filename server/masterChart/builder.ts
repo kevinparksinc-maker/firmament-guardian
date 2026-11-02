@@ -602,6 +602,9 @@ export async function buildUnifiedMasterChart(
   const methodWarnings = unavailableMethods.map(l =>
     `${l.name}: ${l.status}. ${l.notes ?? "No executable calculation was recorded."}`
   );
+  if (input.sunriseAnchor || input.transitSunriseAnchor) {
+    methodWarnings.push("Sunrise XYZ anchor was supplied by the caller; historical sunrise provenance and equatorial coordinate frame have not been independently validated by this server.");
+  }
 
   const snapshot: UnifiedMasterChartSnapshot = {
     snapshotId,
