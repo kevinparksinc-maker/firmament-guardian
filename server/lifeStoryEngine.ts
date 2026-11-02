@@ -8,7 +8,7 @@ import {
   overlay,
 } from "../shared/hybrid";
 import { calculateArabicLots, calculateLot, LOT_FORMULAS, type Sect } from "./utils/arabicLots";
-import { interpretDashaLord, interpretBindus } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
+
 import { DOUBLE_LETTERS, SIMPLE_LETTERS, MOTHER_LETTERS } from "./astrologyKnowledge/canon/seferYetzirah";
 import { DECAN_CANON_RECORDS } from "./astrologyKnowledge/canon/decans36";
 import { MANZIL_CANON_RECORDS } from "./astrologyKnowledge/canon/manazil28";
