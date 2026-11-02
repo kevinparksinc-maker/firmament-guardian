@@ -520,10 +520,11 @@ export async function buildUnifiedMasterChart(
 
   // Layer 15: Genesis Behavioral Patterns & Yogas
   let genesisResult: any = null;
+  let genesisError: string | null = null;
   try {
     genesisResult = runGenesisPatternPipeline(chart);
   } catch (err) {
-    genesisResult = null;
+    genesisError = err instanceof Error ? err.message : String(err);
   }
 
   layers["genesis-behavioral-patterns"] = {
@@ -531,13 +532,14 @@ export async function buildUnifiedMasterChart(
     tradition: "genesis",
     technique: "genesis-pattern-engine-and-yogas",
     name: "Genesis Behavioral Patterns & Vedic Yogas",
-    status: genesisResult?.analysis ? "computed-with-result" : "computed-no-result",
+    status: genesisError ? "failed" : genesisResult?.analysis ? "computed-with-result" : "computed-no-result",
     frame: "agent",
     prerequisites: ["western-aspects-and-orbs", "western-houses-and-angles"],
     calculationVersion: engineVersion,
     evidenceIds: ["genesis-patterns-core", "genesis-yogas"],
     sourceIds: ["genesis-symbolic-engine"],
     results: genesisResult?.analysis ?? null,
+    ...(genesisError ? { errorCode: "GENESIS_PIPELINE_FAILED", notes: genesisError } : {}),
   };
 
   // Layer 16: Transit Activation Layer (when mode is transit or combined)
