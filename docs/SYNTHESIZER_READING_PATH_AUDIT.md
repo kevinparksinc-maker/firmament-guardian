@@ -18,7 +18,7 @@ The registered ledger currently includes planets/signs, equal houses/angles, maj
 
 - `horary.open` and `horary.followUp`: now attach canonical question-moment method evidence alongside the specialized significator and traditional judgment. The latter remains the authoritative Horary verdict.
 - `zodiacHorary.read`: sign-as-Agent-H1 special chart; not yet adapted.
-- `social.systemIntersect`, synastry, Life Story cycle/audit APIs, Energy Read, Simulation Lab, and standalone `ai.*` endpoints: independent engines or text-only inputs; they are not yet guaranteed to consume the same complete method ledger.
+- `social.systemIntersect`, Life Story cycle/audit APIs, Energy Read, Simulation Lab, and standalone `ai.*` endpoints: independent engines or text-only inputs; they are not yet guaranteed to consume the same complete method ledger.
 - Full Shadbala, Bhava Bala, Rasi Drishti, Yoga, planetary war, receptions, translation/collection of light, and activated lunar-mansion aspect engines must be separately audited and registered with actual calculation records before any completeness claim.
 - God/Agent chart consistency, sunrise-anchor provenance, the interpretation prompt token budget, and live Render/Android behavior still need end-to-end verification.
 
@@ -29,3 +29,4 @@ The registered ledger currently includes planets/signs, equal houses/angles, maj
 3. Every reading endpoint is either connected to the canonical synthesis or explicitly marked as a separate non-unified engine.
 4. AI output must not invent calculations or treat reference-only methods as computed.
 5. Unit tests, typecheck, build, Docker and security checks pass; then verify the actual rendered screens and endpoint responses.
+\n## Synastry-specific audit findings\n\n`social.systemIntersect` now returns two independently calculated natal synthesis ledgers alongside its existing cross-chart analysis. These are NOT yet a unified cross-chart doctrine interpretation. The legacy synastry engine uses a starting harmony score of 65, fallback fabricated 2.1° orb when no connection exists, and canned transit pressure/windows. These must be replaced with measured cross-chart aspect evidence and actual transit calculations before claiming accurate relationship scoring.\n

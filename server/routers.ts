@@ -449,8 +449,23 @@ export const appRouter = router({
           targetChart: chartPayload,
         })
       )
-      .mutation(({ input }) => {
-        return analyzeSystemIntersect(input.userChart, input.targetChart);
+      .mutation(async ({ input }) => {
+        // Each person's complete calculated doctrine ledger is independent;
+        // the existing cross-chart synastry calculation is preserved separately.
+        const [user, target] = await Promise.all([
+          synthesizeChartForReading(input.userChart as ChartResult, "natal", "Synastry: first person's natal evidence"),
+          synthesizeChartForReading(input.targetChart as ChartResult, "natal", "Synastry: second person's natal evidence"),
+        ]);
+        return {
+          ...analyzeSystemIntersect(input.userChart as ChartResult, input.targetChart as ChartResult),
+          unifiedSynthesis: {
+            scope: "two-natal-ledgers-plus-existing-cross-chart-synastry" as const,
+            user: user.synthesis,
+            target: target.synthesis,
+            // Keep cross-chart aspects and scores from analyzeSystemIntersect;
+            // never label either natal ledger as a computed cross-chart doctrine.
+          },
+        };
       }),
   }),
   ai: router({
