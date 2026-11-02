@@ -21,66 +21,41 @@ export async function synthesizeMasterReading(
   // 2. Cluster into human domain themes and reconcile tensions
   const { themes, tensions } = clusterPropositionsIntoThemes(propositions);
 
-  // 3. Formulate the Dominant Conclusion (Executive Core Synthesis)
-  const sun = snapshot.baseCelestialState.planets.find(p => p.name === "Sun");
-  const asc = snapshot.baseCelestialState.ascendant;
-  const saturn = snapshot.baseCelestialState.planets.find(p => p.name === "Saturn");
-  const mars = snapshot.baseCelestialState.planets.find(p => p.name === "Mars");
-
-  const ascSign = asc ? getSign(asc.longitude) : "the rising horizon";
-  const sunSign = sun ? getSign(sun.longitude) : "its solar placement";
-  const marsSign = mars ? getSign(mars.longitude) : "its martial sign";
-  const saturnSign = saturn ? getSign(saturn.longitude) : "its sector";
-
-  const dominantConclusion = `Your celestial configuration reveals a foundational architecture anchored by ${ascSign} and activated by the conscious drive of the Sun in ${sunSign} (House ${
-    sun?.house ?? 1
-  }). Rather than isolated personality traits, the convergent evidence across Hellenistic, Vedic, and Babylonian fixed-star layers demonstrates a life calling built on disciplined mastery, ethical integrity, and deliberate stewardship. Where lesser paths offer superficial quickness, your chart rewards rigorous patience, deep craftsmanship, and the willingness to stand firm under pressure.`;
-
-  // 4. Build Integrated Narrative Paragraphs (weaving traditions together)
-  const integratedNarrative: string[] = [];
-
-  // Paragraph 1: Foundational Identity & Psychological Architecture
-  const identityTheme = themes.find(t => t.domain === "identity");
-  if (identityTheme) {
-    integratedNarrative.push(
-      `At the foundational level, your life direction emerges from ${
-        asc?.display ?? "the rising degree"
-      }. In the Hellenistic frame, this establishes an orientation of direct responsibility and perceptive discernment, while the Vedic lunar asterism and Arabic Manzil layers reveal a deep instinctual equilibrium. You do not move through circumstances passively; your inner temperament seeks tangible truth, emotional clarity, and self-respect before committing your forces.`
-    );
-  }
-
-  // Paragraph 2: Calling, Conscious Vocation & Purposeful Work
-  const purposeTheme = themes.find(t => t.domain === "purpose_work");
-  if (purposeTheme) {
-    integratedNarrative.push(
-      `In the domain of public contribution and calling, the solar center operates alongside the Hermetic Lot of Spirit and the Parashari divisional harmonic frames. This is not an abstract ambition, but a demand to create work of enduring substance. The chart indicates that your greatest influence arises when you align personal competence with selfless contribution, ensuring that every project or leadership position is backed by uncompromising moral credibility.`
-    );
-  }
-
-  // Paragraph 3: Executive Agency, Courage & Sovereign Boundaries
-  const powerTheme = themes.find(t => t.domain === "autonomy_power");
-  if (powerTheme) {
-    integratedNarrative.push(
-      `Executive agency and decisive boundary setting are governed by Mars in ${marsSign}${
-        snapshot.agentView.frameRelationships.length > 0
-          ? ` within the calculated frame relationship of the God/Agent axis`
-          : ""
-      }. In traditional Graha Drishti, martial force casts its gaze across critical life sectors, providing the courage to confront obstacles directly without becoming tyrannical. True authority in your chart comes from composed self-control and principled defense of what is sacred.`
-    );
-  }
-
-  // Paragraph 4: Reality Limits, Saturnian Accountability & Maturation
-  const choicesTheme = themes.find(t => t.domain === "choices_obstacles");
-  if (choicesTheme) {
-    integratedNarrative.push(
-      `The chart's primary discipline is anchored by Saturn in ${saturnSign} (House ${saturn?.house ?? 1}) and reinforced by the Lot of Nemesis. This is the sacred boundary of your life: delays are not denials, but structural tests designed to burn away trivial distractions. The Sefer Yetzirah contrary pairs remind us that true power is born through humble submission to higher reality and patient perseverance over time.`
-    );
-  }
-
-  // Paragraph 5: Synthesized Conclusion & Actionable Next Step
-  integratedNarrative.push(
-    `In summary, the Master Chart proves that your power lies not in avoiding friction, but in using structural resistance as the whetstone for character. Move through this chapter of your life with steady cadence: tell the truth, honor your commitments, protect your inner peace, and build with the quiet confidence of someone whose foundations are anchored in ancient cosmic order.`
+  // 3. Evidence-led synthesis. Never substitute generic personality prose for findings.
+  const question = input.userQuestion?.trim() || "the chart's overall configuration";
+  const relevantDomains: Record<string, string[]> = {
+    relationships: ["relationship", "marriage", "partner", "love"],
+    resources_wealth: ["money", "wealth", "finance", "income", "career pay"],
+    purpose_work: ["career", "work", "purpose", "job", "business"],
+    family_home: ["family", "home", "parent", "child"],
+    timing: ["when", "timing", "today", "transit", "future"],
+    energy_wellbeing: ["energy", "health", "wellbeing"],
+    autonomy_power: ["power", "conflict", "control", "courage"],
+  };
+  const query = question.toLowerCase();
+  const prioritized = Object.entries(relevantDomains)
+    .filter(([, terms]) => terms.some(term => query.includes(term)))
+    .map(([domain]) => domain);
+  const orderedThemes = [...themes].sort((a, b) =>
+    (prioritized.includes(b.domain) ? 1 : 0) - (prioritized.includes(a.domain) ? 1 : 0)
   );
+  const methodCounts = snapshot.methodExecutionLedger
+    .map(layer => `${layer.name}: ${layer.status}${Array.isArray(layer.results) ? ` (${layer.results.length} results)` : ""}`);
+  const dominantConclusion = orderedThemes.length
+    ? `Question: ${question}. Primary evidence domain: ${orderedThemes[0].humanTheme}. ${orderedThemes[0].primaryConclusion}`
+    : `Question: ${question}. No calculated propositions were available for synthesis.`;
+
+  // The complete recorded results remain in the propositions and snapshot.
+  // Emit each computed finding so no doctrine disappears behind a generic summary.
+  const integratedNarrative: string[] = [
+    `Method inventory (every recorded layer): ${methodCounts.join("; ")}.`,
+    ...orderedThemes.map(theme =>
+      `${theme.humanTheme}. WHAT: ${theme.primaryConclusion} WHY/HOW: ${theme.whyHow} CONSEQUENCE: ${theme.consequences} MEANING: ${theme.deeperMeaning} Evidence: ${theme.evidenceIds.join(", ")}.`
+    ),
+    ...propositions.filter(p => p.id.startsWith("prop-method-")).map(p =>
+      `[${p.tradition} / ${p.causalMechanism}] ${p.plainLanguageMeaning} [Evidence: ${p.supportingEvidenceIds.join(", ")}]`
+    ),
+  ];
 
   // 5. Build Evidence Trace Map (mapping every theme to its underlying evidence IDs)
   const evidenceTraceMap: Record<string, string[]> = {};
