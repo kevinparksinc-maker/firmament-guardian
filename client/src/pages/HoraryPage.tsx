@@ -31,7 +31,7 @@ type ResolvedPlace = {
   timezone: string;
 };
 
-type HoraryResult = { chart: HoraryChart; reading: string };
+type HoraryResult = { chart: HoraryChart; reading: string; synthesisStatus: "ai_completed" | "deterministic_fallback" };
 
 export default function HoraryPage() {
   const initialMoment = localDateTime();
@@ -50,6 +50,7 @@ export default function HoraryPage() {
   const [horary, setHorary] = useState<HoraryResult | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
+  const providerStatus = trpc.system.providerStatus.useQuery(undefined, { retry: false });
   const geocode = trpc.hybrid.geocode.useQuery({ query: locationQuery }, { enabled: false, retry: false });
   const birthGeocode = trpc.hybrid.geocode.useQuery({ query: birthLocationQuery }, { enabled: false, retry: false });
   const cast = trpc.horary.open.useMutation({
@@ -125,6 +126,7 @@ export default function HoraryPage() {
     <div className="relative min-h-screen overflow-hidden bg-[#080b14] text-slate-100 selection:bg-cyan-300/25">
       <div className="pointer-events-none fixed inset-0 overflow-hidden"><div className="absolute -left-36 -top-32 h-[34rem] w-[34rem] rounded-full bg-cyan-700/15 blur-3xl"/><div className="absolute -right-40 top-1/3 h-[32rem] w-[32rem] rounded-full bg-violet-600/10 blur-3xl"/><div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(255,255,255,.3)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.3)_1px,transparent_1px)] [background-size:64px_64px]"/></div>
       <main className="relative z-10 mx-auto max-w-6xl px-5 py-6 md:px-10 md:py-10">
+        {providerStatus.data && <p role="status">{providerStatus.data.configured ? "AI provider configured" : "AI provider unavailable"}: {providerStatus.data.provider}</p>}
         <Link href="/" className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm text-slate-300 transition hover:border-cyan-200/30 hover:text-white"><ArrowLeft className="h-4 w-4"/>Back to the astrology app</Link>
         <div className="mb-6 rounded-2xl border border-amber-200/25 bg-gradient-to-r from-amber-100/[0.09] via-violet-100/[0.06] to-cyan-100/[0.06] p-4 sm:p-5"><p className="text-[10px] font-bold uppercase tracking-[.23em] text-amber-200">THE QUESTION CHAMBER · 2050 OBSERVATORY</p><div className="mt-3 grid gap-3 text-xs leading-6 text-slate-300 sm:grid-cols-3"><p><strong className="block text-amber-100">01. Ask clearly</strong>Write one question that matters to you.</p><p><strong className="block text-amber-100">02. Set the moment</strong>Resolve where and when your question became important.</p><p><strong className="block text-amber-100">03. Read the testimony</strong>Explore the two chart frames, evidence and plain-English synthesis.</p></div></div>
         <Link href="/zodiac-readings" className="mb-7 flex items-center gap-3 rounded-xl border border-amber-200/30 bg-amber-100/[0.07] px-5 py-4 text-sm text-amber-100 hover:bg-amber-100/[0.12]"><Sparkles className="h-5 w-5"/> Explore the second engine: Twelve Zodiac Sign Readings →</Link>
