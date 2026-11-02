@@ -39,6 +39,30 @@ export async function synthesizeMasterReading(
   const orderedThemes = [...themes].sort((a, b) =>
     (prioritized.includes(b.domain) ? 1 : 0) - (prioritized.includes(a.domain) ? 1 : 0)
   );
+  const methodFindings = snapshot.methodExecutionLedger.map(layer => {
+    const raw = layer.results;
+    const entries = Array.isArray(raw)
+      ? raw.map((value, index) => [String(index + 1), value] as const)
+      : raw && typeof raw === "object"
+        ? Object.entries(raw)
+        : raw == null ? [] : [["result", raw] as const];
+    const findings = entries.map(([label, value]) => ({
+      label,
+      details: typeof value === "string" ? value : JSON.stringify(value) ?? String(value),
+    }));
+    return {
+      id: layer.id,
+      name: layer.name,
+      tradition: layer.tradition,
+      status: layer.status,
+      frame: layer.frame,
+      evidenceIds: layer.evidenceIds,
+      sourceIds: layer.sourceIds,
+      resultCount: findings.length,
+      findings,
+      ...(layer.notes ? { notes: layer.notes } : {}),
+    };
+  });
   const methodCounts = snapshot.methodExecutionLedger
     .map(layer => `${layer.name}: ${layer.status}${Array.isArray(layer.results) ? ` (${layer.results.length} results)` : ""}`);
   const dominantConclusion = orderedThemes.length
@@ -62,11 +86,7 @@ export async function synthesizeMasterReading(
   for (const theme of themes) {
     evidenceTraceMap[theme.id] = theme.evidenceIds;
   }
-  evidenceTraceMap["dominant-conclusion"] = [
-    "angle-ascendant",
-    "planet-sun",
-    "planet-saturn",
-  ];
+  evidenceTraceMap["dominant-conclusion"] = orderedThemes[0]?.evidenceIds ?? [];
 
   // 6. Summarize Method Ledger
   const ledger = snapshot.methodExecutionLedger;
@@ -103,6 +123,7 @@ export async function synthesizeMasterReading(
     mode: readingMode,
     dominantConclusion,
     integratedNarrative,
+    methodFindings,
     themes,
     contradictionsAndTensions: tensions,
     timingOverview:

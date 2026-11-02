@@ -66,6 +66,7 @@ export interface SynthesisResult {
   mode: "natal" | "transit" | "combined";
   dominantConclusion: string;
   integratedNarrative: string[];
+  methodFindings: Array<{ id: string; name: string; tradition: string; status: string; frame: string; evidenceIds: string[]; sourceIds: string[]; resultCount: number; findings: Array<{ label: string; details: string }>; notes?: string }>;
   themes: SynthesizedTheme[];
   contradictionsAndTensions: Array<{
     polarities: string;
