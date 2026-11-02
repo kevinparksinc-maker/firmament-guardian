@@ -7,7 +7,7 @@ import { TransitLocationBar } from "./TransitLocationBar";
 
 const MAX_ORB = 5;
 const aspectFlow: Record<TransitContact["aspect"], number> = {
-  trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 0,
+  trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 1, semisquare: 0,
 };
 const percentWeight = (orb: number) =>
   orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
