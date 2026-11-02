@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import {
   calculateChart,
+  aspectBetween,
   type ChartResult,
   type ChartRow,
 } from "../astronomy";
@@ -190,34 +191,18 @@ export async function buildUnifiedMasterChart(
 
   // Layer 3: Western Aspects & Orbs
   const majorAspects = chart.movingBodies.flatMap(p1 =>
-    chart.movingBodies
-      .filter(p2 => p1.name < p2.name)
-      .map(p2 => {
-        const diff = Math.abs(normalizeLongitude(p1.longitude) - normalizeLongitude(p2.longitude));
-        const angle = diff > 180 ? 360 - diff : diff;
-        const aspectDefs = [
-          { name: "Conjunction", deg: 0, maxOrb: 5 },
-          { name: "Sextile", deg: 60, maxOrb: 5 },
-          { name: "Square", deg: 90, maxOrb: 5 },
-          { name: "Trine", deg: 120, maxOrb: 5 },
-          { name: "Opposition", deg: 180, maxOrb: 5 },
-        ];
-        for (const def of aspectDefs) {
-          const orb = Math.abs(angle - def.deg);
-          if (orb <= def.maxOrb) {
-            return {
-              body1: p1.name,
-              body2: p2.name,
-              aspect: def.name,
-              angle: Math.round(angle * 100) / 100,
-              orb: Math.round(orb * 100) / 100,
-              nature: def.name === "Square" || def.name === "Opposition" ? "friction" : "harmony",
-            };
-          }
-        }
-        return null;
-      })
-      .filter((a): a is NonNullable<typeof a> => a !== null)
+    chart.movingBodies.filter(p2 => p1.name < p2.name).map(p2 => {
+      const contact = aspectBetween(p1.longitude, p2.longitude);
+      if (!contact) return null;
+      const diff = Math.abs(normalizeLongitude(p1.longitude) - normalizeLongitude(p2.longitude));
+      return {
+        body1: p1.name, body2: p2.name,
+        aspect: contact.aspect[0].toUpperCase() + contact.aspect.slice(1),
+        angle: Math.round((diff > 180 ? 360 - diff : diff) * 100) / 100,
+        orb: Math.round(contact.orb * 100) / 100,
+        nature: contact.aspect === "square" || contact.aspect === "opposition" ? "friction" : "harmony",
+      };
+    }).filter((a): a is NonNullable<typeof a> => a !== null)
   );
 
   layers["western-aspects-and-orbs"] = {
