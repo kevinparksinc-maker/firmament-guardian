@@ -280,6 +280,7 @@ export function InterpretationPanel({
   const [followUps, setFollowUps] = useState<string[]>([]);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const generate = trpc.interpretation.generate.useMutation();
+  const masterSynthesis = trpc.interpretation.masterSynthesize.useMutation();
   const chapterMutation = trpc.interpretation.chapter.useMutation();
   const chat = trpc.interpretation.followUp.useMutation({
     onSuccess: answer => {
@@ -501,6 +502,25 @@ export function InterpretationPanel({
       id="ai-reading"
       className="mt-10 scroll-mt-8 space-y-7 border-t border-white/10 pt-10 sm:mt-14 sm:pt-14"
     >
+      <div className="mx-auto max-w-4xl rounded-2xl border border-cyan-300/25 bg-slate-950/60 p-5">
+        <h3 className="text-xl font-semibold text-cyan-100">Unified Master Chart Synthesis</h3>
+        <p className="mt-2 text-sm text-slate-300">Calculate the complete available method ledger from this chart and display evidence-backed findings. Missing methods remain identified rather than silently counted.</p>
+        <Button className="mt-4" disabled={masterSynthesis.isPending} onClick={() => {
+          masterSynthesis.mutate({
+            ...chart.input,
+            worldview: chart.worldview,
+            mode,
+            question: activeQuestion || "Synthesize every calculated doctrine and show the evidence.",
+          });
+        }}>{masterSynthesis.isPending ? "Synthesizing…" : "Run unified synthesis"}</Button>
+        {masterSynthesis.error && <p role="alert" className="mt-3 text-sm text-rose-300">{masterSynthesis.error.message}</p>}
+        {masterSynthesis.data && <div className="mt-4 space-y-3 text-sm text-slate-200">
+          <p className="font-medium">{masterSynthesis.data.dominantConclusion}</p>
+          <p className="text-xs text-cyan-200">Methods evaluated: {masterSynthesis.data.methodLedgerSummary.totalEvaluated} · Computed: {masterSynthesis.data.methodLedgerSummary.computedWithResult} · Reference only: {masterSynthesis.data.methodLedgerSummary.referenceOnly} · Failed: {masterSynthesis.data.methodLedgerSummary.failed}</p>
+          {masterSynthesis.data.integratedNarrative.map((line, index) => <p key={index}>{line}</p>)}
+          {masterSynthesis.data.themes.map(theme => <details key={theme.id} className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer font-medium">{theme.humanTheme}</summary><p className="mt-2">{theme.primaryConclusion}</p><p className="mt-2">{theme.whyHow}</p><p className="mt-2 text-xs text-cyan-200">Evidence: {theme.evidenceIds.join(", ") || "Not recorded"}</p></details>)}
+        </div>}
+      </div>
       <div className="mx-auto max-w-4xl text-center">
         <div className="mb-3 flex items-center justify-center gap-2 text-xs uppercase tracking-[0.28em] text-cyan-300">
           <BookOpen className="h-4 w-4" /> Your personal reading
