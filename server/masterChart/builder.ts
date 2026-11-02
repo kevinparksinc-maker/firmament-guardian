@@ -618,6 +618,13 @@ export async function buildUnifiedMasterChart(
   const computedWithResultCount = methodExecutionLedger.filter(
     l => l.status === "computed-with-result"
   ).length;
+  const failedMethods = methodExecutionLedger.filter(l => l.status === "failed");
+  const unavailableMethods = methodExecutionLedger.filter(l =>
+    l.status === "not-implemented" || l.status === "reference-only"
+  );
+  const methodWarnings = unavailableMethods.map(l =>
+    `${l.name}: ${l.status}. ${l.notes ?? "No executable calculation was recorded."}`
+  );
 
   const snapshot: UnifiedMasterChartSnapshot = {
     snapshotId,
@@ -677,9 +684,9 @@ export async function buildUnifiedMasterChart(
     layers,
     methodExecutionLedger,
     validation: {
-      complete: true,
-      errors: [],
-      warnings: [],
+      complete: failedMethods.length === 0 && unavailableMethods.length === 0,
+      errors: failedMethods.map(l => `${l.name}: ${l.errorCode ?? "calculation failed"}`),
+      warnings: methodWarnings,
       totalMethods: methodExecutionLedger.length,
       computedWithResultCount,
     },
