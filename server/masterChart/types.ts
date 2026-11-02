@@ -55,6 +55,7 @@ export interface MasterChartInput {
   transitTime?: string;
   mode?: "natal" | "transit" | "combined";
   worldview?: "god" | "agent" | "agent-vs-god";
+  xyzPositions?: Record<string, { x: number; y: number; z: number }>;
 }
 
 export interface UnifiedMasterChartSnapshot {
