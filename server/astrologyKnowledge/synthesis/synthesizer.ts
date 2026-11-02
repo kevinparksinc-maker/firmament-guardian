@@ -110,7 +110,7 @@ export async function synthesizeMasterReading(
   const interpretedMethodIds = new Set(
     themes.flatMap(theme => theme.linkedPropositionIds)
       .filter(id => id.startsWith("prop-method-"))
-      .map(id => id.slice("prop-method-".length).replace(/-(?:\\d+|remaining)$/, ""))
+      .map(id => id.slice("prop-method-".length).replace(/-([0-9]+|remaining)$/, ""))
   );
   const uninterpretedMethods = computedLayers.filter(layer => !interpretedMethodIds.has(layer.id));
   const groundedRatio = expectedEvidenceIds.size === 0
