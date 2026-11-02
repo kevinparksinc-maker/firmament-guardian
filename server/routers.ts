@@ -4,7 +4,15 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { calculateChart, geocodeLocation, type ChartResult } from "./astronomy";
+import { calculateChart, geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
+import {
+  calculatePersonAge,
+  calculateAnnualProfection,
+  generatePlanetaryCycles,
+  compileLifeStoryChapters,
+  runAstrologyEngineAudit,
+  generateLifeStoryChapter,
+} from "./lifeStoryEngine";
 import {
   followUp,
   generateChapter,
@@ -137,6 +145,9 @@ export const appRouter = router({
     geocode: publicProcedure
       .input(z.object({ query: z.string().min(2) }))
       .query(({ input }) => geocodeLocation(input.query)),
+    reverseGeocode: publicProcedure
+      .input(z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }))
+      .query(({ input }) => reverseGeocodeLocation(input.latitude, input.longitude)),
     calculate: publicProcedure
       .input(chartInput)
       .mutation(({ input }) => calculateChart(input)),
@@ -618,6 +629,71 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
           input.chart.input?.time || "12:00",
           input.chart.input?.date || new Date().toISOString().split("T")[0]
         );
+      }),
+  }),
+  lifeStory: router({
+    calculateCycles: publicProcedure
+      .input(
+        chartResultInput.extend({
+          targetAge: z.number().min(0).max(120).optional(),
+        })
+      )
+      .query(({ input }) => {
+        const birthDate = input.chart.input?.date || "1990-01-01";
+        const currentAge = calculatePersonAge(birthDate);
+        const selectedAge = input.targetAge ?? currentAge;
+        const profection = calculateAnnualProfection(selectedAge, input.chart);
+        const cycles = generatePlanetaryCycles(input.chart, currentAge);
+        const chapters = compileLifeStoryChapters(input.chart, currentAge, cycles);
+        const audit = runAstrologyEngineAudit(input.chart);
+
+        return {
+          currentAge,
+          selectedAge,
+          profection,
+          cycles,
+          chapters,
+          audit,
+        };
+      }),
+
+    generateChapter: publicProcedure
+      .input(
+        chartResultInput.extend({
+          chapterKey: z.enum([
+            "birth_origins",
+            "childhood",
+            "adolescence",
+            "early_adulthood",
+            "adult_development",
+            "later_life",
+            "turning_points",
+            "future_chapters",
+          ]),
+          selectedAge: z.number().min(0).max(120).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return generateLifeStoryChapter(
+          input.chart,
+          input.chapterKey,
+          input.selectedAge
+        );
+      }),
+
+    audit: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => {
+        const layers = runAstrologyEngineAudit(input.chart);
+        const verifiedCount = layers.filter(
+          l => l.status === "implemented-verified"
+        ).length;
+        return {
+          layers,
+          totalLayers: layers.length,
+          verifiedCount,
+          isFullyOperational: verifiedCount >= 19,
+        };
       }),
   }),
 });
