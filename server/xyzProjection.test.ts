@@ -51,4 +51,26 @@ describe("chart XYZ integration", () => {
     expect(mars?.longitude).toBeCloseTo(45, 6);
     expect(mars?.xyz).toEqual({ x: 1, y: 1, z: 0.25 });
   });
+  it("uses a supplied historical sunrise XYZ anchor for Agent equal-house cusps", async () => {
+    const chart = await calculateChart({
+      location: "Dallas, TX",
+      latitude: 0,
+      longitude: 0,
+      timezone: "UTC",
+      date: "1986-11-20",
+      time: "18:00",
+      worldview: "agent",
+      readingScope: "natal",
+      sunriseAnchor: {
+        sunriseUtc: "1986-11-20T12:00:00Z",
+        sunriseSunXYZ: { x: 1, y: 0, z: 0 },
+      },
+    });
+    const expected = 6 * (360.98564736629 / 24);
+    expect(chart.ascendant?.longitude).toBeCloseTo(expected, 6);
+    expect(chart.houses[0]).toBeCloseTo(expected, 6);
+    expect(chart.houses[1]).toBeCloseTo((expected + 30) % 360, 6);
+    expect(chart.validation.notes.join(" ")).toContain("verified sunrise XYZ anchor");
+  });
+
 });

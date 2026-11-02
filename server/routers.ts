@@ -45,6 +45,8 @@ const chartInput = z.object({
   readingScope: z.enum(["natal", "transit", "combined"]).default("combined"),
   birthTimeKnown: z.boolean().optional(),
   elevation: z.number().optional(),
+  sunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),
+  transitSunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),
   xyzPositions: z.record(z.string(), z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() })).optional(),
   transitXYZPositions: z.record(z.string(), z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() })).optional(),
 });
@@ -258,6 +260,8 @@ export const appRouter = router({
           transitTime: input.transitTime,
           mode: input.mode,
           worldview: input.worldview,
+          sunriseAnchor: input.sunriseAnchor,
+          transitSunriseAnchor: input.transitSunriseAnchor,
           xyzPositions: input.xyzPositions,
           transitXYZPositions: input.transitXYZPositions,
         });
