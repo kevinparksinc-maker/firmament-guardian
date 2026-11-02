@@ -330,15 +330,16 @@ export const appRouter = router({
           mode: z.enum(["natal", "transit", "combined"]).default("combined"),
         })
       )
-      .mutation(({ input }) =>
-        followUp(
-          input.chart,
-          input.interpretation,
+      .mutation(async ({ input }) => {
+        const { context } = await synthesizeChartForReading(input.chart as ChartResult, input.mode, input.question);
+        return followUp(
+          input.chart as ChartResult,
+          { ...input.interpretation, intelligence: `${input.interpretation.intelligence}\\n\\n${context}` },
           input.history,
           input.question,
           input.mode
-        )
-      ),
+        );
+      }),
   }),
   horary: router({
     open: publicProcedure
