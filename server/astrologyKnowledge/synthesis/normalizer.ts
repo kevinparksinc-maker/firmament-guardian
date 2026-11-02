@@ -6,6 +6,21 @@ function getSign(longitude: number): string {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
 }
 
+/** Translate computed method records into inspectable chart facts, not a raw JSON dump. */
+export function describeComputedFinding(finding: unknown): string {
+  if (finding === null || finding === undefined) return "No finding value supplied";
+  if (typeof finding !== "object") return String(finding);
+  if (Array.isArray(finding)) return finding.map(describeComputedFinding).join("; ");
+  const record = finding as Record<string, unknown>;
+  const fields = Object.entries(record).map(([key, value]) => {
+    if (value === null || value === undefined) return null;
+    const readable = key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ");
+    const rendered = typeof value === "object" ? JSON.stringify(value) : String(value);
+    return `${readable}: ${rendered}`;
+  }).filter((part): part is string => part !== null);
+  return fields.join("; ") || "Empty calculated record";
+}
+
 export function extractPropositionsFromSnapshot(
   snapshot: UnifiedMasterChartSnapshot
 ): InterpretedProposition[] {
@@ -362,7 +377,7 @@ export function extractPropositionsFromSnapshot(
       propositions.push({
         id: `prop-method-${layer.id}-${index}`,
         themeTitle: `${layer.name} — finding ${index + 1}`,
-        plainLanguageMeaning: `${layer.name}: ${JSON.stringify(finding)}`,
+        plainLanguageMeaning: `${layer.name}: ${describeComputedFinding(finding)}`,
         domain: domains[layer.id] ?? "identity",
         causalMechanism: `${layer.technique}; ${layer.frame}; ${layer.calculationVersion}`,
         valence,
@@ -375,13 +390,13 @@ export function extractPropositionsFromSnapshot(
       });
     });
     // Record any evidence identifiers without a one-to-one finding.
-    const alreadyLinked = new Set(propositions.flatMap(p => p.supportingEvidenceIds));
+    const alreadyLinked = new Set(propositions.filter(p => !p.id.startsWith("prop-method-ledger-")).flatMap(p => p.supportingEvidenceIds));
     const unlinked = layer.evidenceIds.filter(id => !alreadyLinked.has(id));
     if (unlinked.length) {
       propositions.push({
         id: `prop-method-${layer.id}-remaining`,
         themeTitle: `${layer.name} — additional evidence references`,
-        plainLanguageMeaning: `Recorded method evidence references: ${unlinked.join(", ")}`,
+        plainLanguageMeaning: `Additional source references for ${layer.name}: ${unlinked.join(", ")}. These references are not separate calculated findings.`,
         domain: domains[layer.id] ?? "identity",
         causalMechanism: layer.technique,
         valence: "neutral",

@@ -117,10 +117,14 @@ export function clusterPropositionsIntoThemes(
     }
 
     // Build synthesized explanation (WHAT, WHY, HOW, CONSEQUENCE, MEANING)
-    const primaryConclusion = props[0].plainLanguageMeaning;
-    const whyHow = props.map((p: InterpretedProposition) => `Via ${p.tradition}: ${p.causalMechanism} governs ${p.themeTitle.toLowerCase()}`).join("; ");
+    const interpreted = props.filter(p => !p.id.endsWith("-remaining"));
+    const strongest = interpreted.find(p => p.strength === "dominant") ?? interpreted.find(p => p.strength === "strong") ?? interpreted[0] ?? props[0];
+    const primaryConclusion = strongest.plainLanguageMeaning;
+    // Include the ACTUAL finding text from each computed doctrine, not just a label
+    // that says the doctrine was evaluated. Every computed proposition participates.
+    const whyHow = interpreted.map(p => `[${p.tradition} / ${p.frame}] ${p.plainLanguageMeaning} (mechanism: ${p.causalMechanism}; evidence: ${p.supportingEvidenceIds.join(", ")})`).join("\\n");
     const concreteManifestations = meta.lifeSpheres.map((sphere: string) =>
-      `In ${sphere}: Demands conscious integration of ${props.map((p: InterpretedProposition) => p.causalMechanism).join(" with ")}.`
+      `In ${sphere}: Read the concrete calculated factors above together, distinguishing supportive, frictional, and unclassified contacts. No biographical event is established solely by the chart.`
     );
     const consequences = `When integrated, this grants profound self-command and resilience. If neglected or rushed, it manifests as reactive friction or ungrounded ideals.`;
     const deeperMeaning = `This configuration teaches that genuine strength is not the absence of resistance, but the capacity to maintain moral integrity and deliberate direction under shifting conditions.`;

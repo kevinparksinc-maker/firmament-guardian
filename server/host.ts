@@ -55,7 +55,8 @@ export async function askHost(
   history: Array<{ role: "user" | "assistant"; content: string }>,
   question: string,
   chart?: ChartResult | any,
-  mode: "natal" | "transit" | "combined" = "combined"
+  mode: "natal" | "transit" | "combined" = "combined",
+  synthesisContext = ""
 ) {
   let ragContext = "";
 
@@ -119,6 +120,8 @@ ${formattedPacket}
       ragContext = `\n=== USER CHART SUMMARY ===\nLocation: ${chart.input?.location || "N/A"}, Date: ${chart.input?.date || "N/A"} ${chart.input?.time || "N/A"}\nPlacements: ${(chart.movingBodies || []).map((b: any) => `${b.name} in ${b.display} (H${b.house})`).join(", ")}\n===========================\n`;
     }
   }
+
+  if (synthesisContext) ragContext += `\n\nUNIFIED MASTER SYNTHESIS — COMPLETE METHOD EVIDENCE:\n${synthesisContext}`;
 
   const systemInstructions = [
     HOST_SYSTEM,

@@ -1,3 +1,4 @@
+import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -226,9 +227,12 @@ export const appRouter = router({
           mode: z.enum(["natal", "transit", "combined"]).optional(),
         })
       )
-      .mutation(({ input }) =>
-        askHost(input.history, input.question, input.chart, input.mode)
-      ),
+      .mutation(async ({ input }) => {
+        const context = input.chart
+          ? (await synthesizeChartForReading(input.chart as ChartResult, input.mode ?? "combined", input.question)).context
+          : "";
+        return askHost(input.history, input.question, input.chart, input.mode, context);
+      }),
     generate: publicProcedure
       .input(
         chartResultInput.extend({
@@ -241,9 +245,11 @@ export const appRouter = router({
             .default("What should I understand from this chart?"),
         })
       )
-      .mutation(({ input }) =>
-        generateInterpretation(input.chart, input.mode, input.question)
-      ),
+      .mutation(async ({ input }) => {
+        const { synthesis, context } = await synthesizeChartForReading(input.chart, input.mode, input.question);
+        const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context);
+        return { ...interpretation, synthesis };
+      }),
     masterSynthesize: publicProcedure
       .input(
         chartInput.extend({
@@ -296,17 +302,19 @@ export const appRouter = router({
           question: z.string().trim().max(2000).default(""),
         })
       )
-      .mutation(({ input }) =>
-        generateChapter(
-          input.chart,
+      .mutation(async ({ input }) => {
+        const { context } = await synthesizeChartForReading(input.chart as ChartResult, input.mode, input.question || input.chapterId);
+        return generateChapter(
+          input.chart as ChartResult,
           input.mode,
           input.intelligence,
           input.chapterId as any,
           input.completedChapters,
           input.analysis,
-          input.question
-        )
-      ),
+          input.question,
+          context
+        );
+      }),
     followUp: publicProcedure
       .input(
         z.object({
@@ -325,15 +333,16 @@ export const appRouter = router({
           mode: z.enum(["natal", "transit", "combined"]).default("combined"),
         })
       )
-      .mutation(({ input }) =>
-        followUp(
-          input.chart,
-          input.interpretation,
+      .mutation(async ({ input }) => {
+        const { context } = await synthesizeChartForReading(input.chart as ChartResult, input.mode, input.question);
+        return followUp(
+          input.chart as ChartResult,
+          { ...input.interpretation, intelligence: `${input.interpretation.intelligence}\\n\\n${context}` },
           input.history,
           input.question,
           input.mode
-        )
-      ),
+        );
+      }),
   }),
   horary: router({
     open: publicProcedure
@@ -674,10 +683,12 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         })
       )
       .mutation(async ({ input }) => {
+        const { context } = await synthesizeChartForReading(input.chart as ChartResult, "natal", `Life story chapter: ${input.chapterKey}`);
         return generateLifeStoryChapter(
-          input.chart,
+          input.chart as ChartResult,
           input.chapterKey,
-          input.selectedAge
+          input.selectedAge,
+          context
         );
       }),
 
