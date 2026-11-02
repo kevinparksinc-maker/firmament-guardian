@@ -42,6 +42,15 @@ async function startServer() {
   app.get("/health", (_req, res) => {
     res.status(200).json({ ok: true });
   });
+  // Readiness reports configuration, not an unverified claim that external services work.
+  app.get("/ready", (_req, res) => {
+    const checks = {
+      sessionSigning: Boolean((process.env.MANUS_JWT_SECRET ?? process.env.JWT_SECRET)?.length),
+      interpreterKey: Boolean(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY),
+      databaseConfigured: Boolean(process.env.DATABASE_URL),
+    };
+    res.status(checks.sessionSigning ? 200 : 503).json({ ready: checks.sessionSigning, checks });
+  });
   app.get("/api/runtime-config", (_req, res) => {
     res.json({
       apiUrl: process.env.MANUS_API_URL ?? "",
@@ -88,6 +97,10 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.post("/api/background-music", express.raw({ type: "*/*", limit: "80mb" }), (req, res) => {
+    if (process.env.NODE_ENV === "production") {
+      res.status(403).json({ error: "Direct filesystem uploads are disabled in production; use authenticated persistent object storage." });
+      return;
+    }
     try {
       const targetDir = path.resolve(process.cwd(), "client", "public", "assets");
       fs.mkdirSync(targetDir, { recursive: true });
