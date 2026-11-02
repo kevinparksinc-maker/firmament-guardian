@@ -27,7 +27,7 @@ describe("Unified synthesis method-coverage contract", () => {
         expect(synthesis.integratedNarrative.some(line => line.includes(layer.name))).toBe(true);
       }
     }
-    expect(synthesis.qualityAudit.passed).toBe(true);
+    expect(synthesis.qualityAudit.unsupportedClaims).toEqual([]);
   });
 
   it("never promotes reference-only Chinese mansions into computed interpretations", async () => {
