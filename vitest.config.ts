@@ -14,6 +14,12 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    include: [
+      "server/**/*.test.ts",
+      "server/**/*.spec.ts",
+      "shared/xyzWheel.test.ts",
+      "test/astrology/invariant_engine.test.ts",
+      "test/astrology/sunrise_ascendant.test.ts",
+    ],
   },
 });
