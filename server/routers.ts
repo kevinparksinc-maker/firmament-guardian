@@ -227,9 +227,12 @@ export const appRouter = router({
           mode: z.enum(["natal", "transit", "combined"]).optional(),
         })
       )
-      .mutation(({ input }) =>
-        askHost(input.history, input.question, input.chart, input.mode)
-      ),
+      .mutation(async ({ input }) => {
+        const context = input.chart
+          ? (await synthesizeChartForReading(input.chart as ChartResult, input.mode ?? "combined", input.question)).context
+          : "";
+        return askHost(input.history, input.question, input.chart, input.mode, context);
+      }),
     generate: publicProcedure
       .input(
         chartResultInput.extend({
