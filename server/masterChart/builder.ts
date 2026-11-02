@@ -52,6 +52,7 @@ function computeSnapshotId(input: MasterChartInput, version: string): string {
     m: input.mode ?? "natal",
     w: input.worldview ?? "agent-vs-god",
     xyz: input.xyzPositions ? Object.entries(input.xyzPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
+    transitXYZ: input.transitXYZPositions ? Object.entries(input.transitXYZPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
     v: version,
   });
   return "umc-" + crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
@@ -86,6 +87,7 @@ export async function buildUnifiedMasterChart(
     readingScope: mode,
     worldview: input.worldview ?? "agent-vs-god",
     xyzPositions: input.xyzPositions,
+    transitXYZPositions: input.transitXYZPositions,
   });
 
   const basePlanets = chart.movingBodies;
