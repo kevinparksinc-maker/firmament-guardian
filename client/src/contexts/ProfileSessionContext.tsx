@@ -29,7 +29,7 @@ function readProfile(): UserProfileData | null {
     }
     return null;
   } catch {
-    return SAMPLE_PROFILE;
+    return null;
   }
 }
 
