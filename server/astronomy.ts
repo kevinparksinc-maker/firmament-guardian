@@ -42,8 +42,9 @@ export type ChartRow = {
   overlay: Overlay;
   uncertainty?: MoonUncertainty;
 };
-export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition"; orb: number };
-export type TransitRow = ChartRow & { natalContacts: TransitContact[] };
+export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "semisquare" | "square" | "trine" | "opposition"; orb: number };
+export type MinorTransitContact = { natalName: string; aspect: "quintile" | "sesquiquadrate" | "biquintile" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "flow" | "friction" };
+export type TransitRow = ChartRow & { natalContacts: TransitContact[]; minorNatalContacts: MinorTransitContact[] };
 export type ChartResult = {
   input: ChartInput;
   worldview: Worldview;
@@ -104,8 +105,26 @@ function planetaryTopocentric(planet: number, locationAvailable: boolean) {
 }
 export function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number } | null {
   // angularDistance correctly wraps across 0°/360° (for example, 359° and 1° are 2° apart).
-  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
+  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [45, "semisquare"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
   const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= 5 ? best : null;
+}
+/** Secondary contacts are not part of the five-major-aspect Energy Read score.
+ * Two flow and two friction minors are equally weighted at half of major strength.
+ * Semi-sextile is excluded; semi-square is a full-weight major friction aspect.
+ * A separate list prevents double counting and keeps conjunctions harmonious in primary scoring.
+ */
+export function minorAspectBetween(a: number, b: number): Omit<MinorTransitContact, "natalName"> | null {
+  const separation = angularDistance(a, b);
+  const targets = [
+    { target: 72, aspect: "quintile" as const, classification: "flow" as const },
+    { target: 135, aspect: "sesquiquadrate" as const, classification: "friction" as const },
+    { target: 144, aspect: "biquintile" as const, classification: "flow" as const },
+    { target: 150, aspect: "quincunx" as const, classification: "friction" as const },
+  ];
+  const best = targets.map(({ target, aspect, classification }) => ({ aspect, classification, orb: Math.abs(separation - target) }))
+    .filter(contact => contact.orb <= 2)
+    .sort((a, b) => a.orb - b.orb)[0];
+  return best ? { ...best, weightMultiplier: 0.5 } : null;
 }
 function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope, transit = false) {
   const date = transit ? input.transitDate : input.date;
@@ -177,10 +196,11 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (transitHasLocation && Number.isNaN(transitAsc)) throw new Error("Swiss Ephemeris failed to calculate the transit Ascendant for Equal House.");
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
-  const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts }; });
+  const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
   const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
-  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }], validation };
+  const minorContactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = minorAspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
+  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode), minorNatalContacts: minorContactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode), minorNatalContacts: minorContactsFor(transitSouthNode) }], validation };
 }
 
 export async function geocodeLocation(query: string) {
