@@ -102,20 +102,32 @@ export async function synthesizeMasterReading(
   const expectedEvidenceIds = new Set(
     ledger.filter(l => l.status === "computed-with-result").flatMap(l => l.evidenceIds)
   );
-  const tracedEvidenceIds = new Set(propositions.flatMap(p => p.supportingEvidenceIds));
+  // Only evidence actually incorporated into a synthesized theme counts as interpreted.
+  // Inventory-only ledger entries cannot inflate the interpretation coverage score.
+  const tracedEvidenceIds = new Set(themes.flatMap(theme => theme.evidenceIds));
   const missingEvidenceIds = Array.from(expectedEvidenceIds).filter(id => !tracedEvidenceIds.has(id));
+  const computedLayers = ledger.filter(l => l.status === "computed-with-result");
+  const interpretedMethodIds = new Set(
+    themes.flatMap(theme => theme.linkedPropositionIds)
+      .filter(id => id.startsWith("prop-method-"))
+      .map(id => id.slice("prop-method-".length).replace(/-(?:\\d+|remaining)$/, ""))
+  );
+  const uninterpretedMethods = computedLayers.filter(layer => !interpretedMethodIds.has(layer.id));
   const groundedRatio = expectedEvidenceIds.size === 0
     ? 1
     : (expectedEvidenceIds.size - missingEvidenceIds.length) / expectedEvidenceIds.size;
   const qualityAudit = {
     groundedRatio,
-    unsupportedClaims: missingEvidenceIds.map(id => `Unrepresented computed evidence: ${id}`),
-    passed: missingEvidenceIds.length === 0,
+    unsupportedClaims: [
+      ...missingEvidenceIds.map(id => `Not incorporated into interpreted themes: ${id}`),
+      ...uninterpretedMethods.map(layer => `Computed method missing from interpreted themes: ${layer.id}`),
+    ],
+    passed: missingEvidenceIds.length === 0 && uninterpretedMethods.length === 0,
   };
   // Report method coverage explicitly; reference-only or unavailable layers are never
   // described as calculated. The raw evidence remains available in the snapshot.
   integratedNarrative.push(
-    `Calculation coverage: ${ledger.filter(l => l.status === "computed-with-result").length} methods returned results, ${methodLedgerSummary.referenceOnly} are reference-only, ${methodLedgerSummary.notApplicable} are not applicable, and ${methodLedgerSummary.failed} failed. ${missingEvidenceIds.length === 0 ? "All recorded computed evidence IDs are represented in the proposition stream." : `${missingEvidenceIds.length} computed evidence IDs are not represented.`}`
+    `Calculation coverage: ${ledger.filter(l => l.status === "computed-with-result").length} methods returned results, ${methodLedgerSummary.referenceOnly} are reference-only, ${methodLedgerSummary.notApplicable} are not applicable, and ${methodLedgerSummary.failed} failed. ${missingEvidenceIds.length === 0 ? "All recorded computed evidence IDs are incorporated into interpreted themes." : `${missingEvidenceIds.length} computed evidence IDs are not incorporated into interpreted themes.`}`
   );
 
   return {
