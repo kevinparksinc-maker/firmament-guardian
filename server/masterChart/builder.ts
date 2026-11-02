@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import {
   calculateChart,
+  aspectBetween,
   type ChartResult,
   type ChartRow,
 } from "../astronomy";
@@ -190,34 +191,18 @@ export async function buildUnifiedMasterChart(
 
   // Layer 3: Western Aspects & Orbs
   const majorAspects = chart.movingBodies.flatMap(p1 =>
-    chart.movingBodies
-      .filter(p2 => p1.name < p2.name)
-      .map(p2 => {
-        const diff = Math.abs(normalizeLongitude(p1.longitude) - normalizeLongitude(p2.longitude));
-        const angle = diff > 180 ? 360 - diff : diff;
-        const aspectDefs = [
-          { name: "Conjunction", deg: 0, maxOrb: 5 },
-          { name: "Sextile", deg: 60, maxOrb: 5 },
-          { name: "Square", deg: 90, maxOrb: 5 },
-          { name: "Trine", deg: 120, maxOrb: 5 },
-          { name: "Opposition", deg: 180, maxOrb: 5 },
-        ];
-        for (const def of aspectDefs) {
-          const orb = Math.abs(angle - def.deg);
-          if (orb <= def.maxOrb) {
-            return {
-              body1: p1.name,
-              body2: p2.name,
-              aspect: def.name,
-              angle: Math.round(angle * 100) / 100,
-              orb: Math.round(orb * 100) / 100,
-              nature: def.name === "Square" || def.name === "Opposition" ? "friction" : "harmony",
-            };
-          }
-        }
-        return null;
-      })
-      .filter((a): a is NonNullable<typeof a> => a !== null)
+    chart.movingBodies.filter(p2 => p1.name < p2.name).map(p2 => {
+      const contact = aspectBetween(p1.longitude, p2.longitude);
+      if (!contact) return null;
+      const diff = Math.abs(normalizeLongitude(p1.longitude) - normalizeLongitude(p2.longitude));
+      return {
+        body1: p1.name, body2: p2.name,
+        aspect: contact.aspect[0].toUpperCase() + contact.aspect.slice(1),
+        angle: Math.round((diff > 180 ? 360 - diff : diff) * 100) / 100,
+        orb: Math.round(contact.orb * 100) / 100,
+        nature: contact.aspect === "square" || contact.aspect === "opposition" ? "friction" : "harmony",
+      };
+    }).filter((a): a is NonNullable<typeof a> => a !== null)
   );
 
   layers["western-aspects-and-orbs"] = {
@@ -535,10 +520,11 @@ export async function buildUnifiedMasterChart(
 
   // Layer 15: Genesis Behavioral Patterns & Yogas
   let genesisResult: any = null;
+  let genesisError: string | null = null;
   try {
     genesisResult = runGenesisPatternPipeline(chart);
   } catch (err) {
-    genesisResult = null;
+    genesisError = err instanceof Error ? err.message : String(err);
   }
 
   layers["genesis-behavioral-patterns"] = {
@@ -546,41 +532,28 @@ export async function buildUnifiedMasterChart(
     tradition: "genesis",
     technique: "genesis-pattern-engine-and-yogas",
     name: "Genesis Behavioral Patterns & Vedic Yogas",
-    status: genesisResult?.analysis ? "computed-with-result" : "computed-no-result",
+    status: genesisError ? "failed" : genesisResult?.analysis ? "computed-with-result" : "computed-no-result",
     frame: "agent",
     prerequisites: ["western-aspects-and-orbs", "western-houses-and-angles"],
     calculationVersion: engineVersion,
     evidenceIds: ["genesis-patterns-core", "genesis-yogas"],
     sourceIds: ["genesis-symbolic-engine"],
     results: genesisResult?.analysis ?? null,
+    ...(genesisError ? { errorCode: "GENESIS_PIPELINE_FAILED", notes: genesisError } : {}),
   };
 
   // Layer 16: Transit Activation Layer (when mode is transit or combined)
   if (mode === "transit" || mode === "combined") {
     const transitAspects = (chart.transits ?? []).flatMap(tb =>
       chart.movingBodies.map(nb => {
-        const diff = Math.abs(normalizeLongitude(tb.longitude) - normalizeLongitude(nb.longitude));
-        const angle = diff > 180 ? 360 - diff : diff;
-        const aspectDefs = [
-          { name: "Conjunction", deg: 0, orbMax: 5 },
-          { name: "Sextile", deg: 60, orbMax: 3.5 },
-          { name: "Square", deg: 90, orbMax: 4.5 },
-          { name: "Trine", deg: 120, orbMax: 4.5 },
-          { name: "Opposition", deg: 180, orbMax: 5 },
-        ];
-        for (const def of aspectDefs) {
-          const orb = Math.abs(angle - def.deg);
-          if (orb <= def.orbMax) {
-            return {
-              transitBody: tb.name,
-              natalBody: nb.name,
-              aspect: def.name,
-              orb: Math.round(orb * 100) / 100,
-              nature: (def.name === "Square" || def.name === "Opposition" ? "friction" : "harmonic") as "friction" | "harmonic",
-            };
-          }
-        }
-        return null;
+        const contact = aspectBetween(tb.longitude, nb.longitude);
+        if (!contact) return null;
+        return {
+          transitBody: tb.name, natalBody: nb.name,
+          aspect: contact.aspect[0].toUpperCase() + contact.aspect.slice(1),
+          orb: Math.round(contact.orb * 100) / 100,
+          nature: (contact.aspect === "square" || contact.aspect === "opposition" ? "friction" : "harmonic") as "friction" | "harmonic",
+        };
       }).filter((a): a is NonNullable<typeof a> => a !== null)
     );
 
