@@ -683,10 +683,12 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         })
       )
       .mutation(async ({ input }) => {
+        const { context } = await synthesizeChartForReading(input.chart as ChartResult, "natal", `Life story chapter: ${input.chapterKey}`);
         return generateLifeStoryChapter(
-          input.chart,
+          input.chart as ChartResult,
           input.chapterKey,
-          input.selectedAge
+          input.selectedAge,
+          context
         );
       }),
 
