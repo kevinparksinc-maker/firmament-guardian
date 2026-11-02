@@ -25,6 +25,9 @@ export async function synthesizeChartForReading(
       chart.houses.some((cusp, index) => angularDifference(cusp, snapshot.baseCelestialState.houses[index].cusp) > 0.01)) {
     throw new Error("Master Chart equal-house cusp mismatch. Refresh the chart before reading.");
   }
+  if (mode !== "natal" && (chart.transits.length > 0) !== Boolean(snapshot.transit?.planets.length)) {
+    throw new Error("Master Chart transit coverage mismatch. Refresh the chart before reading.");
+  }
   if (mode !== "natal" && chart.transits.length) {
     for (const transit of chart.transits) {
       const canonical = snapshot.transit?.planets.find(row => row.name === transit.name);
