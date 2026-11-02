@@ -520,6 +520,21 @@ export function InterpretationPanel({
           <p className="font-medium">{masterSynthesis.data.dominantConclusion}</p>
           <p className="text-xs text-cyan-200">Methods evaluated: {masterSynthesis.data.methodLedgerSummary.totalEvaluated} · Computed: {masterSynthesis.data.methodLedgerSummary.computedWithResult} · Reference only: {masterSynthesis.data.methodLedgerSummary.referenceOnly} · Failed: {masterSynthesis.data.methodLedgerSummary.failed}</p>
           {masterSynthesis.data.integratedNarrative.map((line, index) => <p key={index}>{line}</p>)}
+          <div className="space-y-2">
+            <h4 className="font-semibold text-cyan-100">Every recorded method and its calculated findings</h4>
+            {masterSynthesis.data.methodFindings.map(method => <details key={method.id} className="rounded-lg border border-white/10 p-3">
+              <summary className="cursor-pointer font-medium">{method.name} · {method.status} · {method.resultCount} result entries</summary>
+              <p className="mt-2 text-xs text-slate-400">{method.tradition} · {method.frame} · Sources: {method.sourceIds.join(", ") || "Not recorded"}</p>
+              {method.notes && <p className="mt-2 text-xs text-amber-200">{method.notes}</p>}
+              <p className="mt-2 text-xs text-cyan-200">Evidence: {method.evidenceIds.join(", ") || "Not recorded"}</p>
+              <div className="mt-3 max-h-80 space-y-2 overflow-auto">
+                {method.findings.map((finding, index) => <div key={index} className="rounded bg-white/5 p-2">
+                  <p className="font-medium">{finding.label}</p>
+                  <p className="mt-1 whitespace-pre-wrap break-words font-mono text-xs">{finding.details}</p>
+                </div>)}
+              </div>
+            </details>)}
+          </div>
           {masterSynthesis.data.themes.map(theme => <details key={theme.id} className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer font-medium">{theme.humanTheme}</summary><p className="mt-2">{theme.primaryConclusion}</p><p className="mt-2">{theme.whyHow}</p><p className="mt-2 text-xs text-cyan-200">Evidence: {theme.evidenceIds.join(", ") || "Not recorded"}</p></details>)}
         </div>}
       </div>
