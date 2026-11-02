@@ -19,10 +19,9 @@ export function CelestialDomeChart({chart}:{chart:ChartResult}){
  const bodies=useMemo(()=>layer==="transit"?chart.transits:chart.movingBodies,[chart,layer]);
  const nodes=layer==="natal"?[chart.northNode,chart.southNode]:[];
  const entries=[...bodies,...nodes];
- const framework=layer==="transit"?chart.firmament.transit:chart.firmament.natal;
  const frameworkPosition=(name:string,longitude:number,ring:number)=>{
-   const projected=framework.positions[name];
-   if(!projected) return position(longitude,ring,rotate);
+   const projected=entries.find(body => body.name === name)?.xyz;
+   if(!projected || !Number.isFinite(projected.x) || !Number.isFinite(projected.y)) return position(longitude,ring,rotate);
    const angle=(Math.atan2(projected.y,projected.x)-rotate*Math.PI/180);
    const distance=Math.min(210,Math.max(28,Math.hypot(projected.x,projected.y)*2.7));
    return {x:300+Math.cos(angle)*distance,y:282+Math.sin(angle)*distance*.45};
