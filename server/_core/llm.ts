@@ -374,6 +374,24 @@ const RETRY_BASE_DELAY_MS = 500;
 const RETRY_MAX_DELAY_MS = 30_000;
 const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
+export function getLLMProviderStatus() {
+  const provider = ENV.anthropicApiKey
+    ? "anthropic"
+    : ENV.openaiApiKey && ENV.openaiApiBase
+      ? "openai-compatible"
+      : ENV.geminiApiKey
+        ? "gemini"
+        : ENV.forgeApiKey
+          ? "built-in-forge"
+          : "unconfigured";
+  return {
+    configured: provider !== "unconfigured",
+    provider,
+    requestTimeoutMs: LLM_REQUEST_TIMEOUT_MS,
+    maxRetries: RETRY_MAX_RETRIES,
+  } as const;
+}
+
 type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
 
 const sleep = (ms: number, signal?: AbortSignal | null) =>

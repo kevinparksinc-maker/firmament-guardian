@@ -42,7 +42,7 @@ export async function synthesizeMasterReading(
   const methodCounts = snapshot.methodExecutionLedger
     .map(layer => `${layer.name}: ${layer.status}${Array.isArray(layer.results) ? ` (${layer.results.length} results)` : ""}`);
   const dominantConclusion = orderedThemes.length
-    ? `Question: ${question}. Primary evidence domain: ${orderedThemes[0].humanTheme}. ${orderedThemes[0].primaryConclusion}`
+    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. Primary evidence domain: ${orderedThemes[0].humanTheme}. ${orderedThemes[0].primaryConclusion}`
     : `Question: ${question}. No calculated propositions were available for synthesis.`;
 
   // The complete recorded results remain in the propositions and snapshot.
@@ -83,7 +83,7 @@ export async function synthesizeMasterReading(
     ledger.filter(l => l.status === "computed-with-result").flatMap(l => l.evidenceIds)
   );
   const tracedEvidenceIds = new Set(propositions.flatMap(p => p.supportingEvidenceIds));
-  const missingEvidenceIds = [...expectedEvidenceIds].filter(id => !tracedEvidenceIds.has(id));
+  const missingEvidenceIds = Array.from(expectedEvidenceIds).filter(id => !tracedEvidenceIds.has(id));
   const groundedRatio = expectedEvidenceIds.size === 0
     ? 1
     : (expectedEvidenceIds.size - missingEvidenceIds.length) / expectedEvidenceIds.size;

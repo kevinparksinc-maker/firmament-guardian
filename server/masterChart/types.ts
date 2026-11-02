@@ -47,9 +47,14 @@ export interface MasterChartInput {
   timezone: string;
   date: string;
   time: string;
+  transitLocation?: string;
+  transitLatitude?: number;
+  transitLongitude?: number;
+  transitTimezone?: string;
   transitDate?: string;
   transitTime?: string;
   mode?: "natal" | "transit" | "combined";
+  worldview?: "god" | "agent" | "agent-vs-god";
 }
 
 export interface UnifiedMasterChartSnapshot {
@@ -68,11 +73,11 @@ export interface UnifiedMasterChartSnapshot {
     mode: "natal" | "transit" | "combined";
   };
   frameConfig: {
-    zodiacMode: "hybrid-fixed-star-tropical";
-    firmamentAnchorVersion: "polaris-spica-fixed-frame-v2";
-    obliquityMode: "zero-tilt-equatorial-aligned";
-    precessionMode: "none-fixed-firmament";
-    houseSystem: "equal-house-ascendant";
+    zodiacMode: "aldebaran-anchored-babylonian-stellar";
+    firmamentAnchorVersion: "aldebaran-15-taurus-swiss-mode-14";
+    obliquityMode: "swiss-ephemeris-sidereal-longitudes";
+    precessionMode: "none-user-frame-fixed-anchor";
+    houseSystem: "topocentric-equal-house-ascendant";
     engineVersion: "firmament-master-2026.1";
   };
   baseCelestialState: {
@@ -101,7 +106,7 @@ export interface UnifiedMasterChartSnapshot {
   agentView: {
     description: string;
     ascendantAnchor: string;
-    houseSystem: "equal-house-from-ascendant";
+    houseSystem: "topocentric-equal-house-from-ascendant";
     placements: Array<{
       body: string;
       longitude: number;
