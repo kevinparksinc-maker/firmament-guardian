@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { longitudeFromXYZ } from "./astronomy";
+import { calculateChart, longitudeFromXYZ } from "./astronomy";
 
 describe("fixed-wheel XYZ projection", () => {
   it.each([
@@ -20,5 +20,35 @@ describe("fixed-wheel XYZ projection", () => {
     { x: 1, y: Number.POSITIVE_INFINITY, z: 0 },
   ])("rejects invalid vector %j", vector => {
     expect(() => longitudeFromXYZ(vector)).toThrow("Invalid XYZ coordinates");
+  });
+});
+
+describe("chart XYZ integration", () => {
+  const base = {
+    location: "God View",
+    latitude: 0,
+    longitude: 0,
+    timezone: "UTC",
+    date: "1986-11-20",
+    time: "12:00",
+    worldview: "god" as const,
+    readingScope: "natal" as const,
+    birthTimeKnown: true,
+  };
+  it("obtains real XYZ vectors for planetary positions by default", async () => {
+    const chart = await calculateChart(base);
+    expect(chart.movingBodies).toHaveLength(10);
+    for (const planet of chart.movingBodies) {
+      expect(planet.coordinateSource).toBe("swiss-ephemeris");
+      expect(planet.xyz).toBeDefined();
+      expect(planet.longitude).toBeCloseTo(longitudeFromXYZ(planet.xyz!), 6);
+    }
+  });
+  it("honors an external vector instead of overwriting it", async () => {
+    const chart = await calculateChart({ ...base, xyzPositions: { Mars: { x: 1, y: 1, z: 0.25 } } });
+    const mars = chart.movingBodies.find(row => row.name === "Mars");
+    expect(mars?.coordinateSource).toBe("external-xyz");
+    expect(mars?.longitude).toBeCloseTo(45, 6);
+    expect(mars?.xyz).toEqual({ x: 1, y: 1, z: 0.25 });
   });
 });
