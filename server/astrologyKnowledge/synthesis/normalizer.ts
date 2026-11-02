@@ -390,7 +390,7 @@ export function extractPropositionsFromSnapshot(
       });
     });
     // Record any evidence identifiers without a one-to-one finding.
-    const alreadyLinked = new Set(propositions.flatMap(p => p.supportingEvidenceIds));
+    const alreadyLinked = new Set(propositions.filter(p => !p.id.startsWith("prop-method-ledger-")).flatMap(p => p.supportingEvidenceIds));
     const unlinked = layer.evidenceIds.filter(id => !alreadyLinked.has(id));
     if (unlinked.length) {
       propositions.push({
