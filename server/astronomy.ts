@@ -215,7 +215,9 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
 
 export async function geocodeLocation(query: string) {
   const normalizedQuery = query.trim();
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(normalizedQuery)}`;
+  // Resolve explicit US state names within the United States rather than accepting an unrelated worldwide first match.
+  const explicitlyUS = /\b(?:USA|United States|Texas|Nevada|California|Florida|New York|Illinois|Arizona|Colorado)\b/i.test(normalizedQuery);
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5${explicitlyUS ? "&countrycodes=us" : ""}&q=${encodeURIComponent(normalizedQuery)}`;
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -226,7 +228,9 @@ export async function geocodeLocation(query: string) {
       if (!response.ok) throw new Error(`geocoder returned ${response.status}`);
       const data: any[] = await response.json();
       if (!data[0]) throw new Error("No matching place found.");
-      const item = data[0]; const lat = Number(item.lat); const lon = Number(item.lon); const timezone = tzLookup(lat, lon); return { label: item.display_name, latitude: lat, longitude: lon, timezone };
+      const item = data.find(candidate => !explicitlyUS || candidate.address?.country_code === "us");
+      if (!item) throw new Error("No matching place found in the specified country. Please enter city, state and country.");
+      const lat = Number(item.lat); const lon = Number(item.lon); const timezone = tzLookup(lat, lon); return { label: item.display_name, latitude: lat, longitude: lon, timezone };
     } catch (error) {
       lastError = error;
       if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 250));
