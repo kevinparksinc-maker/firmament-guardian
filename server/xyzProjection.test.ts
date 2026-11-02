@@ -70,6 +70,8 @@ describe("chart XYZ integration", () => {
     expect(chart.ascendant?.longitude).toBeCloseTo(expected, 6);
     expect(chart.houses[0]).toBeCloseTo(expected, 6);
     expect(chart.houses[1]).toBeCloseTo((expected + 30) % 360, 6);
+    expect(chart.midheaven).toBeNull(); // Do not mix Swiss ecliptic MC with a fixed-equatorial sunrise Ascendant.
+    expect(chart.validation.notes.join(" ")).toContain("independent verification");
     expect(chart.validation.notes.join(" ")).toContain("verified sunrise XYZ anchor");
   });
 
