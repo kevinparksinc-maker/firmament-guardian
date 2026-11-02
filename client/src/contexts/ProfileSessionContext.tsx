@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { ChartResult } from "../../../server/astronomy";
 import type { UserProfileData } from "@/components/NatalProfileBuilder";
-import { SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
 
 const PROFILE_KEY = "algorithms_cosmos_profile";
 const SAVED_PROFILES_KEY = "fg:saved-birth-profiles:v1";
@@ -11,24 +10,24 @@ function profileId(p: UserProfileData): string {
 }
 
 function readSavedProfiles(): UserProfileData[] {
-  if (typeof window === "undefined") return [SAMPLE_PROFILE];
+  if (typeof window === "undefined") return [];
   try {
     const value = JSON.parse(window.localStorage.getItem(SAVED_PROFILES_KEY) || "[]");
     const valid = Array.isArray(value) ? value.filter((p): p is UserProfileData => Boolean(p && typeof p.name === "string" && typeof p.date === "string" && typeof p.location === "string")) : [];
-    return valid.length > 0 ? valid : [SAMPLE_PROFILE];
-  } catch { return [SAMPLE_PROFILE]; }
+    return valid;
+  } catch { return []; }
 }
 
 
 function readProfile(): UserProfileData | null {
-  if (typeof window === "undefined") return SAMPLE_PROFILE;
+  if (typeof window === "undefined") return null;
   try {
     const stored = window.localStorage.getItem(PROFILE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as UserProfileData;
       if (parsed && typeof parsed.name === "string" && parsed.location) return parsed;
     }
-    return SAMPLE_PROFILE;
+    return null;
   } catch {
     return SAMPLE_PROFILE;
   }
