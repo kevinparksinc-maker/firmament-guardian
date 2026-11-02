@@ -3,7 +3,7 @@ import type { ChartResult, ChartRow, TransitContact } from "../../../server/astr
 import { ELEMENTAL_DECAN_SIGNS, ZODIAC_SIGNS } from "../../../shared/hybrid";
 
 const RULERS: Record<string,string> = {Aries:"Mars",Taurus:"Venus",Gemini:"Mercury",Cancer:"Moon",Leo:"Sun",Virgo:"Mercury",Libra:"Venus",Scorpio:"Mars",Sagittarius:"Jupiter",Capricorn:"Saturn",Aquarius:"Saturn",Pisces:"Jupiter"};
-const ANGLES: Record<TransitContact["aspect"],number> = {conjunction:0,semisquare:45,sextile:60,square:90,trine:120,opposition:180};
+const ANGLES: Partial<Record<TransitContact["aspect"],number>> = {conjunction:0,sextile:60,square:90,trine:120,opposition:180};
 const geometry = (a:number,b:number) => {
   const delta=Math.abs(((a-b)%360+360)%360),distance=Math.min(delta,360-delta);
   const candidates=(Object.entries(ANGLES) as [TransitContact["aspect"],number][]).map(([aspect,angle])=>({aspect,orb:Math.abs(distance-angle)}));
