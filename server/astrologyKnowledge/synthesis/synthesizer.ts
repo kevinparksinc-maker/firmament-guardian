@@ -108,11 +108,10 @@ export async function synthesizeMasterReading(
     timingOverview:
       readingMode === "transit" || readingMode === "combined"
         ? {
-            activeWindow: "Current Transit Season",
-            turningPoints: [
-              "Exact planetary transit peak activation",
-              "Subsequent easing window into harmonic equilibrium",
-            ],
+            activeWindow: snapshot.transit?.transitInstantUtc ?? "Transit moment not supplied",
+            turningPoints: snapshot.transit?.aspectsToNatal?.length
+              ? snapshot.transit.aspectsToNatal.map(contact => `${contact.transitBody} ${contact.aspect} natal ${contact.natalBody} (orb ${contact.orb}°)`).slice(0, 12)
+              : ["No calculated natal transit contacts available; peak and easing times are not established."],
           }
         : undefined,
     methodLedgerSummary,
