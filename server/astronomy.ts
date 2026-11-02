@@ -207,11 +207,11 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
   ensureCanonicalReferenceFrame();
-  const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, SIDEREAL_FLAG, input.latitude, input.longitude, "E") : null;
+  const houseResult: any = hasAgentLocation && !input.sunriseAnchor ? (sweph as any).houses_ex(jd, SIDEREAL_FLAG, input.latitude, input.longitude, "E") : null;
   const asc = hasAgentLocation ? (input.sunriseAnchor
     ? ascendantFromSunrise({ ...input.sunriseAnchor, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
     : Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0])) : null;
-  const mc = hasAgentLocation ? Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]) : null;
+  const mc = hasAgentLocation && !input.sunriseAnchor ? Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]) : null;
   if (hasAgentLocation && Number.isNaN(asc)) throw new Error("Swiss Ephemeris failed to calculate the Ascendant for Equal House.");
   const houses = fixedHouseRows(worldview, asc);
   const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
@@ -228,8 +228,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
     "Chart planetary positions are projected from Cartesian XYZ in the configured Aldebaran sidereal frame; reference longitudes are used only to validate frame alignment.",
-    input.sunriseAnchor ? "Natal Ascendant: verified sunrise XYZ anchor supplied by caller." : "Natal Ascendant: legacy Swiss houses_ex solver; historical sunrise anchor not supplied.",
-    input.transitSunriseAnchor ? "Transit Ascendant: verified sunrise XYZ anchor supplied by caller." : "Transit Ascendant: legacy Swiss houses_ex solver when a transit location is resolved.",
+    input.sunriseAnchor ? "Natal Ascendant: caller-supplied sunrise XYZ anchor; historical timestamp and equatorial frame require independent verification. Swiss MC omitted to avoid mixed-frame angles." : "Natal Ascendant: legacy Swiss houses_ex solver; historical sunrise anchor not supplied.",
+    input.transitSunriseAnchor ? "Transit Ascendant: caller-supplied sunrise XYZ anchor; historical timestamp and equatorial frame require independent verification." : "Transit Ascendant: legacy Swiss houses_ex solver when a transit location is resolved.",
     input.xyzPositions ? "Supplied XYZ vectors override matching natal planetary longitudes in the fixed 360° plane; missing bodies retain Swiss Ephemeris positions." : "Planetary longitudes are canonical geocentric values; only the Moon receives a separate topocentric correction.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
@@ -239,7 +239,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
   ensureCanonicalReferenceFrame();
-  const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, SIDEREAL_FLAG, input.transitLatitude, input.transitLongitude, "E") : null;
+  const transitHouseResult: any = transitHasLocation && !input.transitSunriseAnchor ? (sweph as any).houses_ex(transitJd, SIDEREAL_FLAG, input.transitLatitude, input.transitLongitude, "E") : null;
   const transitAsc = transitHasLocation ? (input.transitSunriseAnchor
     ? ascendantFromSunrise({ ...input.transitSunriseAnchor, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant
     : Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0])) : null;
