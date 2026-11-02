@@ -86,7 +86,7 @@ const aspectFlow: Record<TransitContact["aspect"], number> = {
   sextile: 1,
   square: -1,
   opposition: -1,
-  conjunction: 0,
+  conjunction: 1, semisquare: 0,
 };
 
 const percentWeight = (orb: number) =>
