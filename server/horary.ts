@@ -1,3 +1,4 @@
+import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { calculateChart, type ChartInput } from "./astronomy";
 import { withCurrentQuestion } from "./_core/conversation";
 import { invokeLLM, type Message } from "./_core/llm";
@@ -69,6 +70,8 @@ export type HoraryChart = {
   canonEvidenceText: string;
   evidenceText: string;
   judgmentEvidenceText: string;
+  unifiedSynthesisContext?: string;
+  unifiedSynthesisSnapshotId?: string;
 };
 
 const TRADITIONAL_RULERS: Record<string, string> = {
@@ -462,10 +465,19 @@ function deterministicHoraryReading(chart: HoraryChart) {
 
 export async function openHoraryQuestion(input: HoraryInput) {
   const chart = await calculateHoraryChart(input);
+  // Question-time Horary judgment stays authoritative; Master methods supplement it.
+  const questionMomentChart = await calculateChart({
+    location: input.location, latitude: input.latitude, longitude: input.longitude,
+    timezone: input.timezone, date: input.date, time: input.time,
+    readingScope: "natal", worldview: "agent",
+  });
+  const { synthesis, context } = await synthesizeChartForReading(questionMomentChart, "natal", input.question);
+  chart.unifiedSynthesisContext = context;
+  chart.unifiedSynthesisSnapshotId = synthesis.snapshotId;
   const coreReading = deterministicHoraryReading(chart);
   const reading = await answer([
     { role: "system", content: HORARY_SYSTEM },
-    { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. The first visible sections must be exactly: “What I hear beneath your question,” “What this means for you,” then “Judgment,” before “The astrological picture.”\n\n${chart.judgmentEvidenceText}\n\nFULL TECHNICAL EVIDENCE (all configured layers):\n${chart.evidenceText}\n\nGive the complete, human-centered horary judgment now.` },
+    { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. The first visible sections must be exactly: “What I hear beneath your question,” “What this means for you,” then “Judgment,” before “The astrological picture.”\n\n${chart.judgmentEvidenceText}\n\nFULL TECHNICAL EVIDENCE (all configured layers):\n${chart.evidenceText}\n\nUNIFIED MASTER METHOD EVIDENCE (supplementary; Horary significators remain authoritative):\n${chart.unifiedSynthesisContext}\n\nGive the complete, human-centered horary judgment now.` },
   ], 3200).then(
     reading => ({ reading, synthesisStatus: "ai_completed" as const }),
     error => {
@@ -485,7 +497,7 @@ export async function horaryFollowUp(
 ) {
   return answer([
     { role: "system", content: `${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.` },
-    { role: "user", content: `Original horary judgment evidence:\n\n${chart.judgmentEvidenceText}\n\nFull configured chart and canon evidence:\n\n${chart.evidenceText}` },
+    { role: "user", content: `Original horary judgment evidence:\n\n${chart.judgmentEvidenceText}\n\nUnified Master method evidence:\n${chart.unifiedSynthesisContext || "Not recorded; do not claim uncalculated methods."}\n\nFull configured chart and canon evidence:\n\n${chart.evidenceText}` },
     ...withCurrentQuestion(history, question, 12),
   ], 1800).catch(() =>
     `The core chart remains fixed for this follow-up. The deterministic judgment is ${chart.traditional.judgment.verdict}. The relevant significators are ${chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler} and ${chart.topicRuler}; Moon status: ${chart.traditional.moonStatus.explanation} The optional language-synthesis service did not return within its time budget, so no new claim is being added beyond the calculated evidence.`,
