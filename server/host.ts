@@ -58,7 +58,7 @@ export async function askHost(
   mode: "natal" | "transit" | "combined" = "combined",
   synthesisContext = ""
 ) {
-  let ragContext = synthesisContext ? `UNIFIED MASTER SYNTHESIS — COMPLETE METHOD EVIDENCE:\n${synthesisContext}\n` : "";
+  let ragContext = "";
 
   if (chart && typeof chart === "object" && Array.isArray(chart.movingBodies)) {
     try {
@@ -121,7 +121,7 @@ ${formattedPacket}
     }
   }
 
-  const systemInstructions = [
+  if (synthesisContext) ragContext += `\n\nUNIFIED MASTER SYNTHESIS — COMPLETE METHOD EVIDENCE:\n${synthesisContext}`;\n\n  const systemInstructions = [
     HOST_SYSTEM,
     ragContext
       ? `YOU ARE IN DEEPLY PERSONALIZED LIFE STORYTELLING RAG MODE.
