@@ -466,8 +466,16 @@ export async function openHoraryQuestion(input: HoraryInput) {
   const reading = await answer([
     { role: "system", content: HORARY_SYSTEM },
     { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. The first visible sections must be exactly: “What I hear beneath your question,” “What this means for you,” then “Judgment,” before “The astrological picture.”\n\n${chart.judgmentEvidenceText}\n\nFULL TECHNICAL EVIDENCE (all configured layers):\n${chart.evidenceText}\n\nGive the complete, human-centered horary judgment now.` },
-  ], 3200).catch(() => coreReading);
-  return { chart, reading };
+  ], 3200).then(
+    reading => ({ reading, synthesisStatus: "ai_completed" as const }),
+    error => {
+      const category = error instanceof Error && /time|abort|deadline/i.test(error.message) ? "timeout" : "provider_error";
+      // Deliberately exclude prompts, provider responses and credentials from logs.
+      console.warn("[Horary] AI synthesis unavailable; deterministic fallback used", { category });
+      return { reading: coreReading, synthesisStatus: "deterministic_fallback" as const };
+    },
+  );
+  return { chart, ...reading };
 }
 
 export async function horaryFollowUp(
