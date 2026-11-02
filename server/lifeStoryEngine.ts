@@ -921,7 +921,8 @@ export function runAstrologyEngineAudit(chart: ChartResult): MethodAuditStatus[]
 export async function generateLifeStoryChapter(
   chart: ChartResult,
   chapterKey: LifeStageKey,
-  selectedAge?: number
+  selectedAge?: number,
+  synthesisContext = ""
 ): Promise<{ title: string; content: string; chapterMeta: LifeStoryChapterSummary }> {
   const currentAge = calculatePersonAge(chart.input.date || "1990-01-01");
   const cycles = generatePlanetaryCycles(chart, currentAge);
@@ -979,6 +980,9 @@ export async function generateLifeStoryChapter(
     `- God View Context: ${targetChapter.godViewThemes}`,
     `- Agent View Context: ${targetChapter.agentViewThemes}`,
     `- Arabic Lots: ${arabicLotsSummary}`,
+    ``,
+    `## UNIFIED MASTER CHART — ALL COMPUTED METHOD FINDINGS`,
+    synthesisContext || "No unified synthesis context supplied.",
     ``,
     `## INTERPRETIVE MANDATE & FORMULA`,
     `1. Structure your storytelling around: WHAT → WHY → HOW → CONSEQUENCE → MEANING`,
