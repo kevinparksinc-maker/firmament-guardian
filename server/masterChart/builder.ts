@@ -84,6 +84,7 @@ export async function buildUnifiedMasterChart(
     transitTimezone: input.transitTimezone,
     readingScope: mode,
     worldview: input.worldview ?? "agent-vs-god",
+    xyzPositions: input.xyzPositions,
   });
 
   const basePlanets = chart.movingBodies;
