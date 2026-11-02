@@ -55,9 +55,10 @@ export async function askHost(
   history: Array<{ role: "user" | "assistant"; content: string }>,
   question: string,
   chart?: ChartResult | any,
-  mode: "natal" | "transit" | "combined" = "combined"
+  mode: "natal" | "transit" | "combined" = "combined",
+  synthesisContext = ""
 ) {
-  let ragContext = "";
+  let ragContext = synthesisContext ? `UNIFIED MASTER SYNTHESIS — COMPLETE METHOD EVIDENCE:\n${synthesisContext}\n` : "";
 
   if (chart && typeof chart === "object" && Array.isArray(chart.movingBodies)) {
     try {
