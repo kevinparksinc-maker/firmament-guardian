@@ -228,6 +228,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
     "Chart planetary positions are projected from Cartesian XYZ in the configured Aldebaran sidereal frame; reference longitudes are used only to validate frame alignment.",
+    input.sunriseAnchor ? "Natal Ascendant: verified sunrise XYZ anchor supplied by caller." : "Natal Ascendant: legacy Swiss houses_ex solver; historical sunrise anchor not supplied.",
+    input.transitSunriseAnchor ? "Transit Ascendant: verified sunrise XYZ anchor supplied by caller." : "Transit Ascendant: legacy Swiss houses_ex solver when a transit location is resolved.",
     input.xyzPositions ? "Supplied XYZ vectors override matching natal planetary longitudes in the fixed 360° plane; missing bodies retain Swiss Ephemeris positions." : "Planetary longitudes are canonical geocentric values; only the Moon receives a separate topocentric correction.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
