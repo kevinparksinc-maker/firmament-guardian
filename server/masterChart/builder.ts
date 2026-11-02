@@ -544,28 +544,14 @@ export async function buildUnifiedMasterChart(
   if (mode === "transit" || mode === "combined") {
     const transitAspects = (chart.transits ?? []).flatMap(tb =>
       chart.movingBodies.map(nb => {
-        const diff = Math.abs(normalizeLongitude(tb.longitude) - normalizeLongitude(nb.longitude));
-        const angle = diff > 180 ? 360 - diff : diff;
-        const aspectDefs = [
-          { name: "Conjunction", deg: 0, orbMax: 5 },
-          { name: "Sextile", deg: 60, orbMax: 3.5 },
-          { name: "Square", deg: 90, orbMax: 4.5 },
-          { name: "Trine", deg: 120, orbMax: 4.5 },
-          { name: "Opposition", deg: 180, orbMax: 5 },
-        ];
-        for (const def of aspectDefs) {
-          const orb = Math.abs(angle - def.deg);
-          if (orb <= def.orbMax) {
-            return {
-              transitBody: tb.name,
-              natalBody: nb.name,
-              aspect: def.name,
-              orb: Math.round(orb * 100) / 100,
-              nature: (def.name === "Square" || def.name === "Opposition" ? "friction" : "harmonic") as "friction" | "harmonic",
-            };
-          }
-        }
-        return null;
+        const contact = aspectBetween(tb.longitude, nb.longitude);
+        if (!contact) return null;
+        return {
+          transitBody: tb.name, natalBody: nb.name,
+          aspect: contact.aspect[0].toUpperCase() + contact.aspect.slice(1),
+          orb: Math.round(contact.orb * 100) / 100,
+          nature: (contact.aspect === "square" || contact.aspect === "opposition" ? "friction" : "harmonic") as "friction" | "harmonic",
+        };
       }).filter((a): a is NonNullable<typeof a> => a !== null)
     );
 
