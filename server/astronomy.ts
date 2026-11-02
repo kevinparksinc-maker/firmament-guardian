@@ -109,7 +109,12 @@ function calculatedXYZ(jd: number, planet: number) {
     throw new Error("Ephemeris did not return finite Cartesian coordinates.");
   }
   const xyz = { x: Number(data[0]), y: Number(data[1]), z: Number(data[2]) };
-  return { xyz, longitude: longitudeFromXYZ(xyz) };
+  const longitude = longitudeFromXYZ(xyz);
+  const referenceLongitude = safeCalc(jd, planet).longitude;
+  if (angularDistance(longitude, referenceLongitude) > 0.1) {
+    throw new Error("XYZ frame mismatch: Cartesian projection disagrees with the configured fixed zodiac reference.");
+  }
+  return { xyz, longitude };
 }
 function safeCalc(jd: number, planet: number) {
   return rawCalc(jd, planet, MOSHIER_FLAGS);
@@ -216,7 +221,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Source calculation success is distinct from an optional historical reference fixture.
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
-    "Chart calculated with Swiss Ephemeris sidereal mode 14, anchored to Aldebaran at 15° Taurus.",
+    "Chart planetary positions are projected from Cartesian XYZ in the configured Aldebaran sidereal frame; reference longitudes are used only to validate frame alignment.",
     input.xyzPositions ? "Supplied XYZ vectors override matching natal planetary longitudes in the fixed 360° plane; missing bodies retain Swiss Ephemeris positions." : "Planetary longitudes are canonical geocentric values; only the Moon receives a separate topocentric correction.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
