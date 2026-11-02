@@ -87,6 +87,7 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
 
 const MOSHIER_FLAGS = 4 | 256;
 const SIDEREAL_FLAG = 65536;
+const CARTESIAN_XYZ_FLAG = 4096;
 const TOPOCENTRIC_FLAG = 32768;
 const CANONICAL_SIDEREAL_MODE = 14;
 function ensureCanonicalReferenceFrame() {
