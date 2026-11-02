@@ -52,6 +52,8 @@ function computeSnapshotId(input: MasterChartInput, version: string): string {
     tt: input.transitTime ?? "",
     m: input.mode ?? "natal",
     w: input.worldview ?? "agent-vs-god",
+    sunriseAnchor: input.sunriseAnchor ?? null,
+    transitSunriseAnchor: input.transitSunriseAnchor ?? null,
     xyz: input.xyzPositions ? Object.entries(input.xyzPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
     transitXYZ: input.transitXYZPositions ? Object.entries(input.transitXYZPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
     v: version,
@@ -89,6 +91,8 @@ export async function buildUnifiedMasterChart(
     worldview: input.worldview ?? "agent-vs-god",
     xyzPositions: input.xyzPositions,
     transitXYZPositions: input.transitXYZPositions,
+    sunriseAnchor: input.sunriseAnchor,
+    transitSunriseAnchor: input.transitSunriseAnchor,
   });
 
   const basePlanets = chart.movingBodies;
