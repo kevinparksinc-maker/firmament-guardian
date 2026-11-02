@@ -22,7 +22,7 @@ export async function synthesizeChartForReading(
     `UNIFIED MASTER SYNTHESIS — SNAPSHOT ${synthesis.snapshotId}`,
     `Computed methods: ${synthesis.methodLedgerSummary.computedWithResult} / ${synthesis.methodLedgerSummary.totalEvaluated}; quality audit: ${synthesis.qualityAudit.passed ? "passed" : "incomplete"}.`,
     `Dominant conclusion: ${synthesis.dominantConclusion}`,
-    ...synthesis.integratedNarrative,
+    ...synthesis.themes.map(theme => `Theme ${theme.humanTheme}: ${theme.primaryConclusion}; evidence ${theme.evidenceIds.join(", ")}`),
     "CALCULATED METHOD FINDINGS (never present reference-only methods as calculated):",
     ...synthesis.methodFindings.map(method => `${method.id} [${method.status}; ${method.frame}; ${method.tradition}]: ${method.findings.map(f => `${f.label}: ${f.details}`).join("; ")}; evidence ${method.evidenceIds.join(", ")}`),
   ].join("\n");
