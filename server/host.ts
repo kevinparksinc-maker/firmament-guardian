@@ -121,7 +121,9 @@ ${formattedPacket}
     }
   }
 
-  if (synthesisContext) ragContext += `\n\nUNIFIED MASTER SYNTHESIS — COMPLETE METHOD EVIDENCE:\n${synthesisContext}`;\n\n  const systemInstructions = [
+  if (synthesisContext) ragContext += `\n\nUNIFIED MASTER SYNTHESIS — COMPLETE METHOD EVIDENCE:\n${synthesisContext}`;
+
+  const systemInstructions = [
     HOST_SYSTEM,
     ragContext
       ? `YOU ARE IN DEEPLY PERSONALIZED LIFE STORYTELLING RAG MODE.
