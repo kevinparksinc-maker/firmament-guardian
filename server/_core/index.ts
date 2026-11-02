@@ -31,6 +31,12 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  if (process.env.NODE_ENV === "production") {
+    const jwtSecret = process.env.MANUS_JWT_SECRET ?? process.env.JWT_SECRET;
+    if (!jwtSecret || jwtSecret === "firmament-guardian-default-jwt-secret-key" || jwtSecret.length < 32) {
+      throw new Error("Production requires a unique MANUS_JWT_SECRET or JWT_SECRET of at least 32 characters.");
+    }
+  }
   const app = express();
   const server = createServer(app);
   app.get("/health", (_req, res) => {
@@ -120,4 +126,7 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+startServer().catch(error => {
+  console.error("Server startup failed:", error);
+  process.exitCode = 1;
+});
