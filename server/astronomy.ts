@@ -101,6 +101,16 @@ function rawCalc(jd: number, planet: number, flags: number) {
   return { longitude: normalizeLongitude(Number(data[0])), speed: Number(data[3] ?? 0) };
 }
 /** Geocentric position. Never touches sweph's global topocentric observer. */
+function calculatedXYZ(jd: number, planet: number) {
+  ensureCanonicalReferenceFrame();
+  const result: any = (sweph as any).calc_ut(jd, planet, MOSHIER_FLAGS | SIDEREAL_FLAG | CARTESIAN_XYZ_FLAG);
+  const data = result?.data ?? result;
+  if (!data || ![data[0], data[1], data[2]].every((n: unknown) => typeof n === "number" && Number.isFinite(n))) {
+    throw new Error("Ephemeris did not return finite Cartesian coordinates.");
+  }
+  const xyz = { x: Number(data[0]), y: Number(data[1]), z: Number(data[2]) };
+  return { xyz, longitude: longitudeFromXYZ(xyz) };
+}
 function safeCalc(jd: number, planet: number) {
   return rawCalc(jd, planet, MOSHIER_FLAGS);
 }
