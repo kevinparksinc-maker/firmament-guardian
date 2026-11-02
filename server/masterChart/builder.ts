@@ -51,6 +51,7 @@ function computeSnapshotId(input: MasterChartInput, version: string): string {
     tt: input.transitTime ?? "",
     m: input.mode ?? "natal",
     w: input.worldview ?? "agent-vs-god",
+    xyz: input.xyzPositions ? Object.entries(input.xyzPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
     v: version,
   });
   return "umc-" + crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
