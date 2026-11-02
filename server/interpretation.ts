@@ -699,7 +699,8 @@ function buildFallbackPlan(
 async function analyzeChart(
   chart: ChartResult,
   mode: ReadingMode,
-  evidencePacket: AstrologyEvidencePacket
+  evidencePacket: AstrologyEvidencePacket,
+  synthesisContext = ""
 ) {
   const known = knownPoints(chart);
   const semantic = evidenceAnchors(evidencePacket);
@@ -710,7 +711,7 @@ async function analyzeChart(
     },
     {
       role: "user",
-      content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nWrite the reading plan JSON now.`,
+      content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}\n\nWrite the reading plan JSON now.`,
     },
   ];
   try {
@@ -961,7 +962,8 @@ async function generateLifeStoryReading(
   mode: ReadingMode,
   evidencePacket: AstrologyEvidencePacket,
   question: string,
-  analysisPlan: string
+  analysisPlan: string,
+  synthesisContext = ""
 ): Promise<string> {
   const fallback = buildLifeStoryExecutiveOverview(chart, mode, evidencePacket);
   try {
@@ -996,7 +998,7 @@ THE GUARDIAN ANGEL LIFE-STORY MANDATE:
       },
       {
         role: "user",
-        content: `Here is the user's chart evidence:\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nVALIDATED READING PLAN (follow its priorities and chapter logic):\n${analysisPlan}\n\nUser Question/Intent: ${question}\n\nWrite the complete, flowing Life Story Narrative now. Use the plan and evidence together; do not invent personal history.`,
+        content: `Here is the user's chart evidence:\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nUNIFIED METHOD-BY-METHOD SYNTHESIS (all computed layers; do not omit relevant evidence):\n${synthesisContext}\n\nVALIDATED READING PLAN (follow its priorities and chapter logic):\n${analysisPlan}\n\nUser Question/Intent: ${question}\n\nWrite the complete, flowing Life Story Narrative now. Use the plan and evidence together; do not invent personal history.`,
       },
     ];
     const generated = await ask(messages, 3500, 0);
@@ -1012,12 +1014,13 @@ THE GUARDIAN ANGEL LIFE-STORY MANDATE:
 export async function generateInterpretation(
   chart: ChartResult,
   mode: ReadingMode = "combined",
-  question = "What should I understand from this chart?"
+  question = "What should I understand from this chart?",
+  synthesisContext = ""
 ) {
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
-  const intelligence = `${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}`;
-  const analysis = await analyzeChart(chart, mode, evidencePacket);
-  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis);
+  const intelligence = `${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
+  const analysis = await analyzeChart(chart, mode, evidencePacket, synthesisContext);
+  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis, synthesisContext);
   return {
     intelligence,
     evidencePacket,
@@ -1152,7 +1155,8 @@ export async function generateChapter(
   chapterId: ReadingChapterId,
   completedChapters: string[] = [],
   analysis = "",
-  question = ""
+  question = "",
+  synthesisContext = ""
 ) {
   const chapter = READING_CHAPTERS.find(item => item.id === chapterId);
   if (!chapter) throw new Error("That reading chapter is not available.");
@@ -1161,7 +1165,7 @@ export async function generateChapter(
     `${question ? `User question: ${question}\n\n` : ""}Chapter focus: ${chapter.title}. ${chapter.focus}`,
     mode
   );
-  const facts = `${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}`;
+  const facts = `${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
   const context = completedChapters.length
     ? `Already written chapters, full text below. Do not repeat any point, placement meaning, scene, or advice already made in them. Stay consistent with every fact they state, and put new weight on evidence they left untouched.${chapterId === "mirror" ? " This is the Mirror: synthesize across all chapters into the few threads that actually connect them. Do not re-list evidence." : ""}\n\n${completedChapters.join("\n\n---\n\n")}`
     : "This is the opening chapter; establish the emotional and narrative foundation.";
