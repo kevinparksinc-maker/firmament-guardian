@@ -24,6 +24,7 @@ import { TransitLocationBar } from "@/components/TransitLocationBar";
 import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
+import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
 
 const MAX_ORB = 5;
 const aspectFlow: Record<TransitContact["aspect"], number> = {
@@ -86,49 +87,7 @@ export default function EnergyPage() {
     setTimeout(() => setIsRefreshing(false), 700);
   };
 
-  const energyData = useMemo(() => {
-    if (!chart || chart.readingScope === "natal") return null;
-    const contacts = (chart.transits || []).flatMap((body) =>
-      (body?.natalContacts || [])
-        .filter((contact) => Number.isFinite(contact.orb) && contact.orb <= MAX_ORB)
-        .map((contact) => ({
-          ...contact,
-          transit: body.name,
-          natal: contact.natalName,
-          strength: percentWeight(contact.orb),
-          id: `${body.name}-${contact.aspect}-${contact.natalName}`,
-        }))
-    );
-
-    const harmonious = contacts.filter((c) => aspectFlow[c.aspect] === 1);
-    const challenging = contacts.filter((c) => aspectFlow[c.aspect] === -1);
-    const dynamic = contacts.filter((c) => aspectFlow[c.aspect] === 0);
-
-    const flowWeight = harmonious.reduce((sum, c) => sum + c.strength, 0);
-    const frictionWeight = challenging.reduce((sum, c) => sum + c.strength, 0);
-    const totalWeight = flowWeight + frictionWeight || 1;
-    const flowPct = Math.round((flowWeight / totalWeight) * 100);
-    const frictionPct = 100 - flowPct;
-
-    const signal: "Effortless Flow" | "Dynamic Synthesis" | "Growth Crucible" =
-      flowWeight > frictionWeight * 1.3
-        ? "Effortless Flow"
-        : frictionWeight > flowWeight * 1.3
-        ? "Growth Crucible"
-        : "Dynamic Synthesis";
-
-    return {
-      contacts,
-      harmonious,
-      challenging,
-      dynamic,
-      flowWeight,
-      frictionWeight,
-      flowPct,
-      frictionPct,
-      signal,
-    };
-  }, [chart]);
+  const energyData = useMemo(() => calculateEnergyRead(chart), [chart]);
 
   const filteredContacts = useMemo(() => {
     if (!energyData) return [];
@@ -137,7 +96,7 @@ export default function EnergyPage() {
       list = list.filter((c) => c.transit === selectedPlanetFilter || c.natal === selectedPlanetFilter);
     }
     if (aspectCategory === "harmonious") {
-      list = list.filter((c) => aspectFlow[c.aspect] === 1);
+      list = list.filter((c) => ENERGY_ASPECT_FLOW[c.aspect] === 1);
     } else if (aspectCategory === "challenging") {
       list = list.filter((c) => aspectFlow[c.aspect] === -1);
     } else if (aspectCategory === "dynamic") {
