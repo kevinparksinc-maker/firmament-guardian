@@ -52,8 +52,8 @@ export type ChartRow = {
   overlay: Overlay;
   uncertainty?: MoonUncertainty;
 };
-export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition"; orb: number };
-export type MinorTransitContact = { natalName: string; aspect: "semisextile" | "semisquare" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "flow" | "friction" };
+export type TransitContact = { natalName: string; aspect: "conjunction" | "square" | "trine" | "opposition"; orb: number };
+export type MinorTransitContact = { natalName: string; aspect: "sextile" | "semisextile" | "semisquare" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "flow" | "friction" };
 export type TransitRow = ChartRow & { natalContacts: TransitContact[]; minorNatalContacts: MinorTransitContact[] };
 export type ChartResult = {
   input: ChartInput;
@@ -147,10 +147,10 @@ function planetaryTopocentric(planet: number, locationAvailable: boolean) {
 }
 export function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number } | null {
   // angularDistance correctly wraps across 0°/360° (for example, 359° and 1° are 2° apart).
-  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
+  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [90, "square"], [120, "trine"], [180, "opposition"]];
   const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= 5 ? best : null;
 }
-/** The three minor aspects complete the balanced eight-aspect Energy Read.
+/** The four minor aspects complete the balanced eight-aspect Energy Read.
  * A pair may have at most one scored aspect; minor contacts are calculated
  * only when the pair has no major contact.
  */
@@ -159,6 +159,7 @@ export function minorAspectBetween(a: number, b: number): Omit<MinorTransitConta
   const separation = angularDistance(a, b);
   const targets = [
     { target: 30, aspect: "semisextile" as const, classification: "flow" as const },
+    { target: 60, aspect: "sextile" as const, classification: "flow" as const },
     { target: 45, aspect: "semisquare" as const, classification: "friction" as const },
     { target: 150, aspect: "quincunx" as const, classification: "friction" as const },
   ];
