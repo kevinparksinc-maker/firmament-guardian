@@ -106,6 +106,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
   const calculate = trpc.hybrid.calculate.useMutation({ onSuccess: setResult });
   const me = trpc.auth.me.useQuery();
   const saveChart = trpc.history.saveChart.useMutation();
+  const initializeProfile = trpc.natalStore.initializeProfile.useMutation();
   const calculateChart = async (
     nextWorldview: Worldview = worldview,
     nextReadingMode: ReadingMode = readingMode,
@@ -259,6 +260,22 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     setWorldview("agent-vs-god");
     setReadingMode("natal");
     navigate("/chart");
+    // Establish the three canonical natal views at profile creation. The
+    // existing chart display remains available even if login/storage is absent.
+    if (me.data) {
+      try {
+        await initializeProfile.mutateAsync({
+          location: nextForm.location,
+          latitude: nextForm.latitude,
+          longitude: nextForm.longitude,
+          timezone: nextForm.timezone,
+          date: nextForm.date,
+          time: nextForm.time,
+        });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Master Profile initialization failed.");
+      }
+    }
     await calculateChart("agent-vs-god", "natal", nextForm);
     setIsProfileModalOpen(false);
   };
