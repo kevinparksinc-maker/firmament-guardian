@@ -941,7 +941,9 @@ export async function generateLifeStoryChapter(
 
   let arabicLotsSummary = "Unavailable";
   if (chart.ascendant && sun && moon) {
-    const isDay = chart.ascendant.longitude !== sun.longitude; // simplified sect approximation
+    // Match the canonical Master Chart sect convention: Sun in houses 7–12
+    // is above the horizon; houses 1–6 are below it.
+    const isDay = sun.house >= 7 && sun.house <= 12;
     const lots = calculateArabicLots({
       ascendant: chart.ascendant.longitude,
       sun: sun.longitude,
