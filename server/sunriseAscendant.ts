@@ -3,7 +3,8 @@
  *
  * Coordinates must be expressed in one fixed equatorial XYZ frame:
  * X=0 degrees of the wheel, Y=90 degrees, Z=north celestial pole.
- * The observer latitude and solar declination affect the sunrise hour angle.
+ * At verified sunrise, the Sun's fixed-frame XYZ longitude is the rising anchor.
+ * Latitude is retained as an input for provenance/validation, not a longitude offset.
  * No tropical longitude, ayanamsha, obliquity or precession adjustment is applied here.
  *
  * Sunrise itself must be obtained independently for the historical date/location;
@@ -33,15 +34,9 @@ export function solarAnglesFromFixedXYZ(vector: FixedVector) {
 
 export function sunriseEasternHorizonLongitude(sunXYZ: FixedVector, latitude: number): number {
   if (!Number.isFinite(latitude) || Math.abs(latitude) > 90) throw new Error("Invalid observer latitude.");
-  const { longitude: sunRightAscension, declination } = solarAnglesFromFixedXYZ(sunXYZ);
-  const cosineHourAngle = -Math.tan(radians(latitude)) * Math.tan(radians(declination));
-  if (!Number.isFinite(cosineHourAngle) || cosineHourAngle < -1 || cosineHourAngle > 1) {
-    throw new Error("No unique geometric sunrise at this latitude and solar declination.");
-  }
-  const sunriseHourAngle = degrees(Math.acos(cosineHourAngle));
-  // At sunrise: local sidereal angle = Sun RA - sunrise hour angle.
-  // On a zero-tilt wheel the east-horizon intersection is LST + 90 degrees.
-  return normalizeDegrees(sunRightAscension - sunriseHourAngle + 90);
+  // The framework defines the rising degree at sunrise as the Sun's XYZ longitude.
+  // No meridian, hour-angle, or +90-degree offset is applied.
+  return solarAnglesFromFixedXYZ(sunXYZ).longitude;
 }
 
 export function ascendantFromSunrise(input: {
@@ -67,6 +62,6 @@ export function ascendantFromSunrise(input: {
     elapsedHours,
     sunriseUtc: new Date(sunriseMillis).toISOString(),
     eventUtc: new Date(eventMillis).toISOString(),
-    model: "fixed-equatorial-xyz-zero-tilt-sunrise-v1" as const,
+    model: "fixed-equatorial-xyz-solar-longitude-sunrise-v2" as const,
   };
 }
