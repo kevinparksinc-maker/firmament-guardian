@@ -127,7 +127,7 @@ export function retrieveChartCanonDossier(
   );
   const vedicJyotishSystem = evaluateVedicJyotishSystem(
     chart,
-    options?.vedicCoordinateMode ?? "firmament-tropical-hybrid"
+    options?.vedicCoordinateMode ?? "aldebaran-anchored-sidereal-mode-14"
   );
   const arabicPersianSystem = evaluateArabicPersianTradition(chart, isDayChart);
   const relationalChains = buildRelationalHouseChains(

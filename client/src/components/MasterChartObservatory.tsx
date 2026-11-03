@@ -44,6 +44,15 @@ export function MasterChartObservatory({ chart, onSelectBody }: MasterChartObser
         timezone: chart.input.timezone,
         date: chart.input.date,
         time: chart.input.time,
+        transitLocation: chart.input.transitLocation,
+        transitLatitude: chart.input.transitLatitude,
+        transitLongitude: chart.input.transitLongitude,
+        transitTimezone: chart.input.transitTimezone,
+        transitTime: chart.input.transitTime,
+        worldview: chart.worldview,
+        readingScope: chart.readingScope,
+        birthTimeKnown: chart.input.birthTimeKnown,
+        elevation: chart.input.elevation,
         transitDate: chart.transitDate,
         mode: chart.readingScope === "transit" ? "transit" : chart.readingScope === "combined" ? "combined" : "natal",
       },
@@ -53,7 +62,7 @@ export function MasterChartObservatory({ chart, onSelectBody }: MasterChartObser
         },
       }
     );
-  }, [chart.input.date, chart.input.time, chart.input.location, chart.readingScope]);
+  }, [chart.input.date, chart.input.time, chart.input.location, chart.input.transitLocation, chart.input.transitLatitude, chart.input.transitLongitude, chart.input.transitTimezone, chart.input.transitTime, chart.worldview, chart.readingScope, chart.input.birthTimeKnown, chart.input.elevation, chart.transitDate]);
 
   if (masterChartQuery.isPending && !snapshot) {
     return (
@@ -370,7 +379,7 @@ export function MasterChartObservatory({ chart, onSelectBody }: MasterChartObser
             <div className="p-4 rounded-xl border border-cyan-950 bg-slate-900/60 space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
                 <Star className="w-3.5 h-3.5" />
-                Polaris Axis & Royal Watchers of Persia
+                Fixed Stars & Royal Watchers
               </h4>
               <div className="space-y-2 text-xs">
                 {(snap.layers["fixed-stars-royal-watchers"]?.results as any[])?.slice(0, 4).map((s: any) => (

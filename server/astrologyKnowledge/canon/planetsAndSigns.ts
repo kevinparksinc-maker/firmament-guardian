@@ -130,7 +130,7 @@ export const PLANET_CANON_RECORDS: Record<string, PlanetCanonRecord> = {
     firmamentCanonNote: {
       category: "FIRMAMENT_CANON",
       statement:
-        "Canonical geocentric longitude governs tropical sign, Nakshatra (27), Manzil (28), and Decan (36) overlays; topocentric parallax is preserved separately in Agent View. If birth time is unknown, Firmament flags the full ~12°–15° daily lunar range rather than guessing a single degree.",
+        "Canonical Aldebaran-anchored geocentric longitude governs stellar sign, Nakshatra (27), Manzil (28), and Decan (36) overlays; topocentric parallax is preserved separately in Agent View. If birth time is unknown, Firmament flags the full ~12°–15° daily lunar range rather than guessing a single degree.",
       provenance: {
         tradition: "firmament",
         sourceTitle: "Firmament Core Doctrine",
@@ -779,10 +779,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [0, 30],
     astronomicalFact: {
       category: "FACT",
-      statement: "0°00′–30°00′ tropical ecliptic longitude beginning at the vernal equinox.",
+      statement: "0°00′–30°00′ canonical stellar ecliptic longitude beginning at the vernal equinox.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -813,10 +813,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [30, 60],
     astronomicalFact: {
       category: "FACT",
-      statement: "30°00′–60°00′ tropical ecliptic longitude.",
+      statement: "30°00′–60°00′ canonical stellar ecliptic longitude.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -847,10 +847,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [60, 90],
     astronomicalFact: {
       category: "FACT",
-      statement: "60°00′–90°00′ tropical ecliptic longitude, reaching the northern solstice at 90°.",
+      statement: "60°00′–90°00′ canonical stellar ecliptic longitude, reaching the northern solstice at 90°.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -881,10 +881,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [90, 120],
     astronomicalFact: {
       category: "FACT",
-      statement: "90°00′–120°00′ tropical ecliptic longitude beginning at the summer solstice.",
+      statement: "90°00′–120°00′ canonical stellar ecliptic longitude beginning at the summer solstice.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -915,10 +915,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [120, 150],
     astronomicalFact: {
       category: "FACT",
-      statement: "120°00′–150°00′ tropical ecliptic longitude.",
+      statement: "120°00′–150°00′ canonical stellar ecliptic longitude.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -949,10 +949,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [150, 180],
     astronomicalFact: {
       category: "FACT",
-      statement: "150°00′–180°00′ tropical ecliptic longitude approaching the autumnal equinox.",
+      statement: "150°00′–180°00′ canonical stellar ecliptic longitude approaching the autumnal equinox.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -983,10 +983,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [180, 210],
     astronomicalFact: {
       category: "FACT",
-      statement: "180°00′–210°00′ tropical ecliptic longitude beginning at the autumnal equinox.",
+      statement: "180°00′–210°00′ canonical stellar ecliptic longitude beginning at the autumnal equinox.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -1017,10 +1017,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [210, 240],
     astronomicalFact: {
       category: "FACT",
-      statement: "210°00′–240°00′ tropical ecliptic longitude.",
+      statement: "210°00′–240°00′ canonical stellar ecliptic longitude.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -1052,10 +1052,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [240, 270],
     astronomicalFact: {
       category: "FACT",
-      statement: "240°00′–270°00′ tropical ecliptic longitude approaching the winter solstice.",
+      statement: "240°00′–270°00′ canonical stellar ecliptic longitude approaching the winter solstice.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -1086,10 +1086,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [270, 300],
     astronomicalFact: {
       category: "FACT",
-      statement: "270°00′–300°00′ tropical ecliptic longitude beginning at the winter solstice.",
+      statement: "270°00′–300°00′ canonical stellar ecliptic longitude beginning at the winter solstice.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -1120,10 +1120,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [300, 330],
     astronomicalFact: {
       category: "FACT",
-      statement: "300°00′–330°00′ tropical ecliptic longitude.",
+      statement: "300°00′–330°00′ canonical stellar ecliptic longitude.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },
@@ -1155,10 +1155,10 @@ export const SIGN_CANON_RECORDS: Record<string, SignCanonRecord> = {
     degreeRange: [330, 360],
     astronomicalFact: {
       category: "FACT",
-      statement: "330°00′–360°00′ tropical ecliptic longitude completing the ecliptic circle.",
+      statement: "330°00′–360°00′ canonical stellar ecliptic longitude completing the ecliptic circle.",
       provenance: {
         tradition: "firmament",
-        sourceTitle: "Tropical Ecliptic Coordinate System",
+        sourceTitle: "Aldebaran-Anchored Stellar Coordinate System",
         epistemicCategory: "FACT",
       },
     },

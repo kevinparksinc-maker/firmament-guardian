@@ -24,10 +24,10 @@ const EXPECTED_TOTALS: Record<Classical, number> = {Sun:48,Moon:49,Mars:39,Mercu
 const TRACE = (technique: string, ruleId: string): SourceTrace => ({
  sourceId:"local-vedic-rules", tradition:"vedic", technique, sourceTitle:"Firmament Vedic calculation layer",
  retrievedAt:new Date().toISOString(), ruleId, confidence:"high",
- calculationSettings:{coordinateFrame:"firmament-fixed-tropical",ephemeris:"Swiss Ephemeris Moshier",yearLengthDays:365.25},
+ calculationSettings:{coordinateFrame:"aldebaran-anchored-sidereal-mode-14",ephemeris:"Swiss Ephemeris mode 14",yearLengthDays:365.25},
 });
 function fixedFirmamentPosition(longitude:number) {
- if (!Number.isFinite(longitude)) throw new Error("Invalid tropical longitude.");
+ if (!Number.isFinite(longitude)) throw new Error("Invalid canonical stellar longitude.");
  return {longitude:normalizeLongitude(longitude),frameOffset:0};
 }
 function signIndex(longitude:number){return Math.floor(normalizeLongitude(longitude)/30);}
@@ -49,7 +49,7 @@ function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number):Evidenc
  let cursor=birth-elapsed*365.25; const timeline:Array<{lord:(typeof ORDER)[number];start:number;end:number}>=[];
  for(let i=0;i<18;i++){const lord=ORDER[(ORDER.indexOf(firstLord)+i)%9];const end=cursor+YEARS[lord]*365.25;timeline.push({lord,start:cursor,end});cursor=end;}
  const now=dayNumber(new Date()); const active=activePeriod(timeline,now); const details=[
-  "Firmament fixed Moon "+moon.toFixed(4)+"°; fixed stellar reference offset 0°.",
+  "Firmament mode-14 Moon "+moon.toFixed(4)+"°; Aldebaran 15° Taurus reference offset 0° in the supplied canonical frame.",
   "Birth Nakshatra "+NAKSHATRAS[starIndex]+"; starting Mahadasha "+firstLord+".",
   "Balance at birth "+balance.toFixed(3)+" years using a 365.25-day year."
  ];
@@ -60,7 +60,7 @@ function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number):Evidenc
   if(ad&&pd) details.push("Current Pratyantardasha: "+active.lord+"/"+ad.lord+"/"+pd.lord+" ("+dateLabel(pd.start)+"–"+dateLabel(pd.end)+").");
   const next=timeline.find(item=>item.start>now);if(next)details.push("Next Mahadasha: "+next.lord+", beginning "+dateLabel(next.start)+".");
  } else details.push("Current date falls outside the two full 120-year Vimshottari cycles generated; no current period is claimed.");
- return [{id:"vedic-vimshottari-dasha",tradition:"vedic",category:"calculated-fact",technique:"dasha",subject:"Vimshottari Dasha",statement:details.join(" "),concepts:["dasha","vimshottari",NAKSHATRAS[starIndex].toLowerCase(),firstLord.toLowerCase()],polarity:"neutral",strength:1,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("dasha","vedic-dasha-architecture"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,firmamentMoonDegrees:Number(moon.toFixed(6)),birthNakshatra:NAKSHATRAS[starIndex],yearLengthDays:365.25,subperiods:"proportional 120-year Vimshottari cycle"}}}];
+ return [{id:"vedic-vimshottari-dasha",tradition:"vedic",category:"calculated-fact",technique:"dasha",subject:"Vimshottari Dasha",statement:details.join(" "),concepts:["dasha","vimshottari",NAKSHATRAS[starIndex].toLowerCase(),firstLord.toLowerCase()],polarity:"neutral",strength:1,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("dasha","vedic-dasha-architecture"),calculationSettings:{coordinateFrame:"aldebaran-anchored-sidereal-mode-14",frameOffsetDegrees:0,firmamentMoonDegrees:Number(moon.toFixed(6)),birthNakshatra:NAKSHATRAS[starIndex],yearLengthDays:365.25,subperiods:"proportional 120-year Vimshottari cycle"}}}];
 }
 function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,frameOffset:number):EvidenceItem[]{
  const contributorSigns:Record<Contributor,number>={Lagna:signIndex(asc),...Object.fromEntries(CLASSICAL.map(p=>[p,signIndex(positions[p])])) as Record<Classical,number>};
@@ -75,8 +75,8 @@ function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,fram
  const sav=Array(12).fill(0) as number[];for(const p of CLASSICAL)bav[p].forEach((score,i)=>sav[i]+=score);
  if(sav.reduce((a,b)=>a+b,0)!==337) return [{id:"vedic-ashtakavarga-sav-checksum-failed",tradition:"vedic",category:"uncertainty",technique:"ashtakavarga",subject:"Ashtakavarga",statement:"Sarvashtakavarga checksum failed; no scores are passed to the interpreter.",concepts:["ashtakavarga","validation-failed"],polarity:"neutral",strength:0,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:TRACE("ashtakavarga","vedic-ashtakavarga-classical")}];
  const ranked=sav.map((score,i)=>({sign:ZODIAC_SIGNS[i],score}));const high=[...ranked].sort((a,b)=>b.score-a.score).slice(0,3);const low=[...ranked].sort((a,b)=>a.score-b.score).slice(0,3);
- const parts=["Firmament fixed, unreduced Parashari Bhinnashtakavarga and Sarvashtakavarga; fixed stellar reference offset 0°.","SAV total checksum 337 bindus.","Highest SAV signs: "+high.map(x=>x.sign+" "+x.score).join(", ")+".","Lowest SAV signs: "+low.map(x=>x.sign+" "+x.score).join(", ")+".",...CLASSICAL.map(p=>p+" BAV total "+bav[p].reduce((a,b)=>a+b,0)+": "+bav[p].map((score,i)=>ZODIAC_SIGNS[i]+" "+score).join(", ")+".")];
- return [{id:"vedic-ashtakavarga-bav-sav",tradition:"vedic",category:"calculated-fact",technique:"ashtakavarga",subject:"Bhinnashtakavarga and Sarvashtakavarga",statement:parts.join(" "),concepts:["ashtakavarga","bhinnashtakavarga","sarvashtakavarga","bindu-scores"],polarity:"neutral",strength:1,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("ashtakavarga","vedic-ashtakavarga-classical"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,system:"Parashari unreduced BAV/SAV",excludedContributors:["Rahu","Ketu"],checksums:{Sun:48,Moon:49,Mars:39,Mercury:54,Jupiter:56,Venus:52,Saturn:39,SAV:337}}}}];
+ const parts=["Firmament mode-14, unreduced Parashari Bhinnashtakavarga and Sarvashtakavarga; Aldebaran 15° Taurus reference offset 0° in the supplied canonical frame.","SAV total checksum 337 bindus.","Highest SAV signs: "+high.map(x=>x.sign+" "+x.score).join(", ")+".","Lowest SAV signs: "+low.map(x=>x.sign+" "+x.score).join(", ")+".",...CLASSICAL.map(p=>p+" BAV total "+bav[p].reduce((a,b)=>a+b,0)+": "+bav[p].map((score,i)=>ZODIAC_SIGNS[i]+" "+score).join(", ")+".")];
+ return [{id:"vedic-ashtakavarga-bav-sav",tradition:"vedic",category:"calculated-fact",technique:"ashtakavarga",subject:"Bhinnashtakavarga and Sarvashtakavarga",statement:parts.join(" "),concepts:["ashtakavarga","bhinnashtakavarga","sarvashtakavarga","bindu-scores"],polarity:"neutral",strength:1,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("ashtakavarga","vedic-ashtakavarga-classical"),calculationSettings:{coordinateFrame:"aldebaran-anchored-sidereal-mode-14",frameOffsetDegrees:0,system:"Parashari unreduced BAV/SAV",excludedContributors:["Rahu","Ketu"],checksums:{Sun:48,Moon:49,Mars:39,Mercury:54,Jupiter:56,Venus:52,Saturn:39,SAV:337}}}}];
 }
 export function resolveVedicTimingAndAshtakavarga(chart:ChartResult):EvidenceItem[]{
  if(!Number.isFinite(chart.julianDay)||!chart.utc) return [{id:"vedic-advanced-no-epoch",tradition:"vedic",category:"uncertainty",technique:"dasha-ashtakavarga",subject:"Dasha and Ashtakavarga",statement:"Dasha and Ashtakavarga were not calculated because the chart has no valid birth epoch.",concepts:["dasha","ashtakavarga","unavailable"],polarity:"neutral",strength:0,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:TRACE("dasha-ashtakavarga","vedic-dasha-architecture")}];

@@ -107,7 +107,7 @@ export const NAKSHATRA_CANON_RECORDS: NakshatraCanonRecord[] = NAKSHATRAS.map((n
     padas,
     epistemicNote: {
       category: "FIRMAMENT_CANON",
-      statement: `Firmament projects ${name} onto the locked 0° Aries tropical coordinate frame (${startDeg.toFixed(2)}°–${endDeg.toFixed(2)}°). Classical Vedic Jyotish (Parashara / Taittiriya Brahmana) applies a sidereal ayanamsa offset; Firmament preserves the classical deity (${doc.deity}), Shakti, and 4 Navamsha padas while explicitly documenting the tropical 0° Aries lock.`,
+      statement: `Firmament projects ${name} onto the canonical Aldebaran-anchored stellar coordinate frame (${startDeg.toFixed(2)}°–${endDeg.toFixed(2)}°). Classical Vedic Jyotish (Parashara / Taittiriya Brahmana) applies a sidereal ayanamsa offset; Firmament preserves the classical deity (${doc.deity}), Shakti, and 4 Navamsha padas while explicitly documenting the canonical stellar frame.`,
       provenance: {
         tradition: "firmament",
         sourceTitle: "Firmament Hybrid Zodiac Canon",
@@ -120,7 +120,7 @@ export const NAKSHATRA_CANON_RECORDS: NakshatraCanonRecord[] = NAKSHATRAS.map((n
         "Taittiriya Brahmana 1.5; Brihat Parashara Hora Shastra; Varahamihira, Brihat Jataka",
       epistemicCategory: "TRADITION",
       disputedOrVariantNote:
-        "Traditional Jyotish uses sidereal (Nirayana) longitudes; Firmament Canon locks the 27 equal 13°20′ divisions to tropical 0° Aries without applying precession.",
+        "Traditional Jyotish uses sidereal (Nirayana) longitudes; Firmament Canon locks the 27 equal 13°20′ divisions to the canonical Aldebaran-anchored stellar frame without applying user-frame precession.",
     },
   };
 });
@@ -128,18 +128,18 @@ export const NAKSHATRA_CANON_RECORDS: NakshatraCanonRecord[] = NAKSHATRAS.map((n
 export function getNakshatraCanonByLongitude(
   longitude: number,
   options?: {
-    coordinateMode?: "firmament-tropical-hybrid" | "classical-sidereal-lahiri" | "classical-sidereal-raman";
+    coordinateMode?: "aldebaran-anchored-sidereal-mode-14" | "firmament-tropical-hybrid" | "classical-sidereal-lahiri" | "classical-sidereal-raman";
     utcIso?: string;
   }
 ): {
   nakshatra: NakshatraCanonRecord;
   pada: NakshatraPadaRecord;
-  coordinateModeUsed: "firmament-tropical-hybrid" | "classical-sidereal-lahiri" | "classical-sidereal-raman";
+  coordinateModeUsed: "aldebaran-anchored-sidereal-mode-14" | "firmament-tropical-hybrid" | "classical-sidereal-lahiri" | "classical-sidereal-raman";
   effectiveLongitude: number;
 } {
-  const mode = options?.coordinateMode ?? "firmament-tropical-hybrid";
+  const mode = options?.coordinateMode ?? "aldebaran-anchored-sidereal-mode-14";
   let offset = 0;
-  if (mode !== "firmament-tropical-hybrid") {
+  if (mode !== "aldebaran-anchored-sidereal-mode-14" && mode !== "firmament-tropical-hybrid") {
     const year = options?.utcIso ? new Date(options.utcIso).getUTCFullYear() : 2000;
     const effectiveYear = Number.isFinite(year) ? year : 2000;
     const lahiri = 23.856 + (effectiveYear - 2000) * 0.01397;

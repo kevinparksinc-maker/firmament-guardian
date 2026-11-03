@@ -13,6 +13,7 @@ const HoraryPage = lazy(() => import("./pages/HoraryPage"));
 const ZodiacHoraryPage = lazy(() => import("./pages/ZodiacHoraryPage"));
 const History = lazy(() => import("./pages/History"));
 const SkyHomePrototype = lazy(() => import("./pages/SkyHomePrototype"));
+const ComponentShowcase = lazy(() => import("./pages/ComponentShowcase"));
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -23,6 +24,7 @@ function Router() {
       <Route path={"/horary"} component={HoraryPage} />
       <Route path={"/zodiac-readings"} component={ZodiacHoraryPage} />
       <Route path={"/history"} component={History} />
+      <Route path={"/components"} component={ComponentShowcase} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

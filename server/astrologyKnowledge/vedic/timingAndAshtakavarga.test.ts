@@ -55,7 +55,7 @@ describe("Vedic Dasha and Ashtakavarga calculation layer", () => {
     expect(dasha?.statement).toContain("Current Mahadasha:");
   });
 
-  it("uses the fixed Firmament grid without date-dependent Lahiri adjustment", () => {
+  it("uses the fixed Aldebaran mode-14 grid without date-dependent Lahiri adjustment", () => {
     const base = resolveVedicTimingAndAshtakavarga(chart);
     const later = resolveVedicTimingAndAshtakavarga({
       ...chart,
@@ -63,7 +63,7 @@ describe("Vedic Dasha and Ashtakavarga calculation layer", () => {
       julianDay: 2483275.17,
     } as ChartResult);
     const dasha = (items: typeof base) => items.find(item => item.technique === "dasha");
-    expect(dasha(base)?.sourceTrace.calculationSettings?.coordinateFrame).toBe("firmament-fixed-tropical");
+    expect(dasha(base)?.sourceTrace.calculationSettings?.coordinateFrame).toBe("aldebaran-anchored-sidereal-mode-14");
     expect(dasha(base)?.sourceTrace.calculationSettings?.birthNakshatra).toBe(
       dasha(later)?.sourceTrace.calculationSettings?.birthNakshatra
     );

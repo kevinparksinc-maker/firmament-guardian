@@ -26,7 +26,7 @@ export function ChartObservatory2050({chart}:{chart:ChartResult}){
  const ringCount=layer==="nakshatra"?27:layer==="manzil"?28:layer==="decan"?36:12;
  const sector=selectedRow?layer==="nakshatra"?Math.floor(normalizeLongitude(selectedRow.longitude)/(360/27)):layer==="manzil"?Math.floor(normalizeLongitude(selectedRow.longitude)/(360/28)):layer==="decan"?Math.floor(normalizeLongitude(selectedRow.longitude)/10):Math.floor(normalizeLongitude(selectedRow.longitude)/30):0;
  const overlayText=selectedRow?layer==="nakshatra"?`${selectedRow.overlay.nakshatra} · Pada ${selectedRow.overlay.pada}`:layer==="manzil"?selectedRow.overlay.manzil:layer==="decan"?selectedRow.overlay.decan:selectedStar?`${selectedStar.name} · ${selectedStar.separation.toFixed(2)}° separation`:"No star catalog contact":"";
- const frameDesc=frame==="god"?"Fixed Aries-zero collective houses. The frozen stellar archive and territory lines never drift.":"Observer-centered 30° equal houses, beginning from the chart's local Ascendant. Tropical planetary longitudes are unchanged.";
+ const frameDesc=frame==="god"?"Fixed Aries-zero collective houses. The frozen stellar archive and territory lines never drift.":"Observer-centered 30° equal houses, beginning from the chart's local Ascendant. Aldebaran-anchored planetary longitudes are canonical; the Moon may expose a separate topocentric correction.";
  return <section className="cg2050" aria-labelledby="cg2050-title">
    <div className="cg2050-header"><div><p className="cg2050-eyebrow"><Orbit size={15}/> CELESTIAL OBSERVATORY · LIVE CHART EVIDENCE</p><h2 id="cg2050-title">The heavens, <em>made legible.</em></h2><p>Explore your actual chart placements, the permanent stellar field, and the two reference frames. This display reads the existing calculation—it never changes it.</p></div><span className="cg2050-trust"><i/> CALCULATED CHART · {chart.movingBodies.length} MOVING BODIES</span></div>
    <div className="cg2050-body">
@@ -50,7 +50,7 @@ export function ChartObservatory2050({chart}:{chart:ChartResult}){
            <text x="240" y="268" textAnchor="middle" fontSize="10" fill="#92a8c1">{frame==="god"?"PERMANENT FRAME":"LOCAL EQUAL HOUSES"}</text>
          </svg>
        </div>
-       <div className="cg2050-frame-caption"><span><Eye size={13}/> FIXED STARS NEVER MOVE</span><span><Orbit size={13}/> TROPICAL PLANETS MOVE</span></div>
+       <div className="cg2050-frame-caption"><span><Eye size={13}/> FIXED STARS NEVER MOVE</span><span><Orbit size={13}/> STELLAR PLANETS MOVE</span></div>
        <p className="cg2050-help">{frameDesc}</p>
      </div>
      <div className="cg2050-panel">

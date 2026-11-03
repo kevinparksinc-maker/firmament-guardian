@@ -12,13 +12,13 @@ import type {
 
 /**
  * Compute approximate Lahiri (Chitrapaksha) or Raman Ayanamsa for a given Julian Day / UTC date,
- * while preserving Firmament's 0° Aries Tropical Hybrid mode (0° offset) as the default hybrid lock.
+ * while preserving Firmament's Aldebaran-anchored sidereal mode 14 (0° additional offset) as the default hybrid lock.
  */
 export function calculateAyanamsaDegrees(
   utcIso: string,
   mode: VedicAyanamsaMode
 ): number {
-  if (mode === "firmament-tropical-hybrid") return 0;
+  if (mode === "aldebaran-anchored-sidereal-mode-14" || mode === "firmament-tropical-hybrid") return 0;
   const year = utcIso ? new Date(utcIso).getUTCFullYear() : 2000;
   const effectiveYear = Number.isFinite(year) ? year : 2000;
   // Mean Lahiri at J2000.0 is ~23.856° with precession rate ~50.29"/yr (0.01397°/yr)
@@ -463,11 +463,11 @@ const VARA_INFO: Array<{ name: string; ruler: string; meaning: string }> = [
 /**
  * Evaluates the complete Jyotish interpretive system (Panchanga, Jaimini Chara Karakas, Arudha Lagna,
  * Navamsha D9 + Vargottama, Vimshottari Dasha, and Classical Yogas with Bhanga checks),
- * explicitly tracking whether Firmament Tropical Hybrid (0° Aries) or Classical Sidereal (Lahiri/Raman) is used.
+ * explicitly tracking whether Aldebaran-anchored sidereal mode 14 or Classical Sidereal (Lahiri/Raman) is used.
  */
 export function evaluateVedicJyotishSystem(
   chart: ChartResult,
-  coordinateMode: VedicAyanamsaMode = "firmament-tropical-hybrid"
+  coordinateMode: VedicAyanamsaMode = "aldebaran-anchored-sidereal-mode-14"
 ): VedicStrengthAndPanchangaSummary {
   const ayanamsaDegreesApplied = calculateAyanamsaDegrees(chart.utc, coordinateMode);
   const convert = (lon: number) => toVedicLongitude(lon, chart.utc, coordinateMode);

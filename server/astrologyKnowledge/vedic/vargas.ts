@@ -5,7 +5,7 @@ import type { EvidenceItem } from "../types";
 
 /** Explicit traditional Parashari variants, applied to supplied fixed-frame longitude.
  * These are NOT automatically Lahiri-sidereal vargas; the underlying chart supplies
- * tropical/geocentric longitudes in Guardian's fixed-zero reference.
+ * Aldebaran-anchored geocentric longitudes in Guardian's canonical mode-14 reference.
  * A sidereal conversion needs to be made upstream if genuine Jyotish D charts are desired.
  */
 export type Varga = "D2"|"D3"|"D9"|"D10";
@@ -45,7 +45,7 @@ export function resolveVargaEvidence(chart:ChartResult):EvidenceItem[]{
  return (["D2","D3","D9","D10"] as const).flatMap(division=>rows.map(row=>{
   const v=vargaPlacement(offset===null?row.longitude:normalizeLongitude(row.longitude-offset),division);
   return {id:`vedic-varga-${division}-${row.name.toLowerCase().replace(/\s+/g,"-")}`,tradition:"vedic" as const,category:"deterministic-rule" as const,technique:"varga",subject:row.name,
-   statement:`[${division} · ${coordinateFrame}] ${row.name} at tropical ${row.display}: ${offset===null?"Lahiri ayanamsa could not be computed; this fixed-zero projection is NOT a validated Jyotish varga.":`Lahiri ayanamsa ${offset.toFixed(5)}°, sidereal source longitude ${normalizeLongitude(row.longitude-offset).toFixed(5)}°.`} Source sign ${v.sourceSign}, division ${v.part}/${Number(division.slice(1))}, derived ${v.sign}.`,
+   statement:`[${division} · ${coordinateFrame}] ${row.name} at canonical mode-14 ${row.display}: ${offset===null?"Lahiri ayanamsa could not be computed; this canonical stellar projection is NOT a validated classical Jyotish varga.":`Lahiri conversion ${offset.toFixed(5)}°, converted sidereal source longitude ${normalizeLongitude(row.longitude-offset).toFixed(5)}°.`} Source sign ${v.sourceSign}, division ${v.part}/${Number(division.slice(1))}, derived ${v.sign}.`,
    concepts:["varga",division.toLowerCase(),row.name.toLowerCase(),v.sign.toLowerCase()],polarity:"neutral" as const,sourceId:"local-vedic-rules",sourceTrace:trace(division)};
  }));
 }

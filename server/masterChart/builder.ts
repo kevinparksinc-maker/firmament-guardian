@@ -51,6 +51,8 @@ function computeSnapshotId(input: MasterChartInput, version: string): string {
     tt: input.transitTime ?? "",
     m: input.mode ?? "natal",
     w: input.worldview ?? "agent-vs-god",
+    btk: input.birthTimeKnown ?? true,
+    el: input.elevation ?? 0,
     v: version,
   });
   return "umc-" + crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
@@ -84,6 +86,8 @@ export async function buildUnifiedMasterChart(
     transitTimezone: input.transitTimezone,
     readingScope: mode,
     worldview: input.worldview ?? "agent-vs-god",
+    birthTimeKnown: input.birthTimeKnown,
+    elevation: input.elevation,
   });
 
   const basePlanets = chart.movingBodies;

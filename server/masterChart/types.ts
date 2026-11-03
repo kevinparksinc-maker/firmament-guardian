@@ -55,6 +55,8 @@ export interface MasterChartInput {
   transitTime?: string;
   mode?: "natal" | "transit" | "combined";
   worldview?: "god" | "agent" | "agent-vs-god";
+  birthTimeKnown?: boolean;
+  elevation?: number;
 }
 
 export interface UnifiedMasterChartSnapshot {

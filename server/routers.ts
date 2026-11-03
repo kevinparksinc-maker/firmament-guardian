@@ -158,6 +158,8 @@ export const appRouter = router({
           transitTime: input.transitTime,
           mode: input.mode,
           worldview: input.worldview,
+          birthTimeKnown: input.birthTimeKnown,
+          elevation: input.elevation,
         })
       ),
   }),
@@ -254,6 +256,8 @@ export const appRouter = router({
           transitTime: input.transitTime,
           mode: input.mode,
           worldview: input.worldview,
+          birthTimeKnown: input.birthTimeKnown,
+          elevation: input.elevation,
         });
         return synthesizeMasterReading({
           snapshot,

@@ -285,7 +285,7 @@ export function ThreeLayerOrrery({ chart }: ThreeLayerOrreryProps) {
               </span>
             </div>
             <span className="font-mono text-[11px] text-slate-500">
-              0° ARI TOP · POLARIS STILL CENTER
+              0° ARI TOP · FIXED STELLAR FRAME
             </span>
           </div>
 
@@ -521,7 +521,7 @@ export function ThreeLayerOrrery({ chart }: ThreeLayerOrreryProps) {
               );
             })}
 
-            {/* Polaris Still Center */}
+            {/* Neutral frame origin; Polaris remains a fixed-star data point, not the cosmological center. */}
             <circle
               cx="220"
               cy="220"
@@ -541,7 +541,7 @@ export function ThreeLayerOrrery({ chart }: ThreeLayerOrreryProps) {
               fontWeight="600"
               fontFamily="IBM Plex Mono, monospace"
             >
-              POLARIS
+              FRAME ORIGIN
             </text>
             <text
               x="220"
