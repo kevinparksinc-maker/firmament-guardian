@@ -11,6 +11,7 @@ import { HORARY_SYSTEM as HORARY_SPECIALIZED_SYSTEM } from "./horary-instruction
 import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
 import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
 import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever";
+import { getPlanetInHouseKnowledge } from "./astrologyKnowledge/canon/planetInHouseInterpretations";
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
@@ -219,7 +220,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     .filter((aspect): aspect is HoraryAspect => Boolean(aspect));
   const significatorNames = new Set(aspectNames);
   const canonDossier = retrieveChartCanonDossier(calculated);
-  const canonEvidenceText = canonDossier.placements
+  const canonDossierEvidenceText = canonDossier.placements
     .filter(row => significatorNames.has(row.body))
     .map(row => [
       `- ${row.body}: ${row.planetInSignSynthesis}`,
@@ -228,6 +229,35 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
       row.godToAgentNote ? `  - God → Agent: ${row.godToAgentNote}` : null,
     ].filter((line): line is string => Boolean(line)).join("\n"))
     .join("\n") || "- No local canon placement dossier was available for the selected significators.";
+  // Canon-first dual-frame interpretation: resolve every available placement against
+  // the 144-record local library before requesting language synthesis.
+  const canonBodyName = (name: string) =>
+    name === "North Node" || name === "True Node" ? "Rahu" :
+    name === "South Node" ? "Ketu" : name;
+  const dualFrameCanonEvidence = placements.map(row => {
+    const body = canonBodyName(row.name);
+    const views = [
+      { label: "God View", house: row.godHouse },
+      { label: "Agent View", house: row.agentHouse ?? row.house },
+    ];
+    const records = views.map(view => {
+      const record = view.house == null ? null : getPlanetInHouseKnowledge(body, view.house);
+      if (!record) return `  - ${view.label}: no matching planet-in-house canon record; do not invent one.`;
+      return [
+        `  - ${view.label}: House ${view.house} · ${record.domain} [${record.ruleId}]`,
+        `    Core: ${record.core}`,
+        `    Career: ${record.career}`,
+        `    Relationships: ${record.relationships}`,
+        `    Challenge: ${record.challenge}`,
+        `    Gift: ${record.gift}`,
+        `    Vedic / historical context: ${record.vedic}`,
+        `    Provenance: ${record.epistemicStatus}; ${record.sourceCaveat}`,
+        `    Interpretation rule: ${record.interpretiveGuardrail}`,
+      ].join("\\n");
+    });
+    return `- ${row.name} at ${row.display}\\n${records.join("\\n")}`;
+  }).join("\\n");
+  const canonEvidenceText = `DUAL-FRAME PLANET-IN-HOUSE CANON (resolved locally before interpretation):\\n${dualFrameCanonEvidence}\\n\\nSIGNIFICATOR CONDITION DOSSIER:\\n${canonDossierEvidenceText}`;
   // Other close contacts may add context, but do not become additional significators.
   const otherCloseAspects = uniquePairs(placements, CLASSICAL_PLANETS)
     .filter(([first, second]) => !(significatorNames.has(first.name) && significatorNames.has(second.name)))
