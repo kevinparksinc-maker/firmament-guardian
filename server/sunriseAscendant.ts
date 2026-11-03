@@ -39,8 +39,8 @@ export function sunriseEasternHorizonLongitude(sunXYZ: FixedVector, latitude: nu
   }
   const sunriseHourAngle = degrees(Math.acos(cosineHourAngle));
   // At sunrise: local sidereal angle = Sun RA - sunrise hour angle.
-  // On a zero-tilt wheel the east-horizon intersection is LST + 90 degrees.
-  return normalizeDegrees(sunRightAscension - sunriseHourAngle + 90);
+  // No additional angular offset is authorized by the master calculation contract.
+  return normalizeDegrees(sunRightAscension - sunriseHourAngle);
 }
 
 export function ascendantFromSunrise(input: {
