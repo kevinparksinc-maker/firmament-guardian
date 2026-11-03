@@ -5,7 +5,9 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { calculateChart, geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
+import { getStoredNatal } from "./stored-natal";
+import { geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
+import { getChartSnapshot } from "./chart-snapshot-service";
 import {
   calculatePersonAge,
   calculateAnnualProfection,
@@ -110,6 +112,54 @@ export const appRouter = router({
       return { success: true } as const;
     }),
   }),
+  natalStore: router({
+    initializeProfile: protectedProcedure
+      .input(chartInput.pick({
+        location: true, latitude: true, longitude: true,
+        timezone: true, date: true, time: true,
+        sunriseAnchor: true, xyzPositions: true,
+      }).extend({
+        currentLocation: z.object({
+          location: z.string().min(2).max(240),
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+          timezone: z.string().min(2),
+        }).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Birth location defines the permanent natal horizon. Current location
+        // is intentionally separate and must never override natal coordinates.
+        const snapshot = await getStoredNatal(ctx.user.openId, input);
+        return {
+          snapshotId: snapshot.snapshotId,
+          complete: snapshot.validation.complete,
+          validation: snapshot.validation,
+          godView: snapshot.godView,
+          agentView: snapshot.agentView,
+          synthesis: synthesizeMasterReading({
+            snapshot,
+            readingMode: "natal",
+            userQuestion: "Establish the foundational natal synthesis for this profile.",
+          }),
+          currentLocation: input.currentLocation ?? null,
+        };
+      }),
+    getOrCreate: protectedProcedure
+      .input(chartInput)
+      .mutation(({ ctx, input }) => getStoredNatal(ctx.user.openId, input)),
+    synthesize: protectedProcedure
+      .input(chartInput.extend({
+        question: z.string().trim().max(2000).default("What does my natal chart reveal?"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const snapshot = await getStoredNatal(ctx.user.openId, input);
+        return synthesizeMasterReading({
+          snapshot,
+          readingMode: "natal",
+          userQuestion: input.question,
+        });
+      }),
+  }),
   history: router({
     charts: protectedProcedure.query(({ ctx }) =>
       db.listSavedCharts(ctx.user.openId)
@@ -151,7 +201,7 @@ export const appRouter = router({
       .query(({ input }) => reverseGeocodeLocation(input.latitude, input.longitude)),
     calculate: publicProcedure
       .input(chartInput)
-      .mutation(({ input }) => calculateChart(input)),
+      .mutation(({ input }) => getChartSnapshot(input)),
     masterChart: publicProcedure
       .input(
         chartInput.extend({
@@ -266,7 +316,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const snapshot = await buildUnifiedMasterChart({
+        const snapshot = await (input.mode === "natal" && input.worldview === "agent-vs-god" ? getMasterNatalChart : buildUnifiedMasterChart)({
           location: input.location,
           latitude: input.latitude,
           longitude: input.longitude,
@@ -433,7 +483,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const chart = await calculateChart({
+        const chart = await getChartSnapshot({
           location: input.location,
           latitude: input.latitude,
           longitude: input.longitude,

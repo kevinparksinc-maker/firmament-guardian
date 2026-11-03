@@ -1,6 +1,6 @@
+import { getChartSnapshot } from "../chart-snapshot-service";
 import crypto from "crypto";
 import {
-  calculateChart,
   aspectBetween,
   type ChartResult,
   type ChartRow,
@@ -118,7 +118,7 @@ export async function buildUnifiedMasterChart(
   const createdAtUtc = new Date().toISOString();
 
   // 1. Calculate authoritative base celestial state using established astronomy engine
-  const chart: ChartResult = await calculateChart({
+  const chart: ChartResult = await getChartSnapshot({
     location: input.location,
     latitude: input.latitude,
     longitude: input.longitude,

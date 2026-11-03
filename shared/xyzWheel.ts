@@ -24,7 +24,7 @@ export function sector(angle:number) {
 }
 /** Equatorial eastern-horizon intersection at declination 0, NOT ecliptic ASC. */
 export function equatorialAscendantFromLast(localApparentSiderealDegrees:number):number {
-  return mod360(localApparentSiderealDegrees+90);
+  return mod360(localApparentSiderealDegrees);
 }
 /** Approximate sunrise diagnostic. h0 is the solar-center apparent altitude in degrees.
  * Requires external independently verified sunrise and Sun equatorial coordinates.
