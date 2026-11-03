@@ -41,19 +41,10 @@ export function MasterSynthesizerPanel({
   const handleSynthesize = (qToUse?: string) => {
     synthesizeMutation.mutate(
       {
-        location: chart.input.location,
-        latitude: chart.input.latitude,
-        longitude: chart.input.longitude,
-        timezone: chart.input.timezone,
-        date: chart.input.date,
-        time: chart.input.time,
-        transitDate: chart.transitDate,
-        mode:
-          chart.readingScope === "transit"
-            ? "transit"
-            : chart.readingScope === "combined"
-            ? "combined"
-            : "natal",
+        ...chart.input,
+        worldview: chart.worldview,
+        transitDate: chart.input.transitDate ?? chart.transitDate,
+        mode: chart.readingScope === "transit" ? "transit" : chart.readingScope === "combined" ? "combined" : "natal",
         question: qToUse ?? question,
       },
       {
