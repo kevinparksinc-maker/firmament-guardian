@@ -197,6 +197,21 @@ function moonRange(date: string): MoonUncertainty | undefined {
   return { from, to, label: `${formatLongitude(from)} to ${formatLongitude(to)} possible on this date` };
 }
 
+/** Use the most recent sunrise for a chart instant, including events before today's sunrise.
+ * Explicit caller-supplied anchors are never changed.
+ */
+function sunriseForEvent(
+  supplied: ChartInput["sunriseAnchor"], localDate: string, timezone: string,
+  latitude: number, longitude: number, eventUtc: Date,
+) {
+  if (supplied) return resolveMasterSunrise(supplied, eventUtc, latitude, longitude);
+  const localNoon = parseLocalToUtc(localDate, "12:00", timezone);
+  const current = resolveMasterSunrise(undefined, localNoon, latitude, longitude);
+  if (Date.parse(current.anchor.sunriseUtc) <= eventUtc.getTime()) return current;
+  const previousNoon = new Date(localNoon.getTime() - 24 * 3600_000);
+  return resolveMasterSunrise(undefined, previousNoon, latitude, longitude);
+}
+
 export async function calculateChart(rawInput: ChartInput): Promise<ChartResult> {
   const worldview: Worldview = rawInput.worldview ?? "agent"; const readingScope: ReadingScope = rawInput.readingScope ?? "combined";
   // Natal-only readings never use transit fields, so stale or half-filled form values are ignored.
@@ -209,7 +224,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = masterJulianDay(utcDate);
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
   ensureCanonicalReferenceFrame();
-  const natalSunrise = hasAgentLocation ? resolveMasterSunrise(input.sunriseAnchor, parseLocalToUtc(input.date, "12:00", input.timezone), input.latitude, input.longitude) : null;
+  const natalSunrise = hasAgentLocation ? sunriseForEvent(input.sunriseAnchor, input.date, input.timezone, input.latitude, input.longitude, utcDate) : null;
   const asc = natalSunrise ? ascendantFromSunrise({ ...natalSunrise.anchor, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant : null;
   // MC is unavailable until its independent equatorial mapping is approved.
   const mc: number | null = null;
@@ -254,7 +269,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = masterJulianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
   ensureCanonicalReferenceFrame();
-  const transitSunrise = transitHasLocation ? resolveMasterSunrise(input.transitSunriseAnchor, parseLocalToUtc(input.transitDate ?? input.date, "12:00", input.transitTimezone as string), input.transitLatitude as number, input.transitLongitude as number) : null;
+  const transitSunrise = transitHasLocation ? sunriseForEvent(input.transitSunriseAnchor, input.transitDate ?? input.date, input.transitTimezone as string, input.transitLatitude as number, input.transitLongitude as number, transitDate) : null;
   const transitAsc = transitSunrise ? ascendantFromSunrise({ ...transitSunrise.anchor, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant : null;
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
