@@ -38,7 +38,17 @@ export async function synthesizeChartForReading(
       }
     }
   }
+  const failedMethods = snapshot.methodExecutionLedger.filter(layer => layer.status === "failed");
+  if (failedMethods.length > 0) {
+    const failedIds = failedMethods.map(layer => layer.id).join(", ");
+    console.error("[MASTER_METHOD_FAILED] Required calculated methods failed:", failedIds);
+    throw new Error(`MASTER_METHOD_FAILED: Calculated method(s) failed: ${failedIds}.`);
+  }
   const synthesis = await synthesizeMasterReading({ snapshot, readingMode: mode, userQuestion: question });
+  if (!synthesis.qualityAudit.passed) {
+    console.error("[SYNTHESIS_COVERAGE_FAILED] Uninterpreted calculated evidence:", synthesis.qualityAudit.unsupportedClaims);
+    throw new Error("SYNTHESIS_COVERAGE_FAILED: Not all calculated evidence was incorporated into the synthesis.");
+  }
   const context = [
     `UNIFIED MASTER SYNTHESIS — SNAPSHOT ${synthesis.snapshotId}`,
     `Computed methods: ${synthesis.methodLedgerSummary.computedWithResult} / ${synthesis.methodLedgerSummary.totalEvaluated}; quality audit: ${synthesis.qualityAudit.passed ? "passed" : "incomplete"}.`,
