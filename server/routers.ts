@@ -267,7 +267,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const snapshot = await buildUnifiedMasterChart({
+        const snapshot = await (input.mode === "natal" && input.worldview === "agent-vs-god" ? getMasterNatalChart : buildUnifiedMasterChart)({
           location: input.location,
           latitude: input.latitude,
           longitude: input.longitude,
