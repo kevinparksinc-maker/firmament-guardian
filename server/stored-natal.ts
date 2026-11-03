@@ -12,13 +12,16 @@ export async function getStoredNatal(openId: string, input: MasterChartInput) {
     mode: "natal", worldview: "agent-vs-god",
     sunriseAnchor: input.sunriseAnchor, xyzPositions: input.xyzPositions,
   };
-  const snapshot = await getMasterNatalChart(normalized);
   const records = await listSavedCharts(openId);
   const existing = records.find(row => {
-    const saved = row.chart as { snapshotId?: string; validation?: { complete?: boolean } };
-    return saved?.snapshotId === snapshot.snapshotId && saved?.validation?.complete === true;
+    const savedInput = row.input as MasterChartInput;
+    const saved = row.chart as { snapshotId?: string; validation?: { complete?: boolean }; frameConfig?: { engineVersion?: string } };
+    return saved?.snapshotId && saved?.validation?.complete === true &&
+      saved?.frameConfig?.engineVersion === "firmament-master-2026.1" &&
+      JSON.stringify(savedInput) === JSON.stringify(normalized);
   });
   if (existing) return existing.chart;
+  const snapshot = await getMasterNatalChart(normalized);
   if (!snapshot.validation.complete) return snapshot;
   await createSavedChart({
     openId, title: "Master Natal " + snapshot.snapshotId,
