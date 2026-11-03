@@ -116,7 +116,8 @@ ${formattedPacket}
 ===================================================
 `;
     } catch (error) {
-      console.warn("[askHost] Failed to generate full RAG packet, using summary fallback:", error);
+      console.error("[HOST_EVIDENCE_FAILED] Full chart evidence retrieval failed:", error);
+      throw new Error("HOST_EVIDENCE_FAILED: Full chart evidence is unavailable; refusing a summary-only reading.");
       ragContext = `\n=== USER CHART SUMMARY ===\nLocation: ${chart.input?.location || "N/A"}, Date: ${chart.input?.date || "N/A"} ${chart.input?.time || "N/A"}\nPlacements: ${(chart.movingBodies || []).map((b: any) => `${b.name} in ${b.display} (H${b.house})`).join(", ")}\n===========================\n`;
     }
   }
