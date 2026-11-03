@@ -113,6 +113,37 @@ export const appRouter = router({
     }),
   }),
   natalStore: router({
+    initializeProfile: protectedProcedure
+      .input(chartInput.pick({
+        location: true, latitude: true, longitude: true,
+        timezone: true, date: true, time: true,
+        sunriseAnchor: true, xyzPositions: true,
+      }).extend({
+        currentLocation: z.object({
+          location: z.string().min(2).max(240),
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+          timezone: z.string().min(2),
+        }).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Birth location defines the permanent natal horizon. Current location
+        // is intentionally separate and must never override natal coordinates.
+        const snapshot = await getStoredNatal(ctx.user.openId, input);
+        return {
+          snapshotId: snapshot.snapshotId,
+          complete: snapshot.validation.complete,
+          validation: snapshot.validation,
+          godView: snapshot.godView,
+          agentView: snapshot.agentView,
+          synthesis: synthesizeMasterReading({
+            snapshot,
+            readingMode: "natal",
+            userQuestion: "Establish the foundational natal synthesis for this profile.",
+          }),
+          currentLocation: input.currentLocation ?? null,
+        };
+      }),
     getOrCreate: protectedProcedure
       .input(chartInput)
       .mutation(({ ctx, input }) => getStoredNatal(ctx.user.openId, input)),
