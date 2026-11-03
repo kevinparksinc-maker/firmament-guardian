@@ -230,7 +230,7 @@ function ReadingProgress({ chart }: { chart: ChartResult }) {
   );
 }
 
-export function InterpretationPanel({
+function InterpretationPanelInner({
   chart,
   initialMode = "combined",
   initialQuestion = "",
@@ -1077,4 +1077,10 @@ export function InterpretationPanel({
       )}
     </section>
   );
+}
+
+
+/** Remount reading state when the canonical chart identity changes. */
+export function InterpretationPanel(props: Parameters<typeof InterpretationPanelInner>[0]) {
+  return <InterpretationPanelInner key={getReadingCacheKey(props.chart, props.initialMode ?? "combined")} {...props} />;
 }
