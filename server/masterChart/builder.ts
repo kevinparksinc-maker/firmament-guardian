@@ -61,6 +61,50 @@ function computeSnapshotId(input: MasterChartInput, version: string): string {
   return "umc-" + crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
 }
 
+// Reuse the same versioned natal foundation across reading requests in this
+// server process. Event/transit snapshots are deliberately never cached here.
+// A bounded cache prevents unbounded growth; persistence is a separate concern.
+const NATAL_CACHE_LIMIT = 64;
+const natalSnapshotCache = new Map<string, Promise<UnifiedMasterChartSnapshot>>();
+
+export async function getMasterNatalChart(
+  input: MasterChartInput
+): Promise<UnifiedMasterChartSnapshot> {
+  const natalInput: MasterChartInput = {
+    ...input,
+    mode: "natal",
+    worldview: "agent-vs-god",
+    transitDate: undefined,
+    transitTime: undefined,
+    transitLocation: undefined,
+    transitLatitude: undefined,
+    transitLongitude: undefined,
+    transitTimezone: undefined,
+    transitSunriseAnchor: undefined,
+    transitXYZPositions: undefined,
+  };
+  const key = computeSnapshotId(natalInput, "firmament-master-2026.1");
+  const cached = natalSnapshotCache.get(key);
+  if (cached) {
+    natalSnapshotCache.delete(key);
+    natalSnapshotCache.set(key, cached);
+    return cached;
+  }
+  const pending = buildUnifiedMasterChart(natalInput);
+  natalSnapshotCache.set(key, pending);
+  while (natalSnapshotCache.size > NATAL_CACHE_LIMIT) {
+    const oldest = natalSnapshotCache.keys().next().value;
+    if (oldest === undefined) break;
+    natalSnapshotCache.delete(oldest);
+  }
+  try {
+    return await pending;
+  } catch (error) {
+    if (natalSnapshotCache.get(key) === pending) natalSnapshotCache.delete(key);
+    throw error;
+  }
+}
+
 function getSign(longitude: number): string {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
 }
