@@ -23,12 +23,14 @@ import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { TransitLocationBar } from "@/components/TransitLocationBar";
 import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
-import type { ChartResult, TransitContact } from "../../../server/astronomy";
+import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
 import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
 
-const ASPECT_SYMBOLS: Record<TransitContact["aspect"], string> = {
+const ASPECT_SYMBOLS: Record<TransitContact["aspect"] | MinorTransitContact["aspect"], string> = {
   conjunction: "☌",
+  semisextile: "⚺",
   semisquare: "∠",
+  quincunx: "⚻",
   sextile: "⚹",
   square: "□",
   trine: "△",
