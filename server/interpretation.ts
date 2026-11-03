@@ -965,7 +965,6 @@ async function generateLifeStoryReading(
   analysisPlan: string,
   synthesisContext = ""
 ): Promise<string> {
-  const fallback = buildLifeStoryExecutiveOverview(chart, mode, evidencePacket);
   try {
     const messages: Message[] = [
       {
@@ -1002,13 +1001,14 @@ THE GUARDIAN ANGEL LIFE-STORY MANDATE:
       },
     ];
     const generated = await ask(messages, 3500, 0);
-    if (generated && generated.length > 300) {
-      return generated;
+    if (generated.trim().length <= 300) {
+      throw new Error("The interpretation was too short to qualify as a full synthesized reading.");
     }
+    return generated;
   } catch (err) {
-    console.warn("[generateInterpretation] LLM life story call failed, using deterministic life story engine:", err);
+    console.error("[generateInterpretation] Full synthesis unavailable:", err);
+    throw new Error("A full synthesized interpretation could not be completed. Your calculated chart remains available; please retry the reading.");
   }
-  return fallback;
 }
 
 export async function generateInterpretation(
@@ -1186,10 +1186,10 @@ export async function generateChapter(
       return text;
     }
   } catch (err) {
-    console.warn(`[generateChapter] AI request for chapter ${chapterId} failed, using rich deterministic life-story fallback:`, err);
+    console.error(`[generateChapter] Synthesized chapter unavailable for ${chapterId}:`, err);
   }
 
-  return buildLifeStoryChapterFallback(chart, mode, evidencePacket, chapterId, chapter);
+  throw new Error("The synthesized chapter could not be completed. Please retry; the calculated chart remains available.");
 }
 export async function followUp(
   chart: ChartResult,
