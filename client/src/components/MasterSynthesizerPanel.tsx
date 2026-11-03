@@ -37,10 +37,13 @@ export function MasterSynthesizerPanel({
 
   const synthesizeMutation = trpc.interpretation.masterSynthesize.useMutation();
   const [result, setResult] = useState<SynthesisResult | null>(null);
+  const requestVersion = React.useRef(0);
 
   const evidencePercent = result ? Math.round(result.qualityAudit.groundedRatio * 100) : 0;
 
   const handleSynthesize = (qToUse?: string) => {
+    const version = ++requestVersion.current;
+    setResult(null);
     synthesizeMutation.mutate(
       {
         ...chart.input,
@@ -50,7 +53,7 @@ export function MasterSynthesizerPanel({
       },
       {
         onSuccess: data => {
-          setResult(data as unknown as SynthesisResult);
+          if (version === requestVersion.current) setResult(data as SynthesisResult);
         },
       }
     );
@@ -58,6 +61,7 @@ export function MasterSynthesizerPanel({
 
   React.useEffect(() => {
     handleSynthesize();
+    return () => { requestVersion.current += 1; };
   }, [chart]);
 
   return (
