@@ -1,3 +1,4 @@
+import { calculateEnergyRead } from "@/lib/energyScoring";
 import { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import {
@@ -142,50 +143,15 @@ export function ProfileHomeScreen({
     },
   ];
 
-  // Comprehensive Energy Snapshot calculation
+  // Both screens share the exact same scored natal/transit contacts.
   const energySnapshot = useMemo(() => {
-    if (!chart || chart.readingScope === "natal") return null;
-    const contacts = (chart.transits || []).flatMap((body) =>
-      (body?.natalContacts || [])
-        .filter((contact) => Number.isFinite(contact.orb) && contact.orb <= MAX_ORB)
-        .map((contact) => ({
-          ...contact,
-          transit: body.name,
-          strength: percentWeight(contact.orb),
-        }))
-    );
-
-    const flowContacts = contacts.filter((c) => aspectFlow[c.aspect] === 1);
-    const frictionContacts = contacts.filter((c) => aspectFlow[c.aspect] === -1);
-    const flow = flowContacts.reduce((sum, c) => sum + c.strength, 0);
-    const friction = frictionContacts.reduce((sum, c) => sum + c.strength, 0);
-    const total = flow + friction || 1;
-    const flowPct = Math.round((flow / total) * 100);
-    const frictionPct = 100 - flowPct;
-
-    const signal =
-      !contacts.length
-        ? "Equilibrium"
-        : flow > friction * 1.25
-        ? "Harmonious Flow"
-        : friction > flow * 1.25
-        ? "Dynamic Friction"
-        : "Balanced Synthesis";
-
-    // Find tightest aspect for next peak calculated window
-    const tightest = [...contacts].sort((a, b) => a.orb - b.orb)[0];
+    const score = calculateEnergyRead(chart);
+    if (!score) return null;
+    const tightest = score.tightest;
     const nextShiftDesc = tightest
-      ? `Transit ${tightest.transit} ${tightest.aspect} natal ${tightest.natalName} (orb ${tightest.orb.toFixed(2)}°)`
-      : "Moon ingress transition approaching in ~14h";
-
-    return {
-      contactsCount: contacts.length,
-      flowPct,
-      frictionPct,
-      signal,
-      nextShiftDesc,
-      tightest,
-    };
+      ? `Current closest contact: Transit ${tightest.transit} ${tightest.aspect} natal ${tightest.natalName} (orb ${tightest.orb.toFixed(2)}°)`
+      : "No active contacts; next shift has not been calculated.";
+    return { ...score, nextShiftDesc };
   }, [chart]);
 
   const handleLaunchHorary = () => {
