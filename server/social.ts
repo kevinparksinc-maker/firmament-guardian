@@ -275,11 +275,13 @@ export function evaluateLovedOneCheckIn(
   // Check Jupiter expansive window
   if (jupiterTransit && pressureLevel === "calm") {
     const softAspect = jupiterTransit.natalContacts?.find(
-      c => c.aspect === "trine" || c.aspect === "conjunction" || c.aspect === "sextile"
+      c => c.aspect === "trine" || c.aspect === "conjunction"
     );
-    if (softAspect) {
+    const minorSoftAspect = jupiterTransit.minorNatalContacts?.find(c => c.classification === "flow");
+    const supportiveAspect = softAspect ?? minorSoftAspect;
+    if (supportiveAspect) {
       dominantTransitBody = "Jupiter";
-      activeSignatures.push(`Jupiter ${softAspect.aspect} natal ${softAspect.natalName}`);
+      activeSignatures.push(`Jupiter ${supportiveAspect.aspect} natal ${supportiveAspect.natalName}${supportiveAspect === minorSoftAspect ? " (minor, half weight)" : ""}`);
       mechanicsSummary = `Transit Jupiter is generating an expansive vitality window for ${name}. High receptivity, optimism, and open horizons.`;
       whatTheyAreProcessing = `Fresh inspiration, creative clarity, and appetite for expansion.`;
       howToShowUp = `Celebrate their wins, brainstorm possibilities, and lean into vision-building.`;
