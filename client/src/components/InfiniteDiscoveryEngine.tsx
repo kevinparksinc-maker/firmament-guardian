@@ -331,13 +331,14 @@ export function InfiniteDiscoveryEngine({
         </div>
       </div>
 
-      {/* Discovery Cards Grid */}
-      <div className="mt-5 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Swipeable facts; tap to open the existing evidence drawer. */}
+      <div className="mt-5"><p className="font-semibold text-amber-200">Your Natal Fun Facts</p><p className="text-xs text-slate-400">Swipe for another discovery · Tap to go deeper</p></div>
+      <div aria-label="Swipeable natal fun facts" className="mt-3 flex gap-3.5 overflow-x-auto snap-x snap-mandatory pb-4">
         {filteredItems.map((item) => (
           <div
             key={item.id}
             onClick={() => setInspectModalItem(item)}
-            className="group relative cursor-pointer rounded-2xl border border-white/10 bg-slate-950/60 p-4 transition-all duration-200 hover:border-amber-300/50 hover:bg-slate-900/80 hover:shadow-[0_0_24px_rgba(217,182,111,0.12)] space-y-3"
+            className="group relative w-[82%] min-w-[82%] shrink-0 snap-center cursor-pointer rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:w-[45%] sm:min-w-[45%] lg:w-[31%] lg:min-w-[31%] transition-all duration-200 hover:border-amber-300/50 hover:bg-slate-900/80 hover:shadow-[0_0_24px_rgba(217,182,111,0.12)] space-y-3"
           >
             {/* Top row */}
             <div className="flex items-center justify-between">
