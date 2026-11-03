@@ -22,7 +22,9 @@ function readSavedProfiles(): UserProfileData[] {
   try {
     const value = JSON.parse(window.localStorage.getItem(SAVED_PROFILES_KEY) || "[]");
     const valid = Array.isArray(value) ? value.filter((p): p is UserProfileData => Boolean(p && typeof p.name === "string" && typeof p.date === "string" && typeof p.location === "string")) : [];
-    return valid.map(ensureId);
+    const migrated = valid.map(ensureId);
+    if (valid.some(p => !p.id)) window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(migrated));
+    return migrated;
   } catch { return []; }
 }
 
@@ -33,7 +35,12 @@ function readProfile(): UserProfileData | null {
     const stored = window.localStorage.getItem(PROFILE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as UserProfileData;
-      if (parsed && typeof parsed.name === "string" && parsed.location) return ensureId(parsed);
+      if (parsed && typeof parsed.name === "string" && parsed.location) {
+        const saved = readSavedProfiles().find(p => p.id === parsed.id || legacyKey(p) === legacyKey(parsed));
+        const migrated = saved || ensureId(parsed);
+        if (!parsed.id) window.localStorage.setItem(PROFILE_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
     }
     return null;
   } catch {
@@ -105,7 +112,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
 
   const deleteSavedProfile = useCallback((target: UserProfileData) => {
     const updated = readSavedProfiles().filter(p => profileId(p) !== profileId(target));
-    const isActive = profile && profileId(profile) === profileId(target);
+    const isActive = profile && (profileId(profile) === profileId(target) || legacyKey(profile) === legacyKey(target));
     try {
       window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
       setSavedProfiles(updated);
