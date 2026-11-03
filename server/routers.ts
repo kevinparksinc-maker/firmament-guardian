@@ -286,11 +286,19 @@ export const appRouter = router({
           xyzPositions: input.xyzPositions,
           transitXYZPositions: input.transitXYZPositions,
         });
-        return synthesizeMasterReading({
+        const failedMethods = snapshot.methodExecutionLedger.filter(layer => layer.status === "failed");
+        if (failedMethods.length) {
+          throw new Error(`MASTER_METHOD_FAILED: ${failedMethods.map(layer => layer.id).join(", ")}`);
+        }
+        const synthesis = await synthesizeMasterReading({
           snapshot,
           readingMode: input.mode,
           userQuestion: input.question,
         });
+        if (!synthesis.qualityAudit.passed) {
+          throw new Error("SYNTHESIS_COVERAGE_FAILED: Computed method evidence was not fully incorporated.");
+        }
+        return synthesis;
       }),
     chapter: publicProcedure
       .input(
