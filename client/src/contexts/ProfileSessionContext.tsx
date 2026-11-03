@@ -5,8 +5,16 @@ import type { UserProfileData } from "@/components/NatalProfileBuilder";
 const PROFILE_KEY = "algorithms_cosmos_profile";
 const SAVED_PROFILES_KEY = "fg:saved-birth-profiles:v1";
 
-function profileId(p: UserProfileData): string {
+function legacyKey(p: UserProfileData): string {
   return [p.name.trim().toLowerCase(), p.date, p.time, p.location.trim().toLowerCase()].join("|");
+}
+
+function profileId(p: UserProfileData): string {
+  return p.id || legacyKey(p);
+}
+
+function ensureId(p: UserProfileData): UserProfileData {
+  return p.id ? p : { ...p, id: crypto.randomUUID() };
 }
 
 function readSavedProfiles(): UserProfileData[] {
@@ -14,7 +22,7 @@ function readSavedProfiles(): UserProfileData[] {
   try {
     const value = JSON.parse(window.localStorage.getItem(SAVED_PROFILES_KEY) || "[]");
     const valid = Array.isArray(value) ? value.filter((p): p is UserProfileData => Boolean(p && typeof p.name === "string" && typeof p.date === "string" && typeof p.location === "string")) : [];
-    return valid;
+    return valid.map(ensureId);
   } catch { return []; }
 }
 
@@ -25,7 +33,7 @@ function readProfile(): UserProfileData | null {
     const stored = window.localStorage.getItem(PROFILE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as UserProfileData;
-      if (parsed && typeof parsed.name === "string" && parsed.location) return parsed;
+      if (parsed && typeof parsed.name === "string" && parsed.location) return ensureId(parsed);
     }
     return null;
   } catch {
@@ -40,6 +48,7 @@ type ProfileSession = {
   deleteSavedProfile: (profile: UserProfileData) => void;
   setProfile: (next: UserProfileData | null) => void;
   saveEditedProfile: (previous: UserProfileData, next: UserProfileData) => void;
+  importProfiles: (profiles: UserProfileData[]) => number;
   updateTransitLocation: (transit: {
     transitLocation: string;
     transitLatitude: number;
@@ -57,15 +66,16 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
   const [savedProfiles, setSavedProfiles] = useState<UserProfileData[]>(readSavedProfiles);
 
   const setProfile = useCallback((next: UserProfileData | null) => {
-    updateProfile(next);
+    const saved = next ? ensureId(next) : null;
+    updateProfile(saved);
     setChart(null);
     if (typeof window === "undefined") return;
     try {
-      if (next) {
-        window.localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+      if (saved) {
+        window.localStorage.setItem(PROFILE_KEY, JSON.stringify(saved));
         const existing = readSavedProfiles();
-        const withoutMatch = existing.filter(p => profileId(p) !== profileId(next));
-        const updated = [next, ...withoutMatch].slice(0, 100);
+        const withoutMatch = existing.filter(p => profileId(p) !== profileId(saved));
+        const updated = [saved, ...withoutMatch].slice(0, 100);
         window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
         setSavedProfiles(updated);
       } else window.localStorage.removeItem(PROFILE_KEY);
@@ -76,14 +86,15 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const saveEditedProfile = useCallback((previous: UserProfileData, next: UserProfileData) => {
-    updateProfile(next);
+    const saved = { ...next, id: previous.id || next.id || crypto.randomUUID() };
+    updateProfile(saved);
     setChart(null);
     if (typeof window === "undefined") return;
     try {
-      const updated = [next, ...readSavedProfiles().filter(p =>
-        profileId(p) !== profileId(previous) && profileId(p) !== profileId(next)
+      const updated = [saved, ...readSavedProfiles().filter(p =>
+        profileId(p) !== profileId(previous) && profileId(p) !== profileId(saved) && legacyKey(p) !== legacyKey(previous)
       )].slice(0, 100);
-      window.localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+      window.localStorage.setItem(PROFILE_KEY, JSON.stringify(saved));
       window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
       setSavedProfiles(updated);
       window.dispatchEvent(new Event("fg:profile-updated"));
@@ -106,6 +117,32 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new Event("fg:profile-updated"));
     } catch { /* Browser storage may be unavailable. */ }
   }, [profile]);
+
+  const importProfiles = useCallback((incoming: UserProfileData[]): number => {
+    const existing = readSavedProfiles();
+    const known = new Set(existing.map(profileId));
+    const added: UserProfileData[] = [];
+    for (const candidate of incoming) {
+      if (!candidate || typeof candidate.name !== "string" || !candidate.name.trim() ||
+          !/^\\d{4}-\\d{2}-\\d{2}$/.test(candidate.date) ||
+          !/^\\d{2}:\\d{2}$/.test(candidate.time) ||
+          typeof candidate.location !== "string" ||
+          !Number.isFinite(candidate.latitude) || !Number.isFinite(candidate.longitude) ||
+          Math.abs(candidate.latitude) > 90 || Math.abs(candidate.longitude) > 180 ||
+          typeof candidate.timezone !== "string" || !candidate.timezone) continue;
+      const saved = ensureId(candidate);
+      if (!known.has(profileId(saved))) {
+        known.add(profileId(saved));
+        added.push(saved);
+      }
+    }
+    if (!added.length) return 0;
+    const updated = [...added, ...existing].slice(0, 100);
+    window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
+    setSavedProfiles(updated);
+    window.dispatchEvent(new Event("fg:profile-updated"));
+    return added.length;
+  }, []);
 
   useEffect(() => {
     const sync = () => {
@@ -156,8 +193,8 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ profile, chart, savedProfiles, setProfile, saveEditedProfile, updateTransitLocation, setChart, deleteSavedProfile }),
-    [profile, chart, savedProfiles, setProfile, saveEditedProfile, updateTransitLocation, deleteSavedProfile]
+    () => ({ profile, chart, savedProfiles, setProfile, saveEditedProfile, importProfiles, updateTransitLocation, setChart, deleteSavedProfile }),
+    [profile, chart, savedProfiles, setProfile, saveEditedProfile, importProfiles, updateTransitLocation, deleteSavedProfile]
   );
   return <ProfileSessionContext.Provider value={value}>{children}</ProfileSessionContext.Provider>;
 }
