@@ -144,8 +144,10 @@ MANDATORY STYLE RULES:
 
   const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
   const response = await invokeLLM({ model, messages, maxTokens: 1800 });
-  return String(
-    response.choices[0]?.message?.content ??
-      "I couldn’t complete that interpretation just now. Please try asking again."
-  );
+  const content = response.choices[0]?.message?.content;
+  const reading = typeof content === "string" ? content.trim() : "";
+  if (!reading) {
+    throw new Error("HOST_AI_EMPTY_RESPONSE: AI provider returned no readable interpretation.");
+  }
+  return reading;
 }
