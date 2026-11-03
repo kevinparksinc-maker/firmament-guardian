@@ -25,21 +25,21 @@ export function solarAnglesFromFixedXYZ(vector: FixedVector) {
     throw new Error("Sun XYZ must be a nonzero finite vector.");
   }
   return {
-    longitude: normalizeDegrees(degrees(Math.atan2(y, x))),
+    rightAscension: normalizeDegrees(degrees(Math.atan2(y, x))),
     declination: degrees(Math.atan2(z, Math.hypot(x, y))),
   };
 }
 
 export function sunriseEasternHorizonLongitude(sunXYZ: FixedVector, latitude: number): number {
   if (!Number.isFinite(latitude) || Math.abs(latitude) > 90) throw new Error("Invalid observer latitude.");
-  const { longitude: sunRightAscension, declination } = solarAnglesFromFixedXYZ(sunXYZ);
+  const { rightAscension: sunRightAscension, declination } = solarAnglesFromFixedXYZ(sunXYZ);
   const cosineHourAngle = -Math.tan(radians(latitude)) * Math.tan(radians(declination));
   if (!Number.isFinite(cosineHourAngle) || cosineHourAngle < -1 || cosineHourAngle > 1) {
     throw new Error("No unique geometric sunrise at this latitude and solar declination.");
   }
   const sunriseHourAngle = degrees(Math.acos(cosineHourAngle));
-  // At sunrise: local sidereal angle = Sun RA - sunrise hour angle.
-  // No additional angular offset is authorized by the master calculation contract.
+  // Master sunrise anchor: Sun equatorial RA minus the sunrise hour angle.
+  // This is the explicitly specified wheel anchor, not a conventional ecliptic ASC.
   return normalizeDegrees(sunRightAscension - sunriseHourAngle);
 }
 
