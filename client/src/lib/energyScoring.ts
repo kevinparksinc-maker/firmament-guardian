@@ -1,6 +1,6 @@
 import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
 
-/** One deterministic scoring policy for the homepage and Energy Read. Sextile is half-weight. */
+/** One deterministic scoring policy for the homepage and Energy Read. Four major aspects have full weight; sextile and three other minor aspects have half weight. */
 export const ENERGY_MAX_ORB = 5;
 export const ENERGY_ASPECT_FLOW: Record<TransitContact["aspect"] | MinorTransitContact["aspect"], -1 | 0 | 1> = {
   conjunction: 1, trine: 1, sextile: 1, square: -1, opposition: -1,
@@ -11,7 +11,7 @@ const PLANET_STARS: Record<string, number> = {
   Mercury: 4, Neptune: 4, Venus: 3, Uranus: 3,
   "North Node": 4, "South Node": 4, Ascendant: 4, Descendant: 4,
 };
-const MAJOR = new Set<TransitContact["aspect"] | MinorTransitContact["aspect"]>(["conjunction", "trine", "square", "opposition", "sextile"]);
+const MAJOR = new Set<TransitContact["aspect"] | MinorTransitContact["aspect"]>(["conjunction", "trine", "square", "opposition"]);
 export function energyIntensity(orb: number): number {
   if (!Number.isFinite(orb) || orb < 0 || orb > ENERGY_MAX_ORB) return 0;
   return Math.max(1, 5 - Math.floor(orb));
