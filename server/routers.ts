@@ -116,6 +116,18 @@ export const appRouter = router({
     getOrCreate: protectedProcedure
       .input(chartInput)
       .mutation(({ ctx, input }) => getStoredNatal(ctx.user.openId, input)),
+    synthesize: protectedProcedure
+      .input(chartInput.extend({
+        question: z.string().trim().max(2000).default("What does my natal chart reveal?"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const snapshot = await getStoredNatal(ctx.user.openId, input);
+        return synthesizeMasterReading({
+          snapshot,
+          readingMode: "natal",
+          userQuestion: input.question,
+        });
+      }),
   }),
   history: router({
     charts: protectedProcedure.query(({ ctx }) =>
