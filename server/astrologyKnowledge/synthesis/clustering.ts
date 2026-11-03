@@ -127,7 +127,7 @@ export function clusterPropositionsIntoThemes(
       `In ${sphere}: Read the concrete calculated factors above together, distinguishing supportive, frictional, and unclassified contacts. No biographical event is established solely by the chart.`
     );
     const consequences = `Evidence: ${strongest.plainLanguageMeaning}. No specific life outcome is established by this calculation alone.`;
-    const deeperMeaning = `This configuration teaches that genuine strength is not the absence of resistance, but the capacity to maintain moral integrity and deliberate direction under shifting conditions.`;
+    const deeperMeaning = `Symbolic interpretation of ${strongest.themeTitle}: ${strongest.plainLanguageMeaning}. This is interpretive meaning, not a separately calculated event.`;
 
     themes.push({
       id: `theme-${domain}`,
