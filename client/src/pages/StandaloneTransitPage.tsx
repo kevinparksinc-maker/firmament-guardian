@@ -29,7 +29,8 @@ export default function StandaloneTransitPage() {
         location,latitude:Number(latitude),longitude:Number(longitude),timezone,date,time,
         worldview:"agent",readingScope:"natal",
       });
-      setResult(chart);
+      // The event-time moving bodies are the independent sky; suppress natal/transit overlays.
+      setResult({...chart,transits:[]});
     } catch { /* The mutation error is rendered below. */ }
   };
   return <main className="mx-auto max-w-5xl space-y-5 p-4 text-slate-100 sm:p-6">
