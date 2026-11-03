@@ -43,24 +43,43 @@ const PLANET_GLYPHS: Record<string, string> = {
   "North Node": "☊", "South Node": "☋", Ascendant: "AC",
 };
 
-const ASPECT_INTERPRETATIONS: Record<string, { theme: string; advice: string }> = {
-  "Sun-trine": { theme: "Vital alignment and effortless creative expression", advice: "Step into visibility; your natural gifts are received warmly." },
-  "Sun-sextile": { theme: "Productive opportunities to lead or innovate", advice: "Engage collaborative projects and reach out to mentors." },
-  "Sun-square": { theme: "Ego friction and constructive friction with authority", advice: "Channel restless tension into disciplined craftsmanship." },
-  "Sun-opposition": { theme: "Relational mirror; awareness of external counter-forces", advice: "Seek balance between personal desire and partnership obligations." },
-  "Sun-conjunction": { theme: "Major annual cosmic reset; illuminated vitality", advice: "Plant seeds of long-term intent; your core identity is highlighted." },
-  "Moon-trine": { theme: "Emotional resonance, intuitive clarity, and peaceful rhythm", advice: "Trust your gut feelings; intimate conversations flourish." },
-  "Moon-sextile": { theme: "Harmonious domestic or social exchanges", advice: "Connect with loved ones and create nourishing surroundings." },
-  "Moon-square": { theme: "Emotional turbulence or reactive sensitivities", advice: "Pause before reacting; give yourself space to digest feelings." },
-  "Moon-opposition": { theme: "Tug between emotional comfort and external demands", advice: "Acknowledge conflicting needs without self-judgment." },
-  "Moon-conjunction": { theme: "Intense emotional magnification and psychic impressionability", advice: "Protect your energetic boundaries; practice grounding meditation." },
-  "Jupiter-trine": { theme: "Auspicious growth, optimism, and serendipitous openings", advice: "Say yes to opportunities for education, travel, or expansion." },
-  "Jupiter-conjunction": { theme: "Bountiful revitalization and expansive luck", advice: "Take bold, honorable leaps into larger spheres of influence." },
-  "Saturn-trine": { theme: "Solid foundational endurance and sustained progress", advice: "Build systems that outlast the moment; patience pays off." },
-  "Saturn-square": { theme: "Structural tests, boundary setting, and reality checks", advice: "Embrace discipline; cut excess commitments and simplify." },
-  "Mars-conjunction": { theme: "Surge of physical drive, initiative, and courage", advice: "Direct this sharp fire into focused workouts or decisive tasks." },
-  "Venus-trine": { theme: "Magnetic allure, financial harmony, and artistic grace", advice: "Ideal for romance, creative projects, and renegotiating agreements." },
+const PLANET_THEMES: Record<string, { domain: string; expression: string }> = {
+  Sun: { domain: "identity, confidence, and direction", expression: "taking ownership of a decision and showing your work" },
+  Moon: { domain: "feelings, habits, and emotional security", expression: "recognizing an emotional need before reacting" },
+  Mercury: { domain: "thinking, communication, and practical decisions", expression: "clarifying a conversation, plan, or piece of information" },
+  Venus: { domain: "relationships, values, and resources", expression: "negotiating fairly and choosing what you genuinely value" },
+  Mars: { domain: "initiative, conflict, and physical effort", expression: "directing effort toward one clear action rather than scattering it" },
+  Jupiter: { domain: "growth, learning, and opportunity", expression: "testing a promising opportunity against the facts" },
+  Saturn: { domain: "responsibility, boundaries, and long-term structure", expression: "setting a sustainable limit or completing a demanding task" },
+  Uranus: { domain: "change, independence, and disruption", expression: "making room for a new approach without acting impulsively" },
+  Neptune: { domain: "imagination, ideals, and uncertainty", expression: "separating inspiration from assumptions before committing" },
+  Pluto: { domain: "power, transformation, and deep patterns", expression: "examining what needs to change at the root" },
+  "North Node": { domain: "growth direction and unfamiliar choices", expression: "practicing a new response instead of repeating an old one" },
+  "South Node": { domain: "familiar habits and established patterns", expression: "recognizing when a familiar strategy has stopped helping" },
+  Ascendant: { domain: "presentation, immediate circumstances, and approach", expression: "adjusting how you enter a situation" },
 };
+
+const ASPECT_DYNAMICS: Record<string, { meaning: string; approach: string }> = {
+  conjunction: { meaning: "concentrates both themes in the same area of attention", approach: "Use the combined focus deliberately; intensity alone does not decide the outcome." },
+  sextile: { meaning: "offers a cooperative opening that still needs initiative", approach: "Make a specific move while the opportunity is available." },
+  trine: { meaning: "lets the two themes support one another with relatively little resistance", approach: "Put the ease to work rather than assuming results will happen automatically." },
+  square: { meaning: "creates pressure between competing needs or methods", approach: "Name the trade-off and choose a constructive response instead of forcing either side." },
+  opposition: { meaning: "brings contrasting priorities into view, often through other people", approach: "Seek a workable balance without abandoning your own position." },
+  semisextile: { meaning: "highlights a subtle adjustment between neighboring concerns", approach: "Notice the small practical change that helps the two priorities coexist." },
+  semisquare: { meaning: "introduces a minor but persistent source of irritation", approach: "Resolve a small obstacle before it grows into unnecessary conflict." },
+  quincunx: { meaning: "calls for adaptation between needs that do not fit neatly together", approach: "Change the method or expectation rather than trying to force a perfect match." },
+};
+
+function interpretContact(contact: { transit: string; natal: string; aspect: string; orb: number }) {
+  const moving = PLANET_THEMES[contact.transit] ?? { domain: contact.transit.toLowerCase() + " themes", expression: "observing how this influence appears in daily decisions" };
+  const rooted = PLANET_THEMES[contact.natal] ?? { domain: contact.natal.toLowerCase() + " themes", expression: "checking the relevant natal pattern" };
+  const dynamic = ASPECT_DYNAMICS[contact.aspect] ?? { meaning: "connects these two areas of experience", approach: "Observe the pattern before drawing conclusions." };
+  const close = contact.orb <= 0.5 ? "This is a very close contact" : contact.orb <= 2 ? "This is a close contact" : "This contact has a wider orb";
+  return {
+    theme: `${contact.transit} ${contact.aspect} natal ${contact.natal}: ${moving.domain} meet ${rooted.domain}`,
+    advice: `In this symbolic transit reading, moving ${contact.transit} emphasizes ${moving.domain}, while natal ${contact.natal} represents your established pattern around ${rooted.domain}. The ${contact.aspect} ${dynamic.meaning}. ${close} at ${contact.orb.toFixed(2)}°, so consider ${moving.expression} while also ${rooted.expression}. ${dynamic.approach}`,
+  };
+}
 
 export default function EnergyPage() {
   const { chart, profile } = useProfileSession();
@@ -327,11 +346,7 @@ export default function EnergyPage() {
             const isFlow = ENERGY_ASPECT_FLOW[c.aspect] === 1;
             const isFriction = ENERGY_ASPECT_FLOW[c.aspect] === -1;
             const symbol = ASPECT_SYMBOLS[c.aspect] || c.aspect;
-            const interpKey = `${c.transit}-${c.aspect}`;
-            const interpretation = ASPECT_INTERPRETATIONS[interpKey] || {
-              theme: `${c.transit} ${c.aspect} natal ${c.natal}`,
-              advice: "Reflect on how this planetary resonance activates your evolutionary path.",
-            };
+            const interpretation = interpretContact(c);
             const isExpanded = expandedContactId === c.id;
 
             return (
