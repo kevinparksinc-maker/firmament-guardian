@@ -652,7 +652,9 @@ export async function buildUnifiedMasterChart(
     schemaVersion: "1.0.0",
     createdAtUtc,
     inputs: {
-      profileIds: [input.location, input.date, input.time].filter(Boolean),
+      // Birth coordinates and timestamps are not profile IDs. Identity is supplied
+      // only when an authenticated profile registry is connected.
+      profileIds: [],
       eventInstantUtc: chart.utc,
       timezone: input.timezone,
       locationContext: {
