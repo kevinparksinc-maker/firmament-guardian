@@ -4,7 +4,7 @@ import type { InterpretedProposition } from "./types";
 import { getDecanCanonByLongitude } from "../canon/decans36";
 import { getManzilCanonByLongitude } from "../canon/manazil28";
 import { getNakshatraCanonByLongitude } from "../canon/nakshatras27";
-import { synthesizePlanetInSign } from "../canon/planetsAndSigns";
+import { PLANET_CANON_RECORDS, synthesizePlanetInSign } from "../canon/planetsAndSigns";
 import { synthesizePlanetInHouse } from "../canon/housesAndFrames";
 
 function getSign(longitude: number): string {
@@ -20,6 +20,25 @@ function canonContextForFinding(layerId: string, finding: unknown): string {
   const record = finding as Record<string, unknown>;
   const body = typeof record.body === "string" ? record.body : "";
   const longitude = typeof record.longitude === "number" ? record.longitude : NaN;
+  if (layerId === "western-aspects-and-orbs") {
+    const first = typeof record.body1 === "string" ? record.body1 : "";
+    const second = typeof record.body2 === "string" ? record.body2 : "";
+    const aspect = typeof record.aspect === "string" ? record.aspect.toLowerCase() : "";
+    const orb = typeof record.orb === "number" && Number.isFinite(record.orb)
+      ? ` (calculated orb ${record.orb.toFixed(2)}°)` : "";
+    const firstCanon = PLANET_CANON_RECORDS[first];
+    const secondCanon = PLANET_CANON_RECORDS[second];
+    if (!firstCanon || !secondCanon) return "";
+    const aspectDoctrine: Record<string, string> = {
+      conjunction: "Conjunction: combined planetary functions and concentrated expression; harmony or tension depends on the participants.",
+      sextile: "Sextile: cooperative opportunity that benefits from deliberate action.",
+      square: "Square: friction requiring adjustment, effort, and constructive resolution.",
+      trine: "Trine: flowing cooperation and readily available capacities.",
+      opposition: "Opposition: polarity that calls for awareness, negotiation, and integration.",
+    };
+    if (!aspectDoctrine[aspect]) return "";
+    return `Canon aspect interpretation: ${first} (${firstCanon.coreMeanings.join(", ")}) and ${second} (${secondCanon.coreMeanings.join(", ")}) form a ${aspect}${orb}. ${aspectDoctrine[aspect]} ${first} healthy expression: ${firstCanon.psychologicalFunctions.healthyExpression}. ${second} healthy expression: ${secondCanon.psychologicalFunctions.healthyExpression}. Source: computed aspect plus planetary Canon; interpret as a symbolic combination, not a biographical fact.`;
+  }
   if (layerId === "western-planets-and-signs") {
     const name = typeof record.name === "string" ? record.name : body;
     const sign = typeof record.sign === "string" ? record.sign : Number.isFinite(longitude) ? getSign(longitude) : "";
