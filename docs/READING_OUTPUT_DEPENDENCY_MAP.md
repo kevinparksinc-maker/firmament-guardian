@@ -120,7 +120,14 @@ If a field is not applicable, say why. If unverified, mark **OPEN**. Never use `
 9. Cache reload and version change: no stale or divergent synthesis.
 10. Mobile/desktop loaded-state smoke tests, backend health and Render deployment checks.
 
-## 7. Status / ownership
+## 7. Fail-closed coordinate policy (2026-11-03)
+
+- **Implemented in `server/astronomy.ts` on this branch:** Agent natal and local transit Ascendants require their respective sunrise UTC + fixed-frame Sun XYZ anchors. Missing anchors now throw `SUNRISE_ANCHOR_REQUIRED` / `TRANSIT_SUNRISE_ANCHOR_REQUIRED`; no fallback to Swiss `houses_ex` Ascendant.
+- **Integration consequence:** Any calling route or client that does not supply the anchor will now receive an error. Trace and wire historical sunrise acquisition and error presentation before deployment. Do not restore the legacy fallback to make UI tests green.
+- **Still OPEN:** The Midheaven uses `houses_ex`; its geometric compatibility with the selected model needs separate verification. Externally supplied XYZ can override planetary longitudes, and missing external vectors currently use automatic ephemeris XYZ. Define and test an explicit all-or-nothing source policy before claiming planetary-position fail-closed behavior.
+- **Required tests:** missing natal/transit anchors throw; valid sunrise anchor succeeds; no fabricated ASC appears in any chart or reading; God View remains usable; errors propagate to frontend without cached stale readings.
+
+## 8. Status / ownership
 
 - **Verified**: the files in Section 2 exist and contain the described relevant code.
 - **Verified**: selected Canon lookups currently occur in normalizer; full-chart dossier retriever exists.
