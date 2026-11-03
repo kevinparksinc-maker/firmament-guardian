@@ -44,7 +44,7 @@ export function TransitWeatherTimeline({chart,onAskMasterInterpreter,className="
  const cached=cache[key];
  useEffect(()=>{setSelected(0);setCache({});},[chart?.input.date,chart?.input.time,chart?.input.location,chart?.input.transitLocation]);
  useEffect(()=>{
-  if(!chart||!key||cached||mutation.isPending)return;
+  if(!chart||!key||cached)return;
   let active=true;
   const input=chart.input;
   mutation.mutateAsync({
