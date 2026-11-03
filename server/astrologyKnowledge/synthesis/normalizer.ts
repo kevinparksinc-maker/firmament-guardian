@@ -1,9 +1,37 @@
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
 import type { InterpretedProposition } from "./types";
+import { getDecanCanonByLongitude } from "../canon/decans36";
+import { getManzilCanonByLongitude } from "../canon/manazil28";
+import { getNakshatraCanonByLongitude } from "../canon/nakshatras27";
 
 function getSign(longitude: number): string {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
+}
+
+/**
+ * Reuse deterministic Canon knowledge before any language-model expansion.
+ * Interpret only coordinates supplied by computed method records.
+ */
+function canonContextForFinding(layerId: string, finding: unknown): string {
+  if (!finding || typeof finding !== "object") return "";
+  const record = finding as Record<string, unknown>;
+  const body = typeof record.body === "string" ? record.body : "";
+  const longitude = typeof record.longitude === "number" ? record.longitude : NaN;
+  if (!body || !Number.isFinite(longitude)) return "";
+  if (layerId === "elemental-decans") {
+    const canon = getDecanCanonByLongitude(longitude);
+    return `Canon interpretation for ${body}: ${canon.sign} decan ${canon.decanNumber}, elemental family ruler ${canon.triplicitySubRuler}. ${canon.behavioralNuance} Core themes: ${canon.coreThemes.join(", ")}. Source category: ${canon.provenance.epistemicCategory}.`;
+  }
+  if (layerId === "arabic-lunar-manazil") {
+    const canon = getManzilCanonByLongitude(longitude);
+    return `Canon interpretation for ${body} in Manzil ${canon.index} (${canon.name}): ${canon.natalAndPsychologicalMeaning} Traditional themes: ${canon.traditionalThemes.join(", ")}. Source category: ${canon.provenance.epistemicCategory}.`;
+  }
+  if (layerId === "vedic-nakshatras-and-padas") {
+    const canon = getNakshatraCanonByLongitude(longitude);
+    return `Canon interpretation for ${body} in ${canon.nakshatra.name}, pada ${canon.pada.pada}: ${canon.nakshatra.coreMeaning} ${canon.nakshatra.psychologicalPattern} Shakti: ${canon.nakshatra.shakti}. Source category: ${canon.nakshatra.provenance.epistemicCategory}.`;
+  }
+  return "";
 }
 
 /** Translate computed method records into inspectable chart facts, not a raw JSON dump. */
@@ -377,7 +405,7 @@ export function extractPropositionsFromSnapshot(
       propositions.push({
         id: `prop-method-${layer.id}-${index}`,
         themeTitle: `${layer.name} — finding ${index + 1}`,
-        plainLanguageMeaning: `${layer.name}: ${describeComputedFinding(finding)}`,
+        plainLanguageMeaning: `${layer.name}: ${describeComputedFinding(finding)}${canonContextForFinding(layer.id, finding) ? `\n${canonContextForFinding(layer.id, finding)}` : ""}`,
         domain: domains[layer.id] ?? "identity",
         causalMechanism: `${layer.technique}; ${layer.frame}; ${layer.calculationVersion}`,
         valence,
