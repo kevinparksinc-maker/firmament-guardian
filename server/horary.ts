@@ -165,7 +165,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
         transitTimezone: input.timezone,
         transitDate: input.date,
         transitTime: input.time,
-        worldview: "agent",
+        worldview: "agent-vs-god",
         readingScope: "combined",
         birthTimeKnown: Boolean(input.natal.time),
       })
