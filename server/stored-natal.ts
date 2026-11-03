@@ -1,9 +1,9 @@
 import { getDb, listSavedCharts, createSavedChart } from "./db";
 import { getMasterNatalChart } from "./masterChart/builder";
-import type { MasterChartInput } from "./masterChart/types";
+import type { MasterChartInput, UnifiedMasterChartSnapshot } from "./masterChart/types";
 
 /** Reuse the existing saved_charts table for authenticated natal snapshots. */
-export async function getStoredNatal(openId: string, input: MasterChartInput) {
+export async function getStoredNatal(openId: string, input: MasterChartInput): Promise<UnifiedMasterChartSnapshot> {
   if (!openId) throw new Error("Authentication required");
   if (!(await getDb())) throw new Error("Durable storage is not configured");
   const normalized: MasterChartInput = {
@@ -20,13 +20,13 @@ export async function getStoredNatal(openId: string, input: MasterChartInput) {
       saved?.frameConfig?.engineVersion === "firmament-master-2026.1" &&
       equalInputs(savedInput, normalized);
   });
-  if (existing) return existing.chart;
+  if (existing) return existing.chart as UnifiedMasterChartSnapshot;
   const snapshot = await getMasterNatalChart(normalized);
   if (!snapshot.validation.complete) return snapshot;
   // A second read avoids duplicate writes when another request saved this profile during calculation.
   const recent = await listSavedCharts(openId);
   const alreadySaved = recent.find(row => row.title === "Master Natal " + snapshot.snapshotId);
-  if (alreadySaved) return alreadySaved.chart;
+  if (alreadySaved) return alreadySaved.chart as UnifiedMasterChartSnapshot;
   await createSavedChart({
     openId, title: "Master Natal " + snapshot.snapshotId,
     location: normalized.location, input: normalized, chart: snapshot,
