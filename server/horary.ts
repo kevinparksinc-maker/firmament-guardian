@@ -1,5 +1,5 @@
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
-import type { ChartInput } from "./astronomy";
+import type { ChartInput, calculateChart } from "./astronomy";
 import { getChartSnapshot } from "./chart-snapshot-service";
 import { withCurrentQuestion } from "./_core/conversation";
 import { invokeLLM, type Message } from "./_core/llm";
