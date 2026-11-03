@@ -12,8 +12,8 @@ describe("zero-tilt sunrise-anchored rising point", () => {
     expect(solarAnglesFromFixedXYZ({ x: 0, y: 1, z: 1 }).longitude).toBe(90);
     expect(solarAnglesFromFixedXYZ({ x: 0, y: 1, z: 1 }).declination).toBeCloseTo(45, 8);
   });
-  it("anchors the east horizon to the Sun at equatorial sunrise", () => {
-    expect(sunriseEasternHorizonLongitude(sun, 0)).toBeCloseTo(0, 8);
+  it("uses the sunrise hour angle without an extra 90-degree offset", () => {
+    expect(sunriseEasternHorizonLongitude(sun, 0)).toBeCloseTo(270, 8);
   });
   it("advances from sunrise by sidereal rather than civil rotation", () => {
     const result = ascendantFromSunrise({
@@ -22,7 +22,7 @@ describe("zero-tilt sunrise-anchored rising point", () => {
       sunriseSunXYZ: sun,
       latitude: 0,
     });
-    expect(result.ascendant).toBeCloseTo(6 * SIDEREAL_DEGREES_PER_UTC_HOUR, 8);
+    expect(result.ascendant).toBeCloseTo((270 + 6 * SIDEREAL_DEGREES_PER_UTC_HOUR) % 360, 8);
     expect(result.elapsedHours).toBe(6);
   });
   it("uses latitude and declination to change the sunrise intersection", () => {
