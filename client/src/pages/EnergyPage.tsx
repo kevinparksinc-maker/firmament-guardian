@@ -43,41 +43,40 @@ const PLANET_GLYPHS: Record<string, string> = {
   "North Node": "☊", "South Node": "☋", Ascendant: "AC",
 };
 
-const PLANET_THEMES: Record<string, { domain: string; expression: string }> = {
-  Sun: { domain: "identity, confidence, and direction", expression: "taking ownership of a decision and showing your work" },
-  Moon: { domain: "feelings, habits, and emotional security", expression: "recognizing an emotional need before reacting" },
-  Mercury: { domain: "thinking, communication, and practical decisions", expression: "clarifying a conversation, plan, or piece of information" },
-  Venus: { domain: "relationships, values, and resources", expression: "negotiating fairly and choosing what you genuinely value" },
-  Mars: { domain: "initiative, conflict, and physical effort", expression: "directing effort toward one clear action rather than scattering it" },
-  Jupiter: { domain: "growth, learning, and opportunity", expression: "testing a promising opportunity against the facts" },
-  Saturn: { domain: "responsibility, boundaries, and long-term structure", expression: "setting a sustainable limit or completing a demanding task" },
-  Uranus: { domain: "change, independence, and disruption", expression: "making room for a new approach without acting impulsively" },
-  Neptune: { domain: "imagination, ideals, and uncertainty", expression: "separating inspiration from assumptions before committing" },
-  Pluto: { domain: "power, transformation, and deep patterns", expression: "examining what needs to change at the root" },
-  "North Node": { domain: "growth direction and unfamiliar choices", expression: "practicing a new response instead of repeating an old one" },
-  "South Node": { domain: "familiar habits and established patterns", expression: "recognizing when a familiar strategy has stopped helping" },
-  Ascendant: { domain: "presentation, immediate circumstances, and approach", expression: "adjusting how you enter a situation" },
+// Contact interpretation must be derived from chart evidence, not canned planet advice.
+const SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"] as const;
+const ELEMENT_DECANS: Record<string, string[]> = {
+  Aries: ["Aries", "Leo", "Sagittarius"], Leo: ["Leo", "Sagittarius", "Aries"], Sagittarius: ["Sagittarius", "Aries", "Leo"],
+  Taurus: ["Taurus", "Virgo", "Capricorn"], Virgo: ["Virgo", "Capricorn", "Taurus"], Capricorn: ["Capricorn", "Taurus", "Virgo"],
+  Gemini: ["Gemini", "Libra", "Aquarius"], Libra: ["Libra", "Aquarius", "Gemini"], Aquarius: ["Aquarius", "Gemini", "Libra"],
+  Cancer: ["Cancer", "Scorpio", "Pisces"], Scorpio: ["Scorpio", "Pisces", "Cancer"], Pisces: ["Pisces", "Cancer", "Scorpio"],
 };
 
-const ASPECT_DYNAMICS: Record<string, { meaning: string; approach: string }> = {
-  conjunction: { meaning: "concentrates both themes in the same area of attention", approach: "Use the combined focus deliberately; intensity alone does not decide the outcome." },
-  sextile: { meaning: "offers a cooperative opening that still needs initiative", approach: "Make a specific move while the opportunity is available." },
-  trine: { meaning: "lets the two themes support one another with relatively little resistance", approach: "Put the ease to work rather than assuming results will happen automatically." },
-  square: { meaning: "creates pressure between competing needs or methods", approach: "Name the trade-off and choose a constructive response instead of forcing either side." },
-  opposition: { meaning: "brings contrasting priorities into view, often through other people", approach: "Seek a workable balance without abandoning your own position." },
-  semisextile: { meaning: "highlights a subtle adjustment between neighboring concerns", approach: "Notice the small practical change that helps the two priorities coexist." },
-  semisquare: { meaning: "introduces a minor but persistent source of irritation", approach: "Resolve a small obstacle before it grows into unnecessary conflict." },
-  quincunx: { meaning: "calls for adaptation between needs that do not fit neatly together", approach: "Change the method or expectation rather than trying to force a perfect match." },
-};
+type EvidenceRow = ChartResult["movingBodies"][number];
+function describePlacement(row: EvidenceRow | undefined, label: string): string {
+  if (!row || !Number.isFinite(row.longitude)) return `${label}: placement evidence unavailable`;
+  const longitude = ((row.longitude % 360) + 360) % 360;
+  const sign = SIGNS[Math.floor(longitude / 30)];
+  const degree = longitude % 30;
+  const decanIndex = Math.min(2, Math.floor(degree / 10));
+  const decan = ELEMENT_DECANS[sign][decanIndex];
+  const house = row.agentHouse ?? row.house;
+  const starEvidence = row.royalStarContacts?.length
+    ? `; ${row.royalStarContacts.length} recorded royal-star contact(s)` : "";
+  return `${label}: ${degree.toFixed(2)}° ${sign}, ${decan} elemental-family decan${Number.isFinite(house) && house > 0 ? `, house ${house}` : ", house unavailable"}${starEvidence}`;
+}
 
-function interpretContact(contact: { transit: string; natal: string; aspect: string; orb: number }) {
-  const moving = PLANET_THEMES[contact.transit] ?? { domain: contact.transit.toLowerCase() + " themes", expression: "observing how this influence appears in daily decisions" };
-  const rooted = PLANET_THEMES[contact.natal] ?? { domain: contact.natal.toLowerCase() + " themes", expression: "checking the relevant natal pattern" };
-  const dynamic = ASPECT_DYNAMICS[contact.aspect] ?? { meaning: "connects these two areas of experience", approach: "Observe the pattern before drawing conclusions." };
-  const close = contact.orb <= 0.5 ? "This is a very close contact" : contact.orb <= 2 ? "This is a close contact" : "This contact has a wider orb";
+function interpretContact(contact: { transit: string; natal: string; aspect: string; orb: number }, chart: ChartResult | null | undefined) {
+  const moving = chart?.transits?.find(row => row.name === contact.transit);
+  const rooted = chart?.movingBodies?.find(row => row.name === contact.natal);
+  const movingEvidence = describePlacement(moving, `Transit ${contact.transit}`);
+  const natalEvidence = describePlacement(rooted, `Natal ${contact.natal}`);
+  const frame = chart?.worldview === "god" ? "God View" : "Agent View";
+  const relation = contact.aspect === "trine" || contact.aspect === "conjunction" || contact.aspect === "sextile"
+    ? "harmonious" : "frictional";
   return {
-    theme: `${contact.transit} ${contact.aspect} natal ${contact.natal}: ${moving.domain} meet ${rooted.domain}`,
-    advice: `In this symbolic transit reading, moving ${contact.transit} emphasizes ${moving.domain}, while natal ${contact.natal} represents your established pattern around ${rooted.domain}. The ${contact.aspect} ${dynamic.meaning}. ${close} at ${contact.orb.toFixed(2)}°, so consider ${moving.expression} while also ${rooted.expression}. ${dynamic.approach}`,
+    theme: `${contact.transit} ${contact.aspect} natal ${contact.natal} · ${contact.orb.toFixed(2)}° orb`,
+    advice: `WHAT — A ${relation} ${contact.aspect} links two specifically located planetary expressions. WHY — ${movingEvidence}. ${natalEvidence}. HOW — Compare their decan families and house topics in the ${frame}, rather than interpreting the planet names alone. CONSEQUENCE — The ${contact.orb.toFixed(2)}° orb measures geometric closeness, not a guaranteed outcome. MEANING — Lunar mansion, Arabic manzil, Chinese mansion, and dignity interpretations require verified catalog mappings; they are not yet supplied by this contact evidence and must not be invented.`,
   };
 }
 
@@ -346,7 +345,7 @@ export default function EnergyPage() {
             const isFlow = ENERGY_ASPECT_FLOW[c.aspect] === 1;
             const isFriction = ENERGY_ASPECT_FLOW[c.aspect] === -1;
             const symbol = ASPECT_SYMBOLS[c.aspect] || c.aspect;
-            const interpretation = interpretContact(c);
+            const interpretation = interpretContact(c, chart);
             const isExpanded = expandedContactId === c.id;
 
             return (
