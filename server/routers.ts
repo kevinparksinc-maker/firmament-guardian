@@ -710,13 +710,35 @@ Only describe aspects explicitly supplied with calculated planet pairs and orbs 
         })
       )
       .mutation(async ({ input }) => {
-        const { context } = await synthesizeChartForReading(input.chart as ChartResult, "natal", `Life story chapter: ${input.chapterKey}`);
-        return generateLifeStoryChapter(
-          input.chart as ChartResult,
-          input.chapterKey,
-          input.selectedAge,
-          context
-        );
+        const chart = input.chart as ChartResult;
+        const { synthesis } = await synthesizeChartForReading(chart, "natal", "Life story chapter: " + input.chapterKey);
+        const currentAge = calculatePersonAge(chart.input.date);
+        const cycles = generatePlanetaryCycles(chart, currentAge);
+        const chapters = compileLifeStoryChapters(chart, currentAge, cycles);
+        const chapterMeta = chapters.find(chapter => chapter.key === input.chapterKey) ?? chapters[0];
+        const focusAge = input.selectedAge ?? (chapterMeta.ageRange[0] + chapterMeta.ageRange[1]) / 2;
+        const profection = calculateAnnualProfection(focusAge, chart);
+        const content = [
+          "# " + chapterMeta.title,
+          "Period: " + chapterMeta.periodLabel,
+          "Profected age: " + Math.floor(focusAge),
+          "Agent View: " + profection.lordOfTheYearAgent + " ruling " + profection.profectedSignAgent + ", house " + profection.profectedHouseAgent,
+          "God View: " + profection.lordOfTheYearGod + " ruling " + profection.profectedSignGod + ", house " + profection.profectedHouseGod,
+          "Profection themes: " + profection.traditionalThemes.join(", "),
+          ...chapterMeta.keyCycles.map(cycle => cycle.title + " (approximate age " + cycle.age + "): " + cycle.description),
+          "## Canonical Master Synthesis",
+          synthesis.dominantConclusion,
+          ...synthesis.themes.map(theme => [
+            "### " + theme.humanTheme,
+            "What: " + theme.primaryConclusion,
+            "Why and how: " + theme.whyHow,
+            "Consequences: " + theme.consequences,
+            "Meaning: " + theme.deeperMeaning,
+            "Evidence: " + theme.evidenceIds.join(", "),
+          ].join("\n\n")),
+          "These are symbolic chart interpretations, not verified biographical events.",
+        ].join("\n\n");
+        return { title: chapterMeta.title, content, chapterMeta };
       }),
 
     audit: publicProcedure
