@@ -429,7 +429,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
           currentProfile={activeProfile}
-          onSaveProfile={handleSaveProfile}
+          onSaveProfile={handleEditProfile}
           onLoadSample={handleLoadSampleChart}
           isCalculating={calculate.isPending}
         />}
