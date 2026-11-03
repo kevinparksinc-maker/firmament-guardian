@@ -24,6 +24,8 @@ describe("Unified synthesis method-coverage contract", () => {
         const id = `prop-method-${layer.id}-${index}`;
         expect(propositions.some(prop => prop.id === id)).toBe(true);
         expect(linked.has(id)).toBe(true);
+        const proposition = propositions.find(prop => prop.id === id)!;
+        expect(synthesis.themes.some(theme => theme.linkedPropositionIds.includes(id) && theme.whyHow.includes(proposition.plainLanguageMeaning) && proposition.supportingEvidenceIds.every(evidenceId => theme.evidenceIds.includes(evidenceId)))).toBe(true);
         expect(synthesis.integratedNarrative.some(line => line.includes(layer.name))).toBe(true);
       }
     }
