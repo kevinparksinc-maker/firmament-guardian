@@ -9,7 +9,7 @@ import {
 describe("zero-tilt sunrise-anchored rising point", () => {
   const sun = { x: 1, y: 0, z: 0 };
   it("derives fixed-wheel solar longitude and declination from XYZ", () => {
-    expect(solarAnglesFromFixedXYZ({ x: 0, y: 1, z: 1 }).longitude).toBe(90);
+    expect(solarAnglesFromFixedXYZ({ x: 0, y: 1, z: 1 }).rightAscension).toBe(90);
     expect(solarAnglesFromFixedXYZ({ x: 0, y: 1, z: 1 }).declination).toBeCloseTo(45, 8);
   });
   it("uses the sunrise hour angle without an extra 90-degree offset", () => {
