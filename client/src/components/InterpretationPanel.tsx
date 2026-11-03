@@ -283,6 +283,13 @@ export function InterpretationPanel({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const generate = trpc.interpretation.generate.useMutation();
   const masterSynthesis = trpc.interpretation.masterSynthesize.useMutation();
+  const [visibleMasterSynthesis, setVisibleMasterSynthesis] = useState<NonNullable<typeof masterSynthesis.data> | null>(null);
+  const masterSynthesisRequest = useRef(0);
+  useEffect(() => {
+    masterSynthesisRequest.current += 1;
+    setVisibleMasterSynthesis(null);
+    masterSynthesis.reset();
+  }, [chart, mode]);
   const chapterMutation = trpc.interpretation.chapter.useMutation();
   const chat = trpc.interpretation.followUp.useMutation({
     onSuccess: answer => {
@@ -508,23 +515,25 @@ export function InterpretationPanel({
         <h3 className="text-xl font-semibold text-cyan-100">Unified Master Chart Synthesis</h3>
         <p className="mt-2 text-sm text-slate-300">Calculate the complete available method ledger from this chart and display evidence-backed findings. Missing methods remain identified rather than silently counted.</p>
         <Button className="mt-4" disabled={masterSynthesis.isPending} onClick={() => {
+          const request = ++masterSynthesisRequest.current;
+          setVisibleMasterSynthesis(null);
           masterSynthesis.mutate({
             ...chart.input,
             worldview: chart.worldview,
             mode,
             question: activeQuestion || "Synthesize every calculated doctrine and show the evidence.",
-          });
+          }, { onSuccess: data => { if (request === masterSynthesisRequest.current) setVisibleMasterSynthesis(data); } });
         }}>{masterSynthesis.isPending ? "Synthesizing…" : "Run unified synthesis"}</Button>
         {masterSynthesis.error && <p role="alert" className="mt-3 text-sm text-rose-300">{masterSynthesis.error.message}</p>}
-        {masterSynthesis.data && <div className="mt-4 space-y-3 text-sm text-slate-200">
-          <p className="font-medium">{masterSynthesis.data.dominantConclusion}</p>
-          <p className="text-xs text-slate-300">Evidence traced: {Math.round(masterSynthesis.data.qualityAudit.groundedRatio * 100)}% · {masterSynthesis.data.qualityAudit.passed ? "Coverage audit passed" : "Coverage review required"}</p>
-          {!masterSynthesis.data.qualityAudit.passed && <p role="alert" className="text-xs text-amber-200">{masterSynthesis.data.qualityAudit.unsupportedClaims.length} evidence coverage issues. Review method findings before relying on this summary.</p>}
-          <p className="text-xs text-cyan-200">Methods evaluated: {masterSynthesis.data.methodLedgerSummary.totalEvaluated} · Computed: {masterSynthesis.data.methodLedgerSummary.computedWithResult} · Reference only: {masterSynthesis.data.methodLedgerSummary.referenceOnly} · Failed: {masterSynthesis.data.methodLedgerSummary.failed}</p>
-          {masterSynthesis.data.integratedNarrative.map((line, index) => <p key={index}>{line}</p>)}
+        {visibleMasterSynthesis && <div className="mt-4 space-y-3 text-sm text-slate-200">
+          <p className="font-medium">{visibleMasterSynthesis.dominantConclusion}</p>
+          <p className="text-xs text-slate-300">Evidence traced: {Math.round(visibleMasterSynthesis.qualityAudit.groundedRatio * 100)}% · {visibleMasterSynthesis.qualityAudit.passed ? "Coverage audit passed" : "Coverage review required"}</p>
+          {!visibleMasterSynthesis.qualityAudit.passed && <p role="alert" className="text-xs text-amber-200">{visibleMasterSynthesis.qualityAudit.unsupportedClaims.length} evidence coverage issues. Review method findings before relying on this summary.</p>}
+          <p className="text-xs text-cyan-200">Methods evaluated: {visibleMasterSynthesis.methodLedgerSummary.totalEvaluated} · Computed: {visibleMasterSynthesis.methodLedgerSummary.computedWithResult} · Reference only: {visibleMasterSynthesis.methodLedgerSummary.referenceOnly} · Failed: {visibleMasterSynthesis.methodLedgerSummary.failed}</p>
+          {visibleMasterSynthesis.integratedNarrative.map((line, index) => <p key={index}>{line}</p>)}
           <div className="space-y-2">
             <h4 className="font-semibold text-cyan-100">Every recorded method and its calculated findings</h4>
-            {masterSynthesis.data.methodFindings.map(method => <details key={method.id} className="rounded-lg border border-white/10 p-3">
+            {visibleMasterSynthesis.methodFindings.map(method => <details key={method.id} className="rounded-lg border border-white/10 p-3">
               <summary className="cursor-pointer font-medium">{method.name} · {method.status} · {method.resultCount} result entries</summary>
               <p className="mt-2 text-xs text-slate-400">{method.tradition} · {method.frame} · Sources: {method.sourceIds.join(", ") || "Not recorded"}</p>
               {method.notes && <p className="mt-2 text-xs text-amber-200">{method.notes}</p>}
@@ -537,7 +546,7 @@ export function InterpretationPanel({
               </div>
             </details>)}
           </div>
-          {masterSynthesis.data.themes.map(theme => <details key={theme.id} className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer font-medium">{theme.humanTheme}</summary><p className="mt-2">{theme.primaryConclusion}</p><p className="mt-2">{theme.whyHow}</p><p className="mt-2 text-xs text-cyan-200">Evidence: {theme.evidenceIds.join(", ") || "Not recorded"}</p></details>)}
+          {visibleMasterSynthesis.themes.map(theme => <details key={theme.id} className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer font-medium">{theme.humanTheme}</summary><p className="mt-2">{theme.primaryConclusion}</p><p className="mt-2">{theme.whyHow}</p><p className="mt-2 text-xs text-cyan-200">Evidence: {theme.evidenceIds.join(", ") || "Not recorded"}</p></details>)}
         </div>}
       </div>
       <div className="mx-auto max-w-4xl text-center">
