@@ -518,6 +518,8 @@ export function InterpretationPanel({
         {masterSynthesis.error && <p role="alert" className="mt-3 text-sm text-rose-300">{masterSynthesis.error.message}</p>}
         {masterSynthesis.data && <div className="mt-4 space-y-3 text-sm text-slate-200">
           <p className="font-medium">{masterSynthesis.data.dominantConclusion}</p>
+          <p className="text-xs text-slate-300">Evidence traced: {Math.round(masterSynthesis.data.qualityAudit.groundedRatio * 100)}% · {masterSynthesis.data.qualityAudit.passed ? "Coverage audit passed" : "Coverage review required"}</p>
+          {!masterSynthesis.data.qualityAudit.passed && <p role="alert" className="text-xs text-amber-200">{masterSynthesis.data.qualityAudit.unsupportedClaims.length} evidence coverage issues. Review method findings before relying on this summary.</p>}
           <p className="text-xs text-cyan-200">Methods evaluated: {masterSynthesis.data.methodLedgerSummary.totalEvaluated} · Computed: {masterSynthesis.data.methodLedgerSummary.computedWithResult} · Reference only: {masterSynthesis.data.methodLedgerSummary.referenceOnly} · Failed: {masterSynthesis.data.methodLedgerSummary.failed}</p>
           {masterSynthesis.data.integratedNarrative.map((line, index) => <p key={index}>{line}</p>)}
           <div className="space-y-2">
