@@ -30,7 +30,7 @@ import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarouse
 import { ProfileSwitcherModal } from "@/components/ProfileSwitcherModal";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import type { UserProfileData } from "@/components/NatalProfileBuilder";
-import type { ChartResult, TransitContact } from "../../../server/astronomy";
+import type { ChartResult } from "../../../server/astronomy";
 
 type ProfileHomeScreenProps = {
   profile: UserProfileData;
@@ -80,18 +80,6 @@ function signAt(longitude: number | undefined): string {
     ? SIGNS[Math.floor((((longitude % 360) + 360) % 360) / 30)]
     : "Unavailable";
 }
-
-const MAX_ORB = 5;
-const aspectFlow: Record<TransitContact["aspect"], number> = {
-  trine: 1,
-  sextile: 1,
-  square: -1,
-  opposition: -1,
-  conjunction: 1, semisquare: 0,
-};
-
-const percentWeight = (orb: number) =>
-  orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
 
 export function ProfileHomeScreen({
   profile,
