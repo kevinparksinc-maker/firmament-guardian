@@ -17,6 +17,12 @@ const SAMPLE_INPUT = {
 };
 
 describe("Master Synthesizer Pipeline", () => {
+  it("distinguishes sub-four-decimal coordinate changes in snapshot identity", async () => {
+    const first = await buildUnifiedMasterChart(SAMPLE_INPUT);
+    const shifted = await buildUnifiedMasterChart({ ...SAMPLE_INPUT, latitude: SAMPLE_INPUT.latitude + 0.000001 });
+    expect(shifted.snapshotId).not.toBe(first.snapshotId);
+  });
+
   it("extracts grounded propositions with explicit evidence IDs across traditions", async () => {
     const snapshot = await buildUnifiedMasterChart(SAMPLE_INPUT);
     const propositions = extractPropositionsFromSnapshot(snapshot);
