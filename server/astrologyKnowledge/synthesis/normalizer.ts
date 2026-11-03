@@ -10,6 +10,30 @@ export function extractPropositionsFromSnapshot(
   snapshot: UnifiedMasterChartSnapshot
 ): InterpretedProposition[] {
   const propositions: InterpretedProposition[] = [];
+  // Register every calculated doctrine in the synthesis evidence stream, not only
+  // the manually interpreted subset below. This is a coverage record, not an
+  // invented human prediction; deeper interpretations remain evidence-gated.
+  for (const layer of snapshot.methodExecutionLedger) {
+    if (layer.status !== "computed-with-result" || layer.evidenceIds.length === 0) continue;
+    const frame = layer.frame === "god" || layer.frame === "agent" || layer.frame === "transit"
+      ? layer.frame : "shared";
+    const resultCount = Array.isArray(layer.results) ? layer.results.length : layer.results == null ? 0 : 1;
+    propositions.push({
+      id: `prop-method-ledger-${layer.id}`,
+      themeTitle: `Calculated method: ${layer.name}`,
+      plainLanguageMeaning: `${layer.name} was executed for this chart and returned ${resultCount} result record(s). Its evidence is available for cross-method review; this entry alone does not establish a life prediction.`,
+      domain: "identity",
+      causalMechanism: `Method ${layer.id}; technique ${layer.technique}; status ${layer.status}`,
+      valence: "neutral",
+      strength: "subtle",
+      tradition: layer.tradition,
+      frame,
+      supportingEvidenceIds: layer.evidenceIds,
+      opposingEvidenceIds: [],
+      sourceDoctrineIds: layer.sourceIds,
+    });
+  }
+
   const planets = snapshot.baseCelestialState.planets;
   const asc = snapshot.baseCelestialState.ascendant;
   const sun = planets.find(p => p.name === "Sun");

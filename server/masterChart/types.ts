@@ -57,6 +57,7 @@ export interface MasterChartInput {
   worldview?: "god" | "agent" | "agent-vs-god";
   birthTimeKnown?: boolean;
   elevation?: number;
+  xyzPositions?: Record<string, { x: number; y: number; z: number }>;
 }
 
 export interface UnifiedMasterChartSnapshot {

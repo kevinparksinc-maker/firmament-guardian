@@ -31,7 +31,7 @@ type ResolvedPlace = {
   timezone: string;
 };
 
-type HoraryResult = { chart: HoraryChart; reading: string };
+type HoraryResult = { chart: HoraryChart; reading: string; synthesisStatus: "ai_completed" | "deterministic_fallback" };
 
 export default function HoraryPage() {
   const initialMoment = localDateTime();
@@ -50,6 +50,7 @@ export default function HoraryPage() {
   const [horary, setHorary] = useState<HoraryResult | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
+  const providerStatus = trpc.system.providerStatus.useQuery(undefined, { retry: false });
   const geocode = trpc.hybrid.geocode.useQuery({ query: locationQuery }, { enabled: false, retry: false });
   const birthGeocode = trpc.hybrid.geocode.useQuery({ query: birthLocationQuery }, { enabled: false, retry: false });
   const cast = trpc.horary.open.useMutation({
@@ -115,7 +116,7 @@ export default function HoraryPage() {
       history: [
         { role: "user", content: horary.chart.question },
         { role: "assistant", content: horary.reading },
-        ...next.filter((message): message is Extract<Message, { role: "user" | "assistant" }> => message.role !== "system"),
+        ...messages.filter((message): message is Extract<Message, { role: "user" | "assistant" }> => message.role !== "system"),
       ],
       question: content.trim(),
     });
@@ -125,6 +126,7 @@ export default function HoraryPage() {
     <div className="relative min-h-screen overflow-hidden bg-[#080b14] text-slate-100 selection:bg-cyan-300/25">
       <div className="pointer-events-none fixed inset-0 overflow-hidden"><div className="absolute -left-36 -top-32 h-[34rem] w-[34rem] rounded-full bg-cyan-700/15 blur-3xl"/><div className="absolute -right-40 top-1/3 h-[32rem] w-[32rem] rounded-full bg-violet-600/10 blur-3xl"/><div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(255,255,255,.3)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.3)_1px,transparent_1px)] [background-size:64px_64px]"/></div>
       <main className="relative z-10 mx-auto max-w-6xl px-5 py-6 md:px-10 md:py-10">
+        {providerStatus.data && <p role="status">{providerStatus.data.configured ? "AI provider configured" : "AI provider unavailable"}: {providerStatus.data.provider}</p>}
         <Link href="/" className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm text-slate-300 transition hover:border-cyan-200/30 hover:text-white"><ArrowLeft className="h-4 w-4"/>Back to the astrology app</Link>
         <div className="mb-6 rounded-2xl border border-amber-200/25 bg-gradient-to-r from-amber-100/[0.09] via-violet-100/[0.06] to-cyan-100/[0.06] p-4 sm:p-5"><p className="text-[10px] font-bold uppercase tracking-[.23em] text-amber-200">THE QUESTION CHAMBER · 2050 OBSERVATORY</p><div className="mt-3 grid gap-3 text-xs leading-6 text-slate-300 sm:grid-cols-3"><p><strong className="block text-amber-100">01. Ask clearly</strong>Write one question that matters to you.</p><p><strong className="block text-amber-100">02. Set the moment</strong>Resolve where and when your question became important.</p><p><strong className="block text-amber-100">03. Read the testimony</strong>Explore the two chart frames, evidence and plain-English synthesis.</p></div></div>
         <Link href="/zodiac-readings" className="mb-7 flex items-center gap-3 rounded-xl border border-amber-200/30 bg-amber-100/[0.07] px-5 py-4 text-sm text-amber-100 hover:bg-amber-100/[0.12]"><Sparkles className="h-5 w-5"/> Explore the second engine: Twelve Zodiac Sign Readings →</Link>
@@ -170,7 +172,7 @@ export default function HoraryPage() {
 
           <div className="order-3"><FrameRelationshipPanel rows={horary.chart.placements as unknown as import("../../../server/astronomy").ChartRow[]} title="God's View of the Horary Agent" intro="The horary testimony remains primary. This panel adds the broader fixed zodiac frame and explains how the same question-time positions are translated through the local horary houses." /></div>
 
-          <div className="order-1"><HoraryChamber2050 chart={horary.chart} reading={horary.reading}/></div>
+          <div className="order-1 space-y-3"><div role="status" className={`rounded-xl border px-4 py-3 text-sm ${horary.synthesisStatus === "ai_completed" ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100" : "border-amber-300/30 bg-amber-300/10 text-amber-100"}`}>{horary.synthesisStatus === "ai_completed" ? "Claude AI synthesis completed for this horary reading." : "Deterministic horary reading shown: AI synthesis was unavailable or exceeded its deadline. Calculated chart evidence remains available below."}</div><HoraryChamber2050 chart={horary.chart} reading={horary.reading}/></div>
 
           <Card className="order-4 overflow-hidden border-violet-200/15 bg-white/[0.035] text-slate-100"><CardHeader className="border-b border-white/10"><CardTitle className="flex items-center gap-2 font-serif text-2xl"><MessageCircle className="h-5 w-5 text-violet-200"/>Continue with this chart</CardTitle><p className="text-sm leading-6 text-slate-400">Ask what a specific testimony means or challenge the reading. Follow-ups use this same question chart, not a new or silently recalculated chart.</p></CardHeader><CardContent className="space-y-3 p-4 sm:p-6"><AIChatBox messages={messages} onSendMessage={sendFollowUp} isLoading={followUp.isPending} height="540px" placeholder="Ask a follow-up about this horary judgment…" emptyStateMessage="Your horary chart is ready for follow-up questions." suggestedPrompts={["Which chart factor most strongly supports that conclusion?", "What is the main uncertainty or counter-testimony?", "What practical next step follows from this judgment?"]}/>{followUp.error && <p role="alert" className="text-sm text-rose-300">{followUp.error.message}</p>}</CardContent></Card>
           <div className="order-5"><HoraryOrrery natal={horary.chart.natalChart} transit={horary.chart.transitChart} god={horary.chart.godChart}/></div>
