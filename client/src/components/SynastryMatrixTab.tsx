@@ -42,7 +42,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useSovereignTier, SovereignTeaserLock } from "./SovereignTierModal";
 import type { ChartResult } from "../../../server/astronomy";
-import { computeSynastry, type SynastryAspect } from "@/lib/synastry-engine";
+import { computeSynastry, computeRelationshipCompatibility, type SynastryAspect } from "@/lib/synastry-engine";
 import { SynastryDualOrrery } from "./SynastryDualOrrery";
 import type { LovedOneRecord, RelationshipRole } from "../../../shared/social";
 
@@ -284,6 +284,11 @@ export function SynastryMatrixTab({
     [userChart, partnerChart, isSwapped]
   );
 
+  const relationshipCompatibility = useMemo(
+    () => computeRelationshipCompatibility(aspects, partnerDetails.relationship as RelationshipRole),
+    [aspects, partnerDetails.relationship]
+  );
+
   // Filtered aspects
   const filteredAspects = useMemo(() => {
     if (aspectFilter === "all") return aspects;
@@ -443,6 +448,37 @@ export function SynastryMatrixTab({
         firstName={isSwapped ? partnerDetails.name : "Your birth chart"}
         secondName={isSwapped ? "Your birth chart" : partnerDetails.name}
       />}
+
+      {/* Relationship-specific compatibility is grounded in cross-chart evidence. */}
+      <Card className="border-cyan-300/20 bg-slate-950/70 text-slate-100">
+        <CardHeader>
+          <CardTitle className="text-lg text-cyan-200">{relationshipCompatibility.label} · Compatibility dynamics</CardTitle>
+          <p className="text-xs text-slate-300">{relationshipCompatibility.summary}</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {relationshipCompatibility.dimensions.map(d => (
+              <div key={d.label} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="flex justify-between gap-2 text-sm"><span>{d.label}</span>
+                  <span className="font-semibold">{d.score === null ? "No evidence" : d.score + "% flow"}</span></div>
+                <div className="mt-2 h-1.5 rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-cyan-400" style={{width: (d.score ?? 0) + "%"}} />
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{d.contacts} supporting cross-chart contacts</p>
+              </div>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 text-xs leading-relaxed">
+            <div><strong className="text-emerald-300">Where you flow</strong>
+              <p className="mt-1 text-slate-300">{relationshipCompatibility.strengths.map(a => a.planetA+" "+a.aspect+" "+a.planetB+" ("+a.orb+"°)").join("; ") || "No close harmonious contacts in scope."}</p>
+            </div>
+            <div><strong className="text-amber-300">Where to work together</strong>
+              <p className="mt-1 text-slate-300">{relationshipCompatibility.challenges.map(a => a.planetA+" "+a.aspect+" "+a.planetB+" ("+a.orb+"°)").join("; ") || "No close friction contacts in scope."}</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400">These scores describe weighted astrological aspect balance in this relationship, not a measurement of feelings, safety, or real-world relationship success.</p>
+        </CardContent>
+      </Card>
 
       {/* Symbolic cross-aspect balance — never a measure of human compatibility. */}
       <div className="grid gap-6 lg:grid-cols-12">
