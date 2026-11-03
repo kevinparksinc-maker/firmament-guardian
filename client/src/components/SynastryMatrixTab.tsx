@@ -292,7 +292,7 @@ export function SynastryMatrixTab({
 
   const handleAskAboutBond = () => {
     if (!onAskMasterInterpreter || !userChart || !partnerChart) return;
-    const query = `Please provide an in-depth synastry and relationship analysis between me (${userChart?.input.location || "my birth chart"}) and ${partnerDetails.name} (${partnerDetails.date} in ${partnerDetails.location}). The charts contain ${aspects.length} major cross-aspects within 5°. Key calculated aspects: ${aspects.slice(0,16).map(a=>`${a.planetA} ${a.aspect} ${a.planetB} (${a.orb}°)`).join("; ")}. Explain the mutual patterns, both people’s house placements, any tensions and practical ways to communicate, distinguishing symbolic possibility from established human facts.`;
+    const query = `Please provide an in-depth synastry and relationship analysis between me (${userChart?.input.location || "my birth chart"}) and ${partnerDetails.name} (${partnerDetails.date} in ${partnerDetails.location}). The charts contain ${aspects.length} cross-aspects across eight configured aspect types within 5°. Key calculated aspects: ${aspects.slice(0,16).map(a=>`${a.planetA} ${a.aspect} ${a.planetB} (${a.orb}°)`).join("; ")}. Explain the mutual patterns, both people’s house placements, any tensions and practical ways to communicate, distinguishing symbolic possibility from established human facts.`;
     onAskMasterInterpreter(query);
   };
 
@@ -430,11 +430,11 @@ export function SynastryMatrixTab({
       <div className="fg-module-banner">
         <div className="fg-module-eyebrow">02 / THE CELESTIAL INTERSECTION · TWO CALCULATED NATAL SKIES</div>
         <h3 className="fg-module-title">Two lives. One shared sky.</h3>
-        <p className="fg-module-desc">All available planets compared across both natal charts with the same five-degree orb. House overlays are calculated in both directions using actual Ascendants. The relationship indices describe the observed aspect mix, not emotional certainty or compatibility probabilities.</p>
+        <p className="fg-module-desc">All available planets compared across both natal charts using eight aspects and a five-degree orb. House overlays are calculated in both directions using actual Ascendants. The relationship indices describe the observed aspect mix, not emotional certainty or compatibility probabilities.</p>
         {!userChart && <p className="mt-3 text-amber-200 text-sm" role="status">Calculate your natal chart first to activate the synastry evidence.</p>}
         {calculatePartnerMutation.isPending && <p className="mt-3 text-cyan-200 text-sm" role="status">Calculating the second natal chart…</p>}
         {calculatePartnerMutation.isError && <p className="mt-3 text-rose-200 text-sm" role="alert">Could not calculate the second chart: {calculatePartnerMutation.error.message}</p>}
-        {userChart && partnerChart && aspects.length === 0 && <p className="mt-3 text-slate-300 text-sm">No major cross-chart contacts were found within 5°. A zero index here means no testimony in scope, not an incompatible partnership.</p>}
+        {userChart && partnerChart && aspects.length === 0 && <p className="mt-3 text-slate-300 text-sm">No configured cross-chart contacts were found within 5°. A zero index here means no testimony in scope, not an incompatible partnership.</p>}
       </div>
 
       {userChart && partnerChart && <SynastryDualOrrery
@@ -707,7 +707,7 @@ export function SynastryMatrixTab({
                 Planetary Aspect Cross-Grid
               </CardTitle>
               <p className="text-xs text-slate-400 mt-1">
-                Deterministic aspect geometry calculated within rigorous 5°–6° orbs.
+                Eight cross-chart aspect types calculated within a 5° orb; minor aspects carry half weight.
               </p>
             </div>
 
