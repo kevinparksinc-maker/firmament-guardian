@@ -25,7 +25,14 @@ export async function getStoredNatal(openId: string, input: MasterChartInput): P
   if (!snapshot.validation.complete) return snapshot;
   // A second read avoids duplicate writes when another request saved this profile during calculation.
   const recent = await listSavedCharts(openId);
-  const alreadySaved = recent.find(row => row.title === "Master Natal " + snapshot.snapshotId);
+  const alreadySaved = recent.find(row => {
+    const saved = row.chart as { snapshotId?: string; validation?: { complete?: boolean }; frameConfig?: { engineVersion?: string } };
+    return row.title === "Master Natal " + snapshot.snapshotId &&
+      saved?.snapshotId === snapshot.snapshotId &&
+      saved?.validation?.complete === true &&
+      saved?.frameConfig?.engineVersion === "firmament-master-2026.1" &&
+      equalInputs(row.input as MasterChartInput, normalized);
+  });
   if (alreadySaved) return alreadySaved.chart as UnifiedMasterChartSnapshot;
   await createSavedChart({
     openId, title: "Master Natal " + snapshot.snapshotId,
