@@ -610,24 +610,7 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         const prompt = `Analyze synastry between:
 Person 1: ${input.natalPlacements}
 Person 2: ${input.soulmatePlacements}
-Generate a rich, deeply insightful relationship compatibility breakdown in JSON format with:
-{
-  "interpretation": "A flowing, comprehensive synthesis of this relationship's potential and spiritual purpose",
-  "aspectGroups": [
-    {
-      "type": "harmonious",
-      "aspects": [
-        { "planet1": "Sun", "planet2": "Moon", "aspect": "Trine", "orb": 1.5, "interpretation": "Deep natural understanding and intuitive emotional harmony." }
-      ]
-    },
-    {
-      "type": "challenging",
-      "aspects": [
-        { "planet1": "Mars", "planet2": "Saturn", "aspect": "Square", "orb": 2.1, "interpretation": "Patience and timing require conscious communication." }
-      ]
-    }
-  ]
-}`;
+Only describe aspects explicitly supplied with calculated planet pairs and orbs in the input. Do not infer or fabricate aspect angles, orbs, or placements. Return JSON with "interpretation" (evidence-grounded text) and "aspectGroups" (an array of groups with "type" and "aspects"). If calculated aspects are not provided, return an empty aspectGroups array and explain what evidence is missing.`;
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
@@ -639,20 +622,13 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
           const content = String(response.choices[0]?.message?.content ?? "{}");
           const parsed = JSON.parse(content);
           return {
-            interpretation: parsed.interpretation || "A powerful synastry dynamic rooted in complementary strengths and mutual growth.",
+            interpretation: parsed.interpretation || "No verified synastry interpretation was returned; calculated inter-chart aspects are required.",
             aspectGroups: Array.isArray(parsed.aspectGroups) ? parsed.aspectGroups : [],
           };
         } catch {
           return {
-            interpretation: "This celestial pairing unites complementary strengths, balancing individual sovereignty with unshakeable mutual dedication.",
-            aspectGroups: [
-              {
-                type: "harmonious",
-                aspects: [
-                  { planet1: "Sun", planet2: "Moon", aspect: "Trine", orb: 1.8, interpretation: "Mutual intuitive ease and natural respect for each other's emotional rhythms." }
-                ]
-              }
-            ],
+            interpretation: "Synastry response could not be validated. No aspect or orb is reported without verified calculation.",
+            aspectGroups: [],
           };
         }
       }),
