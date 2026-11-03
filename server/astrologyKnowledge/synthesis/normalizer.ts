@@ -4,6 +4,8 @@ import type { InterpretedProposition } from "./types";
 import { getDecanCanonByLongitude } from "../canon/decans36";
 import { getManzilCanonByLongitude } from "../canon/manazil28";
 import { getNakshatraCanonByLongitude } from "../canon/nakshatras27";
+import { synthesizePlanetInSign } from "../canon/planetsAndSigns";
+import { synthesizePlanetInHouse } from "../canon/housesAndFrames";
 
 function getSign(longitude: number): string {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
@@ -18,6 +20,11 @@ function canonContextForFinding(layerId: string, finding: unknown): string {
   const record = finding as Record<string, unknown>;
   const body = typeof record.body === "string" ? record.body : "";
   const longitude = typeof record.longitude === "number" ? record.longitude : NaN;
+  if (layerId === "western-planets-and-signs") {
+    const name = typeof record.name === "string" ? record.name : body;
+    const sign = typeof record.sign === "string" ? record.sign : Number.isFinite(longitude) ? getSign(longitude) : "";
+    return name && sign ? `Canon interpretation for ${name} in ${sign}: ${synthesizePlanetInSign(name, sign)}` : "";
+  }
   if (!body || !Number.isFinite(longitude)) return "";
   if (layerId === "elemental-decans") {
     const canon = getDecanCanonByLongitude(longitude);
@@ -74,6 +81,35 @@ export function extractPropositionsFromSnapshot(
       supportingEvidenceIds: layer.evidenceIds,
       opposingEvidenceIds: [],
       sourceDoctrineIds: layer.sourceIds,
+    });
+  }
+
+  // Interpret each calculated planetary placement through the existing Canon,
+  // preserving separate God and Agent house assignments.
+  for (const planet of snapshot.baseCelestialState.planets) {
+    const agentHouse = planet.agentHouse ?? planet.house;
+    const godHouse = planet.godHouse;
+    const sign = getSign(planet.longitude);
+    const houseReading = typeof agentHouse === "number"
+      ? synthesizePlanetInHouse(planet.name, agentHouse, godHouse, agentHouse)
+      : null;
+    propositions.push({
+      id: `prop-canon-placement-${planet.name.toLowerCase()}`,
+      themeTitle: `${planet.name} — Canon placement and dual-frame houses`,
+      plainLanguageMeaning: [
+        synthesizePlanetInSign(planet.name, sign),
+        houseReading?.houseSynthesis,
+        houseReading?.godToAgentNote,
+      ].filter(Boolean).join(" "),
+      domain: "identity",
+      causalMechanism: `Canon planetary sign and house interpretation; ${planet.name} at ${planet.longitude} degrees`,
+      valence: "neutral",
+      strength: "moderate",
+      tradition: "firmament",
+      frame: "shared",
+      supportingEvidenceIds: [`planet-${planet.name.toLowerCase()}`],
+      opposingEvidenceIds: [],
+      sourceDoctrineIds: ["planet-sign-canon", "house-frame-canon"],
     });
   }
 
