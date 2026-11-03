@@ -43,7 +43,6 @@ export function MasterSynthesizerPanel({
       {
         ...chart.input,
         worldview: chart.worldview,
-        transitDate: chart.input.transitDate ?? chart.transitDate,
         mode: chart.readingScope === "transit" ? "transit" : chart.readingScope === "combined" ? "combined" : "natal",
         question: qToUse ?? question,
       },
@@ -57,7 +56,7 @@ export function MasterSynthesizerPanel({
 
   React.useEffect(() => {
     handleSynthesize();
-  }, [chart.input.date, chart.input.time, chart.input.location, chart.readingScope]);
+  }, [chart]);
 
   return (
     <div className="space-y-6">
