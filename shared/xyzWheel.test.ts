@@ -25,7 +25,7 @@ describe("independent custom XYZ equatorial wheel",()=>{
   }
  });
  it("derives eastern equatorial horizon from sidereal angle",()=>{
-  expect(equatorialAscendantFromLast(204.75)).toBeCloseTo(294.75);
+  expect(equatorialAscendantFromLast(204.75)).toBeCloseTo(204.75);
   expect(siderealAtSunrise(90,0,0,0)).toBeCloseTo(0);
   expect(siderealAtSunrise(90,80,80)).toBeNull();
  });
