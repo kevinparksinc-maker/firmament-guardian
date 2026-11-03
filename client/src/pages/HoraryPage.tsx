@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { ArrowLeft, Clock3, Loader2, MapPin, MessageCircle, Moon, Orbit, Sparkles, Sun } from "lucide-react";
 import { Link } from "wouter";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
@@ -34,6 +35,7 @@ type ResolvedPlace = {
 type HoraryResult = { chart: HoraryChart; reading: string; synthesisStatus: "ai_completed" | "deterministic_fallback" };
 
 export default function HoraryPage() {
+  const { profile: activeProfile } = useProfileSession();
   const initialMoment = localDateTime();
   const [question, setQuestion] = useState("");
   const [subject, setSubject] = useState<"querent" | "other">("querent");
@@ -80,6 +82,23 @@ export default function HoraryPage() {
     setBirthPlace(resolved);
     setBirthLocationQuery(result.data.label);
   };
+
+  // The saved natal foundation is the default for all Horary natal comparisons.
+  // The question-time location remains independently editable.
+  useEffect(() => {
+    if (!activeProfile) return;
+    const resolved = {
+      query: activeProfile.location,
+      label: activeProfile.location,
+      latitude: activeProfile.latitude,
+      longitude: activeProfile.longitude,
+      timezone: activeProfile.timezone,
+    };
+    setBirthPlace(resolved);
+    setBirthLocationQuery(activeProfile.location);
+    setBirthDate(activeProfile.date);
+    setBirthTime(activeProfile.birthTimeUnknown ? "" : activeProfile.time);
+  }, [activeProfile?.id, activeProfile?.date, activeProfile?.time, activeProfile?.location, activeProfile?.latitude, activeProfile?.longitude, activeProfile?.timezone, activeProfile?.birthTimeUnknown]);
 
   const locationIsResolved = Boolean(place && place.query === locationQuery.trim());
   const birthLocationIsResolved = Boolean(birthPlace && birthPlace.query === birthLocationQuery.trim());
