@@ -33,6 +33,7 @@ import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
 
 export interface UserProfileData {
+  id?: string;
   name: string;
   date: string;
   time: string;
@@ -211,7 +212,7 @@ export function NatalProfileBuilder({
       setFormError("Please provide your birth time or check 'Exact birth time unknown'.");
       return;
     }
-    if (!formData.latitude || !formData.longitude || !formData.timezone) {
+    if (!Number.isFinite(formData.latitude) || !Number.isFinite(formData.longitude) || Math.abs(formData.latitude) > 90 || Math.abs(formData.longitude) > 180 || !formData.timezone || !formData.location.trim()) {
       setFormError("Please resolve your birth city to lock exact coordinates and timezone.");
       return;
     }
