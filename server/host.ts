@@ -82,25 +82,14 @@ ${formattedPacket}
 
   if (synthesisContext) ragContext += `\n\nUNIFIED MASTER SYNTHESIS — COMPLETE METHOD EVIDENCE:\n${synthesisContext}`;
 
-  const systemInstructions = [
-    HOST_SYSTEM,
-    ragContext
-      ? `YOU ARE IN DEEPLY PERSONALIZED LIFE STORYTELLING RAG MODE.
-The user's verified chart has been calculated and retrieved above.
-MANDATORY STYLE RULES:
-1. Speak in a flowing, immersive biographical life story narrative—never produce 1-liner summaries or formulaic bullet checklists.
-2. Translate their exact astrological placements (Sun, Moon, Ascendant, houses, nakshatras, transits) into vivid, real-world 2026 lived experience (careers, digital communication, relationships, boundary dynamics, deep trust).
-3. Weave explanations into substantial, multi-paragraph story sections with descriptive narrative headings.
-4. Treat the user with profound depth, care, and practical wisdom.`
-      : "YOU ARE IN EXPLORATION & OBSERVATORY GUIDE MODE. No chart has been calculated yet for this session. Guide the user warmly, answer general astrology inquiries in an engaging storytelling manner, and encourage them to calculate their chart or try the sample chart below to experience the personalized RAG life story reading.",
-  ].filter(Boolean);
+  const systemInstructions = [HOST_SYSTEM, ragContext].filter(Boolean);
 
   const messages: Message[] = [
     { role: "system", content: buildAstrologyInterpreterSystem(...systemInstructions) },
     ...withCurrentQuestion(history, question, 6),
   ];
 
-  // Provider routing is resolved centrally by invokeLLM; do not infer the provider from a single key.\n  const model = "claude-sonnet-4-6";
+  // Provider routing is resolved centrally by invokeLLM.\n  const model = "claude-sonnet-4-6";
   const response = await invokeLLM({ model, messages, maxTokens: 1800 });
   const content = response.choices[0]?.message?.content;
   const reading = typeof content === "string" ? content.trim() : "";
