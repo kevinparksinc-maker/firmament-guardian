@@ -1015,12 +1015,19 @@ export async function generateInterpretation(
   chart: ChartResult,
   mode: ReadingMode = "combined",
   question = "What should I understand from this chart?",
-  synthesisContext = ""
+  synthesisContext = "",
+  primarySynthesisReading?: string
 ) {
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
   const intelligence = `${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
-  const analysis = await analyzeChart(chart, mode, evidencePacket, synthesisContext);
-  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis, synthesisContext);
+  // A canonical synthesis already supplies the reading analysis; do not run
+  // an independent LLM planner that can introduce conflicting conclusions.
+  const analysis = primarySynthesisReading
+    ? synthesisContext
+    : await analyzeChart(chart, mode, evidencePacket, synthesisContext);
+  // Once a canonical Master Synthesis is supplied, the legacy life-story
+  // generator must never overwrite its conclusions or substitute canned prose.
+  const reading = primarySynthesisReading ?? await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis, synthesisContext);
   return {
     intelligence,
     evidencePacket,

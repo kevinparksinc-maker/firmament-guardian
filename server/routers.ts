@@ -251,7 +251,27 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         const { synthesis, context } = await synthesizeChartForReading(input.chart, input.mode, input.question);
-        const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context);
+        // The calculated Master Synthesis owns the displayed conclusion.
+        // Legacy prose generation is not allowed to replace it.
+        const primaryReading = [
+          `# Your Unified Chart Synthesis`,
+          `**Question:** ${input.question}`,
+          `**Core conclusion:** ${synthesis.dominantConclusion}`,
+          ...synthesis.integratedNarrative,
+          ...synthesis.themes.map(theme => [
+            `## ${theme.humanTheme}`,
+            `**What:** ${theme.primaryConclusion}`,
+            `**Why and how:** ${theme.whyHow}`,
+            `**Consequences:** ${theme.consequences}`,
+            `**Deeper meaning:** ${theme.deeperMeaning}`,
+            `**Evidence:** ${theme.evidenceIds.join(", ") || "No evidence IDs recorded"}`,
+            `**Traditions:** ${theme.convergenceAssessment.independentTraditions.join(", ") || "Not recorded"}`,
+          ].join("\n\n")),
+          `## Method Coverage`,
+          `Computed ${synthesis.methodLedgerSummary.computedWithResult} of ${synthesis.methodLedgerSummary.totalEvaluated} recorded methods. Quality audit: ${synthesis.qualityAudit.passed ? "passed" : "requires review"}.`,
+          ...synthesis.methodFindings.map(method => `- **${method.name}** (${method.status}): ${method.findings.map(f => `${f.label}: ${f.details}`).join("; ") || method.notes || "No calculated finding"}`),
+        ].join("\n\n");
+        const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context, primaryReading);
         return { ...interpretation, synthesis };
       }),
     masterSynthesize: publicProcedure
@@ -307,17 +327,29 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const { context } = await synthesizeChartForReading(input.chart as ChartResult, input.mode, input.question || input.chapterId);
-        return generateChapter(
-          input.chart as ChartResult,
-          input.mode,
-          input.intelligence,
-          input.chapterId as any,
-          input.completedChapters,
-          input.analysis,
-          input.question,
-          context
+        const { synthesis } = await synthesizeChartForReading(
+          input.chart as ChartResult, input.mode, input.question || input.chapterId
         );
+        const chapter = READING_CHAPTERS.find(item => item.id === input.chapterId);
+        const title = chapter?.title ?? input.chapterId;
+        const words = (title + " " + input.question).toLowerCase().split(/[^a-z]+/).filter(word => word.length > 3);
+        const matched = synthesis.themes.filter(theme =>
+          words.some(word => theme.humanTheme.toLowerCase().includes(word) || theme.domain.includes(word))
+        );
+        const themes = matched.length ? matched : synthesis.themes;
+        return [
+          "# " + title,
+          "**Core synthesis:** " + synthesis.dominantConclusion,
+          ...themes.map(theme => [
+            "## " + theme.humanTheme,
+            "**What:** " + theme.primaryConclusion,
+            "**Why and how:** " + theme.whyHow,
+            "**Consequences:** " + theme.consequences,
+            "**Meaning:** " + theme.deeperMeaning,
+            "**Evidence:** " + (theme.evidenceIds.join(", ") || "Not recorded"),
+          ].join("\n\n")),
+          "**Coverage:** " + synthesis.methodLedgerSummary.computedWithResult + " calculated methods.",
+        ].join("\n\n");
       }),
     followUp: publicProcedure
       .input(
@@ -590,24 +622,7 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         const prompt = `Analyze synastry between:
 Person 1: ${input.natalPlacements}
 Person 2: ${input.soulmatePlacements}
-Generate a rich, deeply insightful relationship compatibility breakdown in JSON format with:
-{
-  "interpretation": "A flowing, comprehensive synthesis of this relationship's potential and spiritual purpose",
-  "aspectGroups": [
-    {
-      "type": "harmonious",
-      "aspects": [
-        { "planet1": "Sun", "planet2": "Moon", "aspect": "Trine", "orb": 1.5, "interpretation": "Deep natural understanding and intuitive emotional harmony." }
-      ]
-    },
-    {
-      "type": "challenging",
-      "aspects": [
-        { "planet1": "Mars", "planet2": "Saturn", "aspect": "Square", "orb": 2.1, "interpretation": "Patience and timing require conscious communication." }
-      ]
-    }
-  ]
-}`;
+Only describe aspects explicitly supplied with calculated planet pairs and orbs in the input. Do not infer or fabricate aspect angles, orbs, or placements. Return JSON with "interpretation" (evidence-grounded text) and "aspectGroups" (an array of groups with "type" and "aspects"). If calculated aspects are not provided, return an empty aspectGroups array and explain what evidence is missing.`;
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
@@ -619,20 +634,13 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
           const content = String(response.choices[0]?.message?.content ?? "{}");
           const parsed = JSON.parse(content);
           return {
-            interpretation: parsed.interpretation || "A powerful synastry dynamic rooted in complementary strengths and mutual growth.",
+            interpretation: parsed.interpretation || "No verified synastry interpretation was returned; calculated inter-chart aspects are required.",
             aspectGroups: Array.isArray(parsed.aspectGroups) ? parsed.aspectGroups : [],
           };
         } catch {
           return {
-            interpretation: "This celestial pairing unites complementary strengths, balancing individual sovereignty with unshakeable mutual dedication.",
-            aspectGroups: [
-              {
-                type: "harmonious",
-                aspects: [
-                  { planet1: "Sun", planet2: "Moon", aspect: "Trine", orb: 1.8, interpretation: "Mutual intuitive ease and natural respect for each other's emotional rhythms." }
-                ]
-              }
-            ],
+            interpretation: "Synastry response could not be validated. No aspect or orb is reported without verified calculation.",
+            aspectGroups: [],
           };
         }
       }),
@@ -702,13 +710,35 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         })
       )
       .mutation(async ({ input }) => {
-        const { context } = await synthesizeChartForReading(input.chart as ChartResult, "natal", `Life story chapter: ${input.chapterKey}`);
-        return generateLifeStoryChapter(
-          input.chart as ChartResult,
-          input.chapterKey,
-          input.selectedAge,
-          context
-        );
+        const chart = input.chart as ChartResult;
+        const { synthesis } = await synthesizeChartForReading(chart, "natal", "Life story chapter: " + input.chapterKey);
+        const currentAge = calculatePersonAge(chart.input.date);
+        const cycles = generatePlanetaryCycles(chart, currentAge);
+        const chapters = compileLifeStoryChapters(chart, currentAge, cycles);
+        const chapterMeta = chapters.find(chapter => chapter.key === input.chapterKey) ?? chapters[0];
+        const focusAge = input.selectedAge ?? (chapterMeta.ageRange[0] + chapterMeta.ageRange[1]) / 2;
+        const profection = calculateAnnualProfection(focusAge, chart);
+        const content = [
+          "# " + chapterMeta.title,
+          "Period: " + chapterMeta.periodLabel,
+          "Profected age: " + Math.floor(focusAge),
+          "Agent View: " + profection.lordOfTheYearAgent + " ruling " + profection.profectedSignAgent + ", house " + profection.profectedHouseAgent,
+          "God View: " + profection.lordOfTheYearGod + " ruling " + profection.profectedSignGod + ", house " + profection.profectedHouseGod,
+          "Profection themes: " + profection.traditionalThemes.join(", "),
+          ...chapterMeta.keyCycles.map(cycle => cycle.title + " (approximate age " + cycle.age + "): " + cycle.description),
+          "## Canonical Master Synthesis",
+          synthesis.dominantConclusion,
+          ...synthesis.themes.map(theme => [
+            "### " + theme.humanTheme,
+            "What: " + theme.primaryConclusion,
+            "Why and how: " + theme.whyHow,
+            "Consequences: " + theme.consequences,
+            "Meaning: " + theme.deeperMeaning,
+            "Evidence: " + theme.evidenceIds.join(", "),
+          ].join("\n\n")),
+          "These are symbolic chart interpretations, not verified biographical events.",
+        ].join("\n\n");
+        return { title: chapterMeta.title, content, chapterMeta };
       }),
 
     audit: publicProcedure

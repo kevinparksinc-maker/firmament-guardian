@@ -55,7 +55,7 @@ function getReadingCacheKey(chart: ChartResult, mode: ReadingMode): string {
   const natalSignature = chart.movingBodies.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
   const transitSignature = chart.transits.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
   const inputSignature = JSON.stringify(chart.input);
-  return `absolute-reading-v5:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${inputSignature}:${natalSignature}:${transitSignature}`;
+  return `absolute-reading-v6-master-synthesis:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${inputSignature}:${natalSignature}:${transitSignature}`;
 }
 
 function loadCachedReading(
@@ -377,6 +377,9 @@ function InterpretationPanelInner({
         question: q || undefined,
       });
       const initial = { ...base, chapters: base.chapters as Chapter[] };
+      // The generate endpoint already returns the authoritative synthesis.
+      // Reuse it instead of requiring a second request to reveal the findings.
+      if (base.synthesis) setVisibleMasterSynthesis(base.synthesis);
       setInterpretation(initial);
       saveCachedReading(chart, mode, initial, []);
       await generateChapterAt(initial, 0, q);

@@ -93,11 +93,10 @@ export function clusterPropositionsIntoThemes(
 
     // Corroboration level calculation
     let corroborationLevel: SynthesizedTheme["convergenceAssessment"]["corroborationLevel"] = "singular";
-    if (traditions.length >= 3) {
-      corroborationLevel = "strong-corroboration";
-    } else if (traditions.length === 2) {
-      corroborationLevel = "strong-corroboration";
-    } else if (props.length > 1) {
+    // Multiple traditions in the same life domain are not automatically
+    // independent corroboration. Reserve strong claims for a future semantic
+    // agreement check that compares actual propositions and evidence.
+    if (props.length > 1) {
       corroborationLevel = "moderate-reinforcement";
     }
 
@@ -105,10 +104,10 @@ export function clusterPropositionsIntoThemes(
     const supportive = props.filter((p: InterpretedProposition) => p.valence === "supportive");
     const challenging = props.filter((p: InterpretedProposition) => p.valence === "challenging" || p.valence === "transformative");
 
-    let reconciliationText = `The chart harmonizes ${props.map((p: InterpretedProposition) => p.causalMechanism).join(" and ")} through balanced awareness.`;
+    let reconciliationText = "No opposing evidence propositions were identified in this domain.";
     if (supportive.length > 0 && challenging.length > 0) {
-      const tensionPolarity = `${supportive[0].themeTitle} (Expansion/Grace) vs. ${challenging[0].themeTitle} (Discipline/Friction)`;
-      reconciliationText = `The expansive impulse of ${supportive[0].causalMechanism} is anchored and protected by the rigorous limits of ${challenging[0].causalMechanism}. Neither overrides the other: growth is safeguarded by strict boundary discipline.`;
+      const tensionPolarity = `${supportive[0].themeTitle} vs. ${challenging[0].themeTitle}`;
+      reconciliationText = `Distinct signals require joint consideration: supportive finding — ${supportive[0].plainLanguageMeaning} (evidence: ${supportive[0].supportingEvidenceIds.join(", ")}); challenging finding — ${challenging[0].plainLanguageMeaning} (evidence: ${challenging[0].supportingEvidenceIds.join(", ")}). Their relative priority is not established by the available evidence.`;
       tensions.push({
         polarities: tensionPolarity,
         reconciliation: reconciliationText,
@@ -122,7 +121,7 @@ export function clusterPropositionsIntoThemes(
     const primaryConclusion = strongest.plainLanguageMeaning;
     // Include the ACTUAL finding text from each computed doctrine, not just a label
     // that says the doctrine was evaluated. Every computed proposition participates.
-    const whyHow = interpreted.map(p => `[${p.tradition} / ${p.frame}] ${p.plainLanguageMeaning} (mechanism: ${p.causalMechanism}; evidence: ${p.supportingEvidenceIds.join(", ")})`).join("\\n");
+    const whyHow = interpreted.map(p => `[${p.tradition} / ${p.frame}] ${p.plainLanguageMeaning} (mechanism: ${p.causalMechanism}; evidence: ${p.supportingEvidenceIds.join(", ")})`).join("\n");
     const concreteManifestations = interpreted.filter(p => p.supportingEvidenceIds.length > 0).slice(0, 4).map(p =>
       p.themeTitle + ": " + p.plainLanguageMeaning + " (evidence: " + p.supportingEvidenceIds.join(", ") + ")"
     );

@@ -1,9 +1,63 @@
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
 import type { InterpretedProposition } from "./types";
+import { getDecanCanonByLongitude } from "../canon/decans36";
+import { getManzilCanonByLongitude } from "../canon/manazil28";
+import { getNakshatraCanonByLongitude } from "../canon/nakshatras27";
+import { PLANET_CANON_RECORDS, synthesizePlanetInSign } from "../canon/planetsAndSigns";
+import { synthesizePlanetInHouse } from "../canon/housesAndFrames";
 
 function getSign(longitude: number): string {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
+}
+
+/**
+ * Reuse deterministic Canon knowledge before any language-model expansion.
+ * Interpret only coordinates supplied by computed method records.
+ */
+function canonContextForFinding(layerId: string, finding: unknown): string {
+  if (!finding || typeof finding !== "object") return "";
+  const record = finding as Record<string, unknown>;
+  const body = typeof record.body === "string" ? record.body : "";
+  const longitude = typeof record.longitude === "number" ? record.longitude : NaN;
+  if (layerId === "western-aspects-and-orbs") {
+    const first = typeof record.body1 === "string" ? record.body1 : "";
+    const second = typeof record.body2 === "string" ? record.body2 : "";
+    const aspect = typeof record.aspect === "string" ? record.aspect.toLowerCase() : "";
+    const orb = typeof record.orb === "number" && Number.isFinite(record.orb)
+      ? ` (calculated orb ${record.orb.toFixed(2)}°)` : "";
+    const firstCanon = PLANET_CANON_RECORDS[first];
+    const secondCanon = PLANET_CANON_RECORDS[second];
+    if (!firstCanon || !secondCanon) return "";
+    const aspectDoctrine: Record<string, string> = {
+      conjunction: "Conjunction: combined planetary functions and concentrated expression; harmony or tension depends on the participants.",
+      sextile: "Sextile: cooperative opportunity that benefits from deliberate action.",
+      square: "Square: friction requiring adjustment, effort, and constructive resolution.",
+      trine: "Trine: flowing cooperation and readily available capacities.",
+      opposition: "Opposition: polarity that calls for awareness, negotiation, and integration.",
+    };
+    if (!aspectDoctrine[aspect]) return "";
+    return `Canon aspect interpretation: ${first} (${firstCanon.coreMeanings.join(", ")}) and ${second} (${secondCanon.coreMeanings.join(", ")}) form a ${aspect}${orb}. ${aspectDoctrine[aspect]} ${first} healthy expression: ${firstCanon.psychologicalFunctions.healthyExpression}. ${second} healthy expression: ${secondCanon.psychologicalFunctions.healthyExpression}. Source: computed aspect plus planetary Canon; interpret as a symbolic combination, not a biographical fact.`;
+  }
+  if (layerId === "western-planets-and-signs") {
+    const name = typeof record.name === "string" ? record.name : body;
+    const sign = typeof record.sign === "string" ? record.sign : Number.isFinite(longitude) ? getSign(longitude) : "";
+    return name && sign ? `Canon interpretation for ${name} in ${sign}: ${synthesizePlanetInSign(name, sign)}` : "";
+  }
+  if (!body || !Number.isFinite(longitude)) return "";
+  if (layerId === "elemental-decans") {
+    const canon = getDecanCanonByLongitude(longitude);
+    return `Canon interpretation for ${body}: ${canon.sign} decan ${canon.decanNumber}, elemental family ruler ${canon.triplicitySubRuler}. ${canon.behavioralNuance} Core themes: ${canon.coreThemes.join(", ")}. Source category: ${canon.provenance.epistemicCategory}.`;
+  }
+  if (layerId === "arabic-lunar-manazil") {
+    const canon = getManzilCanonByLongitude(longitude);
+    return `Canon interpretation for ${body} in Manzil ${canon.index} (${canon.name}): ${canon.natalAndPsychologicalMeaning} Traditional themes: ${canon.traditionalThemes.join(", ")}. Source category: ${canon.provenance.epistemicCategory}.`;
+  }
+  if (layerId === "vedic-nakshatras-and-padas") {
+    const canon = getNakshatraCanonByLongitude(longitude);
+    return `Canon interpretation for ${body} in ${canon.nakshatra.name}, pada ${canon.pada.pada}: ${canon.nakshatra.coreMeaning} ${canon.nakshatra.psychologicalPattern} Shakti: ${canon.nakshatra.shakti}. Source category: ${canon.nakshatra.provenance.epistemicCategory}.`;
+  }
+  return "";
 }
 
 /** Translate computed method records into inspectable chart facts, not a raw JSON dump. */
@@ -46,6 +100,35 @@ export function extractPropositionsFromSnapshot(
       supportingEvidenceIds: layer.evidenceIds,
       opposingEvidenceIds: [],
       sourceDoctrineIds: layer.sourceIds,
+    });
+  }
+
+  // Interpret each calculated planetary placement through the existing Canon,
+  // preserving separate God and Agent house assignments.
+  for (const planet of snapshot.baseCelestialState.planets) {
+    const agentHouse = planet.agentHouse ?? planet.house;
+    const godHouse = planet.godHouse;
+    const sign = getSign(planet.longitude);
+    const houseReading = typeof agentHouse === "number"
+      ? synthesizePlanetInHouse(planet.name, agentHouse, godHouse, agentHouse)
+      : null;
+    propositions.push({
+      id: `prop-canon-placement-${planet.name.toLowerCase()}`,
+      themeTitle: `${planet.name} — Canon placement and dual-frame houses`,
+      plainLanguageMeaning: [
+        synthesizePlanetInSign(planet.name, sign),
+        houseReading?.houseSynthesis,
+        houseReading?.godToAgentNote,
+      ].filter(Boolean).join(" "),
+      domain: "identity",
+      causalMechanism: `Canon planetary sign and house interpretation; ${planet.name} at ${planet.longitude} degrees`,
+      valence: "neutral",
+      strength: "moderate",
+      tradition: "firmament",
+      frame: "shared",
+      supportingEvidenceIds: [`planet-${planet.name.toLowerCase()}`],
+      opposingEvidenceIds: [],
+      sourceDoctrineIds: ["planet-sign-canon", "house-frame-canon"],
     });
   }
 
@@ -315,7 +398,7 @@ export function extractPropositionsFromSnapshot(
       strength: "moderate",
       tradition: "Kabbalah & Sefer Yetzirah",
       frame: "shared",
-      supportingEvidenceIds: syList.map(e => e.id).slice(0, 5),
+      supportingEvidenceIds: syList.map(e => e.id),
       opposingEvidenceIds: [],
       sourceDoctrineIds: ["sefer-yetzirah-westcott-recension"],
     });
@@ -323,7 +406,7 @@ export function extractPropositionsFromSnapshot(
 
   // 10. Active Transit Layer (if present)
   if (snapshot.transit?.aspectsToNatal && snapshot.transit.aspectsToNatal.length > 0) {
-    for (const t of snapshot.transit.aspectsToNatal.slice(0, 4)) {
+    for (const t of snapshot.transit.aspectsToNatal) {
       propositions.push({
         id: `prop-transit-${t.transitBody.toLowerCase()}-${t.aspect.toLowerCase()}-${t.natalBody.toLowerCase()}`,
         themeTitle: `Active Transit Activation: ${t.transitBody} ${t.aspect} Natal ${t.natalBody}`,
@@ -377,7 +460,7 @@ export function extractPropositionsFromSnapshot(
       propositions.push({
         id: `prop-method-${layer.id}-${index}`,
         themeTitle: `${layer.name} — finding ${index + 1}`,
-        plainLanguageMeaning: `${layer.name}: ${describeComputedFinding(finding)}`,
+        plainLanguageMeaning: `${layer.name}: ${describeComputedFinding(finding)}${canonContextForFinding(layer.id, finding) ? `\n${canonContextForFinding(layer.id, finding)}` : ""}`,
         domain: domains[layer.id] ?? "identity",
         causalMechanism: `${layer.technique}; ${layer.frame}; ${layer.calculationVersion}`,
         valence,
