@@ -115,6 +115,22 @@ describe("Unified Master Chart Architecture", () => {
     expect(found?.id).toBe("western-planets-and-signs");
   });
 
+  it("keeps natal geometry consistent across natal, transit and combined modes", async () => {
+    const base = { ...SAMPLE_INPUT, transitDate: "2026-10-31", transitTime: "12:00" };
+    const natal = await buildUnifiedMasterChart({ ...base, mode: "natal" });
+    const transit = await buildUnifiedMasterChart({ ...base, mode: "transit" });
+    const combined = await buildUnifiedMasterChart({ ...base, mode: "combined" });
+
+    for (const candidate of [transit, combined]) {
+      expect(candidate.baseCelestialState.planets).toEqual(natal.baseCelestialState.planets);
+      expect(candidate.baseCelestialState.houses).toEqual(natal.baseCelestialState.houses);
+      expect(candidate.baseCelestialState.ascendant).toEqual(natal.baseCelestialState.ascendant);
+    }
+    expect(transit.transit?.planets).toEqual(combined.transit?.planets);
+    expect(transit.snapshotId).not.toBe(combined.snapshotId);
+    expect(natal.snapshotId).not.toBe(combined.snapshotId);
+  });
+
   it("activates transit activation layer when mode is transit or combined", async () => {
     const snapshot = await buildUnifiedMasterChart({
       ...SAMPLE_INPUT,
