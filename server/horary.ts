@@ -512,7 +512,7 @@ export async function openHoraryQuestion(input: HoraryInput) {
     console.warn("[Horary] Supplemental Master synthesis unavailable", {
       category: error instanceof Error ? "master_error" : "unknown",
     });
-    chart.unifiedSynthesisContext = "Supplemental Master synthesis unavailable; use the calculated Horary and dual-frame canon evidence only.";
+    throw new Error("HORARY_MASTER_SYNTHESIS_FAILED: Required master synthesis unavailable.");
   }
   const coreReading = deterministicHoraryReading(chart);
   const reading = await answer([
@@ -524,7 +524,7 @@ export async function openHoraryQuestion(input: HoraryInput) {
       const category = error instanceof Error && /time|abort|deadline/i.test(error.message) ? "timeout" : "provider_error";
       // Deliberately exclude prompts, provider responses and credentials from logs.
       console.warn("[Horary] AI synthesis unavailable; deterministic fallback used", { category });
-      return { reading: coreReading, synthesisStatus: "deterministic_fallback" as const };
+      throw new Error(`HORARY_AI_FAILED: AI interpretation unavailable (${category}).`);
     },
   );
   return { chart, ...reading };
