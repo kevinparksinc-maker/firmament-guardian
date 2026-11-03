@@ -18,7 +18,7 @@ export async function getStoredNatal(openId: string, input: MasterChartInput) {
     const saved = row.chart as { snapshotId?: string; validation?: { complete?: boolean }; frameConfig?: { engineVersion?: string } };
     return saved?.snapshotId && saved?.validation?.complete === true &&
       saved?.frameConfig?.engineVersion === "firmament-master-2026.1" &&
-      JSON.stringify(savedInput) === JSON.stringify(normalized);
+      equalInputs(savedInput, normalized);
   });
   if (existing) return existing.chart;
   const snapshot = await getMasterNatalChart(normalized);
@@ -28,4 +28,8 @@ export async function getStoredNatal(openId: string, input: MasterChartInput) {
     location: normalized.location, input: normalized, chart: snapshot,
   });
   return snapshot;
+}
+
+function equalInputs(a: MasterChartInput, b: MasterChartInput): boolean {
+  return a?.location === b.location && a?.latitude === b.latitude && a?.longitude === b.longitude && a?.timezone === b.timezone && a?.date === b.date && a?.time === b.time && a?.mode === b.mode && a?.worldview === b.worldview && JSON.stringify(a?.sunriseAnchor) === JSON.stringify(b.sunriseAnchor) && JSON.stringify(a?.xyzPositions) === JSON.stringify(b.xyzPositions);
 }
