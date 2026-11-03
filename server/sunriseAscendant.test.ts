@@ -3,7 +3,7 @@ import {
   ascendantFromSunrise,
   solarAnglesFromFixedXYZ,
   sunriseEasternHorizonLongitude,
-  SIDEREAL_DEGREES_PER_UTC_HOUR,
+  SUNRISE_ROTATION_DEGREES_PER_HOUR,
 } from "./sunriseAscendant";
 
 describe("zero-tilt sunrise-anchored rising point", () => {
