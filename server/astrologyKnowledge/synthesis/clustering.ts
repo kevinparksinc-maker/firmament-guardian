@@ -126,7 +126,7 @@ export function clusterPropositionsIntoThemes(
     const concreteManifestations = meta.lifeSpheres.map((sphere: string) =>
       `In ${sphere}: Read the concrete calculated factors above together, distinguishing supportive, frictional, and unclassified contacts. No biographical event is established solely by the chart.`
     );
-    const consequences = `When integrated, this grants profound self-command and resilience. If neglected or rushed, it manifests as reactive friction or ungrounded ideals.`;
+    const consequences = `Evidence: ${strongest.plainLanguageMeaning}. No specific life outcome is established by this calculation alone.`;
     const deeperMeaning = `This configuration teaches that genuine strength is not the absence of resistance, but the capacity to maintain moral integrity and deliberate direction under shifting conditions.`;
 
     themes.push({
