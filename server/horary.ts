@@ -1,5 +1,6 @@
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
-import { calculateChart, type ChartInput } from "./astronomy";
+import type { ChartInput } from "./astronomy";
+import { getChartSnapshot } from "./chart-snapshot-service";
 import { withCurrentQuestion } from "./_core/conversation";
 import { invokeLLM, type Message } from "./_core/llm";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
@@ -137,7 +138,7 @@ function uniquePairs(placements: HoraryPlacement[], names: string[]) {
 }
 
 export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryChart> {
-  const calculated = await calculateChart({
+  const calculated = await getChartSnapshot({
     location: input.location,
     latitude: input.latitude,
     longitude: input.longitude,
@@ -157,7 +158,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   if (!calculated.ascendant) throw new Error("Horary requires an Agent View Ascendant.");
   const ascendant = calculated.ascendant;
   const natalChart = input.natal
-    ? await calculateChart({
+    ? await getChartSnapshot({
         ...input.natal,
         transitLocation: input.location,
         transitLatitude: input.latitude,
@@ -173,7 +174,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   // Without a natal profile there is nothing for the question-moment sky to contact.
   // Do not compare the question chart against itself: that invents natal contacts.
   const transitChart = natalChart ?? { ...calculated, transits: calculated.transits.map(row => ({ ...row, natalContacts: [] })) };
-  const godChart = await calculateChart({
+  const godChart = await getChartSnapshot({
     location: "",
     latitude: 0,
     longitude: 0,
