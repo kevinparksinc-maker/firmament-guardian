@@ -227,10 +227,10 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Source calculation success is distinct from an optional historical reference fixture.
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
-    "ACIF: planetary angles derive from geocentric equatorial XYZ (Moshier, mean equator/equinox of date); no sidereal or Aldebaran offset. Traditional zodiac overlays and legacy house angles are separate mappings pending alignment.",
+    "ACIF: planetary angles derive from geocentric equatorial XYZ (Moshier, equatorial-of-date); no sidereal or Aldebaran offset. Legacy zodiac overlays, symbolic fixed-star positions, and God-house assignments are NOT verified equatorial mappings and must not be treated as measured placements.",
     input.sunriseAnchor ? "Natal Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Natal Ascendant: no historical sunrise anchor; Agent chart calculation is unavailable.",
     input.transitSunriseAnchor ? "Transit Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Transit Ascendant: no historical sunrise anchor; transit houses are unavailable.",
-    input.xyzPositions ? "Supplied XYZ vectors must be geocentric equatorial-of-date; missing bodies retain Swiss Ephemeris positions." : "Planetary longitudes are canonical geocentric values; only the Moon receives a separate topocentric correction.",
+    input.xyzPositions ? "Supplied XYZ vectors must be geocentric equatorial-of-date; missing bodies retain Swiss Ephemeris positions." : "Planetary positions are geocentric equatorial right ascensions, not zodiac longitudes; Moon topocentric position is separately labeled.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value));
   const transitInputsPresent = Boolean(input.transitDate?.trim() || input.transitTime?.trim() || input.transitTimezone?.trim() || input.transitLocation?.trim() || transitCoordinatesPresent);
