@@ -10,7 +10,8 @@
  * this module does not silently substitute an approximate sunrise.
  */
 export type FixedVector = { x: number; y: number; z: number };
-export const SIDEREAL_DEGREES_PER_UTC_HOUR = 360.98564736629 / 24;
+/** Framework rule: advance the sunrise rising point exactly 15 degrees per elapsed hour. */
+export const SUNRISE_ROTATION_DEGREES_PER_HOUR = 15;
 
 export function normalizeDegrees(value: number): number {
   if (!Number.isFinite(value)) throw new Error("Angle must be finite.");
@@ -60,9 +61,9 @@ export function ascendantFromSunrise(input: {
   }
   const sunriseHorizon = sunriseEasternHorizonLongitude(input.sunriseSunXYZ, input.latitude);
   return {
-    ascendant: normalizeDegrees(sunriseHorizon + elapsedHours * SIDEREAL_DEGREES_PER_UTC_HOUR),
+    ascendant: normalizeDegrees(sunriseHorizon + elapsedHours * SUNRISE_ROTATION_DEGREES_PER_HOUR),
     sunriseHorizon,
-    elapsedSiderealDegrees: elapsedHours * SIDEREAL_DEGREES_PER_UTC_HOUR,
+    elapsedSiderealDegrees: elapsedHours * SUNRISE_ROTATION_DEGREES_PER_HOUR,
     elapsedHours,
     sunriseUtc: new Date(sunriseMillis).toISOString(),
     eventUtc: new Date(eventMillis).toISOString(),
