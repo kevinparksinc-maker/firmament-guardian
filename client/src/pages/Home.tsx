@@ -255,7 +255,11 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     setForm(nextForm);
     setLocationQuery(newProfile.location);
     setTransitLocationQuery(nextForm.transitLocation);
-    await calculateChart(worldview, readingMode, nextForm);
+    // The first destination after saving a birth profile is always its natal wheel.
+    setWorldview("agent-vs-god");
+    setReadingMode("natal");
+    navigate("/chart");
+    await calculateChart("agent-vs-god", "natal", nextForm);
     setIsProfileModalOpen(false);
   };
 
