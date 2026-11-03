@@ -11,7 +11,7 @@ const PLANET_STARS: Record<string, number> = {
   Mercury: 4, Neptune: 4, Venus: 3, Uranus: 3,
   "North Node": 4, "South Node": 4, Ascendant: 4, Descendant: 4,
 };
-const MAJOR = new Set<TransitContact["aspect"]>(["conjunction", "trine", "square", "opposition"]);
+const MAJOR = new Set<TransitContact["aspect"] | MinorTransitContact["aspect"]>(["conjunction", "trine", "square", "opposition", "sextile"]);
 export function energyIntensity(orb: number): number {
   if (!Number.isFinite(orb) || orb < 0 || orb > ENERGY_MAX_ORB) return 0;
   return Math.max(1, 5 - Math.floor(orb));
@@ -46,7 +46,7 @@ export function calculateEnergyRead(chart: ChartResult | null | undefined) {
       unique.set(key, contact);
     }
   }
-  const contacts = [...unique.values()];
+  const contacts = Array.from(unique.values());
   const harmonious = contacts.filter(c => c.flow === 1);
   const challenging = contacts.filter(c => c.flow === -1);
   const dynamic = contacts.filter(c => c.flow === 0);
