@@ -52,8 +52,8 @@ export type ChartRow = {
   overlay: Overlay;
   uncertainty?: MoonUncertainty;
 };
-export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "semisquare" | "square" | "trine" | "opposition"; orb: number };
-export type MinorTransitContact = { natalName: string; aspect: "quintile" | "sesquiquadrate" | "biquintile" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "flow" | "friction" };
+export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition"; orb: number };
+export type MinorTransitContact = { natalName: string; aspect: "semisextile" | "semisquare" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "flow" | "friction" };
 export type TransitRow = ChartRow & { natalContacts: TransitContact[]; minorNatalContacts: MinorTransitContact[] };
 export type ChartResult = {
   input: ChartInput;
@@ -150,21 +150,20 @@ export function aspectBetween(a: number, b: number): { aspect: TransitContact["a
   const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
   const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= 5 ? best : null;
 }
-/** Secondary contacts are not part of the five-major-aspect Energy Read score.
- * Two flow and two friction minors are equally weighted at half of major strength.
- * Semi-sextile and semi-square are excluded from major scoring; quintile remains secondary.
- * A separate list prevents double counting and keeps conjunctions harmonious in primary scoring.
+/** The three minor aspects complete the balanced eight-aspect Energy Read.
+ * A pair may have at most one scored aspect; minor contacts are calculated
+ * only when the pair has no major contact.
  */
 export function minorAspectBetween(a: number, b: number): Omit<MinorTransitContact, "natalName"> | null {
+  if (aspectBetween(a, b)) return null;
   const separation = angularDistance(a, b);
   const targets = [
-    { target: 72, aspect: "quintile" as const, classification: "flow" as const },
-    { target: 135, aspect: "sesquiquadrate" as const, classification: "friction" as const },
-    { target: 144, aspect: "biquintile" as const, classification: "flow" as const },
+    { target: 30, aspect: "semisextile" as const, classification: "flow" as const },
+    { target: 45, aspect: "semisquare" as const, classification: "friction" as const },
     { target: 150, aspect: "quincunx" as const, classification: "friction" as const },
   ];
   const best = targets.map(({ target, aspect, classification }) => ({ aspect, classification, orb: Math.abs(separation - target) }))
-    .filter(contact => contact.orb <= 2)
+    .filter(contact => contact.orb <= 5)
     .sort((a, b) => a.orb - b.orb)[0];
   return best ? { ...best, weightMultiplier: 0.5 } : null;
 }
