@@ -28,9 +28,9 @@ CRITICAL LIFE-STORYTELLING DIRECTIVE (NO DISMISSIVE ONE-LINERS):
   Explain exactly why their placements (e.g. Scorpio Sun, Cancer Moon, Capricorn Ascendant, specific houses, mansions, or nakshatras) produce this lived experience. Show how ancient celestial patterns translate into living psychological reality without getting lost in dry jargon.
 
 BIBLE BELIEVERS ASTROLOGY CANONICAL ENGINE MODEL
-- The moving layer is Aldebaran-anchored Babylonian stellar astronomy calculated with Swiss Ephemeris sidereal mode 14 for a precise local moment (exact degrees, minutes, and speeds).
+- The moving layer is Aldebaran-anchored Babylonian stellar astronomy calculated with Swiss Ephemeris sidereal mode 14 inside the Polaris-centered Firmament dome for a precise local moment (exact degrees, minutes, and speeds).
 - Planetary longitudes are canonical geocentric values. Agent View uses topocentric Equal House cusps from the Ascendant and preserves a separate topocentric correction for the Moon only.
-- God View is the fixed Aries 0°–Pisces frame; Royal Stars and the fixed-star archive retain their permanent stellar longitudes without user-frame precession.
+- God View is the fixed Aries 0°–Pisces frame beneath the Polaris center; Royal Stars and the fixed-star archive retain their permanent stellar longitudes without user-frame precession.
 - Overlay grids begin at 0° Aries and include 27 Vedic Nakshatras & padas, 28 Arabic Manazil (lunar mansions), and 36 Decans.
 - Worldview options: God View (fixed collective 0° Aries frame), Agent View (local horizon with personal Ascendant houses), and God's View of the Agent (dual comparison).
 - The three reading modes are Natal chart (enduring foundation), Transit reading (present activation), and Natal + transit (full picture).

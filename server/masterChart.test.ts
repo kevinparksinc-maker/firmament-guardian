@@ -51,7 +51,8 @@ describe("Unified Master Chart Architecture", () => {
     const snapshot = await buildUnifiedMasterChart(SAMPLE_INPUT);
 
     expect(snapshot.godView.cosmicFrame).toBe("fixed-aries-1-to-pisces-12");
-    expect(snapshot.godView.polarisCenter).toBe(false);
+    expect(snapshot.godView.polarisCenter).toBe(true);
+    expect(snapshot.frameConfig.firmamentCenter).toBe("polaris-centered-firmament-dome");
     expect(snapshot.godView.placements.length).toBeGreaterThanOrEqual(7);
 
     expect(snapshot.agentView.houseSystem).toBe("topocentric-equal-house-from-ascendant");

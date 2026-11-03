@@ -285,7 +285,7 @@ export function ThreeLayerOrrery({ chart }: ThreeLayerOrreryProps) {
               </span>
             </div>
             <span className="font-mono text-[11px] text-slate-500">
-              0° ARI TOP · FIXED STELLAR FRAME
+              POLARIS CENTER · FIXED FIRMAMENT FRAME
             </span>
           </div>
 
@@ -521,7 +521,7 @@ export function ThreeLayerOrrery({ chart }: ThreeLayerOrreryProps) {
               );
             })}
 
-            {/* Neutral frame origin; Polaris remains a fixed-star data point, not the cosmological center. */}
+            {/* Polaris is the fixed center of the Firmament dome in this model. */}
             <circle
               cx="220"
               cy="220"
@@ -541,7 +541,7 @@ export function ThreeLayerOrrery({ chart }: ThreeLayerOrreryProps) {
               fontWeight="600"
               fontFamily="IBM Plex Mono, monospace"
             >
-              FRAME ORIGIN
+              POLARIS
             </text>
             <text
               x="220"

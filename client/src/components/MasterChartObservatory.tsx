@@ -379,7 +379,7 @@ export function MasterChartObservatory({ chart, onSelectBody }: MasterChartObser
             <div className="p-4 rounded-xl border border-cyan-950 bg-slate-900/60 space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
                 <Star className="w-3.5 h-3.5" />
-                Fixed Stars & Royal Watchers
+                Polaris-Centered Firmament & Royal Watchers
               </h4>
               <div className="space-y-2 text-xs">
                 {(snap.layers["fixed-stars-royal-watchers"]?.results as any[])?.slice(0, 4).map((s: any) => (

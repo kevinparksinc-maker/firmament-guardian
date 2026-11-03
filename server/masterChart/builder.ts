@@ -297,7 +297,7 @@ export async function buildUnifiedMasterChart(
     id: "fixed-stars-royal-watchers",
     tradition: "babylonian",
     technique: "fixed-stars-and-royal-watchers",
-    name: "Fixed Stars & Royal Watchers",
+    name: "Polaris-Centered Firmament & Royal Watchers",
     status: "computed-with-result",
     frame: "god",
     prerequisites: ["firmament-fixed-frame"],
@@ -639,6 +639,7 @@ export async function buildUnifiedMasterChart(
     frameConfig: {
       zodiacMode: "aldebaran-anchored-babylonian-stellar",
       firmamentAnchorVersion: "aldebaran-15-taurus-swiss-mode-14",
+      firmamentCenter: "polaris-centered-firmament-dome",
       obliquityMode: "swiss-ephemeris-sidereal-longitudes",
       precessionMode: "none-user-frame-fixed-anchor",
       houseSystem: "topocentric-equal-house-ascendant",
@@ -656,9 +657,9 @@ export async function buildUnifiedMasterChart(
       houses: baseHouses,
     },
     godView: {
-      description: "Fixed Aries 1 to Pisces 12 universal frame anchored to the Aldebaran 15° Taurus stellar zodiac",
+      description: "Polaris-centered firmament dome with a fixed Aries 1 to Pisces 12 universal frame anchored to the Aldebaran 15° Taurus stellar zodiac",
       cosmicFrame: "fixed-aries-1-to-pisces-12",
-      polarisCenter: false,
+      polarisCenter: true,
       placements: godPlacements,
     },
     agentView: {
