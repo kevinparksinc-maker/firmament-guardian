@@ -50,7 +50,7 @@ const emptyForm = {
 };
 type ReadingMode = "natal" | "transit" | "combined";
 export default function Home({ section = "home" }: { section?: ProfileSection }) {
-  const { profile: activeProfile, setProfile: setActiveProfile, chart: result, setChart: setResult } = useProfileSession();
+  const { profile: activeProfile, setProfile: setActiveProfile, saveEditedProfile, chart: result, setChart: setResult } = useProfileSession();
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
   const [worldview, setWorldview] = useState<Worldview>("agent");
@@ -258,6 +258,11 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     setIsProfileModalOpen(false);
   };
 
+  const handleEditProfile = async (updated: UserProfileData) => {
+    if (activeProfile) saveEditedProfile(activeProfile, updated);
+    await handleSaveProfile(updated);
+  };
+
   const handleClearProfile = () => {
     setActiveProfile(null);
     setResult(null);
@@ -409,7 +414,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
               mode="inline-gate"
               currentProfile={activeProfile}
               onSaveProfile={async (updated) => {
-                await handleSaveProfile(updated);
+                await handleEditProfile(updated);
                 navigate("/chart");
               }}
               onLoadSample={handleLoadSampleChart}
