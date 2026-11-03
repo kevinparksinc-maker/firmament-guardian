@@ -31,5 +31,5 @@ export async function getStoredNatal(openId: string, input: MasterChartInput) {
 }
 
 function equalInputs(a: MasterChartInput, b: MasterChartInput): boolean {
-  return a?.location === b.location && a?.latitude === b.latitude && a?.longitude === b.longitude && a?.timezone === b.timezone && a?.date === b.date && a?.time === b.time && a?.mode === b.mode && a?.worldview === b.worldview && JSON.stringify(a?.sunriseAnchor) === JSON.stringify(b.sunriseAnchor) && JSON.stringify(a?.xyzPositions) === JSON.stringify(b.xyzPositions);
+  return a?.location === b.location && a?.latitude === b.latitude && a?.longitude === b.longitude && a?.timezone === b.timezone && a?.date === b.date && a?.time === b.time && a?.mode === b.mode && a?.worldview === b.worldview && JSON.stringify(a?.sunriseAnchor ?? null) === JSON.stringify(b.sunriseAnchor ?? null) && JSON.stringify(a?.xyzPositions ?? null) === JSON.stringify(b.xyzPositions ?? null);
 }
