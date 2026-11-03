@@ -143,7 +143,7 @@ export async function synthesizeMasterReading(
         ? {
             activeWindow: snapshot.transit?.transitInstantUtc ?? "Transit moment not supplied",
             turningPoints: snapshot.transit?.aspectsToNatal?.length
-              ? snapshot.transit.aspectsToNatal.map(contact => `${contact.transitBody} ${contact.aspect} natal ${contact.natalBody} (orb ${contact.orb}°)`).slice(0, 12)
+              ? snapshot.transit.aspectsToNatal.map(contact => `${contact.transitBody} ${contact.aspect} natal ${contact.natalBody} (orb ${contact.orb}°)`)
               : ["No calculated natal transit contacts available; peak and easing times are not established."],
           }
         : undefined,
