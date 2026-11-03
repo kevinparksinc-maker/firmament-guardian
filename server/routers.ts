@@ -266,11 +266,11 @@ export const appRouter = router({
             `**Deeper meaning:** ${theme.deeperMeaning}`,
             `**Evidence:** ${theme.evidenceIds.join(", ") || "No evidence IDs recorded"}`,
             `**Traditions:** ${theme.convergenceAssessment.independentTraditions.join(", ") || "Not recorded"}`,
-          ].join("\\n\\n")),
+          ].join("\n\n")),
           `## Method Coverage`,
           `Computed ${synthesis.methodLedgerSummary.computedWithResult} of ${synthesis.methodLedgerSummary.totalEvaluated} recorded methods. Quality audit: ${synthesis.qualityAudit.passed ? "passed" : "requires review"}.`,
           ...synthesis.methodFindings.map(method => `- **${method.name}** (${method.status}): ${method.findings.map(f => `${f.label}: ${f.details}`).join("; ") || method.notes || "No calculated finding"}`),
-        ].join("\\n\\n");
+        ].join("\n\n");
         const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context, primaryReading);
         return { ...interpretation, synthesis };
       }),
