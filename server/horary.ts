@@ -496,14 +496,24 @@ function deterministicHoraryReading(chart: HoraryChart) {
 export async function openHoraryQuestion(input: HoraryInput) {
   const chart = await calculateHoraryChart(input);
   // Question-time Horary judgment stays authoritative; Master methods supplement it.
-  const questionMomentChart = await calculateChart({
-    location: input.location, latitude: input.latitude, longitude: input.longitude,
-    timezone: input.timezone, date: input.date, time: input.time,
-    readingScope: "natal", worldview: "agent",
-  });
-  const { synthesis, context } = await synthesizeChartForReading(questionMomentChart, "natal", input.question);
-  chart.unifiedSynthesisContext = context;
-  chart.unifiedSynthesisSnapshotId = synthesis.snapshotId;
+  // The natal foundation belongs to the saved birth profile, never the
+  // moment at which the Horary question was asked. Horary remains event-specific.
+  // The Master ledger is supplemental to the traditional question judgment.
+  try {
+    const masterSource = chart.natalChart ?? chart.transitChart;
+    const masterMode = chart.natalChart ? "combined" : "natal";
+    const { synthesis, context } = await synthesizeChartForReading(masterSource, masterMode, input.question);
+    chart.unifiedSynthesisContext = chart.natalChart
+      ? "MASTER NATAL + QUESTION-MOMENT TRANSIT EVIDENCE:\\n" + context
+      : "QUESTION-MOMENT ONLY (NO SAVED NATAL FOUNDATION):\\n" + context;
+    chart.unifiedSynthesisSnapshotId = synthesis.snapshotId;
+  } catch (error) {
+    // An optional synthesis failure must not prevent a calculated Horary verdict.
+    console.warn("[Horary] Supplemental Master synthesis unavailable", {
+      category: error instanceof Error ? "master_error" : "unknown",
+    });
+    chart.unifiedSynthesisContext = "Supplemental Master synthesis unavailable; use the calculated Horary and dual-frame canon evidence only.";
+  }
   const coreReading = deterministicHoraryReading(chart);
   const reading = await answer([
     { role: "system", content: HORARY_SYSTEM },
