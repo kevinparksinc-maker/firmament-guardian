@@ -39,14 +39,14 @@ import type {
 function computeSnapshotId(input: MasterChartInput, version: string): string {
   const content = JSON.stringify({
     location: input.location,
-    lat: input.latitude.toFixed(4),
-    lon: input.longitude.toFixed(4),
+    lat: input.latitude,
+    lon: input.longitude,
     tz: input.timezone,
     d: input.date,
     t: input.time,
     tl: input.transitLocation ?? "",
-    tlat: input.transitLatitude?.toFixed(4) ?? "",
-    tlon: input.transitLongitude?.toFixed(4) ?? "",
+    tlat: input.transitLatitude ?? null,
+    tlon: input.transitLongitude ?? null,
     ttz: input.transitTimezone ?? "",
     td: input.transitDate ?? "",
     tt: input.transitTime ?? "",
