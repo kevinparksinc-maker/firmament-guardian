@@ -26,15 +26,6 @@ import { InterpretationPanel } from "@/components/InterpretationPanel";
 import type { ChartResult, TransitContact } from "../../../server/astronomy";
 import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
 
-const MAX_ORB = 5;
-const aspectFlow: Record<TransitContact["aspect"], number> = {
-  trine: 1,
-  sextile: 1,
-  square: -1,
-  opposition: -1,
-  conjunction: 1, semisquare: 0,
-};
-
 const ASPECT_SYMBOLS: Record<TransitContact["aspect"], string> = {
   conjunction: "☌",
   semisquare: "∠",
@@ -43,9 +34,6 @@ const ASPECT_SYMBOLS: Record<TransitContact["aspect"], string> = {
   trine: "△",
   opposition: "☍",
 };
-
-const percentWeight = (orb: number) =>
-  orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
 
 const PLANET_GLYPHS: Record<string, string> = {
   Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀", Mars: "♂",
@@ -98,9 +86,9 @@ export default function EnergyPage() {
     if (aspectCategory === "harmonious") {
       list = list.filter((c) => ENERGY_ASPECT_FLOW[c.aspect] === 1);
     } else if (aspectCategory === "challenging") {
-      list = list.filter((c) => aspectFlow[c.aspect] === -1);
+      list = list.filter((c) => ENERGY_ASPECT_FLOW[c.aspect] === -1);
     } else if (aspectCategory === "dynamic") {
-      list = list.filter((c) => aspectFlow[c.aspect] === 0);
+      list = list.filter((c) => ENERGY_ASPECT_FLOW[c.aspect] === 0);
     }
     return list.sort((a, b) => a.orb - b.orb);
   }, [energyData, selectedPlanetFilter, aspectCategory]);
@@ -230,9 +218,9 @@ export default function EnergyPage() {
               <div className="mt-2 text-center">
                 <span
                   className={`rounded-full px-4 py-1 text-xs font-bold ${
-                    energyData.signal === "Effortless Flow"
+                    energyData.signal === "Harmonious Flow"
                       ? "bg-teal-950/70 text-[#2DD4BF] border border-teal-400/40 shadow-[0_0_12px_rgba(45,212,191,0.3)]"
-                      : energyData.signal === "Growth Crucible"
+                      : energyData.signal === "Dynamic Friction"
                       ? "bg-rose-950/70 text-[#FB7185] border border-rose-400/40 shadow-[0_0_12px_rgba(251,113,133,0.3)]"
                       : "bg-cyan-950/70 text-cyan-300 border border-cyan-400/40 shadow-[0_0_12px_rgba(34,211,238,0.3)]"
                   }`}
@@ -288,9 +276,9 @@ export default function EnergyPage() {
                   Transit Climate Assessment
                 </span>
                 <p className="text-xs text-slate-200 leading-relaxed">
-                  {energyData.signal === "Effortless Flow"
+                  {energyData.signal === "Harmonious Flow"
                     ? "Cosmic weather is highly supportive. Favorable alignments invite confident outreach, relationship cultivation, and strategic launches."
-                    : energyData.signal === "Growth Crucible"
+                    : energyData.signal === "Dynamic Friction"
                     ? "Dynamic tension dominates the skies. Conserve your energy, resist hasty confrontation, and redirect internal pressure into meticulous craftsmanship."
                     : "The heavens strike an exact equilibrium between creative flow and evolutionary tension. Balance bold initiative with calculated patience."}
                 </p>
@@ -334,8 +322,8 @@ export default function EnergyPage() {
         {/* Aspects Grid */}
         <div className="grid gap-3 sm:grid-cols-2">
           {filteredContacts.map((c) => {
-            const isFlow = aspectFlow[c.aspect] === 1;
-            const isFriction = aspectFlow[c.aspect] === -1;
+            const isFlow = ENERGY_ASPECT_FLOW[c.aspect] === 1;
+            const isFriction = ENERGY_ASPECT_FLOW[c.aspect] === -1;
             const symbol = ASPECT_SYMBOLS[c.aspect] || c.aspect;
             const interpKey = `${c.transit}-${c.aspect}`;
             const interpretation = ASPECT_INTERPRETATIONS[interpKey] || {
