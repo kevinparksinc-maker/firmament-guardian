@@ -15,22 +15,24 @@ describe("zero-tilt sunrise-anchored rising point", () => {
   it("anchors the east horizon to the Sun at equatorial sunrise", () => {
     expect(sunriseEasternHorizonLongitude(sun, 0)).toBeCloseTo(0, 8);
   });
-  it("advances from sunrise by sidereal rather than civil rotation", () => {
+  it("advances from sunrise by exactly 15 degrees per hour", () => {
     const result = ascendantFromSunrise({
       sunriseUtc: "1986-11-20T12:00:00Z",
       eventUtc: "1986-11-20T18:00:00Z",
       sunriseSunXYZ: sun,
       latitude: 0,
     });
-    expect(result.ascendant).toBeCloseTo(6 * SIDEREAL_DEGREES_PER_UTC_HOUR, 8);
+    expect(result.ascendant).toBeCloseTo(6 * SUNRISE_ROTATION_DEGREES_PER_HOUR, 8);
     expect(result.elapsedHours).toBe(6);
   });
-  it("uses latitude and declination to change the sunrise intersection", () => {
-    const tiltedSun = { x: 1, y: 0, z: 0.4 };
-    expect(sunriseEasternHorizonLongitude(tiltedSun, 40)).not.toBeCloseTo(sunriseEasternHorizonLongitude(tiltedSun, 0));
+  it("anchors directly to the Sun longitude regardless of observer latitude", () => {
+    const sunXYZ = { x: 1, y: 1, z: 0.4 };
+    expect(sunriseEasternHorizonLongitude(sunXYZ, 40)).toBeCloseTo(45, 8);
+    expect(sunriseEasternHorizonLongitude(sunXYZ, 0)).toBeCloseTo(45, 8);
   });
-  it("rejects polar-day or polar-night geometry instead of inventing an Ascendant", () => {
-    expect(() => sunriseEasternHorizonLongitude({ x: 1, y: 0, z: 1 }, 80)).toThrow("No unique geometric sunrise");
+  it("does not apply an extra ninety degrees at sunrise", () => {
+    const result = ascendantFromSunrise({ sunriseUtc: "1986-11-20T12:00:00Z", eventUtc: "1986-11-20T12:00:00Z", sunriseSunXYZ: { x: 0, y: 1, z: 0 }, latitude: 32 });
+    expect(result.ascendant).toBeCloseTo(90, 8);
   });
   it("requires a historical sunrise preceding the event", () => {
     expect(() => ascendantFromSunrise({
