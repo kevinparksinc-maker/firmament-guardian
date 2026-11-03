@@ -34,6 +34,7 @@ export async function getChartSnapshot(input: ChartInput): Promise<ChartResult> 
     snapshots.set(key, found);
     return found;
   }
+  // Freeze the request identity before calling the engine; callers must not mutate input while pending.
   const pending = calculateChart(input);
   snapshots.set(key, pending);
   while (snapshots.size > MAX_SNAPSHOTS) {
