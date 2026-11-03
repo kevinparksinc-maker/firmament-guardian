@@ -721,11 +721,11 @@ async function analyzeChart(
       semantic
     );
     if (plan) return JSON.stringify(plan);
-    console.warn("[Interpretation] reading plan failed validation; using deterministic fallback plan");
+    throw new Error("READING_PLAN_INVALID: AI reading plan failed evidence validation.");
   } catch (error) {
-    console.warn("[Interpretation] reading plan call failed; using deterministic fallback plan:", error);
+    console.error("[READING_PLAN_FAILED] AI reading plan unavailable:", error);
+    throw new Error("READING_PLAN_FAILED: The AI reading plan could not be completed or validated.");
   }
-  return JSON.stringify(buildFallbackPlan(chart, evidencePacket));
 }
 
 function chapterSystem(
