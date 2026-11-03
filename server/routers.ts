@@ -5,7 +5,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { calculateChart, geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
+import { geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
+import { getChartSnapshot } from "./chart-snapshot-service";
 import {
   calculatePersonAge,
   calculateAnnualProfection,
@@ -151,7 +152,7 @@ export const appRouter = router({
       .query(({ input }) => reverseGeocodeLocation(input.latitude, input.longitude)),
     calculate: publicProcedure
       .input(chartInput)
-      .mutation(({ input }) => calculateChart(input)),
+      .mutation(({ input }) => getChartSnapshot(input)),
     masterChart: publicProcedure
       .input(
         chartInput.extend({
@@ -433,7 +434,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const chart = await calculateChart({
+        const chart = await getChartSnapshot({
           location: input.location,
           latitude: input.latitude,
           longitude: input.longitude,
