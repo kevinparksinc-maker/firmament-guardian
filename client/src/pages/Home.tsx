@@ -235,8 +235,9 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     const id = window.setInterval(refreshLiveTransit, 5 * 60 * 1000);
     return () => window.clearInterval(id);
   }, [result, readingMode, worldview, form]);
-  const handleSaveProfile = async (newProfile: UserProfileData) => {
-    setActiveProfile(newProfile);
+  const handleSaveProfile = async (newProfile: UserProfileData, previousProfile?: UserProfileData) => {
+    if (previousProfile) saveEditedProfile(previousProfile, newProfile);
+    else setActiveProfile(newProfile);
     const nextForm = {
       location: newProfile.location,
       latitude: newProfile.latitude,
@@ -259,8 +260,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
   };
 
   const handleEditProfile = async (updated: UserProfileData) => {
-    if (activeProfile) saveEditedProfile(activeProfile, updated);
-    await handleSaveProfile(updated);
+    await handleSaveProfile(updated, activeProfile ?? undefined);
   };
 
   const handleClearProfile = () => {
