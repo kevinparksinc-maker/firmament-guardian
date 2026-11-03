@@ -70,7 +70,7 @@ describe("chart XYZ integration", () => {
     expect(chart.ascendant?.longitude).toBeCloseTo(expected, 6);
     expect(chart.houses[0]).toBeCloseTo(expected, 6);
     expect(chart.houses[1]).toBeCloseTo((expected + 30) % 360, 6);
-    expect(chart.validation.notes.join(" ")).toContain("verified sunrise XYZ anchor");
+    expect(chart.validation.notes.join(" ")).toContain("sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded");
   });
 
 });
