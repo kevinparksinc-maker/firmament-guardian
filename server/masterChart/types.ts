@@ -79,6 +79,7 @@ export interface UnifiedMasterChartSnapshot {
   frameConfig: {
     zodiacMode: "aldebaran-anchored-babylonian-stellar";
     firmamentAnchorVersion: "aldebaran-15-taurus-swiss-mode-14";
+    firmamentCenter: "polaris-centered-firmament-dome";
     obliquityMode: "swiss-ephemeris-sidereal-longitudes";
     precessionMode: "none-user-frame-fixed-anchor";
     houseSystem: "topocentric-equal-house-ascendant";
@@ -98,7 +99,7 @@ export interface UnifiedMasterChartSnapshot {
   godView: {
     description: string;
     cosmicFrame: "fixed-aries-1-to-pisces-12";
-    polarisCenter: boolean;
+    polarisCenter: true;
     placements: Array<{
       body: string;
       longitude: number;
