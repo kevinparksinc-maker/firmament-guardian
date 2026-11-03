@@ -1,7 +1,7 @@
 import sweph from "sweph";
 import { ascendantFromSunrise, type FixedVector } from "./sunriseAscendant";
 import tzLookup from "tz-lookup";
-import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
+import { formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
 import { agentHouseFor, angularDistance, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship, type ReadingScope, type Worldview, type DualPlacement } from "./astrologyCore";
 
 export type ChartInput = {
