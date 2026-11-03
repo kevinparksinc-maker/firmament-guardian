@@ -73,6 +73,53 @@ const RELATIONSHIP_LENSES:Record<RelationshipRole,{label:string;dimensions:Array
   {label:"Execution and initiative",planets:["Mars","Sun"]},
   {label:"Strategy and growth",planets:["Jupiter","Mercury"]}]}
 };
+export type ParentChildDynamic = "father-son"|"mother-son"|"mother-daughter"|"father-daughter";
+const FAMILY_PAIR_LENSES:Record<ParentChildDynamic,{label:string;dimensions:Array<{label:string;planets:string[]}>;themes:string[]}> = {
+ "father-son":{label:"Father ↔ Son",dimensions:[
+  {label:"Respect and recognition",planets:["Sun","Saturn"]},
+  {label:"Independence and initiative",planets:["Mars","Sun"]},
+  {label:"Emotional openness",planets:["Moon","Mercury"]},
+  {label:"Guidance and boundaries",planets:["Saturn","Jupiter"]}],
+  themes:["approval and identity","authority versus autonomy","cooperation versus rivalry"]},
+ "mother-son":{label:"Mother ↔ Son",dimensions:[
+  {label:"Emotional security",planets:["Moon","Venus"]},
+  {label:"Independence and boundaries",planets:["Mars","Saturn"]},
+  {label:"Expression and reception",planets:["Mercury","Moon"]},
+  {label:"Support and growth",planets:["Jupiter","Sun"]}],
+  themes:["care versus autonomy","emotional expectations","independence without rejection"]},
+ "mother-daughter":{label:"Mother ↔ Daughter",dimensions:[
+  {label:"Emotional mirroring",planets:["Moon","Venus"]},
+  {label:"Identity and recognition",planets:["Sun","Moon"]},
+  {label:"Autonomy and expectations",planets:["Mars","Saturn"]},
+  {label:"Expression and reception",planets:["Mercury","Moon"]}],
+  themes:["comparison versus individuality","emotional inheritance","support versus criticism"]},
+ "father-daughter":{label:"Father ↔ Daughter",dimensions:[
+  {label:"Trust and emotional safety",planets:["Moon","Saturn"]},
+  {label:"Recognition and confidence",planets:["Sun","Jupiter"]},
+  {label:"Protection and autonomy",planets:["Mars","Saturn"]},
+  {label:"Expression and reception",planets:["Mercury","Moon"]}],
+  themes:["protection versus independence","recognition and trust","emotional expression"]},
+};
+export function computeParentChildDynamic(aspects:SynastryAspect[],pair:ParentChildDynamic):RelationshipCompatibility {
+ const lens=FAMILY_PAIR_LENSES[pair];
+ const dimensions=lens.dimensions.map(d=>{
+  const contacts=aspects.filter(a=>d.planets.includes(a.planetA)||d.planets.includes(a.planetB));
+  let harmony=0,total=0;
+  for(const a of contacts){
+   const weight=a.weight*a.intensity*(PLANET_STARS[a.planetA]??3)*(PLANET_STARS[a.planetB]??3);
+   total+=weight;
+   if(a.type==="harmony")harmony+=weight;
+  }
+  return {label:d.label,score:total?Math.round(100*harmony/total):null,contacts:contacts.length};
+ });
+ const ranked=[...aspects].sort((a,b)=>b.weight*b.intensity-a.weight*a.intensity);
+ const strengths=ranked.filter(a=>a.type==="harmony").slice(0,3);
+ const challenges=ranked.filter(a=>a.type==="tension").slice(0,3);
+ const supported=dimensions.filter(d=>d.score!==null).length;
+ return {label:lens.label,dimensions,strengths,challenges,
+  summary:supported?lens.label+": "+supported+" of "+dimensions.length+" dimensions have calculated evidence. Explore themes such as "+lens.themes.join(", ")+". These are possibilities, not claims about either person's motives."
+   :"No close aspects support these family-specific dimensions yet. No rivalry, jealousy, or conflict is inferred."};
+}
 export function computeRelationshipCompatibility(aspects:SynastryAspect[],role:RelationshipRole):RelationshipCompatibility {
  const lens=RELATIONSHIP_LENSES[role];
  const dimensions=lens.dimensions.map(d=>{
