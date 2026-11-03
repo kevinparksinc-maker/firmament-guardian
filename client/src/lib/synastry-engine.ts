@@ -94,6 +94,45 @@ export function computeRelationshipCompatibility(aspects:SynastryAspect[],role:R
   :lens.label+": "+supported.length+" of "+dimensions.length+" dimensions have cross-chart evidence. Higher scores indicate more weighted harmonious contacts, not a guarantee of real-life compatibility.";
  return {label:lens.label,dimensions,strengths,challenges,summary};
 }
+export type ExpressionReception = {
+ direction:"A-to-B"|"B-to-A";
+ sender:string; receiver:string;
+ expression:SynastryAspect[];
+ reception:SynastryAspect[];
+ harmonyWeight:number; frictionWeight:number;
+ flowPercent:number|null;
+ reading:string;
+};
+export function computeExpressionReception(aspects:SynastryAspect[]):ExpressionReception[] {
+ return ([
+  {direction:"A-to-B" as const,sender:"Person A",receiver:"Person B",source:"planetA" as const,target:"planetB" as const},
+  {direction:"B-to-A" as const,sender:"Person B",receiver:"Person A",source:"planetB" as const,target:"planetA" as const},
+ ]).map(dir=>{
+  // Mercury/Sun/Mars describe expression; Moon/Mercury/Saturn/Venus
+  // describe emotional and cognitive reception. Cross-chart aspects are
+  // directional: A Mercury -> B Moon differs from B Mercury -> A Moon.
+  const expression=aspects.filter(a=>["Mercury","Sun","Mars"].includes(a[dir.source]) &&
+    ["Moon","Mercury","Saturn","Venus"].includes(a[dir.target]));
+  const reception=aspects.filter(a=>["Moon","Mercury"].includes(a[dir.target]) &&
+    ["Mercury","Sun","Mars"].includes(a[dir.source]));
+  let harmonyWeight=0,frictionWeight=0;
+  for(const a of expression){
+   const weight=a.weight*a.intensity*(PLANET_STARS[a.planetA]??3)*(PLANET_STARS[a.planetB]??3);
+   if(a.type==="harmony")harmonyWeight+=weight;
+   else if(a.type==="tension")frictionWeight+=weight;
+  }
+  const total=harmonyWeight+frictionWeight;
+  const flowPercent=total?Math.round(100*harmonyWeight/total):null;
+  const reading=!expression.length
+   ?"No close expression-to-reception contacts within the configured five-degree orb."
+   :flowPercent!==null && flowPercent>=65
+    ?"The calculated contacts emphasize ease in translating expression into reception; confirm that understanding through conversation."
+    :flowPercent!==null && flowPercent<=35
+     ?"The calculated contacts emphasize friction between expression and reception; clarify intent and ask what was actually heard."
+     :"The calculated contacts show both ease and friction; compare intended meaning with received meaning before drawing conclusions.";
+  return {direction:dir.direction,sender:dir.sender,receiver:dir.receiver,expression,reception,harmonyWeight,frictionWeight,flowPercent,reading};
+ });
+}
 export function computeSynastry(chartA:ChartResult|null,chartB:ChartResult|null){
  const empty:ChemistryScores={overall:0,archetype:"Awaiting two charts",archetypeSubtitle:"Both birth charts are required.",romantic:0,emotional:0,intellectual:0,stability:0,soulGrowth:0};
  if(!chartA||!chartB)return{aspects:[] as SynastryAspect[],scores:empty,houseOverlays:[] as SynastryOverlay[]};
