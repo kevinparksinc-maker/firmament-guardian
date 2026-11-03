@@ -1041,7 +1041,7 @@ Apply the Master Interpreter to astrology only when the user asks for a chart in
 
 const VEDIC_CALCULATION_LAYER_GUIDANCE = `
 VEDIC Dasha & Ashtakavarga Evidence Contract
-- When the evidence packet supplies a calculated Vimshottari Dasha, treat its Nakshatra, Lahiri/Chitrapaksha ayanamsa, birth balance, and Mahadasha/Antardasha/Pratyantardasha dates as calculated inputs. Do not recalculate them or silently shift dates.
+- Vimshottari Dasha, nakshatra, and related traditional timing must only be interpreted when their coordinate mapping and provenance are explicitly verified in the evidence packet. Do not infer a Lahiri ayanamsa, transform equatorial right ascension into zodiac longitude, recalculate periods, or invent missing dates. If verification is absent, identify the technique as unavailable.
 - Explain Dasha as a traditional timing framework: the active period describes a symbolic period emphasis, not a guaranteed event or scientifically proven causal mechanism. Relate the period lord to supplied natal placements, house rulerships, and verified aspects only when those facts are present.
 - When birth time is unknown or the packet marks Dasha uncertain, say so plainly. Do not give an exact current period or pretend the missing timing was calculated.
 - When the evidence packet supplies Ashtakavarga, distinguish each planet's Bhinnashtakavarga (BAV) from the combined Sarvashtakavarga (SAV). Bindu totals are sign-strength testimony, not standalone event predictions. Relate the relevant sign/house to the user's question only when the required house frame and placements are supplied.
