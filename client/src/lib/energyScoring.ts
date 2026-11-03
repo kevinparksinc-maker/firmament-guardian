@@ -1,10 +1,10 @@
-import type { ChartResult, TransitContact } from "../../../server/astronomy";
+import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
 
 /** One deterministic scoring policy for the homepage and Energy Read. */
 export const ENERGY_MAX_ORB = 5;
-export const ENERGY_ASPECT_FLOW: Record<TransitContact["aspect"], -1 | 0 | 1> = {
+export const ENERGY_ASPECT_FLOW: Record<TransitContact["aspect"] | MinorTransitContact["aspect"], -1 | 0 | 1> = {
   conjunction: 1, trine: 1, sextile: 1, square: -1, opposition: -1,
-  semisquare: -1,
+  semisextile: 1, semisquare: -1, quincunx: -1,
 };
 const PLANET_STARS: Record<string, number> = {
   Sun: 5, Moon: 5, Mars: 5, Jupiter: 5, Saturn: 5, Pluto: 5,
@@ -18,7 +18,7 @@ export function energyIntensity(orb: number): number {
 }
 export function calculateEnergyRead(chart: ChartResult | null | undefined) {
   if (!chart || chart.readingScope === "natal") return null;
-  const contacts = (chart.transits ?? []).flatMap(body =>
+  const allContacts = (chart.transits ?? []).flatMap(body =>
     [...(body.natalContacts ?? []), ...(body.minorNatalContacts ?? [])]
       .filter(contact => Number.isFinite(contact.orb) && contact.orb >= 0 && contact.orb <= ENERGY_MAX_ORB)
       .map(contact => {
@@ -35,6 +35,18 @@ export function calculateEnergyRead(chart: ChartResult | null | undefined) {
         };
       })
   );
+  // De-duplicate by transit/natal pair, not by aspect name. A single
+  // planet pair must never inflate either Harmony or Friction twice.
+  const unique = new Map<string, (typeof allContacts)[number]>();
+  for (const contact of allContacts) {
+    const key = JSON.stringify([contact.transit, contact.natal]);
+    const previous = unique.get(key);
+    if (!previous || contact.majorFactor > previous.majorFactor ||
+        (contact.majorFactor === previous.majorFactor && contact.orb < previous.orb)) {
+      unique.set(key, contact);
+    }
+  }
+  const contacts = [...unique.values()];
   const harmonious = contacts.filter(c => c.flow === 1);
   const challenging = contacts.filter(c => c.flow === -1);
   const dynamic = contacts.filter(c => c.flow === 0);
