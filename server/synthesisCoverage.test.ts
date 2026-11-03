@@ -32,6 +32,11 @@ describe("Unified synthesis method-coverage contract", () => {
       expect(theme.linkedPropositionIds.length).toBeGreaterThan(0);
       expect(theme.consequences).toContain("Evidence:");
       expect(theme.deeperMeaning).toContain("Symbolic interpretation of");
+      const evidenceProps = propositions.filter(prop => theme.linkedPropositionIds.includes(prop.id) && !prop.id.endsWith("-remaining") && prop.supportingEvidenceIds.length > 0);
+      expect(theme.concreteManifestations.length).toBe(Math.min(4, evidenceProps.length));
+      for (const manifestation of theme.concreteManifestations) {
+        expect(evidenceProps.some(prop => manifestation.includes(prop.plainLanguageMeaning) && prop.supportingEvidenceIds.every(id => manifestation.includes(id)))).toBe(true);
+      }
     }
     expect(synthesis.qualityAudit.unsupportedClaims).toEqual([]);
   });
