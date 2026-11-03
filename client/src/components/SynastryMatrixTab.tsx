@@ -42,7 +42,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useSovereignTier, SovereignTeaserLock } from "./SovereignTierModal";
 import type { ChartResult } from "../../../server/astronomy";
-import { computeSynastry, computeRelationshipCompatibility, type SynastryAspect } from "@/lib/synastry-engine";
+import { computeSynastry, computeRelationshipCompatibility, computeExpressionReception, type SynastryAspect } from "@/lib/synastry-engine";
 import { SynastryDualOrrery } from "./SynastryDualOrrery";
 import type { LovedOneRecord, RelationshipRole } from "../../../shared/social";
 
@@ -289,6 +289,8 @@ export function SynastryMatrixTab({
     [aspects, partnerDetails.relationship]
   );
 
+  const expressionReception = useMemo(() => computeExpressionReception(aspects), [aspects]);
+
   // Filtered aspects
   const filteredAspects = useMemo(() => {
     if (aspectFilter === "all") return aspects;
@@ -477,6 +479,28 @@ export function SynastryMatrixTab({
             </div>
           </div>
           <p className="text-xs text-slate-400">These scores describe weighted astrological aspect balance in this relationship, not a measurement of feelings, safety, or real-world relationship success.</p>
+        </CardContent>
+      </Card>
+
+      <Card className="border-violet-300/20 bg-slate-950/70 text-slate-100">
+        <CardHeader>
+          <CardTitle className="text-lg text-violet-200">Expression vs. Reception · Both Directions</CardTitle>
+          <p className="text-xs text-slate-300">How one person's communication and self-expression symbolically meet the other's emotional and mental reception. The direction matters.</p>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          {expressionReception.map(d => (
+            <div key={d.direction} className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-2">
+              <h4 className="font-semibold text-violet-200">{d.sender} expresses → {d.receiver} receives</h4>
+              <p className="text-sm">{d.flowPercent === null ? "Insufficient close contacts" : d.flowPercent + "% weighted harmony"}</p>
+              <p className="text-xs text-slate-300">{d.reading}</p>
+              <p className="text-xs text-slate-400">{d.expression.length} relevant cross-chart contacts</p>
+              {d.expression.slice(0,5).map(a => (
+                <p key={a.planetA+"-"+a.planetB+"-"+a.aspect} className="text-xs text-slate-300">
+                  {a.planetA} {a.aspect} {a.planetB} · {a.orb}° · {a.type === "harmony" ? "flow" : "friction"}
+                </p>
+              ))}
+            </div>
+          ))}
         </CardContent>
       </Card>
 
