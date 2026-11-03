@@ -377,6 +377,9 @@ function InterpretationPanelInner({
         question: q || undefined,
       });
       const initial = { ...base, chapters: base.chapters as Chapter[] };
+      // The generate endpoint already returns the authoritative synthesis.
+      // Reuse it instead of requiring a second request to reveal the findings.
+      if (base.synthesis) setVisibleMasterSynthesis(base.synthesis);
       setInterpretation(initial);
       saveCachedReading(chart, mode, initial, []);
       await generateChapterAt(initial, 0, q);
