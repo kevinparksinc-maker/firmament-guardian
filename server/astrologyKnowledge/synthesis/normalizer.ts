@@ -315,7 +315,7 @@ export function extractPropositionsFromSnapshot(
       strength: "moderate",
       tradition: "Kabbalah & Sefer Yetzirah",
       frame: "shared",
-      supportingEvidenceIds: syList.map(e => e.id).slice(0, 5),
+      supportingEvidenceIds: syList.map(e => e.id),
       opposingEvidenceIds: [],
       sourceDoctrineIds: ["sefer-yetzirah-westcott-recension"],
     });
@@ -323,7 +323,7 @@ export function extractPropositionsFromSnapshot(
 
   // 10. Active Transit Layer (if present)
   if (snapshot.transit?.aspectsToNatal && snapshot.transit.aspectsToNatal.length > 0) {
-    for (const t of snapshot.transit.aspectsToNatal.slice(0, 4)) {
+    for (const t of snapshot.transit.aspectsToNatal) {
       propositions.push({
         id: `prop-transit-${t.transitBody.toLowerCase()}-${t.aspect.toLowerCase()}-${t.natalBody.toLowerCase()}`,
         themeTitle: `Active Transit Activation: ${t.transitBody} ${t.aspect} Natal ${t.natalBody}`,
