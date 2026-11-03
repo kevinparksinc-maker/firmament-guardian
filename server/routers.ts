@@ -327,17 +327,29 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const { context } = await synthesizeChartForReading(input.chart as ChartResult, input.mode, input.question || input.chapterId);
-        return generateChapter(
-          input.chart as ChartResult,
-          input.mode,
-          input.intelligence,
-          input.chapterId as any,
-          input.completedChapters,
-          input.analysis,
-          input.question,
-          context
+        const { synthesis } = await synthesizeChartForReading(
+          input.chart as ChartResult, input.mode, input.question || input.chapterId
         );
+        const chapter = READING_CHAPTERS.find(item => item.id === input.chapterId);
+        const title = chapter?.title ?? input.chapterId;
+        const words = (title + " " + input.question).toLowerCase().split(/[^a-z]+/).filter(word => word.length > 3);
+        const matched = synthesis.themes.filter(theme =>
+          words.some(word => theme.humanTheme.toLowerCase().includes(word) || theme.domain.includes(word))
+        );
+        const themes = matched.length ? matched : synthesis.themes;
+        return [
+          "# " + title,
+          "**Core synthesis:** " + synthesis.dominantConclusion,
+          ...themes.map(theme => [
+            "## " + theme.humanTheme,
+            "**What:** " + theme.primaryConclusion,
+            "**Why and how:** " + theme.whyHow,
+            "**Consequences:** " + theme.consequences,
+            "**Meaning:** " + theme.deeperMeaning,
+            "**Evidence:** " + (theme.evidenceIds.join(", ") || "Not recorded"),
+          ].join("\n\n")),
+          "**Coverage:** " + synthesis.methodLedgerSummary.computedWithResult + " calculated methods.",
+        ].join("\n\n");
       }),
     followUp: publicProcedure
       .input(
