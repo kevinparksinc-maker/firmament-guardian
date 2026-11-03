@@ -42,7 +42,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useSovereignTier, SovereignTeaserLock } from "./SovereignTierModal";
 import type { ChartResult } from "../../../server/astronomy";
-import { computeSynastry, computeRelationshipCompatibility, computeExpressionReception, type SynastryAspect } from "@/lib/synastry-engine";
+import { computeSynastry, computeRelationshipCompatibility, computeExpressionReception, computeParentChildDynamic, type ParentChildDynamic, type SynastryAspect } from "@/lib/synastry-engine";
 import { SynastryDualOrrery } from "./SynastryDualOrrery";
 import type { LovedOneRecord, RelationshipRole } from "../../../shared/social";
 
@@ -289,6 +289,14 @@ export function SynastryMatrixTab({
     [aspects, partnerDetails.relationship]
   );
 
+  // Explicit choice avoids guessing family identities from birth charts.
+  const [familyPair, setFamilyPair] = useState<ParentChildDynamic>("father-son");
+  const isParentChild = partnerDetails.relationship === "parent" || partnerDetails.relationship === "child";
+  const familyDynamic = useMemo(
+    () => isParentChild ? computeParentChildDynamic(aspects, familyPair) : null,
+    [aspects, familyPair, isParentChild]
+  );
+
   const expressionReception = useMemo(() => computeExpressionReception(aspects), [aspects]);
 
   // Filtered aspects
@@ -503,6 +511,38 @@ export function SynastryMatrixTab({
           ))}
         </CardContent>
       </Card>
+
+      {isParentChild && familyDynamic && (
+        <Card className="border-amber-300/20 bg-slate-950/70 text-slate-100">
+          <CardHeader>
+            <CardTitle className="text-lg text-amber-200">Parent–Child Relationship Patterns</CardTitle>
+            <p className="text-xs text-slate-300">Select the family pairing explicitly. Charts do not determine a person's family role or identity.</p>
+            <select aria-label="Family relationship pairing" value={familyPair}
+              onChange={e => setFamilyPair(e.target.value as ParentChildDynamic)}
+              className="mt-2 w-full rounded-lg border border-white/20 bg-slate-900 p-2 text-sm text-white">
+              <option value="father-son">Father ↔ Son</option>
+              <option value="mother-son">Mother ↔ Son</option>
+              <option value="mother-daughter">Mother ↔ Daughter</option>
+              <option value="father-daughter">Father ↔ Daughter</option>
+            </select>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-300">{familyDynamic.summary}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {familyDynamic.dimensions.map(d => (
+                <div key={d.label} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex justify-between gap-2 text-sm">
+                    <span>{d.label}</span>
+                    <span>{d.score === null ? "No evidence" : d.score + "% flow"}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">{d.contacts} cross-chart contacts</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400">The expression–reception panel below compares both directions. Neither panel diagnoses competition, jealousy, or anyone's intentions.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Symbolic cross-aspect balance — never a measure of human compatibility. */}
       <div className="grid gap-6 lg:grid-cols-12">
