@@ -139,7 +139,7 @@ export function ProfileSwitcherModal({
                         Load
                       </Button>
                     )}
-                    {savedProfiles.length > 1 && (
+                    {(
                       <button
                         type="button"
                         onClick={(e) => handleDelete(e, p)}
@@ -197,8 +197,7 @@ export function ProfileSwitcherModal({
         </div>
 
         <p className="mt-2 text-[11px] text-slate-400 text-center">
-          Profiles are securely stored in your browser's private memory and remain
-          available across sessions.
+          Profiles are saved in this browser only. Back up profiles before clearing browser data or switching devices.
         </p>
       </DialogContent>
     </Dialog>
