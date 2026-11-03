@@ -39,6 +39,7 @@ type ProfileSession = {
   savedProfiles: UserProfileData[];
   deleteSavedProfile: (profile: UserProfileData) => void;
   setProfile: (next: UserProfileData | null) => void;
+  saveEditedProfile: (previous: UserProfileData, next: UserProfileData) => void;
   updateTransitLocation: (transit: {
     transitLocation: string;
     transitLatitude: number;
@@ -74,14 +75,37 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const deleteSavedProfile = useCallback((target: UserProfileData) => {
-    const updated = readSavedProfiles().filter(p => profileId(p) !== profileId(target));
+  const saveEditedProfile = useCallback((previous: UserProfileData, next: UserProfileData) => {
+    updateProfile(next);
+    setChart(null);
+    if (typeof window === "undefined") return;
     try {
+      const updated = [next, ...readSavedProfiles().filter(p =>
+        profileId(p) !== profileId(previous) && profileId(p) !== profileId(next)
+      )].slice(0, 100);
+      window.localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
       window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
       setSavedProfiles(updated);
       window.dispatchEvent(new Event("fg:profile-updated"));
-    } catch { /* Browser storage may be unavailable. */ }
+    } catch {
+      // Editing remains available for this session if browser storage is blocked.
+    }
   }, []);
+
+  const deleteSavedProfile = useCallback((target: UserProfileData) => {
+    const updated = readSavedProfiles().filter(p => profileId(p) !== profileId(target));
+    const isActive = profile && profileId(profile) === profileId(target);
+    try {
+      window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
+      setSavedProfiles(updated);
+      if (isActive) {
+        window.localStorage.removeItem(PROFILE_KEY);
+        updateProfile(null);
+        setChart(null);
+      }
+      window.dispatchEvent(new Event("fg:profile-updated"));
+    } catch { /* Browser storage may be unavailable. */ }
+  }, [profile]);
 
   useEffect(() => {
     const sync = () => {
@@ -132,8 +156,8 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ profile, chart, savedProfiles, setProfile, updateTransitLocation, setChart, deleteSavedProfile }),
-    [profile, chart, savedProfiles, setProfile, updateTransitLocation, deleteSavedProfile]
+    () => ({ profile, chart, savedProfiles, setProfile, saveEditedProfile, updateTransitLocation, setChart, deleteSavedProfile }),
+    [profile, chart, savedProfiles, setProfile, saveEditedProfile, updateTransitLocation, deleteSavedProfile]
   );
   return <ProfileSessionContext.Provider value={value}>{children}</ProfileSessionContext.Provider>;
 }
