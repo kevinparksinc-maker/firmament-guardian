@@ -185,7 +185,8 @@ function row(name: string, longitude: number, house: number, worldview: Worldvie
   return { name, longitude, display: formatLongitude(longitude), house, godHouse: dual.godHouse, ...(dual.agentHouse == null ? {} : { agentHouse: dual.agentHouse }), ...(dual.frameRelationship ? { frameRelationship: dual.frameRelationship } : {}), royalStarContacts: dual.royalStarContacts, overlay: overlay(longitude), ...extra };
 }
 function fixedHouseRows(worldview: Worldview, ascendant: number | null) {
-  const houses = worldview === "god" ? Array.from({ length: 12 }, (_, index) => index * 30) : equalHouseCusps(ascendant ?? 0);
+  if (worldview !== "god" && (ascendant == null || !Number.isFinite(ascendant))) throw new Error("ASC_REQUIRED_FOR_EQUAL_HOUSES: Cannot construct Agent houses without a valid sunrise-derived Ascendant.");
+  const houses = worldview === "god" ? Array.from({ length: 12 }, (_, index) => index * 30) : equalHouseCusps(ascendant!);
   return houses;
 }
 function moonRange(date: string): MoonUncertainty | undefined {
@@ -208,9 +209,10 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
   ensureCanonicalReferenceFrame();
   if (hasAgentLocation && !input.sunriseAnchor) throw new Error("SUNRISE_ANCHOR_REQUIRED: Cannot calculate Agent View without a verified sunrise UTC time and fixed-frame Sun XYZ. No legacy Ascendant fallback.");
-  const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, SIDEREAL_FLAG, input.latitude, input.longitude, "E") : null;
   const asc = hasAgentLocation ? ascendantFromSunrise({ ...input.sunriseAnchor!, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant : null;
-  const mc = hasAgentLocation ? Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]) : null;
+  // In the zero-tilt equatorial wheel, the upper meridian is 90° behind the eastern horizon.
+  // Derive MC from the SAME sunrise-anchored rotation as ASC; never mix in Swiss houses_ex geometry.
+  const mc = asc == null ? null : normalizeLongitude(asc - 90);
   if (hasAgentLocation && !Number.isFinite(asc)) throw new Error("SUNRISE_ASC_INVALID: Sunrise-derived natal Ascendant is not finite.");
   const houses = fixedHouseRows(worldview, asc);
   const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
@@ -239,7 +241,6 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
   ensureCanonicalReferenceFrame();
   if (transitHasLocation && !input.transitSunriseAnchor) throw new Error("TRANSIT_SUNRISE_ANCHOR_REQUIRED: Cannot calculate local transit houses without sunrise UTC and fixed-frame Sun XYZ. No legacy Ascendant fallback.");
-  const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, SIDEREAL_FLAG, input.transitLatitude, input.transitLongitude, "E") : null;
   const transitAsc = transitHasLocation ? ascendantFromSunrise({ ...input.transitSunriseAnchor!, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant : null;
   if (transitHasLocation && !Number.isFinite(transitAsc)) throw new Error("TRANSIT_SUNRISE_ASC_INVALID: Sunrise-derived transit Ascendant is not finite.");
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
