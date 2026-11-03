@@ -2,12 +2,12 @@ import { useMemo, useState } from "react";
 import { Activity, ArrowRight, Clock3, RefreshCw, Sparkles, Zap } from "lucide-react";
 import { Link } from "wouter";
 import { calculatePlanetaryHours } from "../lib/planetaryHours";
-import type { ChartResult, TransitContact } from "../../../server/astronomy";
+import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
 import { TransitLocationBar } from "./TransitLocationBar";
 
 const MAX_ORB = 5;
-const aspectFlow: Record<TransitContact["aspect"], number> = {
-  trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 1,
+const aspectFlow: Record<TransitContact["aspect"] | MinorTransitContact["aspect"], number> = {
+  trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 1, semisextile: 1, semisquare: -1, quincunx: -1,
 };
 const percentWeight = (orb: number) =>
   orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
@@ -18,8 +18,8 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
   const data = useMemo(() => {
     if (!chart || chart.readingScope === "natal") return null;
     const contacts = chart.transits.flatMap(body =>
-      body.natalContacts.filter(contact => Number.isFinite(contact.orb) && contact.orb <= MAX_ORB)
-        .map(contact => ({ ...contact, transit: body.name, strength: percentWeight(contact.orb) }))
+      [...body.natalContacts, ...body.minorNatalContacts].filter(contact => Number.isFinite(contact.orb) && contact.orb <= MAX_ORB)
+        .map(contact => ({ ...contact, transit: body.name, strength: percentWeight(contact.orb) * ("weightMultiplier" in contact ? contact.weightMultiplier : 1) }))
     );
     const flow = contacts.filter(c => aspectFlow[c.aspect] === 1).reduce((sum,c) => sum+c.strength,0);
     const friction = contacts.filter(c => aspectFlow[c.aspect] === -1).reduce((sum,c) => sum+c.strength,0);
@@ -65,7 +65,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
         ? "Challenging angular relationships carry more weight in this snapshot. Friction describes symbolic tension, not inevitable events."
         : data.signal === "Mixed"
         ? "Supportive and challenging contacts are both present. The pattern can be explored through the planets and houses involved."
-        : "No major natal–transit aspects fall inside your selected 5° orb in this snapshot. This is not a claim that nothing is happening."}</p>
+        : "No natal–transit aspects fall inside your selected 5° orb in this snapshot. This is not a claim that nothing is happening."}</p>
       <div className="mt-5 overflow-hidden rounded-2xl border border-amber-200/20 bg-[radial-gradient(ellipse_at_50%_0%,rgba(225,185,108,.13),transparent_65%),linear-gradient(145deg,rgba(11,24,50,.96),rgba(5,10,25,.98))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.07),0_16px_36px_rgba(0,0,0,.28)] sm:p-5">
         <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-amber-200">Celestial Energy Balance</p><h3 className="mt-1 font-serif text-lg text-white">Your current energetic signature</h3></div><span className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-slate-300">Calculated snapshot</span></div>
         {(() => {
