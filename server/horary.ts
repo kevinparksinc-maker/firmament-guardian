@@ -504,8 +504,8 @@ export async function openHoraryQuestion(input: HoraryInput) {
     const masterMode = chart.natalChart ? "combined" : "natal";
     const { synthesis, context } = await synthesizeChartForReading(masterSource, masterMode, input.question);
     chart.unifiedSynthesisContext = chart.natalChart
-      ? "MASTER NATAL + QUESTION-MOMENT TRANSIT EVIDENCE:\\n" + context
-      : "QUESTION-MOMENT ONLY (NO SAVED NATAL FOUNDATION):\\n" + context;
+      ? "MASTER NATAL + QUESTION-MOMENT TRANSIT EVIDENCE:\n" + context
+      : "QUESTION-MOMENT ONLY (NO SAVED NATAL FOUNDATION):\n" + context;
     chart.unifiedSynthesisSnapshotId = synthesis.snapshotId;
   } catch (error) {
     // An optional synthesis failure must not prevent a calculated Horary verdict.
