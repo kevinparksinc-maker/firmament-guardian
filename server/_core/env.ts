@@ -1,6 +1,6 @@
 export const ENV = {
   appId: process.env.MANUS_PROJECT_ID ?? process.env.VITE_APP_ID ?? "firmament-guardian",
-  cookieSecret: process.env.MANUS_JWT_SECRET ?? process.env.JWT_SECRET ?? "firmament-guardian-default-jwt-secret-key",
+  cookieSecret: process.env.JWT_SECRET ?? "",
   databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl: process.env.MANUS_OAUTH_API_URL ?? process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
