@@ -5,6 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
+import { getStoredNatal } from "./stored-natal";
 import { geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
 import { getChartSnapshot } from "./chart-snapshot-service";
 import {
@@ -110,6 +111,11 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+  }),
+  natalStore: router({
+    getOrCreate: protectedProcedure
+      .input(chartInput)
+      .mutation(({ ctx, input }) => getStoredNatal(ctx.user.openId, input)),
   }),
   history: router({
     charts: protectedProcedure.query(({ ctx }) =>
