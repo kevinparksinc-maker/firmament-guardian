@@ -221,7 +221,10 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const descLongitude = asc == null ? null : normalizeLongitude(asc + 180); const descendant = descLongitude == null ? null : row("Descendant", descLongitude, 7, worldview, asc);
   const mcRow = mc == null ? null : row("Midheaven", mc, houseFor(mc), worldview, asc);
   const nodePosition = safeCalc(jd, 10).longitude; const northNode = row("North Node", nodePosition, houseFor(nodePosition), worldview, asc, { retrograde: true, speed: 0 }); const southNodePosition = normalizeLongitude(nodePosition + 180); const southNode = row("South Node", southNodePosition, houseFor(southNodePosition), worldview, asc, { retrograde: true, speed: 0 });
-  const frozenStars = FIXED_STARS.map(([name, longitude]) => row(name, longitude, houseFor(longitude), worldview, asc));
+  // Symbolic zodiac star anchors are not measured equatorial RA positions.
+  // Keep the traditional catalog in shared/hybrid for independently mapped views,
+  // but do not inject its values into ACIF planetary/star calculations.
+  const frozenStars: ChartRow[] = [];
   const allPlacements = [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), ...(mcRow ? [mcRow] : []), northNode, southNode];
   const godPlacements = allPlacements.map(placement => ({ ...placement, ...dualPlacement(placement.longitude, asc, placement.name) }));
   // Source calculation success is distinct from an optional historical reference fixture.
