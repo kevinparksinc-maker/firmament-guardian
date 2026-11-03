@@ -123,8 +123,8 @@ export function clusterPropositionsIntoThemes(
     // Include the ACTUAL finding text from each computed doctrine, not just a label
     // that says the doctrine was evaluated. Every computed proposition participates.
     const whyHow = interpreted.map(p => `[${p.tradition} / ${p.frame}] ${p.plainLanguageMeaning} (mechanism: ${p.causalMechanism}; evidence: ${p.supportingEvidenceIds.join(", ")})`).join("\\n");
-    const concreteManifestations = meta.lifeSpheres.map((sphere: string) =>
-      `In ${sphere}: Read the concrete calculated factors above together, distinguishing supportive, frictional, and unclassified contacts. No biographical event is established solely by the chart.`
+    const concreteManifestations = interpreted.filter(p => p.supportingEvidenceIds.length > 0).slice(0, 4).map(p =>
+      p.themeTitle + ": " + p.plainLanguageMeaning + " (evidence: " + p.supportingEvidenceIds.join(", ") + ")"
     );
     const consequences = `Evidence: ${strongest.plainLanguageMeaning}. No specific life outcome is established by this calculation alone.`;
     const deeperMeaning = `Symbolic interpretation of ${strongest.themeTitle}: ${strongest.plainLanguageMeaning}. This is interpretive meaning, not a separately calculated event.`;
