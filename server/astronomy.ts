@@ -1,5 +1,6 @@
 import sweph from "sweph";
 import { ascendantFromSunrise, type FixedVector } from "./sunriseAscendant";
+import { resolveMasterSunrise } from "./master-sunrise-provider";
 import tzLookup from "tz-lookup";
 import { formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
 import { agentHouseFor, angularDistance, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship, type ReadingScope, type Worldview, type DualPlacement } from "./astrologyCore";
@@ -207,10 +208,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
   ensureCanonicalReferenceFrame();
-  if (hasAgentLocation && !input.sunriseAnchor) throw new Error("ACIF requires a verified historical sunrise UTC and geocentric equatorial Sun XYZ before computing Agent houses.");
-  const asc = hasAgentLocation && input.sunriseAnchor
-    ? ascendantFromSunrise({ ...input.sunriseAnchor, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
-    : null;
+  const natalSunrise = hasAgentLocation ? resolveMasterSunrise(input.sunriseAnchor, parseLocalToUtc(input.date, "12:00", input.timezone), input.latitude, input.longitude) : null;
+  const asc = natalSunrise ? ascendantFromSunrise({ ...natalSunrise.anchor, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant : null;
   // MC is unavailable until its independent equatorial mapping is approved.
   const mc: number | null = null;
   const houses = fixedHouseRows(worldview, asc);
@@ -231,8 +230,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
     "ACIF: planetary angles derive from geocentric equatorial XYZ (Moshier, equatorial-of-date); no sidereal or Aldebaran offset. Legacy zodiac overlays, symbolic fixed-star positions, and God-house assignments are NOT verified equatorial mappings and must not be treated as measured placements.",
-    input.sunriseAnchor ? "Natal Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Natal Ascendant: no historical sunrise anchor; Agent chart calculation is unavailable.",
-    input.transitSunriseAnchor ? "Transit Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Transit Ascendant: no historical sunrise anchor; transit houses are unavailable.",
+    natalSunrise ? `Natal sunrise source: ${natalSunrise.source}; estimates are not certified historical observations.` : "No local sunrise for God View.",
+    input.transitSunriseAnchor ? "Transit sunrise supplied by caller; independent verification not recorded." : "Transit sunrise is estimated when transit coordinates are available.",
     input.xyzPositions ? "Supplied XYZ vectors must be geocentric equatorial-of-date; missing bodies retain Swiss Ephemeris positions." : "Planetary positions are geocentric equatorial right ascensions, not zodiac longitudes; Moon topocentric position is separately labeled.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value));
@@ -242,10 +241,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
   ensureCanonicalReferenceFrame();
-  if (transitHasLocation && !input.transitSunriseAnchor) throw new Error("ACIF requires a verified transit sunrise UTC and geocentric equatorial Sun XYZ before computing transit houses.");
-  const transitAsc = transitHasLocation && input.transitSunriseAnchor
-    ? ascendantFromSunrise({ ...input.transitSunriseAnchor, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant
-    : null;
+  const transitSunrise = transitHasLocation ? resolveMasterSunrise(input.transitSunriseAnchor, parseLocalToUtc(input.transitDate ?? input.date, "12:00", input.transitTimezone as string), input.transitLatitude as number, input.transitLongitude as number) : null;
+  const transitAsc = transitSunrise ? ascendantFromSunrise({ ...transitSunrise.anchor, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant : null;
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
   const transits: TransitRow[] = planetNames.map((name, i) => { const xyz = input.transitXYZPositions?.[name]; const automatic = xyz ? undefined : calculatedXYZ(transitJd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: safeCalc(transitJd, i).speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
