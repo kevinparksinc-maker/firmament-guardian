@@ -251,7 +251,27 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         const { synthesis, context } = await synthesizeChartForReading(input.chart, input.mode, input.question);
-        const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context);
+        // The calculated Master Synthesis owns the displayed conclusion.
+        // Legacy prose generation is not allowed to replace it.
+        const primaryReading = [
+          `# Your Unified Chart Synthesis`,
+          `**Question:** ${input.question}`,
+          `**Core conclusion:** ${synthesis.dominantConclusion}`,
+          ...synthesis.integratedNarrative,
+          ...synthesis.themes.map(theme => [
+            `## ${theme.humanTheme}`,
+            `**What:** ${theme.primaryConclusion}`,
+            `**Why and how:** ${theme.whyHow}`,
+            `**Consequences:** ${theme.consequences}`,
+            `**Deeper meaning:** ${theme.deeperMeaning}`,
+            `**Evidence:** ${theme.evidenceIds.join(", ") || "No evidence IDs recorded"}`,
+            `**Traditions:** ${theme.convergenceAssessment.independentTraditions.join(", ") || "Not recorded"}`,
+          ].join("\\n\\n")),
+          `## Method Coverage`,
+          `Computed ${synthesis.methodLedgerSummary.computedWithResult} of ${synthesis.methodLedgerSummary.totalEvaluated} recorded methods. Quality audit: ${synthesis.qualityAudit.passed ? "passed" : "requires review"}.`,
+          ...synthesis.methodFindings.map(method => `- **${method.name}** (${method.status}): ${method.findings.map(f => `${f.label}: ${f.details}`).join("; ") || method.notes || "No calculated finding"}`),
+        ].join("\\n\\n");
+        const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context, primaryReading);
         return { ...interpretation, synthesis };
       }),
     masterSynthesize: publicProcedure
