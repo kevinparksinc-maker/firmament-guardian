@@ -398,6 +398,7 @@ export default function EnergyPage() {
       </section>
 
       {/* SECTION 4: FORECAST TIMELINE */}
+      <div className="flex justify-end"><Link href="/transit-sky" className="rounded-xl border border-cyan-300/40 bg-cyan-950/30 px-4 py-2 text-sm font-semibold text-cyan-200">Open Independent Transit Chart →</Link></div>
       <section aria-label="Transit Weather Timeline" className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
