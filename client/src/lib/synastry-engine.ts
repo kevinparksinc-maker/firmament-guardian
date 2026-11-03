@@ -1,4 +1,5 @@
 
+import type { RelationshipRole } from "../../../shared/social";
 import type { ChartResult } from "../../../server/astronomy";
 import { agentHouseFor, angularDistance } from "../../../server/astrologyCore";
 export type SynastryAspect={planetA:string;planetB:string;aspect:string;symbol:string;orb:number;weight:number;intensity:number;type:"harmony"|"tension"|"neutral"|"karmic";title:string;description:string};
@@ -29,6 +30,70 @@ const FIELDS={
  stability:new Set(["Saturn","Sun","Moon","Venus"]),
  soulGrowth:new Set(["Jupiter","Saturn","Pluto","Neptune","Uranus"]),
 };
+export type RelationshipCompatibility = {
+ label:string; dimensions:Array<{label:string;score:number|null;contacts:number}>;
+ strengths:SynastryAspect[]; challenges:SynastryAspect[];
+ summary:string;
+};
+const RELATIONSHIP_LENSES:Record<RelationshipRole,{label:string;dimensions:Array<{label:string;planets:string[]}>}>={
+ partner:{label:"Romantic partnership",dimensions:[
+  {label:"Emotional understanding",planets:["Moon","Sun","Venus"]},
+  {label:"Attraction and affection",planets:["Venus","Mars","Sun"]},
+  {label:"Communication",planets:["Mercury","Moon"]},
+  {label:"Trust and stability",planets:["Saturn","Moon","Sun"]},
+  {label:"Shared growth",planets:["Jupiter","Pluto"]}]},
+ child:{label:"Parent–child bond",dimensions:[
+  {label:"Emotional security",planets:["Moon","Venus"]},
+  {label:"Guidance and boundaries",planets:["Sun","Saturn"]},
+  {label:"Communication and listening",planets:["Mercury","Moon"]},
+  {label:"Independence and growth",planets:["Mars","Jupiter"]}]},
+ parent:{label:"Parent–adult child bond",dimensions:[
+  {label:"Emotional understanding",planets:["Moon","Venus"]},
+  {label:"Respect and autonomy",planets:["Sun","Saturn","Mars"]},
+  {label:"Communication",planets:["Mercury","Moon"]},
+  {label:"Generational growth",planets:["Jupiter","Pluto"]}]},
+ sibling:{label:"Sibling bond",dimensions:[
+  {label:"Communication",planets:["Mercury","Moon"]},
+  {label:"Cooperation and rivalry",planets:["Mars","Sun"]},
+  {label:"Loyalty and support",planets:["Saturn","Venus"]},
+  {label:"Individual growth",planets:["Jupiter","Uranus"]}]},
+ friend:{label:"Friendship",dimensions:[
+  {label:"Trust and loyalty",planets:["Saturn","Moon"]},
+  {label:"Communication",planets:["Mercury","Jupiter"]},
+  {label:"Companionship",planets:["Venus","Sun"]},
+  {label:"Mutual support and growth",planets:["Moon","Jupiter"]}]},
+ mentor:{label:"Mentorship",dimensions:[
+  {label:"Learning and insight",planets:["Mercury","Jupiter"]},
+  {label:"Guidance and accountability",planets:["Saturn","Sun"]},
+  {label:"Mutual respect",planets:["Sun","Venus"]},
+  {label:"Growth and autonomy",planets:["Jupiter","Uranus"]}]},
+ colleague:{label:"Working partnership",dimensions:[
+  {label:"Communication",planets:["Mercury","Moon"]},
+  {label:"Reliability and accountability",planets:["Saturn","Sun"]},
+  {label:"Execution and initiative",planets:["Mars","Sun"]},
+  {label:"Strategy and growth",planets:["Jupiter","Mercury"]}]}
+};
+export function computeRelationshipCompatibility(aspects:SynastryAspect[],role:RelationshipRole):RelationshipCompatibility {
+ const lens=RELATIONSHIP_LENSES[role];
+ const dimensions=lens.dimensions.map(d=>{
+  const contacts=aspects.filter(a=>d.planets.includes(a.planetA)||d.planets.includes(a.planetB));
+  let harmony=0,total=0;
+  for(const a of contacts){
+   const weight=a.weight*a.intensity*(PLANET_STARS[a.planetA]??3)*(PLANET_STARS[a.planetB]??3);
+   total+=weight;
+   if(a.type==="harmony")harmony+=weight;
+  }
+  return {label:d.label,score:total?Math.round(100*harmony/total):null,contacts:contacts.length};
+ });
+ const ranked=[...aspects].sort((a,b)=>b.weight*b.intensity-a.weight*a.intensity);
+ const strengths=ranked.filter(a=>a.type==="harmony").slice(0,3);
+ const challenges=ranked.filter(a=>a.type==="tension").slice(0,3);
+ const supported=dimensions.filter(d=>d.score!==null);
+ const summary=!supported.length
+  ?"No close cross-chart aspects support a relationship-specific compatibility index yet."
+  :lens.label+": "+supported.length+" of "+dimensions.length+" dimensions have cross-chart evidence. Higher scores indicate more weighted harmonious contacts, not a guarantee of real-life compatibility.";
+ return {label:lens.label,dimensions,strengths,challenges,summary};
+}
 export function computeSynastry(chartA:ChartResult|null,chartB:ChartResult|null){
  const empty:ChemistryScores={overall:0,archetype:"Awaiting two charts",archetypeSubtitle:"Both birth charts are required.",romantic:0,emotional:0,intellectual:0,stability:0,soulGrowth:0};
  if(!chartA||!chartB)return{aspects:[] as SynastryAspect[],scores:empty,houseOverlays:[] as SynastryOverlay[]};
