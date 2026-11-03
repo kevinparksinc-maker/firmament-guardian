@@ -54,7 +54,8 @@ function getReadingCacheKey(chart: ChartResult, mode: ReadingMode): string {
   const time = chart.input.time || "none";
   const natalSignature = chart.movingBodies.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
   const transitSignature = chart.transits.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
-  return `absolute-reading-v4:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${natalSignature}:${transitSignature}`;
+  const inputSignature = JSON.stringify(chart.input);
+  return `absolute-reading-v5:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${inputSignature}:${natalSignature}:${transitSignature}`;
 }
 
 function loadCachedReading(
