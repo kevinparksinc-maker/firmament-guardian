@@ -38,6 +38,8 @@ export function MasterSynthesizerPanel({
   const synthesizeMutation = trpc.interpretation.masterSynthesize.useMutation();
   const [result, setResult] = useState<SynthesisResult | null>(null);
 
+  const evidencePercent = result ? Math.round(result.qualityAudit.groundedRatio * 100) : 0;
+
   const handleSynthesize = (qToUse?: string) => {
     synthesizeMutation.mutate(
       {
@@ -119,7 +121,7 @@ export function MasterSynthesizerPanel({
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3" />
-                100% Evidence Grounded
+                {result.qualityAudit.passed ? `${evidencePercent}% Evidence Traced` : `Evidence Review Required · ${evidencePercent}% Traced`}
               </span>
             </div>
 
@@ -323,8 +325,8 @@ export function MasterSynthesizerPanel({
                   <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Reference-Only</p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                  <span className="text-lg font-bold text-cyan-400 font-mono">100%</span>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Evidence Grounded</p>
+                  <span className="text-lg font-bold text-cyan-400 font-mono">{evidencePercent}%</span>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Evidence Traced</p>
                 </div>
               </div>
 
