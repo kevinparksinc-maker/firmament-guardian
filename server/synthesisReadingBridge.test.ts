@@ -17,6 +17,17 @@ describe("Canonical synthesis reading bridge", () => {
     expect(result.context).toContain("vedic-nakshatras-and-padas");
   });
 
+  it("rejects a changed ascendant or equal-house cusp before interpretation", async () => {
+    const chart = await calculateChart(input);
+    const shiftedAsc = { ...chart, ascendant: chart.ascendant
+      ? { ...chart.ascendant, longitude: (chart.ascendant.longitude + 1) % 360 }
+      : chart.ascendant };
+    await expect(synthesizeChartForReading(shiftedAsc, "natal", "Check angles")).rejects.toThrow("Ascendant mismatch");
+    const shiftedHouses = { ...chart, houses: chart.houses.map((cusp, index) =>
+      index === 0 ? (cusp + 1) % 360 : cusp) };
+    await expect(synthesizeChartForReading(shiftedHouses, "natal", "Check houses")).rejects.toThrow("cusp mismatch");
+  });
+
   it("refuses a silently changed planet position", async () => {
     const chart = await calculateChart(input);
     const altered = { ...chart, movingBodies: chart.movingBodies.map((body, index) =>
