@@ -24,7 +24,7 @@ export type ChartInput = {
   /** Verified historical sunrise anchor in the fixed EQUATORIAL frame. Optional until provider validation is complete. */
   sunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: FixedVector };
   transitSunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: FixedVector };
-  /** External Cartesian coordinates in the canonical fixed zodiac plane; x points at 0° Aries, y at 90° Cancer. */
+  /** External geocentric equatorial-of-date XYZ coordinates; X=0° RA, Y=90° RA. */
   xyzPositions?: Record<string, { x: number; y: number; z: number }>;
   /** Optional independently sampled transit vectors at the transit instant. */
   transitXYZPositions?: Record<string, { x: number; y: number; z: number }>;
@@ -35,7 +35,7 @@ export type MomentPrecision = "exact" | "date-only-reference";
 export type TransitHouseFrame = "transit-location" | "natal-location" | "god-fixed";
 export type ChartRow = {
   name: string;
-  /** Canonical geocentric longitude, shared by the God and Agent house frames. */
+  /** Geocentric equatorial right ascension (degrees), not ecliptic zodiac longitude. */
   longitude: number;
   /** Observer-specific (parallax-corrected) longitude. Present for the Moon only, and only when a location is resolved. */
   topocentricLongitude?: number;
@@ -90,24 +90,24 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
 }
 
 const MOSHIER_FLAGS = 4 | 256;
-const SIDEREAL_FLAG = 65536;
+const EQUATORIAL_FLAG = 2048;
+// ACIF: All displayed celestial angles use geocentric equatorial XYZ/right ascension.
+// Never apply SEFLG_SIDEREAL or an Aldebaran sidereal mode to this calculation.
 const CARTESIAN_XYZ_FLAG = 4096;
 const TOPOCENTRIC_FLAG = 32768;
-const CANONICAL_SIDEREAL_MODE = 14;
 function ensureCanonicalReferenceFrame() {
-  const sw = sweph as any;
-  sw.set_sid_mode?.(sw.constants?.SE_SIDM_ALDEBARAN_15TAU ?? CANONICAL_SIDEREAL_MODE, 0, 0);
+  // Deliberately no global Swiss sidereal state mutation: this frame is equatorial-of-date.
 }
 function rawCalc(jd: number, planet: number, flags: number) {
   ensureCanonicalReferenceFrame();
-  const result: any = (sweph as any).calc_ut(jd, planet, flags | SIDEREAL_FLAG); const data = result?.data ?? result;
+  const result: any = (sweph as any).calc_ut(jd, planet, flags | EQUATORIAL_FLAG); const data = result?.data ?? result;
   if (!data || Number.isNaN(Number(data[0]))) throw new Error("Swiss Ephemeris failed to calculate a planetary position.");
   return { longitude: normalizeLongitude(Number(data[0])), speed: Number(data[3] ?? 0) };
 }
 /** Geocentric position. Never touches sweph's global topocentric observer. */
 function calculatedXYZ(jd: number, planet: number) {
   ensureCanonicalReferenceFrame();
-  const result: any = (sweph as any).calc_ut(jd, planet, MOSHIER_FLAGS | SIDEREAL_FLAG | CARTESIAN_XYZ_FLAG);
+  const result: any = (sweph as any).calc_ut(jd, planet, MOSHIER_FLAGS | EQUATORIAL_FLAG | CARTESIAN_XYZ_FLAG);
   const data = result?.data ?? result;
   if (!data || ![data[0], data[1], data[2]].every((n: unknown) => typeof n === "number" && Number.isFinite(n))) {
     throw new Error("Ephemeris did not return finite Cartesian coordinates.");
@@ -116,7 +116,7 @@ function calculatedXYZ(jd: number, planet: number) {
   const longitude = longitudeFromXYZ(xyz);
   const referenceLongitude = safeCalc(jd, planet).longitude;
   if (angularDistance(longitude, referenceLongitude) > 0.1) {
-    throw new Error("XYZ frame mismatch: Cartesian projection disagrees with the configured fixed zodiac reference.");
+    throw new Error("Equatorial XYZ/right-ascension mismatch.");
   }
   return { xyz, longitude };
 }
@@ -134,7 +134,7 @@ function topocentricMoonLongitude(jd: number, longitude: number, latitude: numbe
     sw.set_topo?.(0, 0, 0);
   }
 }
-/** Longitude from externally supplied XYZ. The supplied frame must already be aligned to the fixed 360° zodiac. */
+/** Right ascension from geocentric equatorial XYZ. Caller must supply the same epoch/frame. */
 export function longitudeFromXYZ(vector: { x: number; y: number; z: number }): number {
   const { x, y, z } = vector;
   if (![x, y, z].every(Number.isFinite) || Math.hypot(x, y) === 0) {
@@ -207,7 +207,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
   ensureCanonicalReferenceFrame();
-  const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, SIDEREAL_FLAG, input.latitude, input.longitude, "E") : null;
+  const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, 0, input.latitude, input.longitude, "E") : null;
   const asc = hasAgentLocation ? (input.sunriseAnchor
     ? ascendantFromSunrise({ ...input.sunriseAnchor, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
     : Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0])) : null;
@@ -227,10 +227,10 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Source calculation success is distinct from an optional historical reference fixture.
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
-    "Chart planetary positions are projected from Cartesian XYZ in the configured Aldebaran sidereal frame; reference longitudes are used only to validate frame alignment.",
-    input.sunriseAnchor ? "Natal Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Natal Ascendant: legacy Swiss houses_ex solver; historical sunrise anchor not supplied.",
-    input.transitSunriseAnchor ? "Transit Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Transit Ascendant: legacy Swiss houses_ex solver when a transit location is resolved.",
-    input.xyzPositions ? "Supplied XYZ vectors override matching natal planetary longitudes in the fixed 360° plane; missing bodies retain Swiss Ephemeris positions." : "Planetary longitudes are canonical geocentric values; only the Moon receives a separate topocentric correction.",
+    "ACIF: planetary angles derive from geocentric equatorial XYZ (Moshier, mean equator/equinox of date); no sidereal or Aldebaran offset. Traditional zodiac overlays and legacy house angles are separate mappings pending alignment.",
+    input.sunriseAnchor ? "Natal Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Natal Ascendant: legacy Swiss houses_ex ecliptic solver; not equatorial sunrise-anchored and not directly comparable with equatorial RA. Historical sunrise anchor not supplied.",
+    input.transitSunriseAnchor ? "Transit Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Transit Ascendant: legacy Swiss houses_ex ecliptic solver when a transit location is resolved; not directly comparable with equatorial RA.",
+    input.xyzPositions ? "Supplied XYZ vectors must be geocentric equatorial-of-date; missing bodies retain Swiss Ephemeris positions." : "Planetary longitudes are canonical geocentric values; only the Moon receives a separate topocentric correction.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value));
   const transitInputsPresent = Boolean(input.transitDate?.trim() || input.transitTime?.trim() || input.transitTimezone?.trim() || input.transitLocation?.trim() || transitCoordinatesPresent);
@@ -239,7 +239,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
   ensureCanonicalReferenceFrame();
-  const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, SIDEREAL_FLAG, input.transitLatitude, input.transitLongitude, "E") : null;
+  const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, 0, input.transitLatitude, input.transitLongitude, "E") : null;
   const transitAsc = transitHasLocation ? (input.transitSunriseAnchor
     ? ascendantFromSunrise({ ...input.transitSunriseAnchor, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant
     : Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0])) : null;
