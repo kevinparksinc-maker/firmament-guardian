@@ -155,6 +155,9 @@ class SDKServer {
 
   private getSessionSecret() {
     const secret = ENV.cookieSecret;
+    if (ENV.isProduction && (!process.env.MANUS_JWT_SECRET && !process.env.JWT_SECRET)) {
+      throw new Error("Production session signing requires MANUS_JWT_SECRET or JWT_SECRET");
+    }
     return new TextEncoder().encode(secret);
   }
 
