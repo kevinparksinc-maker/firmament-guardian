@@ -386,6 +386,18 @@ export function SynastryMatrixTab({
           </div>
         </div>
 
+        <section aria-label="Start a chemistry comparison by relationship" className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-950/15 p-3">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[.2em] text-rose-200">Start a chart comparison</p>
+          <div className="flex flex-wrap gap-2">
+            {([{ label: "Partner", relationship: "partner" }, { label: "Parent", relationship: "parent" }, { label: "Child", relationship: "child" }, { label: "Sibling", relationship: "sibling" }, { label: "Friend", relationship: "friend" }, { label: "Mentor", relationship: "mentor" }, { label: "Colleague", relationship: "colleague" }] as const).map(item => (
+              <button key={item.relationship} type="button" onClick={() => { setPersonForm(current => ({ ...current, relationship: item.relationship })); setIsAddPersonOpen(true); }} className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-rose-300/40 hover:bg-rose-400/10 hover:text-rose-100">
+                + {item.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] leading-5 text-slate-400">Each choice opens the same two-chart calculator with the relationship role preselected. Family, friendship and romantic comparisons all use the actual two birth charts.</p>
+        </section>
+
         {/* Action Bar */}
         <div className="mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
