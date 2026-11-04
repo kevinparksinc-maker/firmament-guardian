@@ -214,7 +214,6 @@ export function ProfileSessionProvider({ children, accountId = "guest" }: { chil
   }, []);
 
   const importDeviceProfiles = useCallback(() => {
-    if (accountId === "guest") return;
     const legacy = readSavedProfiles();
     const active = readProfile();
     importProfiles(legacy.length ? legacy : active ? [active] : []);
