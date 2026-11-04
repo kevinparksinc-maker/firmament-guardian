@@ -185,6 +185,30 @@ export const appRouter = router({
       ),
   }),
   vedic: router({
+    // Read a chart already saved to the signed-in account. Never recalculate
+    // natal astronomy from a birth date, and never trust another user's ID.
+    savedDivisionalCharts: protectedProcedure
+      .input(z.object({ chartId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => {
+        const saved = (await db.listSavedCharts(ctx.user.openId))
+          .find(row => row.id === input.chartId);
+        if (!saved) throw new Error("Saved natal chart not found for this account.");
+        const validated = chartPayloadShape.safeParse(saved.chart);
+        if (!validated.success) throw new Error("Saved chart does not contain a complete natal chart.");
+        const natal = validated.data as ChartResult;
+        if (!natal.ascendant || !Number.isFinite(natal.ascendant.longitude))
+          throw new Error("Saved natal chart is missing a valid Ascendant.");
+        return buildDivisionalCharts({
+          ascendantLongitude: natal.ascendant.longitude,
+          planets: [
+            ...natal.movingBodies.map(p => ({ name: p.name, longitude: p.longitude })),
+            { name: natal.northNode.name, longitude: natal.northNode.longitude },
+            { name: natal.southNode.name, longitude: natal.southNode.longitude },
+          ],
+          d1HouseCusps: natal.houses,
+        });
+      }),
+
     // Reuses the active profile's existing natal chart; no calculateChart call.
     // The caller must supply the same chart already shown in the profile UI.
     divisionalCharts: publicProcedure
