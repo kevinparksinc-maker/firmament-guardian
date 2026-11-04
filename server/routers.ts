@@ -198,6 +198,8 @@ export const appRouter = router({
         const natal = validated.data as ChartResult;
         if (!natal.ascendant || !Number.isFinite(natal.ascendant.longitude))
           throw new Error("Saved natal chart is missing a valid Ascendant.");
+        if (!natal.northNode || !natal.southNode || !Number.isFinite(natal.northNode.longitude) || !Number.isFinite(natal.southNode.longitude))
+          throw new Error("Saved natal chart is missing its lunar nodes.");
         return buildDivisionalCharts({
           ascendantLongitude: natal.ascendant.longitude,
           planets: [
