@@ -66,6 +66,15 @@ export function VedicDivisionalCharts({ chart }: { chart: ChartResult }) {
             <p className="text-xs text-slate-300">{house.planets.join(", ") || "—"}</p>
           </div>)}
         </div>
+        <div className="rounded-xl border border-amber-400/20 p-3 space-y-2" aria-label="Divisional chart interpretation">
+          <h4 className="font-semibold text-amber-100">Chart-specific reading</h4>
+          <p className="text-sm text-slate-300">{active.purpose}. The divisional Ascendant falls in {active.ascendant.sign}; the house positions below describe the projected areas of emphasis in this chart, not new astronomical observations.</p>
+          {active.placements.map(planet => <p key={planet.body} className="text-sm text-slate-300">
+            <strong>{planet.body}</strong> moves from natal {planet.sourceSign} to divisional {planet.sign} in House {planet.house}.
+            {planet.sign === planet.sourceSign ? " The sign repeats from D1, reinforcing that natal sign emphasis in this division." : " The divisional sign differs from D1, so this technique describes a distinct context for the natal placement."}
+          </p>)}
+          <p className="text-xs text-slate-400">This is a deterministic placement interpretation, not a complete strength, dasha, or yoga judgment. Read alongside the unified Master Synthesizer.</p>
+        </div>
         <details className="text-sm text-slate-300"><summary className="cursor-pointer">Show planetary calculations</summary>
           <div className="mt-2 space-y-2">{active.placements.map(planet => <p key={planet.body}>
             <strong>{planet.body}</strong>: {planet.sourceSign} → {planet.sign}, part {planet.divisionPart}, House {planet.house}, derived {planet.longitude.toFixed(3)}°
