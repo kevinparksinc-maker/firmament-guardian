@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { VedicDivisionalCharts } from "./VedicDivisionalCharts";
 import { VedicDashaTimeline } from "./VedicDashaTimeline";
+import { TechniqueAuditDashboard } from "./TechniqueAuditDashboard";
 import { Link } from "wouter";
 import {
   BookOpen,
@@ -313,6 +314,7 @@ export function ProfileChartScreen({
 
       <VedicDivisionalCharts chart={chart} />
         <VedicDashaTimeline chart={chart} />
+        <TechniqueAuditDashboard chart={chart} />
       {/* Fixed Star Intensity Visualizer */}
       <section aria-label="Fixed Star Visualizer">
         <FixedStarIntensityVisualizer chart={chart} />
