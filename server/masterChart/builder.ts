@@ -476,20 +476,21 @@ export async function buildUnifiedMasterChart(
   };
 
   // Layer 11: Vedic Graha Drishti (Special Aspects)
+  const classicalDrishtiPlanets = new Set(["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]);
   const drishtiAspects = basePlanets.flatMap(p => {
+    if (!classicalDrishtiPlanets.has(p.name)) return [];
     const pSignIndex = Math.floor(normalizeLongitude(p.longitude) / 30);
-    const aspects: Array<{ planet: string; targetSign: string; targetHouseOffset: number; type: string }> = [];
-    if (p.name === "Mars") {
-      aspects.push({ planet: "Mars", targetSign: ZODIAC_SIGNS[(pSignIndex + 3) % 12], targetHouseOffset: 4, type: "4th Drishti (Direct Confrontation)" });
-      aspects.push({ planet: "Mars", targetSign: ZODIAC_SIGNS[(pSignIndex + 7) % 12], targetHouseOffset: 8, type: "8th Drishti (Transformation/Crisis)" });
-    } else if (p.name === "Jupiter") {
-      aspects.push({ planet: "Jupiter", targetSign: ZODIAC_SIGNS[(pSignIndex + 4) % 12], targetHouseOffset: 5, type: "5th Drishti (Grace/Dharma)" });
-      aspects.push({ planet: "Jupiter", targetSign: ZODIAC_SIGNS[(pSignIndex + 8) % 12], targetHouseOffset: 9, type: "9th Drishti (Higher Wisdom)" });
-    } else if (p.name === "Saturn") {
-      aspects.push({ planet: "Saturn", targetSign: ZODIAC_SIGNS[(pSignIndex + 2) % 12], targetHouseOffset: 3, type: "3rd Drishti (Labor/Effort)" });
-      aspects.push({ planet: "Saturn", targetSign: ZODIAC_SIGNS[(pSignIndex + 9) % 12], targetHouseOffset: 10, type: "10th Drishti (Authority/Responsibility)" });
-    }
-    return aspects;
+    const offsets = [7,
+      ...(p.name === "Mars" ? [4, 8] : []),
+      ...(p.name === "Jupiter" ? [5, 9] : []),
+      ...(p.name === "Saturn" ? [3, 10] : []),
+    ];
+    return offsets.map(offset => ({
+      planet: p.name,
+      targetSign: ZODIAC_SIGNS[(pSignIndex + offset - 1) % 12],
+      targetHouseOffset: offset,
+      type: offset === 7 ? "7th Drishti (Opposition)" : `${offset}th Special Drishti`,
+    }));
   });
 
   layers["vedic-graha-drishti"] = {
