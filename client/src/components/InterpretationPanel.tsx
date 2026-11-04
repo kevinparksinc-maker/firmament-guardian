@@ -55,7 +55,7 @@ function getReadingCacheKey(chart: ChartResult, mode: ReadingMode): string {
   const natalSignature = chart.movingBodies.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
   const transitSignature = chart.transits.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
   const inputSignature = JSON.stringify(chart.input);
-  return `absolute-reading-v5:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${inputSignature}:${natalSignature}:${transitSignature}`;
+  return `absolute-reading-v6-synthesis-primary:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${inputSignature}:${natalSignature}:${transitSignature}`;
 }
 
 function loadCachedReading(
@@ -287,9 +287,19 @@ function InterpretationPanelInner({
   const [visibleMasterSynthesis, setVisibleMasterSynthesis] = useState<NonNullable<typeof masterSynthesis.data> | null>(null);
   const masterSynthesisRequest = useRef(0);
   useEffect(() => {
-    masterSynthesisRequest.current += 1;
+    const request = ++masterSynthesisRequest.current;
     setVisibleMasterSynthesis(null);
-    masterSynthesis.reset();
+    // The full calculated synthesis is the primary chart reading, not an opt-in extra.
+    masterSynthesis.mutate({
+      ...chart.input,
+      worldview: chart.worldview,
+      mode,
+      question: activeQuestion || "Synthesize every calculated doctrine and show the evidence.",
+    }, {
+      onSuccess: data => {
+        if (request === masterSynthesisRequest.current) setVisibleMasterSynthesis(data);
+      },
+    });
   }, [chart, mode]);
   const chapterMutation = trpc.interpretation.chapter.useMutation();
   const chat = trpc.interpretation.followUp.useMutation({
@@ -514,17 +524,8 @@ function InterpretationPanelInner({
     >
       <div className="mx-auto max-w-4xl rounded-2xl border border-cyan-300/25 bg-slate-950/60 p-5">
         <h3 className="text-xl font-semibold text-cyan-100">Unified Master Chart Synthesis</h3>
-        <p className="mt-2 text-sm text-slate-300">Calculate the complete available method ledger from this chart and display evidence-backed findings. Missing methods remain identified rather than silently counted.</p>
-        <Button className="mt-4" disabled={masterSynthesis.isPending} onClick={() => {
-          const request = ++masterSynthesisRequest.current;
-          setVisibleMasterSynthesis(null);
-          masterSynthesis.mutate({
-            ...chart.input,
-            worldview: chart.worldview,
-            mode,
-            question: activeQuestion || "Synthesize every calculated doctrine and show the evidence.",
-          }, { onSuccess: data => { if (request === masterSynthesisRequest.current) setVisibleMasterSynthesis(data); } });
-        }}>{masterSynthesis.isPending ? "Synthesizing…" : "Run unified synthesis"}</Button>
+        <p className="mt-2 text-sm text-slate-300">Your calculated doctrines and their evidence-backed synthesis load automatically with the chart. Unavailable methods are identified rather than invented.</p>
+        {masterSynthesis.isPending && <p role="status" className="mt-3 text-sm text-cyan-200">Calculating your full synthesis and tracing each available doctrine…</p>}
         {masterSynthesis.error && <p role="alert" className="mt-3 text-sm text-rose-300">{masterSynthesis.error.message}</p>}
         {visibleMasterSynthesis && <div className="mt-4 space-y-3 text-sm text-slate-200">
           <p className="font-medium">{visibleMasterSynthesis.dominantConclusion}</p>
