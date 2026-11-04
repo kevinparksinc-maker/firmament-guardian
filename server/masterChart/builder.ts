@@ -1,3 +1,4 @@
+import { createMasterChartDataBus } from "./chartDataBus";
 import { buildDivisionalCharts } from "../astrologyKnowledge/vedic/divisionalCharts";
 import crypto from "crypto";
 import {
@@ -136,21 +137,17 @@ export async function buildUnifiedMasterChart(
     transitSunriseAnchor: input.transitSunriseAnchor,
   });
 
-  const basePlanets = chart.movingBodies;
-  const baseHouses = chart.houses.map((cusp, idx) => ({
+  // Distribute one validated astronomical state to every registered layer.
+  // A missing Ascendant or required body is a hard error, never a zero-degree fallback.
+  const chartData = createMasterChartDataBus(chart);
+  const basePlanets = chartData.planets;
+  const baseHouses = chartData.houses.map((cusp, idx) => ({
     house: idx + 1,
     sign: getSign(cusp),
     cusp,
     degreeDisplay: formatLongitude(cusp),
   }));
-
-  const ascendant: ChartRow = chart.ascendant ?? {
-    name: "Ascendant",
-    longitude: chart.houses[0] ?? 0,
-    display: formatLongitude(chart.houses[0] ?? 0),
-    house: 1,
-    overlay: overlay(chart.houses[0] ?? 0),
-  };
+  const ascendant: ChartRow = chartData.ascendant;
 
   // 2. Build God View (fixed Aries 1 - Pisces 12 cosmic frame) and Agent View (geocentric equal house from Ascendant)
   const godPlacements = basePlanets.map(p => {
