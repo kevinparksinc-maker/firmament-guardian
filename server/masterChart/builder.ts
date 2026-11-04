@@ -423,8 +423,12 @@ export async function buildUnifiedMasterChart(
   // Layer 9: Complete deterministic D1/D2/D3/D9/D10 chart data.
   // Every divisional chart derives from the same natal Ascendant and planets.
   const vargaResults = buildDivisionalCharts({
-    ascendantLongitude: chart.ascendant.longitude,
-    planets: basePlanets.map(p => ({ name: p.name, longitude: p.longitude })),
+    ascendantLongitude: ascendant.longitude,
+    planets: [
+      ...basePlanets.map(p => ({ name: p.name, longitude: p.longitude })),
+      { name: chart.northNode.name, longitude: chart.northNode.longitude },
+      { name: chart.southNode.name, longitude: chart.southNode.longitude },
+    ],
     d1HouseCusps: chart.houses,
   });
 
