@@ -226,10 +226,16 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
   const refreshLiveTransit = () => {
     if (!result || readingMode === "natal") return;
     const now = new Date();
+    const transitTimezone = form.transitTimezone || form.timezone || "UTC";
+    const localParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: transitTimezone, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).formatToParts(now);
+    const part = (type: string) => localParts.find(item => item.type === type)?.value || "";
     calculate.mutate({
       ...form,
-      transitDate: now.toISOString().slice(0, 10),
-      transitTime: now.toTimeString().slice(0, 5),
+      transitDate: `${part("year")}-${part("month")}-${part("day")}`,
+      transitTime: `${part("hour")}:${part("minute")}`,
       transitLocation: form.transitLocation || form.location,
       transitLatitude: form.transitLatitude ?? form.latitude,
       transitLongitude: form.transitLongitude ?? form.longitude,
