@@ -24,8 +24,9 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
     const flow = contacts.filter(c => aspectFlow[c.aspect] === 1).reduce((sum,c) => sum+c.strength,0);
     const friction = contacts.filter(c => aspectFlow[c.aspect] === -1).reduce((sum,c) => sum+c.strength,0);
     const neutral = contacts.filter(c => aspectFlow[c.aspect] === 0);
+    const conjunctionCount = contacts.filter(c => c.aspect === "conjunction").length;
     const signal = !contacts.length ? "No close contacts" : flow > friction * 1.2 ? "Easy Flow" : friction > flow * 1.2 ? "Friction" : "Mixed";
-    return { contacts, flow, friction, neutral, signal,
+    return { contacts, flow, friction, neutral, conjunctionCount, signal,
       strongest: [...contacts].sort((a,b)=>a.orb-b.orb),
       moment: chart.transitDate };
   }, [chart]);
@@ -85,11 +86,11 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
             <div className="space-y-4">
               <div><div className="mb-2 flex justify-between text-xs"><span className="text-emerald-200">Harmonious contacts</span><strong className="text-white">{data.flow}</strong></div><div className="h-2.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.4)]" style={{width:`${flowShare*100}%`}}/></div></div>
               <div><div className="mb-2 flex justify-between text-xs"><span className="text-rose-200">Friction contacts</span><strong className="text-white">{data.friction}</strong></div><div className="h-2.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-rose-400" style={{width:`${total ? (1-flowShare)*100 : 0}%`}}/></div></div>
-              <div className="flex flex-wrap gap-2 text-[11px]"><span className="rounded-lg border border-violet-300/20 bg-violet-300/10 px-2 py-1 text-violet-200">{data.neutral.length} conjunctions</span><span className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-amber-100">{data.contacts.filter(c=>c.orb<=1.25).length} tight contacts</span></div>
+              <div className="flex flex-wrap gap-2 text-[11px]"><span className="rounded-lg border border-violet-300/20 bg-violet-300/10 px-2 py-1 text-violet-200">{data.conjunctionCount} conjunctions</span><span className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-amber-100">{data.contacts.filter(c=>c.orb<=1.25).length} tight contacts</span></div>
             </div>
           </div>;
         })()}
-        <p className="mt-4 border-t border-white/10 pt-3 text-[11px] leading-5 text-slate-400">The dial compares actual calculated natal–transit aspect weights, not a prediction of outcomes. Conjunctions are counted separately. Future energy curves require new timed chart calculations.</p>
+        <p className="mt-4 border-t border-white/10 pt-3 text-[11px] leading-5 text-slate-400">The dial compares actual calculated natal–transit aspect weights, not a prediction of outcomes. Conjunctions are included in harmonious flow and identified separately in the contact count. Future energy curves require new timed chart calculations.</p>
       </div>
       <div className="mt-4 rounded-2xl border border-violet-300/20 bg-[linear-gradient(135deg,rgba(24,34,67,.94),rgba(10,15,32,.98))] p-4 sm:p-5">
         <div className="flex items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-violet-200">Planetary Contributors</p><h3 className="mt-1 font-serif text-lg text-white">What is shaping your energy?</h3></div><Sparkles size={19} className="text-amber-200"/></div>
