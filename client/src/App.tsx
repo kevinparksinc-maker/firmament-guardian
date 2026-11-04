@@ -1,10 +1,6 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { lazy, Suspense } from "react";
 import { ProfileSessionProvider, useProfileSession } from "./contexts/ProfileSessionContext";
 import { PROFILE_TABS } from "./config/profileNavigation";
-import { trpc } from "@/lib/trpc";
-import { startLogin } from "@/const";
-import { LogIn, ShieldCheck, UserRound } from "lucide-react";
 import { CelestialCommandShell } from "./components/CelestialCommandShell";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,19 +24,15 @@ const StandaloneTransitPage = lazy(() => import("./pages/StandaloneTransitPage")
 const ExplorePage = lazy(() => import("./pages/ExplorePage"));
 
 function AccountEntryGate({ children }: { children: React.ReactNode }) {
-  const me = trpc.auth.me.useQuery(undefined, { retry: false });
-  const [path] = useLocation();
-  const publicPage = ["/account", "/horary", "/sky", "/zodiac-readings"].includes(path);
-  const accountId = me.data?.openId || "guest";
-  return <ProfileSessionProvider key={accountId} accountId={accountId}><CelestialCommandShell>
-    {me.isLoading ? <p role="status" className="p-8 text-center text-slate-300">Checking your session…</p> : me.error ? <div role="alert" className="p-8 text-slate-200">Unable to check your account. Your device profiles are preserved.<button type="button" onClick={() => void me.refetch()} className="ml-3 text-cyan-200 underline">Try again</button></div> : me.data || publicPage ? children : <AccountPage />}
-  </CelestialCommandShell></ProfileSessionProvider>;
+  // Development mode: no account service is required to use the local app.
+  // Keep all profile data in this browser/device until account deployment is ready.
+  return <ProfileSessionProvider accountId="guest"><CelestialCommandShell>{children}</CelestialCommandShell></ProfileSessionProvider>;
 }
 
 function Router() {
   const [path] = useLocation();
   const { profile } = useProfileSession();
-  // A signed-in visitor must finish the birth profile before opening other observatory modules.
+  // A birth profile is still required before opening profile-based observatory modules.
   if (!profile && path !== "/account" && path !== "/profiles" && path !== "/" && path !== "/legacy" && path !== "/horary" && path !== "/zodiac-readings" && path !== "/sky" && path !== "/history") return <Redirect to="/" />;
   return (
     <Switch>
@@ -66,41 +58,21 @@ function Router() {
       <Route path={"/guide"}><Home section="guide" /></Route>
       <Route path={"/profile"}><Home section="profile" /></Route>
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
-  useEffect(() => {
-    const onAuthError = (event: Event) => {
-      const message = (event as CustomEvent<{ message?: string }>).detail?.message;
-      toast.error(message || "Unable to start sign-in. Please try again.");
-    };
-    window.addEventListener("fg:auth-error", onAuthError);
-    return () => window.removeEventListener("fg:auth-error", onAuthError);
-  }, []);
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="dark"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <SovereignTierProvider>
             <Toaster />
-
             <Suspense fallback={<main role="status" className="flex min-h-[55vh] items-center justify-center px-6 text-center text-sm text-cyan-100"><div className="rounded-2xl border border-cyan-200/20 bg-slate-950/70 px-6 py-5" aria-live="polite">Opening your celestial observatory…</div></main>}>
               <AccountEntryGate><Router /></AccountEntryGate>
             </Suspense>
-
           </SovereignTierProvider>
         </TooltipProvider>
       </ThemeProvider>
