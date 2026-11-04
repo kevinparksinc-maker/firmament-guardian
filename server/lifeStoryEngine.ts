@@ -1,3 +1,4 @@
+import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
 import type { ChartResult, ChartRow } from "./astronomy";
 import {
   normalizeLongitude,
@@ -983,6 +984,9 @@ export async function generateLifeStoryChapter(
     ``,
     `## UNIFIED MASTER CHART — ALL COMPUTED METHOD FINDINGS`,
     synthesisContext || "No unified synthesis context supplied.",
+    ``,
+    `## GENESIS 72-QUESTION INTERNAL HISTORIAN INQUIRY`,
+    buildGenesisInquiryPrompt(targetChapter.title + " — " + targetChapter.periodLabel),
     ``,
     `## INTERPRETIVE MANDATE & FORMULA`,
     `1. Structure your storytelling around: WHAT → WHY → HOW → CONSEQUENCE → MEANING`,
