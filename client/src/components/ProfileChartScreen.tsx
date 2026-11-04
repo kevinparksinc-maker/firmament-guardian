@@ -246,6 +246,20 @@ export function ProfileChartScreen({
         </div>
       </section>
 
+      {/* Horary is a separate question-time technique, surfaced directly from the natal workspace. */}
+      <section aria-label="Open traditional Horary" className="rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-950/55 via-slate-950/80 to-violet-950/45 p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-200">Separate question-time chart</p>
+            <h2 className="font-serif text-xl font-semibold text-white">Traditional Horary · The Question Chamber</h2>
+            <p className="max-w-2xl text-sm leading-6 text-slate-300">Ask a specific question and cast a chart for the moment and location it became clear. Examine significators, receptions, lunar testimony, perfection, timing, fixed stars, and the complete judgment. Your natal chart remains the foundation for optional comparison, not a substitute for the horary chart.</p>
+          </div>
+          <Link href="/horary" className="inline-flex shrink-0 items-center justify-center rounded-xl border border-cyan-200/35 bg-cyan-200/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-200/20">
+            Open Horary Chamber <span aria-hidden="true" className="ml-2">→</span>
+          </Link>
+        </div>
+      </section>
+
       {/* Main Chart Graphic Display */}
       <section aria-label="Main Chart Visualizer">
         {chartViewMode === "diamond" ? (
