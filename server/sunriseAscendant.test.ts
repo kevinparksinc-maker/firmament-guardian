@@ -1,43 +1,39 @@
 import { describe, expect, it } from "vitest";
-import {
-  ascendantFromSunrise,
-  solarAnglesFromFixedXYZ,
-  sunriseEasternHorizonLongitude,
-  SIDEREAL_DEGREES_PER_UTC_HOUR,
-} from "./sunriseAscendant";
+import { ascendantFromSunrise, solarAnglesFromFixedXYZ, SIDEREAL_DEGREES_PER_UTC_HOUR } from "./sunriseAscendant";
 
-describe("zero-tilt sunrise-anchored rising point", () => {
-  const sun = { x: 1, y: 0, z: 0 };
-  it("derives fixed-wheel solar longitude and declination from XYZ", () => {
+describe("The Absolute: Sun equatorial XYZ sunrise + elapsed sidereal rotation", () => {
+  it("converts geocentric equatorial XYZ to a 360 degree wheel angle", () => {
     expect(solarAnglesFromFixedXYZ({ x: 0, y: 1, z: 1 }).longitude).toBe(90);
     expect(solarAnglesFromFixedXYZ({ x: 0, y: 1, z: 1 }).declination).toBeCloseTo(45, 8);
   });
-  it("anchors the east horizon to the Sun at equatorial sunrise", () => {
-    expect(sunriseEasternHorizonLongitude(sun, 0)).toBeCloseTo(0, 8);
-  });
-  it("advances from sunrise by sidereal rather than civil rotation", () => {
+  it("uses the Sun position directly at sunrise without an additional horizon offset", () => {
+    const sunriseSunXYZ = { x: Math.cos(235 * Math.PI / 180), y: Math.sin(235 * Math.PI / 180), z: 0 };
     const result = ascendantFromSunrise({
-      sunriseUtc: "1986-11-20T12:00:00Z",
-      eventUtc: "1986-11-20T18:00:00Z",
-      sunriseSunXYZ: sun,
-      latitude: 0,
+      sunriseUtc: "1986-11-20T13:06:00Z",
+      eventUtc: "1986-11-20T16:06:00Z",
+      sunriseSunXYZ,
+      latitude: 32.7767,
     });
-    expect(result.ascendant).toBeCloseTo(6 * SIDEREAL_DEGREES_PER_UTC_HOUR, 8);
-    expect(result.elapsedHours).toBe(6);
+    expect(result.sunriseHorizon).toBeCloseTo(235, 8);
+    expect(result.elapsedHours).toBe(3);
+    expect(result.ascendant).toBeCloseTo(235 + 3 * SIDEREAL_DEGREES_PER_UTC_HOUR, 8);
+    expect(result.model).toBe("sun-equatorial-xyz-at-sunrise-plus-sidereal-rotation-v1");
   });
-  it("uses latitude and declination to change the sunrise intersection", () => {
-    const tiltedSun = { x: 1, y: 0, z: 0.4 };
-    expect(sunriseEasternHorizonLongitude(tiltedSun, 40)).not.toBeCloseTo(sunriseEasternHorizonLongitude(tiltedSun, 0));
+  it("does not change the rule based on latitude after sunrise is established", () => {
+    const input = {
+      sunriseUtc: "1986-11-20T13:06:00Z",
+      eventUtc: "1986-11-20T16:06:00Z",
+      sunriseSunXYZ: { x: 0, y: 1, z: 0.4 },
+    };
+    expect(ascendantFromSunrise({ ...input, latitude: 0 }).ascendant)
+      .toBeCloseTo(ascendantFromSunrise({ ...input, latitude: 40 }).ascendant, 8);
   });
-  it("rejects polar-day or polar-night geometry instead of inventing an Ascendant", () => {
-    expect(() => sunriseEasternHorizonLongitude({ x: 1, y: 0, z: 1 }, 80)).toThrow("No unique geometric sunrise");
-  });
-  it("requires a historical sunrise preceding the event", () => {
+  it("rejects invalid or future sunrise rather than falling back", () => {
     expect(() => ascendantFromSunrise({
-      sunriseUtc: "1986-11-20T12:00:00Z",
-      eventUtc: "1986-11-20T11:00:00Z",
-      sunriseSunXYZ: sun,
-      latitude: 0,
-    })).toThrow("Sunrise anchor");
+      sunriseUtc: "1986-11-20T18:00:00Z",
+      eventUtc: "1986-11-20T16:06:00Z",
+      sunriseSunXYZ: { x: 1, y: 0, z: 0 },
+      latitude: 32,
+    })).toThrow("Sunrise anchor must precede");
   });
 });
