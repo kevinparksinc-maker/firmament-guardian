@@ -446,24 +446,32 @@ export async function buildUnifiedMasterChart(
   };
 
   // Layer 10: Vedic Timing & Ashtakavarga
-  let timingResult: any = null;
+  let timingResult: ReturnType<typeof resolveVedicTimingAndAshtakavarga> = [];
+  let timingError: string | undefined;
   try {
     timingResult = resolveVedicTimingAndAshtakavarga(chart);
   } catch (err) {
-    timingResult = null;
+    timingError = err instanceof Error ? err.message : String(err);
   }
+  // Uncertainty and calculation-error evidence is not a successful calculation.
+  const timingHasFailure = timingResult.some(item =>
+    item.category === "uncertainty" || item.id.includes("calculation-error") ||
+    item.id.includes("checksum-failed")
+  );
 
   layers["vedic-dasha-and-ashtakavarga"] = {
     id: "vedic-dasha-and-ashtakavarga",
     tradition: "vedic",
     technique: "vimshottari-dasha-and-ashtakavarga",
     name: "Vimshottari Dasha Lords & Ashtakavarga Bindus",
-    status: timingResult && timingResult.length > 0 ? "computed-with-result" : "computed-no-result",
+    status: timingError || timingHasFailure ? "failed" : timingResult.length > 0 ? "computed-with-result" : "computed-no-result",
     frame: "shared",
     prerequisites: ["vedic-nakshatras-and-padas"],
     calculationVersion: engineVersion,
-    evidenceIds: (timingResult ?? []).map((t: any) => t.id),
+    evidenceIds: timingResult.map(t => t.id),
     sourceIds: ["brihat-parashara-dasha-system"],
+    errorCode: timingError ? "VEDIC_TIMING_EXCEPTION" : timingHasFailure ? "VEDIC_TIMING_UNAVAILABLE_OR_INVALID" : undefined,
+    notes: timingError,
     results: timingResult,
   };
 
