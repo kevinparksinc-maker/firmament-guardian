@@ -208,7 +208,7 @@ export function NatalProfileBuilder({
       setFormError("Please enter your birth date.");
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.date) || !Number.isFinite(Date.parse(`${formData.date}T00:00:00.000Z`))) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.date) || !Number.isFinite(Date.parse(`${formData.date}T00:00:00.000Z`)) || new Date(`${formData.date}T00:00:00.000Z`).toISOString().slice(0, 10) !== formData.date) {
       setFormError("Please enter a valid birth date in YYYY-MM-DD format.");
       return;
     }
