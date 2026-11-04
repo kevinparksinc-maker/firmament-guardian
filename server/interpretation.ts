@@ -1,3 +1,4 @@
+import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
 import { invokeLLM, type Message } from "./_core/llm";
 import { withCurrentQuestion } from "./_core/conversation";
 import type { ChartResult, ChartRow } from "./astronomy";
@@ -948,7 +949,7 @@ async function generateLifeStoryReading(
       {
         role: "system",
         content: buildAstrologyInterpreterSystem(
-          `You are the Master Interpreter writing the user's primary Natal Life Story Narrative for Bible Believers Astrology.
+          `${buildGenesisInquiryPrompt("Complete natal life story")}\nYou are the Master Interpreter writing the user's primary Natal Life Story Narrative for Bible Believers Astrology.
 CHART-FIRST INTERPRETATION MANDATE:
 1. The application's documented doctrine and the calculated chart evidence govern the interpretation. Do not substitute an external cosmology, generic psychological narrative, or a predetermined character arc. Never invent biographical events.
 2. Explain the specific placement, house, aspect, dignity, mansion, decan, and frame relationships that actually appear in the evidence. Make the human meaning concrete, with clear source-to-conclusion reasoning rather than generalized prose.
