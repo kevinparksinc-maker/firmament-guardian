@@ -185,6 +185,14 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
       );
       return;
     }
+    if (nextWorldview !== "god" && (!Number.isFinite(nextForm.latitude) || !Number.isFinite(nextForm.longitude) || Math.abs(nextForm.latitude) > 90 || Math.abs(nextForm.longitude) > 180)) {
+      setFormError("Birth coordinates are invalid. Edit the profile and resolve the birth city again.");
+      return;
+    }
+    if (nextForm.date && (!/^\d{4}-\d{2}-\d{2}$/.test(nextForm.date) || !Number.isFinite(Date.parse(`${nextForm.date}T00:00:00.000Z`)))) {
+      setFormError("Birth date must be a valid YYYY-MM-DD date.");
+      return;
+    }
     setForm(nextForm);
     calculate.mutate({
       ...nextForm,
@@ -217,8 +225,8 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
       transitDate: now.toISOString().slice(0, 10),
       transitTime: now.toTimeString().slice(0, 5),
       transitLocation: form.transitLocation || form.location,
-      transitLatitude: form.transitLatitude || form.latitude,
-      transitLongitude: form.transitLongitude || form.longitude,
+      transitLatitude: form.transitLatitude ?? form.latitude,
+      transitLongitude: form.transitLongitude ?? form.longitude,
       transitTimezone: form.transitTimezone || form.timezone,
       worldview,
       readingScope: readingMode,
@@ -295,8 +303,8 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         date: activeProfile.date,
         time: activeProfile.time,
         transitLocation: activeProfile.transitLocation || activeProfile.location,
-        transitLatitude: activeProfile.transitLatitude || activeProfile.latitude,
-        transitLongitude: activeProfile.transitLongitude || activeProfile.longitude,
+        transitLatitude: activeProfile.transitLatitude ?? activeProfile.latitude,
+        transitLongitude: activeProfile.transitLongitude ?? activeProfile.longitude,
         transitTimezone: activeProfile.transitTimezone || activeProfile.timezone,
         transitDate: "",
         transitTime: "",
