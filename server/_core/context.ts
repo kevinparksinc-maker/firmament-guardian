@@ -20,19 +20,6 @@ export async function createContext(
     user = null;
   }
 
-  if (!user) {
-    user = {
-      id: 1,
-      openId: "local-observatory-user",
-      name: "Observatory Seeker",
-      email: "seeker@firmament.local",
-      loginMethod: "guest",
-      role: "user",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastSignedIn: new Date(),
-    };
-  }
 
   return {
     req: opts.req,
