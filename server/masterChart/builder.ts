@@ -1,3 +1,4 @@
+import { buildDivisionalCharts } from "../astrologyKnowledge/vedic/divisionalCharts";
 import crypto from "crypto";
 import {
   calculateChart,
@@ -423,44 +424,13 @@ export async function buildUnifiedMasterChart(
     results: nakshatraResults,
   };
 
-  // Layer 9: Explicit D1 Rashi foundation and D2/D3/D9/D10 varga placements.
-  // All derive from the SAME authoritative natal chart. Do not silently apply
-  // a moving ayanamsha or present divisional sign placements as complete charts.
-  const vargaDivisions: Varga[] = ["D2", "D3", "D9", "D10"];
-  const d1Rashi = {
-    division: "D1" as const,
-    name: "Rashi — natal foundation",
-    coordinateFrame: "guardian-fixed-zero-reference" as const,
-    ascendant: chart.ascendant ? {
-      longitude: chart.ascendant.longitude,
-      display: chart.ascendant.display,
-      sign: getSign(chart.ascendant.longitude),
-    } : null,
-    houses: chart.houses.map((cusp, index) => ({
-      house: index + 1,
-      cusp,
-      sign: getSign(cusp),
-    })),
-    placements: basePlanets.map(p => ({
-      body: p.name,
-      longitude: p.longitude,
-      sign: getSign(p.longitude),
-      house: p.house,
-    })),
-  };
-  const vargaResults = [
-    d1Rashi,
-    ...vargaDivisions.map(div => ({
-      division: div,
-      name: div === "D2" ? "Hora" : div === "D3" ? "Drekkana" : div === "D9" ? "Navamsha" : "Dashamsha",
-      coordinateFrame: "guardian-fixed-zero-reference" as const,
-      ascendant: chart.ascendant ? vargaPlacement(chart.ascendant.longitude, div) : null,
-      placements: basePlanets.map(p => ({
-        body: p.name,
-        ...vargaPlacement(p.longitude, div),
-      })),
-    })),
-  ];
+  // Layer 9: Complete deterministic D1/D2/D3/D9/D10 chart data.
+  // Every divisional chart derives from the same natal Ascendant and planets.
+  const vargaResults = buildDivisionalCharts({
+    ascendantLongitude: chart.ascendant.longitude,
+    planets: basePlanets.map(p => ({ name: p.name, longitude: p.longitude })),
+    d1HouseCusps: chart.houses,
+  });
 
   layers["vedic-vargas-divisional"] = {
     id: "vedic-vargas-divisional",
