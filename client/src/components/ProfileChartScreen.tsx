@@ -246,6 +246,43 @@ export function ProfileChartScreen({
         </div>
       </section>
 
+      {/* Horary is a separate question-time technique, surfaced directly from the natal workspace. */}
+      <section aria-label="Open traditional Horary" className="rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-950/55 via-slate-950/80 to-violet-950/45 p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-200">Separate question-time chart</p>
+            <h2 className="font-serif text-xl font-semibold text-white">Traditional Horary · The Question Chamber</h2>
+            <p className="max-w-2xl text-sm leading-6 text-slate-300">Ask a specific question and cast a chart for the moment and location it became clear. Examine significators, receptions, lunar testimony, perfection, timing, fixed stars, and the complete judgment. Your natal chart remains the foundation for optional comparison, not a substitute for the horary chart.</p>
+          </div>
+          <Link href="/horary" className="inline-flex shrink-0 items-center justify-center rounded-xl border border-cyan-200/35 bg-cyan-200/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-200/20">
+            Open Horary Chamber <span aria-hidden="true" className="ml-2">→</span>
+          </Link>
+        </div>
+      </section>
+
+      <section aria-label="Quick access to observatory modules" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Link href="/synastry" className="rounded-2xl border border-rose-300/25 bg-rose-950/20 p-4 transition hover:border-rose-200/50">
+          <strong className="block text-base text-white">Chemistry & Synastry</strong>
+          <span className="mt-1 block text-xs leading-5 text-slate-300">Compare with a partner, parent, child, sibling, friend, mentor or colleague. Open dual wheels, cross-aspects and house overlays.</span>
+          <span className="mt-3 inline-flex text-xs font-semibold text-rose-200">Open Chemistry Studio →</span>
+        </Link>
+        <Link href="/energy" className="rounded-2xl border border-cyan-300/25 bg-cyan-950/20 p-4 transition hover:border-cyan-200/50">
+          <strong className="block text-base text-white">Energy Observatory</strong>
+          <span className="mt-1 block text-xs leading-5 text-slate-300">See the live chart wheel, active aspects, exact orbs, energy timeline and full interpretation.</span>
+          <span className="mt-3 inline-flex text-xs font-semibold text-cyan-200">Open Energy →</span>
+        </Link>
+        <Link href="/horary" className="rounded-2xl border border-violet-300/25 bg-violet-950/20 p-4 transition hover:border-violet-200/50">
+          <strong className="block text-base text-white">Traditional Horary</strong>
+          <span className="mt-1 block text-xs leading-5 text-slate-300">Cast a separate chart for a specific question, moment and location.</span>
+          <span className="mt-3 inline-flex text-xs font-semibold text-violet-200">Open Horary →</span>
+        </Link>
+        <Link href="/explore" className="rounded-2xl border border-amber-300/25 bg-amber-950/20 p-4 transition hover:border-amber-200/50">
+          <strong className="block text-base text-white">Explore Everything</strong>
+          <span className="mt-1 block text-xs leading-5 text-slate-300">Browse every available observatory, timing, reading, relationship and account tool.</span>
+          <span className="mt-3 inline-flex text-xs font-semibold text-amber-200">Open App Directory →</span>
+        </Link>
+      </section>
+
       {/* Main Chart Graphic Display */}
       <section aria-label="Main Chart Visualizer">
         {chartViewMode === "diamond" ? (

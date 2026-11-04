@@ -12,10 +12,17 @@ import "./index.css";
 const queryClient = new QueryClient();
 
 async function fetchApiResponse(input: RequestInfo | URL, init?: RequestInit) {
-  const response = await globalThis.fetch(input, {
-    ...(init ?? {}),
-    credentials: "include",
-  });
+  let response: Response;
+  try {
+    response = await globalThis.fetch(input, {
+      ...(init ?? {}),
+      credentials: "include",
+    });
+  } catch (error) {
+    const target = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Unable to reach the Firmament API at ${target}. Check that the application server is running and that this deployment serves /api/trpc on the same origin. Browser/network detail: ${detail}`);
+  }
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     const preview = (await response.clone().text()).slice(0, 240).replace(/\s+/g, " ");
@@ -56,6 +63,9 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      // Chart payloads contain many verified positions. POST avoids oversized
+      // query-string URLs when tRPC serializes chart inputs for read procedures.
+      methodOverride: "POST",
       headers() {
         // Preview auto-login fallback: when the browser blocks iframe cookies
         // (Safari ITP / private browsing / WebView), the runtime mirrors the

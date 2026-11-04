@@ -43,8 +43,8 @@ export const APP_DIRECTORY = [
   },
   {
     href: "/energy",
-    title: "Current energy",
-    description: "Your natal chart meeting the current sky",
+    title: "Energy chart & aspects",
+    description: "Interactive natal-transit wheel, active aspects, exact orbs, current energy and interpretation",
     group: "Timing",
   },
   {
@@ -79,8 +79,8 @@ export const APP_DIRECTORY = [
   },
   {
     href: "/synastry",
-    title: "Synastry",
-    description: "Compare two birth charts",
+    title: "Chemistry & Synastry Studio",
+    description: "Compare charts with partners, parents, children, siblings, friends, mentors and colleagues using dual wheels, cross-aspects and house overlays",
     group: "Explore",
   },
   {

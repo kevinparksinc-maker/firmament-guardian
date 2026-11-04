@@ -934,6 +934,51 @@ export function FixedStarIntensityVisualizer({
             )}
           </div>
 
+          {/* Chart-specific fixed-star synthesis */}
+          <div className="space-y-3 rounded-xl border border-cyan-300/25 bg-cyan-950/20 p-3">
+            <div>
+              <h5 className="font-semibold text-cyan-100 text-sm">Chart-Specific Star Synthesis</h5>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+                {selectedStar.isRoyalStar
+                  ? `${selectedStar.name} is classified in this fixed reference as a Royal Watcher of the ${selectedStar.watcherDirection}. Its configured longitude is ${selectedStar.zodiacLabel}. The interpretation below separates the star's traditional archetype from the actual natal conjunction evidence.`
+                  : `${selectedStar.name} is held at ${selectedStar.zodiacLabel} in the Firmament fixed-star reference. The interpretation below separates the star's archetype from any measured natal conjunction evidence.`}
+              </p>
+            </div>
+            {selectedStar.contacts.length > 0 ? selectedStar.contacts.map((contact, index) => {
+              const sign = ZODIAC_SIGNS[Math.floor(normalizeLongitude(contact.planetLongitude) / 30)];
+              const within = normalizeLongitude(contact.planetLongitude) % 30;
+              const d = Math.floor(within);
+              const m = Math.floor((within - d) * 60);
+              const planetRow = chartPlacements.find(p => p.name === contact.planetName);
+              return (
+                <div key={contact.planetName + index} className="rounded-lg border border-white/10 bg-black/20 p-2.5 space-y-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <strong className="text-sm text-white">{selectedStar.name} conjunct {contact.planetName}</strong>
+                    <span className="font-mono text-cyan-200 text-xs">{contact.orb.toFixed(2)}° orb</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    {contact.planetName} is at {sign} {d}°{String(m).padStart(2, "0")}′ in House {contact.planetHouse}. The star-to-planet separation is within the configured {selectedStar.isRoyalStar ? "5.0° Royal Star" : "3.5° standard star"} conjunction threshold.
+                  </p>
+                  <p className="text-[11px] text-slate-300">
+                    The planet identifies the function being emphasized; its natal house identifies the life area through which the contact is read. The star's {selectedStar.planetaryNature} traditional nature and its archetype modify the interpretive context, but the planet's own sign condition, rulerships, aspects and chart relationships must also be examined.
+                  </p>
+                  {planetRow && <p className="text-[11px] text-slate-400">Verified chart position: {planetRow.name} · {sign} · House {planetRow.house} · longitude {normalizeLongitude(planetRow.longitude).toFixed(4)}°.</p>}
+                </div>
+              );
+            }) : (
+              <div className="rounded-lg border border-white/10 bg-black/20 p-2.5">
+                <p className="text-sm font-semibold text-slate-200">No qualifying natal conjunction found</p>
+                <p className="mt-1 text-[11px] text-slate-300">No listed planet or chart angle falls within this star's configured conjunction orb. The star's catalogue description can still be read as part of the fixed-star reference, but this chart does not show a qualifying direct contact under the current rule.</p>
+              </div>
+            )}
+            <div className="space-y-1 border-t border-white/10 pt-2">
+              <p className="text-[11px] font-semibold text-cyan-100">How this contact is measured</p>
+              <p className="text-[11px] leading-relaxed text-slate-400">
+                The current engine tests longitude conjunctions only: circular separation is calculated from the star's configured fixed longitude and each supplied natal longitude. Royal Stars use a 5.0° threshold; other catalogue stars use 3.5°. The displayed resonance percentage is a visualization index based on catalogue luminous intensity, orb proximity and angular-house weighting. It is not a classical astrological strength score, probability, or independently established astronomical force.
+              </p>
+            </div>
+          </div>
+
           {/* Astrological Reading & Wisdom */}
           <div className="space-y-2 pt-2 border-t border-white/10 text-xs">
             <div>

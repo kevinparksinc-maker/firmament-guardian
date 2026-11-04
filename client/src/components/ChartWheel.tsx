@@ -12,8 +12,8 @@ const normalize = (value: number) => (value % 360 + 360) % 360;
 
 function DetailRow({ label, value }: { label: string; value: string }) { return <div className="flex items-center justify-between gap-4 border-b border-white/5 py-2 last:border-0"><span className="text-slate-500">{label}</span><span className="text-right text-slate-200">{value}</span></div>; }
 
-export function ChartWheel({ chart }: { chart: ChartResult }) {
-  const [layers, setLayers] = useState({stars:false,vedic:false,arabic:false,chinese:false,aspects:false,natal:true,transits:false,houses:true,zodiac:true,labels:true,nodes:true});
+export function ChartWheel({ chart, transitAspects = false }: { chart: ChartResult; transitAspects?: boolean }) {
+  const [layers, setLayers] = useState(() => ({stars:false,vedic:false,arabic:false,chinese:false,aspects:transitAspects,natal:true,transits:transitAspects,houses:true,zodiac:true,labels:true,nodes:true}));
   const [selectedStar,setSelectedStar] = useState<{name:string;longitude:number}|null>(null);
   const [selectedHouse, setSelectedHouse] = useState<number | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<{ kind: "natal" | "transit"; row: ChartRow } | null>(null);

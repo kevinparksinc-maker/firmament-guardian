@@ -1,4 +1,5 @@
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
+import { ChartWheel } from "@/components/ChartWheel";
 import React, { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import {
@@ -156,6 +157,24 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
       <nav aria-label="Energy pages" className="flex flex-wrap gap-3 text-sm text-cyan-200">{[{href:"/energy",label:"Overview"},{href:"/energy/contacts",label:"Contact ledger"},{href:"/forecast",label:"30-minute forecast"},{href:"/energy/consultation",label:"Interpretation"}].map(item=><Link key={item.href} href={item.href} aria-current={path===item.href?"page":undefined} className={`rounded-xl border px-4 py-3 ${path===item.href?"border-amber-200/50 bg-amber-200/10 text-amber-100":"border-white/15"}`}>{item.label}</Link>)}</nav>
       <p className="text-sm leading-6 text-slate-400">Personal contacts compare current transit bodies with your natal placements and angles. Independent Sky counts pairs within one event sky. The totals can differ even at the same place and time.</p>
       <EnergyScoringKey />
+      {chart && page === "summary" && (
+        <section aria-label="Interactive personal energy chart" className="space-y-3 rounded-3xl border border-cyan-300/25 bg-[#080B14]/90 p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-300">Live sky × natal blueprint</p>
+              <h2 className="font-serif text-2xl font-bold text-white">Your Energy Chart & Active Aspects</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">This wheel plots your natal placements and the selected transit sky together. Transit-to-natal aspect lines are enabled on entry. Select a planet or aspect in the wheel, then open the contact ledger for exact orbs and the detailed interpretation of each contact.</p>
+            </div>
+            <Link href="/energy/contacts" className="inline-flex shrink-0 items-center justify-center rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-100">Open every aspect <ArrowRight size={15} className="ml-2"/></Link>
+          </div>
+          <ChartWheel chart={chart} transitAspects />
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Link href="/energy/contacts" className="rounded-xl border border-white/10 bg-white/[.035] p-3 text-sm text-slate-200 hover:border-cyan-200/30"><strong className="block text-cyan-100">Aspect ledger</strong><span className="text-xs text-slate-400">Every calculated transit-to-natal contact, orb and intensity</span></Link>
+            <Link href="/forecast" className="rounded-xl border border-white/10 bg-white/[.035] p-3 text-sm text-slate-200 hover:border-cyan-200/30"><strong className="block text-cyan-100">Energy timeline</strong><span className="text-xs text-slate-400">How the contact pattern changes through time</span></Link>
+            <Link href="/energy/consultation" className="rounded-xl border border-white/10 bg-white/[.035] p-3 text-sm text-slate-200 hover:border-cyan-200/30"><strong className="block text-cyan-100">Deep interpretation</strong><span className="text-xs text-slate-400">Ask the interpreter to synthesize the active aspects</span></Link>
+          </div>
+        </section>
+      )}
       {/* SECTION 2: MAIN ENERGY GAUGE — RESPONSIVE SEMICIRCULAR GAUGE */}
       {energyData && page === "summary" && (
         <section
@@ -436,7 +455,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
             initialMode="transit"
             initialQuestion={
               new URLSearchParams(window.location.search).get("question") || activeInterpreterQuestion ||
-              "What is the single most important planetary transit active for me right now, and how should I align my actions today?"
+              "Read my actual energy contacts in depth. Calculated contacts: " + (energyData?.contacts.slice(0, 18).map(c => c.transit + " " + c.aspect + " natal " + c.natal + " (orb " + c.orb.toFixed(2) + " degrees, intensity " + c.intensity + "/5, weight " + c.strength + ")").join("; ") || "No contacts within orb") + ". Explain how each contact manifests through both planetary functions and their natal and transit houses, synthesize all patterns, and separate chart evidence from interpretation. Explain what the energy is presenting in ordinary experience, not just what each aspect is called."
             }
           />
         )}
