@@ -128,6 +128,10 @@ export function NatalProfileBuilder({
   const [isSearchingCity, setIsSearchingCity] = useState(false);
   const [citySearchError, setCitySearchError] = useState("");
   const [currentCitySame, setCurrentCitySame] = useState(true);
+  const [verifiedTransitCity, setVerifiedTransitCity] = useState<string | null>(currentProfile?.transitLocation && Number.isFinite(currentProfile.transitLatitude) && Number.isFinite(currentProfile.transitLongitude) && currentProfile.transitTimezone ? currentProfile.transitLocation : null);
+  const [transitCityError, setTransitCityError] = useState("");
+  const [resolvingTransitCity, setResolvingTransitCity] = useState(false);
+  const trpcUtils = trpc.useUtils();
   const [formError, setFormError] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -140,6 +144,8 @@ export function NatalProfileBuilder({
     if (currentProfile) {
       setFormData(currentProfile);
       setCitySearch(currentProfile.location);
+      setVerifiedTransitCity(currentProfile.transitLocation && Number.isFinite(currentProfile.transitLatitude) && Number.isFinite(currentProfile.transitLongitude) && currentProfile.transitTimezone ? currentProfile.transitLocation : null);
+      setCurrentCitySame(!currentProfile.transitLocation || currentProfile.transitLocation === currentProfile.location);
     }
   }, [currentProfile]);
 
@@ -196,6 +202,35 @@ export function NatalProfileBuilder({
     }));
   };
 
+  const handleResolveTransitCity = async () => {
+    const query = (formData.transitLocation || "").trim();
+    if (query.length < 2) {
+      setTransitCityError("Enter your current city first.");
+      return;
+    }
+    setResolvingTransitCity(true);
+    setTransitCityError("");
+    try {
+      const result = await trpcUtils.hybrid.geocode.fetch({ query });
+      if (!result) {
+        setTransitCityError("Location not found. Try a more specific city.");
+        return;
+      }
+      setFormData(prev => ({
+        ...prev,
+        transitLocation: result.label,
+        transitLatitude: result.latitude,
+        transitLongitude: result.longitude,
+        transitTimezone: result.timezone,
+      }));
+      setVerifiedTransitCity(result.label);
+    } catch {
+      setTransitCityError("Unable to verify this location. Try again.");
+    } finally {
+      setResolvingTransitCity(false);
+    }
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setFormError("");
@@ -221,13 +256,18 @@ export function NatalProfileBuilder({
       return;
     }
 
+    if (!currentCitySame && (!verifiedTransitCity || verifiedTransitCity !== formData.transitLocation)) {
+      setFormError("Resolve your current city to verify its coordinates and timezone before continuing.");
+      return;
+    }
+
     const payload: UserProfileData = {
       ...formData,
       time: formData.birthTimeUnknown ? "12:00" : formData.time,
-      transitLocation: formData.transitLocation || formData.location,
-      transitLatitude: formData.transitLatitude ?? formData.latitude,
-      transitLongitude: formData.transitLongitude ?? formData.longitude,
-      transitTimezone: formData.transitTimezone || formData.timezone,
+      transitLocation: currentCitySame ? formData.location : formData.transitLocation,
+      transitLatitude: currentCitySame ? formData.latitude : formData.transitLatitude,
+      transitLongitude: currentCitySame ? formData.longitude : formData.transitLongitude,
+      transitTimezone: currentCitySame ? formData.timezone : formData.transitTimezone,
     };
 
     onSaveProfile(payload);
@@ -521,9 +561,12 @@ export function NatalProfileBuilder({
                 <Input
                   placeholder="Enter current city (e.g. New York, London, Miami)"
                   value={formData.transitLocation || ""}
-                  onChange={e => setFormData(prev => ({ ...prev, transitLocation: e.target.value }))}
+                  onChange={e => { setVerifiedTransitCity(null); setTransitCityError(""); setFormData(prev => ({ ...prev, transitLocation: e.target.value, transitLatitude: undefined, transitLongitude: undefined, transitTimezone: undefined })); }}
                   className="border-white/10 bg-black/40 text-slate-100 text-xs"
                 />
+                <Button type="button" variant="outline" disabled={resolvingTransitCity} onClick={() => void handleResolveTransitCity()}>{resolvingTransitCity ? "Resolving…" : "Verify current city coordinates"}</Button>
+                {verifiedTransitCity === formData.transitLocation && <p className="text-xs text-emerald-300">Verified: {formData.transitLatitude?.toFixed(4)}, {formData.transitLongitude?.toFixed(4)} · {formData.transitTimezone}</p>}
+                {transitCityError && <p className="text-xs text-rose-300">{transitCityError}</p>
               </div>
             )}
           </div>
