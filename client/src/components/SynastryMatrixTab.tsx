@@ -935,7 +935,7 @@ export function SynastryMatrixTab({
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs text-slate-300 leading-relaxed">
-              Enter their birth details to generate full dual-wheel synastry, cross-aspect mathematics, chemistry scores, and an actionable relationship playbook.
+              Enter their birth details to generate a two-person chemistry chart. This works for partners, parents, children, siblings, friends, mentors and colleagues. Compare both wheels, cross-chart aspects, house overlays and the patterns connecting the two charts.
             </DialogDescription>
           </DialogHeader>
 
@@ -962,9 +962,9 @@ export function SynastryMatrixTab({
                 >
                   <option value="partner">Partner / Date / Crush</option>
                   <option value="friend">Best Friend</option>
-                  <option value="child">Child / Family</option>
+                  <option value="child">Child</option>
                   <option value="parent">Parent</option>
-                  <option value="sibling">Sibling</option>
+                  <option value="sibling">Sibling / Family</option>
                   <option value="colleague">Colleague / Work</option>
                   <option value="mentor">Mentor / Guide</option>
                 </select>
