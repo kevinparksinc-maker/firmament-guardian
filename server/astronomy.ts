@@ -178,7 +178,7 @@ function julianDay(date: Date) {
 // Inputs are the LOCAL civil date and signed geographic coordinates (east positive).
 // A missing sunrise (polar day/night) is an error, never a substituted angle.
 function noaaSunriseUtc(localDate: string, latitude: number, longitude: number): Date {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(localDate) || !Number.isFinite(latitude) || Math.abs(latitude) > 90 || !Number.isFinite(longitude) || Math.abs(longitude) > 180)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate) || !Number.isFinite(latitude) || Math.abs(latitude) > 90 || !Number.isFinite(longitude) || Math.abs(longitude) > 180)
     throw new Error("Valid local date and coordinates required for NOAA sunrise.");
   const midnight = Date.parse(localDate + "T00:00:00.000Z");
   if (!Number.isFinite(midnight)) throw new Error("Invalid local sunrise date.");
