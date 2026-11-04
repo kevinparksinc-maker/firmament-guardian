@@ -642,6 +642,29 @@ export async function buildUnifiedMasterChart(
   }
 
   // 4. Assemble Method Execution Ledger and Validation Summary
+  // Validate registered layer output contracts before publishing the snapshot.
+  // Reference-only and mode-inapplicable layers retain their explicit statuses.
+  const expectedPlanetCount = basePlanets.length;
+  const requiredArrayCounts: Record<string, number> = {
+    "western-planets-and-signs": expectedPlanetCount,
+    "arabic-lunar-manazil": expectedPlanetCount,
+    "vedic-nakshatras-and-padas": expectedPlanetCount,
+    "elemental-decans": expectedPlanetCount,
+  };
+  for (const [layerId, expectedCount] of Object.entries(requiredArrayCounts)) {
+    const layer = layers[layerId];
+    if (!layer) continue;
+    if (!Array.isArray(layer.results) || layer.results.length !== expectedCount) {
+      layer.status = "failed";
+      layer.errorCode = "MASTER_CHART_LAYER_OUTPUT_COUNT_MISMATCH";
+      layer.notes = `Expected ${expectedCount} planetary records; received ${Array.isArray(layer.results) ? layer.results.length : "non-array"}.`;
+    }
+  }
+  const housesLayer = layers["western-houses-and-angles"];
+  if (housesLayer && baseHouses.length !== 12) {
+    housesLayer.status = "failed";
+    housesLayer.errorCode = "MASTER_CHART_HOUSE_COUNT_MISMATCH";
+  }
   const methodExecutionLedger = Object.values(layers);
   const computedWithResultCount = methodExecutionLedger.filter(
     l => l.status === "computed-with-result"
