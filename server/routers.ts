@@ -195,7 +195,11 @@ export const appRouter = router({
           throw new Error("A calculated natal Ascendant is required for Vargas.");
         return buildDivisionalCharts({
           ascendantLongitude: natal.ascendant.longitude,
-          planets: natal.movingBodies.map(p => ({ name: p.name, longitude: p.longitude })),
+          planets: [
+            ...natal.movingBodies.map(p => ({ name: p.name, longitude: p.longitude })),
+            { name: natal.northNode.name, longitude: natal.northNode.longitude },
+            { name: natal.southNode.name, longitude: natal.southNode.longitude },
+          ],
           d1HouseCusps: natal.houses,
         });
       }),
