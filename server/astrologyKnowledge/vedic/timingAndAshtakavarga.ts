@@ -142,3 +142,31 @@ export function buildVimshottariTimeline(chart: ChartResult, asOf: Date = new Da
     periods, yearLengthDays: 365.25,
   };
 }
+
+/** Visual BAV/SAV output from the same evidence engine used by synthesis.
+ * No separate bindu calculation or alternative coordinate conversion.
+ */
+export function getAshtakavargaVisual(chart: ChartResult) {
+  const evidence = resolveVedicTimingAndAshtakavarga(chart);
+  const result = evidence.find(item => item.id === "vedic-ashtakavarga-bav-sav");
+  if (!result) return {
+    available: false as const,
+    reason: evidence.find(item => item.technique === "ashtakavarga")?.statement ?? "Ashtakavarga has no validated result.",
+  };
+  const bav = CLASSICAL.map(planet => {
+    const segment = result.statement.split(planet + " BAV total ")[1];
+    if (!segment) throw new Error("Missing " + planet + " BAV in canonical evidence.");
+    const scores = segment.split(".")[0].split(": ")[1];
+    if (!scores) throw new Error("Missing " + planet + " BAV scores.");
+    const bySign = scores.split(", ").map(part => Number(part.trim().split(" ").at(-1)));
+    if (bySign.length !== 12 || bySign.some(n => !Number.isInteger(n)))
+      throw new Error("Malformed " + planet + " BAV evidence.");
+    return { planet, scores: bySign, total: bySign.reduce((a, b) => a + b, 0) };
+  });
+  const sav = ZODIAC_SIGNS.map((sign, i) => ({
+    sign, score: bav.reduce((sum, row) => sum + row.scores[i], 0),
+  }));
+  if (sav.reduce((sum, row) => sum + row.score, 0) !== 337)
+    throw new Error("Ashtakavarga visual checksum differs from canonical evidence.");
+  return { available: true as const, bav, sav, total: 337, evidenceId: result.id };
+}
