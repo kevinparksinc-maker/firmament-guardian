@@ -59,9 +59,28 @@ export async function synthesizeChartForReading(
     ...((snapshot.layers["vedic-vargas-divisional"]?.results as Array<{ division: string; name: string; formula?: string; ascendant?: unknown; houses?: unknown; placements?: unknown }> | undefined) ?? []).map(v => `${v.division} ${v.name}: formula ${v.formula ?? "not supplied"}; ascendant ${JSON.stringify(v.ascendant)}; houses ${JSON.stringify(v.houses)}; placements ${JSON.stringify(v.placements)}`),
     "CANONICAL PLANET FACTS FOR CHARACTER PROFILES (do not invent missing traits):",
     ...snapshot.baseCelestialState.planets.map(planet => `Planet ${planet.name}: ${JSON.stringify(planet)}`),
-    ...synthesis.themes.map(theme => `Theme ${theme.humanTheme}: ${theme.primaryConclusion}; evidence ${theme.evidenceIds.join(", ")}`),
-    "CALCULATED METHOD FINDINGS (never present reference-only methods as calculated):",
-    ...synthesis.methodFindings.map(method => `${method.id} [${method.status}; ${method.frame}; ${method.tradition}]: ${method.findings.map(f => `${f.label}: ${f.details}`).join("; ")}; evidence ${method.evidenceIds.join(", ")}`),
+    "INTERPRETED CROSS-METHOD THEMES (read these connections; do not substitute the inventory for interpretation):",
+    ...synthesis.themes.map(theme => [
+      `THEME ${theme.humanTheme} [${theme.id}]`,
+      `WHAT: ${theme.primaryConclusion}`,
+      `WHY/HOW: ${theme.whyHow}`,
+      `CONSEQUENCE: ${theme.consequences}`,
+      `MEANING: ${theme.deeperMeaning}`,
+      `LINKED PROPOSITIONS: ${theme.linkedPropositionIds.join(", ")}`,
+      `EVIDENCE: ${theme.evidenceIds.join(", ")}`,
+    ].join("\\n")),
+    "CONTRADICTIONS AND TENSIONS:",
+    ...synthesis.contradictionsAndTensions.map(t => `${t.polarities}; reconciliation: ${t.reconciliation}; evidence: ${t.evidenceIds.join(", ")}`),
+    "MANDATORY PER-LAYER OUTPUT CONTRACT: For EACH computed-with-result method below, produce a distinct identifiable layer output with (1) its exact calculated findings, (2) what those findings mean under that method's traditional rules, (3) how they reinforce, modify, or conflict with findings from other layers, (4) its contribution to the answer, and (5) evidence IDs. If a method is unavailable, reference-only, not applicable, or computed without results, report that status instead of inventing an interpretation. Never mistake a raw result inventory for completed interpretation. Keep all method IDs visible, even when related layers are grouped in the final narrative.",
+    "COMPLETE MASTER METHOD LEDGER — ONE OUTPUT REQUIRED FOR EVERY LAYER:",
+    ...synthesis.methodFindings.map(method => [
+      `LAYER ${method.id} | ${method.name} | ${method.status} | frame=${method.frame} | tradition=${method.tradition}`,
+      `SOURCE IDS: ${method.sourceIds.join(", ") || "none"}`,
+      `EVIDENCE IDS: ${method.evidenceIds.join(", ") || "none"}`,
+      `RESULT COUNT: ${method.resultCount}`,
+      ...method.findings.map(f => `FINDING ${f.label}: ${f.details}`),
+      ...(method.notes ? [`NOTES: ${method.notes}`] : []),
+    ].join("\\n")),
   ].join("\n");
   return { synthesis, context };
 }
