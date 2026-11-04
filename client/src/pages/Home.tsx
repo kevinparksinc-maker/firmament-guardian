@@ -13,7 +13,6 @@ import { SavedProfilePicker } from "@/components/SavedProfilePicker";
 import type { Worldview } from "../../../server/astrologyCore";
 import { Link, useLocation } from "wouter";
 import { localDateTime } from "@/lib/transitTime";
-import { startLogin } from "@/const";
 
 const ProfileChartScreen = lazy(() => import("@/components/ProfileChartScreen").then(module => ({ default: module.ProfileChartScreen })));
 const ProfileReadingScreen = lazy(() => import("@/components/ProfileReadingScreen").then(module => ({ default: module.ProfileReadingScreen })));
@@ -238,7 +237,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
   const saveCurrentChart = () => {
     if (!result) return;
     if (!me.data) {
-      startLogin();
+      toast.info("Cloud chart history is paused until account sign-in is ready. Your birth profile remains saved on this device.");
       return;
     }
     saveChart.mutate({
