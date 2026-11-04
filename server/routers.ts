@@ -185,6 +185,33 @@ export const appRouter = router({
         })
       ),
   }),
+  techniqueAudit: router({
+    natal: publicProcedure
+      .input(chartInput)
+      .query(async ({ input }) => {
+        const snapshot = await getMasterNatalChart({
+          ...input,
+          mode: "natal",
+          worldview: "agent-vs-god",
+        });
+        return {
+          snapshotId: snapshot.snapshotId,
+          validation: snapshot.validation,
+          layers: snapshot.methodExecutionLedger.map(layer => ({
+            id: layer.id,
+            name: layer.name,
+            tradition: layer.tradition,
+            technique: layer.technique,
+            status: layer.status,
+            frame: layer.frame,
+            evidenceIds: layer.evidenceIds,
+            results: layer.results ?? null,
+            errorCode: layer.errorCode ?? null,
+            notes: layer.notes ?? null,
+          })),
+        };
+      }),
+  }),
   vedic: router({
     dashaTimeline: publicProcedure
       .input(chartResultInput)
