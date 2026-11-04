@@ -23,10 +23,6 @@ import {
 } from "../astrologyKnowledge/canon/chineseMansions28";
 import { getDecanCanonByLongitude } from "../astrologyKnowledge/canon/decans36";
 import {
-  vargaPlacement,
-  type Varga,
-} from "../astrologyKnowledge/vedic/vargas";
-import {
   resolveVedicTimingAndAshtakavarga,
 } from "../astrologyKnowledge/vedic/timingAndAshtakavarga";
 import { seferYetzirahEvidence } from "../astrologyKnowledge/canon/seferYetzirah";
