@@ -377,5 +377,5 @@ export function buildGenesisInquiryPrompt(focus?: string): string {
   return [GENESIS_HISTORIAN_INSTRUCTIONS,
     focus ? `FOCUS FOR THIS READING: ${focus}. Investigate all 72 questions internally; develop the questions most relevant to this chapter in greatest depth and maintain continuity with the whole life.` : "Investigate all 72 questions internally and synthesize their answers into a continuous Life Story.",
     ...GENESIS_QUESTIONS.map(q => `${q.id}. [${q.section}] ${q.question}`)
-  ].join("\\n");
+  ].join("\n");
 }
