@@ -1,3 +1,4 @@
+import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
@@ -182,6 +183,22 @@ export const appRouter = router({
           transitSunriseAnchor: input.transitSunriseAnchor,
         })
       ),
+  }),
+  vedic: router({
+    // Reuses the active profile's existing natal chart; no calculateChart call.
+    // The caller must supply the same chart already shown in the profile UI.
+    divisionalCharts: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => {
+        const natal = input.chart;
+        if (!natal.ascendant || !Number.isFinite(natal.ascendant.longitude))
+          throw new Error("A calculated natal Ascendant is required for Vargas.");
+        return buildDivisionalCharts({
+          ascendantLongitude: natal.ascendant.longitude,
+          planets: natal.movingBodies.map(p => ({ name: p.name, longitude: p.longitude })),
+          d1HouseCusps: natal.houses,
+        });
+      }),
   }),
   astrologyKnowledge: router({
     behavioralReport: publicProcedure
