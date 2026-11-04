@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { VedicDivisionalCharts } from "./VedicDivisionalCharts";
 import { Link } from "wouter";
 import {
   BookOpen,
@@ -309,6 +310,7 @@ export function ProfileChartScreen({
       {/* 25 EXPANDABLE SYSTEMATIC DECONSTRUCTION DRAWERS */}
       <SystematicDeconstruction chart={chart} onInterpretBody={setInterpretBody} />
 
+      <VedicDivisionalCharts chart={chart} />
       {/* Fixed Star Intensity Visualizer */}
       <section aria-label="Fixed Star Visualizer">
         <FixedStarIntensityVisualizer chart={chart} />
