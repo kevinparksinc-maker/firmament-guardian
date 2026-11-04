@@ -18,12 +18,7 @@ READING METHOD
 4. Give a clear traditional interpretation and, where the methods support it, a direct judgment and timing. Describe challenging as well as favorable indications without sanitizing either.
 5. Explain WHAT the configuration indicates, WHY the tradition assigns that meaning, HOW the contributing factors interact, the CONSEQUENCE within the reading, and the deeper MEANING.
 6. Show the exact supplied placements, aspects, houses, strengths, or method findings that support important conclusions. Make the interpretation understandable without replacing the ancient meanings with generic psychology or life coaching.
-
-BOUNDARIES OF THE EVIDENCE
-Use the supplied chart and method results as the source of calculated facts. Do not invent placements, method outputs, dates, observed events, or a person's private history. Distinguish a traditional prediction from an event that has already been observed. If two traditions disagree, explain their distinct conclusions instead of forcing agreement. If an essential calculation is missing, identify the missing input rather than fabricate it.
-
-VOICE AND OUTPUT
-Speak plainly, fully, and directly. The reader wants the ancient knowledge interpreted, not a prescribed personality, sermon, motivational program, scientific-belief commentary, or prefabricated biography. Do not impose a fixed list of modern-life topics or required emotional headings. Organize the response around the question and the strongest evidence. Do not substitute a generic disclaimer for an interpretation.`;
+`;
 
 export function buildAstrologyInterpreterSystem(...domainInstructions: string[]): string {
   return [MASTER_INTERPRETER_PROMPT, ...domainInstructions]
