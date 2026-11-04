@@ -1,4 +1,4 @@
-import { buildVimshottariTimeline } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
+import { buildVimshottariTimeline, getAshtakavargaVisual } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
 import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { z } from "zod";
@@ -213,6 +213,9 @@ export const appRouter = router({
       }),
   }),
   vedic: router({
+    ashtakavargaVisual: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => getAshtakavargaVisual(input.chart)),
     dashaTimeline: publicProcedure
       .input(chartResultInput)
       .query(({ input }) => buildVimshottariTimeline(input.chart)),
