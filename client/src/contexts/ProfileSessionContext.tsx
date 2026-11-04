@@ -1,3 +1,4 @@
+import { repairProfileLocations } from "@shared/profileLocations";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { ChartResult } from "../../../server/astronomy";
 import type { UserProfileData } from "@/components/NatalProfileBuilder";
@@ -22,8 +23,8 @@ function readSavedProfiles(): UserProfileData[] {
   try {
     const value = JSON.parse(window.localStorage.getItem(SAVED_PROFILES_KEY) || "[]");
     const valid = Array.isArray(value) ? value.filter((p): p is UserProfileData => Boolean(p && typeof p.name === "string" && typeof p.date === "string" && typeof p.location === "string")) : [];
-    const migrated = valid.map(ensureId);
-    if (valid.some(p => !p.id)) window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(migrated));
+    const migrated = valid.map(p => ensureId(repairProfileLocations(p)));
+    if (JSON.stringify(valid) !== JSON.stringify(migrated)) window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(migrated));
     return migrated;
   } catch { return []; }
 }
@@ -37,8 +38,8 @@ function readProfile(): UserProfileData | null {
       const parsed = JSON.parse(stored) as UserProfileData;
       if (parsed && typeof parsed.name === "string" && parsed.location) {
         const saved = readSavedProfiles().find(p => p.id === parsed.id || legacyKey(p) === legacyKey(parsed));
-        const migrated = saved || ensureId(parsed);
-        if (!parsed.id) window.localStorage.setItem(PROFILE_KEY, JSON.stringify(migrated));
+        const migrated = saved || ensureId(repairProfileLocations(parsed));
+        if (JSON.stringify(parsed) !== JSON.stringify(migrated)) window.localStorage.setItem(PROFILE_KEY, JSON.stringify(migrated));
         return migrated;
       }
     }
@@ -51,6 +52,8 @@ function readProfile(): UserProfileData | null {
 type ProfileSession = {
   profile: UserProfileData | null;
   chart: ChartResult | null;
+  energyChart: ChartResult | null;
+  setEnergyChart: Dispatch<SetStateAction<ChartResult | null>>;
   savedProfiles: UserProfileData[];
   deleteSavedProfile: (profile: UserProfileData) => void;
   setProfile: (next: UserProfileData | null) => void;
@@ -70,12 +73,14 @@ const ProfileSessionContext = createContext<ProfileSession | null>(null);
 export function ProfileSessionProvider({ children }: { children: ReactNode }) {
   const [profile, updateProfile] = useState<UserProfileData | null>(readProfile);
   const [chart, setChart] = useState<ChartResult | null>(null);
+  const [energyChart, setEnergyChart] = useState<ChartResult | null>(null);
   const [savedProfiles, setSavedProfiles] = useState<UserProfileData[]>(readSavedProfiles);
 
   const setProfile = useCallback((next: UserProfileData | null) => {
-    const saved = next ? ensureId(next) : null;
+    const saved = next ? ensureId(repairProfileLocations(next)) : null;
     updateProfile(saved);
     setChart(null);
+    setEnergyChart(null);
     if (typeof window === "undefined") return;
     try {
       if (saved) {
@@ -96,6 +101,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
     const saved = { ...next, id: previous.id || next.id || crypto.randomUUID() };
     updateProfile(saved);
     setChart(null);
+    setEnergyChart(null);
     if (typeof window === "undefined") return;
     try {
       const updated = [saved, ...readSavedProfiles().filter(p =>
@@ -120,6 +126,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
         window.localStorage.removeItem(PROFILE_KEY);
         updateProfile(null);
         setChart(null);
+        setEnergyChart(null);
       }
       window.dispatchEvent(new Event("fg:profile-updated"));
     } catch { /* Browser storage may be unavailable. */ }
@@ -131,8 +138,8 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
     const added: UserProfileData[] = [];
     for (const candidate of incoming) {
       if (!candidate || typeof candidate.name !== "string" || !candidate.name.trim() ||
-          !/^\\d{4}-\\d{2}-\\d{2}$/.test(candidate.date) ||
-          !/^\\d{2}:\\d{2}$/.test(candidate.time) ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(candidate.date) ||
+          !/^\d{2}:\d{2}$/.test(candidate.time) ||
           typeof candidate.location !== "string" ||
           !Number.isFinite(candidate.latitude) || !Number.isFinite(candidate.longitude) ||
           Math.abs(candidate.latitude) > 90 || Math.abs(candidate.longitude) > 180 ||
@@ -158,6 +165,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
       updateProfile(current => {
         if (JSON.stringify(current) === JSON.stringify(updated)) return current;
         setChart(null);
+        setEnergyChart(null);
         return updated;
       });
     };
@@ -175,6 +183,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
     transitLongitude: number;
     transitTimezone: string;
   }) => {
+    setEnergyChart(null);
     updateProfile(current => {
       if (!current) return current;
       const next: UserProfileData = {
@@ -200,8 +209,8 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ profile, chart, savedProfiles, setProfile, saveEditedProfile, importProfiles, updateTransitLocation, setChart, deleteSavedProfile }),
-    [profile, chart, savedProfiles, setProfile, saveEditedProfile, importProfiles, updateTransitLocation, deleteSavedProfile]
+    () => ({ profile, chart, energyChart, setEnergyChart, savedProfiles, setProfile, saveEditedProfile, importProfiles, updateTransitLocation, setChart, deleteSavedProfile }),
+    [profile, chart, energyChart, setEnergyChart, savedProfiles, setProfile, saveEditedProfile, importProfiles, updateTransitLocation, deleteSavedProfile]
   );
   return <ProfileSessionContext.Provider value={value}>{children}</ProfileSessionContext.Provider>;
 }

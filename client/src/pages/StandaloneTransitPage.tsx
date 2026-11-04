@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
+import { calculateIndependentEnergyRead } from "@/lib/energyScoring";
+import { localDateTime } from "@/lib/transitTime";
 import { trpc } from "@/lib/trpc";
 import { ChartWheel } from "@/components/ChartWheel";
 import { DiamondChart } from "@/components/DiamondChart";
@@ -9,8 +11,9 @@ import type { ChartResult } from "../../../server/astronomy";
 /** Independent event-time chart: its birth/event coordinates are NOT the user's natal chart. */
 export default function StandaloneTransitPage() {
   const { profile } = useProfileSession();
-  const [date,setDate] = useState(() => new Date().toLocaleDateString("en-CA"));
-  const [time,setTime] = useState("12:00");
+  const initial = localDateTime(new Date(), profile?.transitTimezone || profile?.timezone || "UTC");
+  const [date,setDate] = useState(initial.date);
+  const [time,setTime] = useState(initial.time);
   const [location,setLocation] = useState(() => profile?.transitLocation || profile?.location || "");
   const [latitude,setLatitude] = useState(() => String(profile?.transitLatitude ?? profile?.latitude ?? ""));
   const [longitude,setLongitude] = useState(() => String(profile?.transitLongitude ?? profile?.longitude ?? ""));
@@ -18,19 +21,38 @@ export default function StandaloneTransitPage() {
   const [result,setResult] = useState<ChartResult|null>(null);
   const [view,setView] = useState<"diamond"|"wheel">("diamond");
   const calculate = trpc.hybrid.calculate.useMutation();
+  const utils = trpc.useUtils();
+  const [resolving, setResolving] = useState(false);
+  const [error, setError] = useState("");
+  const request = useRef(0);
+  const energy = useMemo(() => calculateIndependentEnergyRead(result), [result]);
+  useEffect(() => {
+    request.current++;
+    setResult(null);
+    return () => { request.current++; };
+  }, [date, time, location, latitude, longitude, timezone]);
+  const resolveCity = async () => {
+    setResolving(true); setError("");
+    try {
+      const city = await utils.hybrid.geocode.fetch({ query: location });
+      setLocation(city.label); setLatitude(String(city.latitude)); setLongitude(String(city.longitude)); setTimezone(city.timezone);
+    } catch (error) { setError(error instanceof Error ? error.message : "City lookup failed"); }
+    finally { setResolving(false); }
+  };
   const valid = /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d{2}:\d{2}$/.test(time) &&
-    !!location.trim() && !!timezone.trim() && Number.isFinite(Number(latitude)) &&
+    !!location.trim() && !!latitude.trim() && !!longitude.trim() && !!timezone.trim() && Number.isFinite(Number(latitude)) &&
     Number.isFinite(Number(longitude)) && Math.abs(Number(latitude))<=90 && Math.abs(Number(longitude))<=180;
   const run = async () => {
     if (!valid) return;
     setResult(null);
+    const version = ++request.current;
     try {
       const chart = await calculate.mutateAsync({
         location,latitude:Number(latitude),longitude:Number(longitude),timezone,date,time,
         worldview:"agent",readingScope:"natal",
       });
       // The event-time moving bodies are the independent sky; suppress natal/transit overlays.
-      setResult({...chart,transits:[]});
+      if (version === request.current) setResult({...chart,transits:[]});
     } catch { /* The mutation error is rendered below. */ }
   };
   return <main className="mx-auto max-w-5xl space-y-5 p-4 text-slate-100 sm:p-6">
@@ -42,11 +64,13 @@ export default function StandaloneTransitPage() {
     <section className="grid gap-3 rounded-2xl border border-white/15 bg-slate-950/70 p-4 sm:grid-cols-2">
       <label className="text-xs">Date<input aria-label="Transit date" type="date" value={date} onChange={e=>setDate(e.target.value)} className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"/></label>
       <label className="text-xs">Local time<input aria-label="Transit local time" type="time" value={time} onChange={e=>setTime(e.target.value)} className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"/></label>
-      <label className="text-xs">Location<input aria-label="Transit location" value={location} onChange={e=>setLocation(e.target.value)} className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"/></label>
+      <label className="text-xs">Location<input aria-label="Transit location" value={location} onChange={e=>{setLocation(e.target.value);setLatitude("");setLongitude("");}} className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"/></label>
+      <button type="button" onClick={resolveCity} disabled={resolving || location.trim().length < 2} className="rounded-xl border border-cyan-300/40 px-4 py-2 text-sm text-cyan-100">{resolving ? "Resolving city…" : "Resolve city coordinates and timezone"}</button>
       <label className="text-xs">IANA timezone<input aria-label="Transit timezone" value={timezone} onChange={e=>setTimezone(e.target.value)} className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"/></label>
       <label className="text-xs">Latitude<input aria-label="Transit latitude" type="number" step="any" value={latitude} onChange={e=>setLatitude(e.target.value)} className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"/></label>
       <label className="text-xs">Longitude<input aria-label="Transit longitude" type="number" step="any" value={longitude} onChange={e=>setLongitude(e.target.value)} className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"/></label>
       <button disabled={!valid || calculate.isPending} onClick={run} className="rounded-xl bg-amber-400 px-4 py-3 font-bold text-slate-950 disabled:opacity-50 sm:col-span-2">{calculate.isPending?"Calculating sky…":"Calculate Independent Transit Chart"}</button>
+      {error && <p role="alert" className="text-sm text-rose-300 sm:col-span-2">{error}</p>}
       {calculate.error && <p role="alert" className="text-sm text-rose-300 sm:col-span-2">{calculate.error.message}</p>}
     </section>
     {result && <section className="space-y-4">
@@ -55,6 +79,12 @@ export default function StandaloneTransitPage() {
         <button onClick={()=>setView("wheel")} className="rounded-lg border border-amber-300/40 px-3 py-2">Wheel</button>
       </div>
       <p className="text-xs text-slate-400">Event chart · {date} {time} · {location} · {timezone}</p>
+      {energy && <section aria-label="Independent sky energy" className="space-y-3 rounded-2xl border border-cyan-300/30 p-4">
+        <h2 className="font-serif text-xl">Independent Sky Energy Read</h2>
+        <p>{energy.signal} · Harmony {energy.flowPct}% ({energy.flowWeight} points) · Friction {energy.frictionPct}% ({energy.frictionWeight} points)</p>
+        <p className="text-xs text-slate-400">{energy.contactsCount} unique sky pairs · 5° orb · 1–5 intensity · minor contacts half weight</p>
+        <details><summary className="cursor-pointer text-cyan-200">Full contact evidence</summary><ul className="mt-2 space-y-1 text-xs">{[...energy.contacts].sort((a,b)=>a.orb-b.orb).map(c=><li key={c.id}>{c.transit} {c.aspect} {c.natal} · {c.orb.toFixed(2)}° · {c.intensity}/5 · {c.stars} × {c.natalStars} × {c.majorFactor} = {c.strength} points</li>)}</ul></details>
+      </section>}
       {view==="diamond"?<DiamondChart chart={result}/>:<ChartWheel chart={result}/>}
     </section>}
   </main>;

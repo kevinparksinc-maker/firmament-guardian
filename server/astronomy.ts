@@ -1,4 +1,5 @@
 import sweph from "sweph";
+import { localDateTime } from "../shared/transitTime";
 import { ascendantFromSunrise, type FixedVector } from "./sunriseAscendant";
 import tzLookup from "tz-lookup";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
@@ -83,7 +84,7 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
   const wallKey = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")} ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
   const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const naive = Date.UTC(y, m - 1, d, hh, mm); const candidates = new Set<number>();
-  for (let delta = -36; delta <= 36; delta += 1) { const candidate = new Date(naive + delta * 3_600_000); const parts = formatter.formatToParts(candidate); const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value])); const key = `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}`; if (key === wallKey) candidates.add(candidate.getTime()); }
+  for (let delta = -36; delta <= 36; delta += 0.25) { const candidate = new Date(naive + delta * 3_600_000); const parts = formatter.formatToParts(candidate); const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value])); const key = `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}`; if (key === wallKey) candidates.add(candidate.getTime()); }
   if (candidates.size === 0) throw new Error("That local time does not exist in the selected timezone, usually because of a daylight-saving transition.");
   if (candidates.size > 1) throw new Error("That local time is ambiguous in the selected timezone because the clock repeated; choose a different minute.");
   return new Date(Array.from(candidates)[0]);
@@ -207,8 +208,13 @@ function noaaSunriseUtc(localDate: string, latitude: number, longitude: number):
   minutes = solar(jd0 + minutes / 1440);
   return new Date(midnight + minutes * 60000);
 }
-function automaticSunriseAnchor(localDate: string, latitude: number, longitude: number) {
-  const sunrise = noaaSunriseUtc(localDate, latitude, longitude);
+function automaticSunriseAnchor(localDate: string, latitude: number, longitude: number, event: Date) {
+  let sunrise = noaaSunriseUtc(localDate, latitude, longitude);
+  if (sunrise.getTime() > event.getTime()) {
+    const previousDate = new Date(`${localDate}T12:00:00.000Z`);
+    previousDate.setUTCDate(previousDate.getUTCDate() - 1);
+    sunrise = noaaSunriseUtc(previousDate.toISOString().slice(0, 10), latitude, longitude);
+  }
   return { sunriseUtc: sunrise.toISOString(), sunriseSunXYZ: calculatedXYZ(julianDay(sunrise), 0).xyz };
 }
 function row(name: string, longitude: number, house: number, worldview: Worldview, ascendant: number | null, extra: Partial<ChartRow> = {}): ChartRow {
@@ -239,7 +245,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview !== "god" && (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || Math.abs(input.latitude) > 90 || Math.abs(input.longitude) > 180))
     throw new Error("Master Celestial: valid birth coordinates are required. No default Ascendant.");
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
-  const natalSunrise = hasAgentLocation ? automaticSunriseAnchor(input.date, input.latitude, input.longitude) : null;
+  const natalSunrise = hasAgentLocation ? automaticSunriseAnchor(input.date, input.latitude, input.longitude, utcDate) : null;
   const asc = hasAgentLocation
     ? ascendantFromSunrise({ ...natalSunrise!, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
     : null;
@@ -270,7 +276,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview !== "god" && transitInputsPresent && !transitLocationResolved) throw new Error("Transit location must be resolved before calculating transit houses.");
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
-  const transitSunrise = transitHasLocation ? automaticSunriseAnchor(input.transitDate ?? input.date, input.transitLatitude as number, input.transitLongitude as number) : null;
+  const transitSunrise = transitHasLocation ? automaticSunriseAnchor(localDateTime(transitDate, input.transitTimezone || input.timezone).date, input.transitLatitude as number, input.transitLongitude as number, transitDate) : null;
   const transitAsc = transitHasLocation
     ? ascendantFromSunrise({ ...transitSunrise!, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant
     : null;

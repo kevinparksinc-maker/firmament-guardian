@@ -50,7 +50,7 @@ export function clusterPropositionsIntoThemes(
   const themes: SynthesizedTheme[] = [];
   const tensions: Array<{ polarities: string; reconciliation: string; evidenceIds: string[] }> = [];
 
-  for (const [domain, group] of groups) {
+  for (const [domain, group] of Array.from(groups.entries())) {
     if (!group.length) continue;
     const ordered = [...group].sort((a, b) => weight(b) - weight(a));
     const leading = ordered[0];
@@ -68,18 +68,16 @@ export function clusterPropositionsIntoThemes(
       traditions.length >= 2 ? "strong-corroboration"
       : ordered.length >= 2 ? "moderate-reinforcement" : "singular";
 
-    const relationships: string[] = [];
-    for (let i = 0; i < ordered.length; i++) {
-      for (let j = i + 1; j < ordered.length; j++) {
-        const a = ordered[i], b = ordered[j];
-        const shared = a.supportingEvidenceIds.filter(id => b.supportingEvidenceIds.includes(id));
-        if (shared.length) {
-          relationships.push(
-            `${a.themeTitle} and ${b.themeTitle} describe the same chart evidence (${shared.join(", ")}). ${a.tradition} reads it as: ${a.plainLanguageMeaning} ${b.tradition} reads it as: ${b.plainLanguageMeaning}`
-          );
-        }
-      }
+    // Group shared evidence once instead of repeating every pair of witnesses.
+    const witnesses = new Map<string, InterpretedProposition[]>();
+    for (const item of ordered) for (const id of item.supportingEvidenceIds) {
+      const entries = witnesses.get(id) ?? [];
+      entries.push(item);
+      witnesses.set(id, entries);
     }
+    const relationships = Array.from(witnesses.entries())
+      .filter(([, items]) => items.length > 1)
+      .map(([id, items]) => `${id} links ${unique(items.map(item => item.themeTitle)).join("; ")}. These share one calculated condition and are not independent confirmations.`);
 
     const opposing = supportive.length && difficult.length;
     const reconciliation = opposing
@@ -97,8 +95,8 @@ export function clusterPropositionsIntoThemes(
     }
 
     const consequenceParts = [
-      ...supportive.map(p => `Potential strength or gift — ${p.themeTitle}: ${p.plainLanguageMeaning} Evidence: ${p.supportingEvidenceIds.join(", ")}`),
-      ...difficult.map(p => `Potential challenge or cost — ${p.themeTitle}: ${p.plainLanguageMeaning} Evidence: ${p.supportingEvidenceIds.join(", ")}`),
+      ...supportive.map(p => `Available strength — ${p.themeTitle}; expressed through ${p.causalMechanism}. Evidence: ${p.supportingEvidenceIds.join(", ")}`),
+      ...difficult.map(p => `Pressure to manage — ${p.themeTitle}; the relevant condition is ${p.causalMechanism}. Evidence: ${p.supportingEvidenceIds.join(", ")}`),
     ];
     if (!consequenceParts.length) consequenceParts.push(...ordered.map(p => `${p.plainLanguageMeaning} Evidence: ${p.supportingEvidenceIds.join(", ")}`));
 

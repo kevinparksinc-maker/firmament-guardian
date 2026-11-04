@@ -60,9 +60,10 @@ export function MasterSynthesizerPanel({
   };
 
   React.useEffect(() => {
-    handleSynthesize();
+    if (initialQuestion) setQuestion(initialQuestion);
+    handleSynthesize(initialQuestion || question);
     return () => { requestVersion.current += 1; };
-  }, [chart]);
+  }, [chart, initialQuestion]);
 
   return (
     <div className="space-y-6">
@@ -244,13 +245,9 @@ export function MasterSynthesizerPanel({
 
                         <div>
                           <strong className="text-slate-400 uppercase tracking-wider text-[10px] block">
-                            Daily Manifestations
+                            Consequence
                           </strong>
-                          <ul className="list-disc list-inside space-y-1 text-slate-300 mt-1">
-                            {theme.concreteManifestations.map((m, i) => (
-                              <li key={i}>{m}</li>
-                            ))}
-                          </ul>
+                          <p className="mt-1 whitespace-pre-line text-slate-300">{theme.consequences}</p>
                         </div>
 
                         <div>

@@ -711,7 +711,7 @@ export async function buildUnifiedMasterChart(
       descendant: chart.descendant,
       northNode: chart.northNode,
       southNode: chart.southNode,
-      planets: basePlanets,
+      planets: [...basePlanets],
       houses: baseHouses,
     },
     godView: {

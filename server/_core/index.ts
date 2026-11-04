@@ -39,7 +39,7 @@ async function startServer() {
   }
   const app = express();
   const server = createServer(app);
-  app.get("/health", (_req, res) => {
+  app.get(["/health", "/healthz"], (_req, res) => {
     res.status(200).json({ ok: true });
   });
   // Readiness reports configuration, not an unverified claim that external services work.

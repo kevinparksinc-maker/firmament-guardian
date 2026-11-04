@@ -22,7 +22,6 @@ const History = lazy(() => import("./pages/History"));
 const SkyHomePrototype = lazy(() => import("./pages/SkyHomePrototype"));
 const LifeStoryPage = lazy(() => import("./pages/LifeStoryPage"));
 const SynastryPage = lazy(() => import("./pages/SynastryPage"));
-const EnergyPage = lazy(() => import("./pages/EnergyPage"));
 const StandaloneTransitPage = lazy(() => import("./pages/StandaloneTransitPage"));
 const ExplorePage = lazy(() => import("./pages/ExplorePage"));
 
@@ -44,7 +43,6 @@ function Router() {
       ))}
       <Route path={"/legacy"} component={LegacyHome} />
       <Route path={"/synastry"} component={SynastryPage} />
-      <Route path={"/energy"} component={EnergyPage} />
       <Route path={"/transit-sky"} component={StandaloneTransitPage} />
       <Route path={"/explore"} component={ExplorePage} />
       <Route path={"/sky"} component={SkyHomePrototype} />

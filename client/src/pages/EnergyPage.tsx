@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { TransitLocationBar } from "@/components/TransitLocationBar";
+import { HarmonicFlowTimeline } from "@/components/HarmonicFlowTimeline";
 import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
@@ -66,6 +67,26 @@ function describePlacement(row: EvidenceRow | undefined, label: string): string 
   return `${label}: ${degree.toFixed(2)}° ${sign}, ${decan} elemental-family decan${Number.isFinite(house) && house > 0 ? `, house ${house}` : ", house unavailable"}${starEvidence}`;
 }
 
+const PLANET_THEMES: Record<string, string> = {
+  Sun: "identity, purpose and visibility", Moon: "emotional needs, habits and daily rhythm",
+  Mercury: "thinking, decisions and communication", Venus: "relationships, values and enjoyment",
+  Mars: "initiative, assertion and boundaries", Jupiter: "growth, opportunity and judgment",
+  Saturn: "responsibility, discipline and limits", Uranus: "change and independence",
+  Neptune: "imagination, ideals and uncertainty", Pluto: "power, control and transformation",
+  "North Node": "development and unfamiliar direction", "South Node": "familiar patterns and release",
+  Ascendant: "self-presentation and immediate responses", Descendant: "partnership and negotiation",
+};
+const ASPECT_ACTIONS: Record<string, string> = {
+  conjunction: "Bring the two themes into one deliberate action; their energies concentrate together.",
+  trine: "Use the available ease to make progress where these two life areas support each other.",
+  sextile: "Act on an opening that lets these two themes cooperate; participation develops the opportunity.",
+  square: "Identify the competing demands and choose a practical adjustment before pushing harder.",
+  opposition: "Address both sides of the tension through boundaries, negotiation and perspective.",
+  semisextile: "Make a small adjustment between adjacent concerns rather than forcing a major change.",
+  semisquare: "Resolve a recurring irritation with one concrete correction.",
+  quincunx: "Rework expectations where the two needs do not naturally fit together.",
+};
+
 function interpretContact(contact: { transit: string; natal: string; aspect: string; orb: number }, chart: ChartResult | null | undefined) {
   const moving = chart?.transits?.find(row => row.name === contact.transit);
   const rooted = chart?.movingBodies?.find(row => row.name === contact.natal);
@@ -76,12 +97,12 @@ function interpretContact(contact: { transit: string; natal: string; aspect: str
     ? "harmonious" : "frictional";
   return {
     theme: `${contact.transit} ${contact.aspect} natal ${contact.natal} · ${contact.orb.toFixed(2)}° orb`,
-    advice: `WHAT — A ${relation} ${contact.aspect} links two specifically located planetary expressions. WHY — ${movingEvidence}. ${natalEvidence}. HOW — Compare their decan families and house topics in the ${frame}, rather than interpreting the planet names alone. CONSEQUENCE — The ${contact.orb.toFixed(2)}° orb measures geometric closeness, not a guaranteed outcome. MEANING — Lunar mansion, Arabic manzil, Chinese mansion, and dignity interpretations require verified catalog mappings; they are not yet supplied by this contact evidence and must not be invented.`,
+    advice: `WHAT — Transit ${contact.transit} activates ${PLANET_THEMES[contact.transit] || contact.transit}, meeting natal ${contact.natal} through ${PLANET_THEMES[contact.natal] || contact.natal} in a ${relation} ${contact.aspect}. WHY — ${movingEvidence}. ${natalEvidence}. HOW — ${ASPECT_ACTIONS[contact.aspect]} Use the recorded houses and decan families to locate that action in the ${frame}. CONSEQUENCE — The ${contact.orb.toFixed(2)}° orb measures geometric closeness, not a guaranteed outcome. MEANING — Read this contact through the recorded placements and its relative weight in the full chart.`,
   };
 }
 
-export default function EnergyPage({ onRefresh, calculating = false }: { onRefresh?: () => void; calculating?: boolean }) {
-  const { chart, profile } = useProfileSession();
+export default function EnergyPage({ onRefresh, calculating = false, error = "" }: { onRefresh?: () => void; calculating?: boolean; error?: string }) {
+  const { energyChart: chart, profile } = useProfileSession();
   const [selectedPlanetFilter, setSelectedPlanetFilter] = useState<string | null>(null);
   const [aspectCategory, setAspectCategory] = useState<"all" | "harmonious" | "challenging" | "dynamic">("all");
   const [expandedContactId, setExpandedContactId] = useState<string | null>(null);
@@ -117,7 +138,7 @@ export default function EnergyPage({ onRefresh, calculating = false }: { onRefre
     document.getElementById("energy-master-interpreter")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const currentTimeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const currentTimeStr = chart ? new Date(chart.transitDate).toLocaleString([], { timeZone: chart.input.transitTimezone || chart.input.timezone, hour: "2-digit", minute: "2-digit", month: "short", day: "numeric", timeZoneName: "short" }) : "Awaiting calculation";
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-24 pt-2 text-[#E8EDF7]">
@@ -181,6 +202,8 @@ export default function EnergyPage({ onRefresh, calculating = false }: { onRefre
         </div>
       </section>
 
+      {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
+      {!chart && <p role="status">{calculating ? "Calculating current transit contacts…" : "Refresh Sky to calculate your current energy."}</p>}
       {/* SECTION 2: MAIN ENERGY GAUGE — RESPONSIVE SEMICIRCULAR GAUGE */}
       {energyData && (
         <section
@@ -245,7 +268,7 @@ export default function EnergyPage({ onRefresh, calculating = false }: { onRefre
                   {energyData.signal}
                 </span>
                 <p className="mt-1 font-mono text-[11px] text-slate-400 tabular-nums">
-                  Current Telemetry Time: {currentTimeStr}
+                  Calculated sky: {currentTimeStr}
                 </p>
               </div>
             </div>
@@ -266,7 +289,7 @@ export default function EnergyPage({ onRefresh, calculating = false }: { onRefre
                     </span>
                   </div>
                   <p className="mt-1 text-[11px] text-slate-300">
-                    Trines & sextiles lubricating creative execution and smooth diplomacy.
+                    Conjunctions, trines, sextiles and harmonious minor contacts.
                   </p>
                 </div>
 
@@ -383,12 +406,13 @@ export default function EnergyPage({ onRefresh, calculating = false }: { onRefre
 
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-400 font-mono">
                   <span>Exact Orb: {c.orb.toFixed(2)}°</span>
-                  <span>Strength: {c.strength}%</span>
+                  <span>Intensity: {c.intensity}/5 · Weight: {c.strength}</span>
                 </div>
 
                 {isExpanded && (
                   <div className="mt-3 border-t border-white/10 pt-3 space-y-2 animate-in fade-in duration-200">
                     <p className="text-xs font-semibold text-[#D9B66F]">{interpretation.theme}</p>
+                    <p className="text-xs text-cyan-200">{c.intensity} intensity × {c.stars} transit stars × {c.natalStars} natal stars × {c.majorFactor} aspect weight = {c.strength} points</p>
                     <p className="text-xs text-slate-300 leading-relaxed">{interpretation.advice}</p>
                     <div className="flex justify-end pt-1">
                       <button
@@ -409,6 +433,8 @@ export default function EnergyPage({ onRefresh, calculating = false }: { onRefre
           })}
         </div>
       </section>
+
+      {chart && <HarmonicFlowTimeline chart={chart} />}
 
       {/* SECTION 4: FORECAST TIMELINE */}
       <div className="flex justify-end"><Link href="/transit-sky" className="rounded-xl border border-cyan-300/40 bg-cyan-950/30 px-4 py-2 text-sm font-semibold text-cyan-200">Open Independent Transit Chart →</Link></div>

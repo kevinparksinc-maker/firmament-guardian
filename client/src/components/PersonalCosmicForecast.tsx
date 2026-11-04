@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { Activity, ArrowRight, Clock3, RefreshCw, Sparkles, Zap } from "lucide-react";
 import { Link } from "wouter";
+import { calculateEnergyRead } from "@/lib/energyScoring";
 import { calculatePlanetaryHours } from "../lib/planetaryHours";
 import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
+import { HarmonicFlowTimeline } from "./HarmonicFlowTimeline";
 import { TransitLocationBar } from "./TransitLocationBar";
 
 const planetThemes: Record<string, string> = {
@@ -29,30 +31,19 @@ function contactInterpretation(transit: string, natal: string, aspect: string, o
   return `Transiting ${transit} emphasizes ${moving}; natal ${natal} concerns ${personal}. Their ${aspect} ${geometry}. ${closeness} This is symbolic interpretation, not a guaranteed event.`;
 }
 
-const MAX_ORB = 5;
 const aspectFlow: Record<TransitContact["aspect"] | MinorTransitContact["aspect"], number> = {
   trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 1, semisextile: 1, semisquare: -1, quincunx: -1,
 };
-const percentWeight = (orb: number) =>
-  orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
-
 export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { chart: ChartResult | null; calculating: boolean; onRefresh?: () => void }) {
   const [showAllContacts, setShowAllContacts] = useState(false);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const data = useMemo(() => {
-    if (!chart || chart.readingScope === "natal") return null;
-    const contacts = chart.transits.flatMap(body =>
-      [...body.natalContacts, ...body.minorNatalContacts].filter(contact => Number.isFinite(contact.orb) && contact.orb <= MAX_ORB)
-        .map(contact => ({ ...contact, transit: body.name, strength: percentWeight(contact.orb) * ("weightMultiplier" in contact ? contact.weightMultiplier : 1) }))
-    );
-    const flow = contacts.filter(c => aspectFlow[c.aspect] === 1).reduce((sum,c) => sum+c.strength,0);
-    const friction = contacts.filter(c => aspectFlow[c.aspect] === -1).reduce((sum,c) => sum+c.strength,0);
-    const neutral = contacts.filter(c => aspectFlow[c.aspect] === 0);
-    const conjunctionCount = contacts.filter(c => c.aspect === "conjunction").length;
-    const signal = !contacts.length ? "No close contacts" : flow > friction * 1.2 ? "Easy Flow" : friction > flow * 1.2 ? "Friction" : "Mixed";
-    return { contacts, flow, friction, neutral, conjunctionCount, signal,
-      strongest: [...contacts].sort((a,b)=>a.orb-b.orb),
-      moment: chart.transitDate };
+    const score = calculateEnergyRead(chart);
+    if (!score || !chart) return null;
+    return { contacts: score.contacts, flow: score.flowWeight, friction: score.frictionWeight,
+      neutral: score.dynamic, conjunctionCount: score.contacts.filter(c => c.aspect === "conjunction").length,
+      signal: score.signal === "Harmonious Flow" ? "Easy Flow" : score.signal === "Dynamic Friction" ? "Friction" : score.signal === "No active contacts" ? "No close contacts" : "Mixed",
+      strongest: [...score.contacts].sort((a,b) => a.orb-b.orb), moment: chart.transitDate };
   }, [chart]);
 
   const hours = useMemo(() => {
@@ -82,7 +73,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
     </div> : <>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <span className={`rounded-full border px-4 py-2 text-base font-semibold shadow-[0_0_20px_rgba(83,244,255,.14)] ${data.signal === "Easy Flow" ? "border-emerald-300/70 text-emerald-200" : data.signal === "Friction" ? "border-rose-300/70 text-rose-200" : "border-cyan-300/70 text-cyan-100"}`}><Zap size={16} className="mr-2 inline"/>{data.signal}</span>
-        <span className="text-xs text-slate-400">{data.contacts.length} calculated contacts · 5° orb · 100/80/60/40 weighting</span>
+        <span className="text-xs text-slate-400">{data.contacts.length} calculated contacts · 5° orb · 1–5 intensity · planet weights</span>
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-200">{data.signal === "Easy Flow"
         ? "Supportive angular relationships carry more weight in this snapshot. Explore the contacts to see which parts of life are involved."
@@ -122,19 +113,13 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
           const mode = aspectFlow[contact.aspect];
           return <div key={`${contact.transit}-${contact.natalName}-${index}`}>
             <div className="mb-2 flex items-center justify-between gap-2 text-xs"><span className="text-slate-100">{contact.transit} {contact.aspect} {contact.natalName}</span><span className={mode>0?"text-emerald-200":mode<0?"text-rose-200":"text-violet-200"}>{contact.strength}% · {mode>0?"Flow":mode<0?"Friction":"Conjunction"}</span></div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/10"><div className={`h-full rounded-full shadow-[0_0_12px_rgba(255,255,255,.13)] ${mode>0?"bg-gradient-to-r from-cyan-400 to-emerald-300":mode<0?"bg-gradient-to-r from-amber-400 to-rose-400":"bg-gradient-to-r from-violet-400 to-fuchsia-300"}`} style={{width:`${contact.strength}%`}}/></div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/10"><div className={`h-full rounded-full shadow-[0_0_12px_rgba(255,255,255,.13)] ${mode>0?"bg-gradient-to-r from-cyan-400 to-emerald-300":mode<0?"bg-gradient-to-r from-amber-400 to-rose-400":"bg-gradient-to-r from-violet-400 to-fuchsia-300"}`} style={{width:`${contact.intensity * 20}%`}}/></div>
             <p className="mt-1 text-[10px] text-slate-400">{contact.orb.toFixed(2)}° exact orb · within 5°</p>
           </div>;
         })}</div>
         {!data.strongest.length && <p className="mt-3 text-xs text-slate-400">No natal–transit contacts within the 5° orb, including supported minor aspects.</p>}
       </div>
-      <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-[#0b1730] p-4">
-        <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-cyan-200">Harmonic Energy Wave</p><h3 className="mt-1 font-serif text-lg text-white">Next 24 hours</h3></div><Clock3 size={18} className="text-cyan-200"/></div>
-        <div className="mt-4 flex min-h-28 items-center justify-center rounded-xl border border-dashed border-cyan-200/20 bg-[repeating-linear-gradient(90deg,transparent,transparent_24%,rgba(148,163,184,.08)_25%)] px-5 text-center">
-          <p className="max-w-xs text-xs leading-5 text-slate-300">Awaiting calculated 30-minute transit snapshots. Energy peaks and shifts will appear here once the time-series engine is connected.</p>
-        </div>
-        <div className="mt-2 flex justify-between text-[10px] text-slate-400"><span>Now</span><span>+6h</span><span>+12h</span><span>+18h</span><span>+24h</span></div>
-      </div>
+      {chart && <HarmonicFlowTimeline chart={chart} />}
       <div className="mt-4 rounded-2xl border border-amber-300/30 bg-[radial-gradient(ellipse_at_top_right,rgba(245,158,11,.14),transparent_65%),linear-gradient(145deg,#111c37,#0a1225)] p-4 shadow-[0_12px_32px_rgba(0,0,0,.24)] sm:p-5">
         <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber-200">Traditional Time Lord</p><h3 className="mt-1 font-serif text-xl text-white">Planetary Hour Clock</h3></div><Clock3 size={23} className="text-amber-200"/></div>
         {hours ? <>
@@ -159,7 +144,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
           return <div key={id} className="rounded-lg border border-white/10 bg-white/[.035] p-3 text-sm text-slate-200">
             <button type="button" className="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200" aria-expanded={selectedContact === id} onClick={() => setSelectedContact(current => current === id ? null : id)}>
               <span className="font-medium text-white">Transit {c.transit} {c.aspect} natal {c.natalName}</span>
-              <span className="mt-1 block text-xs text-amber-100">{c.orb.toFixed(2)}° orb · {c.strength}% weight · {aspectFlow[c.aspect] === 1 ? "Flow" : aspectFlow[c.aspect] === -1 ? "Friction" : "Conjunction / context dependent"}</span>
+              <span className="mt-1 block text-xs text-amber-100">{c.orb.toFixed(2)}° orb · {c.intensity}/5 intensity · {c.strength} weight · {aspectFlow[c.aspect] === 1 ? "Flow" : aspectFlow[c.aspect] === -1 ? "Friction" : "Conjunction / context dependent"}</span>
             </button>
             {selectedContact === id && <div className="mt-3 border-t border-white/10 pt-3 text-xs leading-5 text-slate-300">
               <p>Exact chart testimony: transiting {c.transit} forms a {c.aspect} with natal {c.natalName}, separated by {c.orb.toFixed(2)}°. This contact contributes {c.strength} weighted points under the configured 5° orb.</p>
@@ -171,7 +156,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
         })}
         {data.strongest.length > 4 && <button type="button" className="w-full rounded-lg border border-amber-300/40 px-3 py-3 text-sm font-semibold text-amber-100" onClick={() => setShowAllContacts(current => !current)}>{showAllContacts ? "Show leading four contacts" : `Show all ${data.strongest.length} calculated contacts`}</button>}
       </div>}
-      <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-400"><Clock3 size={14} className="mt-0.5 shrink-0"/>Snapshot: {new Date(data.moment).toLocaleString()} · This displays the calculated chart moment, not an automatically updating live clock. Exact future shift times need additional time-series calculations.</p>
+      <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-400"><Clock3 size={14} className="mt-0.5 shrink-0"/>Snapshot: {new Date(data.moment).toLocaleString()} · Current energy refreshes every five minutes while open. Use the 30-minute timeline above for calculated future scores.</p>
       <Link href="/guide?tab=weather#main-cosmos-tabs" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-cyan-300/45 bg-cyan-300/10 px-4 text-sm font-semibold text-cyan-100 hover:bg-cyan-300/20">Explore your energy in depth <ArrowRight size={16}/></Link>
     </>}
   </section>;

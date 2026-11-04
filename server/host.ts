@@ -89,7 +89,8 @@ ${formattedPacket}
     ...withCurrentQuestion(history, question, 6),
   ];
 
-  // Provider routing is resolved centrally by invokeLLM.\n  const model = "claude-sonnet-4-6";
+  // Provider routing is resolved centrally by invokeLLM.
+  const model = "claude-sonnet-4-6";
   const response = await invokeLLM({ model, messages, maxTokens: 1800 });
   const content = response.choices[0]?.message?.content;
   const reading = typeof content === "string" ? content.trim() : "";

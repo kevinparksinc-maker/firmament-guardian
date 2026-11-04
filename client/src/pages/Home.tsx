@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Diamond, House, RotateCcw, Sparkles, UserRound } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
@@ -12,6 +12,7 @@ import { NatalProfileBuilder, type UserProfileData, SAMPLE_PROFILE } from "@/com
 import { SavedProfilePicker } from "@/components/SavedProfilePicker";
 import type { Worldview } from "../../../server/astrologyCore";
 import { Link, useLocation } from "wouter";
+import { localDateTime } from "@/lib/transitTime";
 import { startLogin } from "@/const";
 
 const ProfileChartScreen = lazy(() => import("@/components/ProfileChartScreen").then(module => ({ default: module.ProfileChartScreen })));
@@ -48,16 +49,31 @@ const emptyForm = {
   transitDate: "",
   transitTime: "",
 };
+
+function profileForm(profile: UserProfileData) {
+  const hasTransit = Boolean(profile.transitLocation && profile.transitTimezone &&
+    Number.isFinite(profile.transitLatitude) && Number.isFinite(profile.transitLongitude));
+  return {
+    location: profile.location, latitude: profile.latitude, longitude: profile.longitude,
+    timezone: profile.timezone, date: profile.date, time: profile.time,
+    transitLocation: hasTransit ? profile.transitLocation! : profile.location,
+    transitLatitude: hasTransit ? profile.transitLatitude! : profile.latitude,
+    transitLongitude: hasTransit ? profile.transitLongitude! : profile.longitude,
+    transitTimezone: hasTransit ? profile.transitTimezone! : profile.timezone,
+    transitDate: "", transitTime: "",
+  };
+}
+
 type ReadingMode = "natal" | "transit" | "combined";
 export default function Home({ section = "home" }: { section?: ProfileSection }) {
-  const { profile: activeProfile, setProfile: setActiveProfile, saveEditedProfile, chart: result, setChart: setResult } = useProfileSession();
+  const { profile: activeProfile, setProfile: setActiveProfile, saveEditedProfile, chart: result, setChart: setResult, energyChart, setEnergyChart } = useProfileSession();
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
-  const [worldview, setWorldview] = useState<Worldview>("agent");
+  const [worldview, setWorldview] = useState<Worldview>(result?.worldview ?? "agent");
   const [locationQuery, setLocationQuery] = useState("");
   const [transitLocationQuery, setTransitLocationQuery] = useState("");
   const [readingQuestion, setReadingQuestion] = useState("");
-  const [readingMode, setReadingMode] = useState<ReadingMode>("combined");
+  const [readingMode, setReadingMode] = useState<ReadingMode>(result?.readingScope ?? "natal");
   const [showShareModal, setShowShareModal] = useState(false);
   const [, navigate] = useLocation();
   const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(() => {
@@ -103,13 +119,25 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     { query: transitLocationQuery },
     { enabled: false, retry: false }
   );
+  const currentProfile = useRef(activeProfile);
+  currentProfile.current = activeProfile;
   const calculate = trpc.hybrid.calculate.useMutation({
-    onSuccess: setResult,
+    onSuccess: data => {
+      const profile = currentProfile.current;
+      if (profile && data.input.date === profile.date && data.input.time === profile.time &&
+          data.input.latitude === profile.latitude && data.input.longitude === profile.longitude) setResult(data);
+    },
     onError: (error) => {
       setResult(null);
       setFormError(`Chart calculation failed: ${error.message}`);
     },
   });
+  const liveRequest = useRef(0);
+  const liveCalculate = trpc.hybrid.calculate.useMutation();
+  useEffect(() => {
+    liveRequest.current += 1;
+    return () => { liveRequest.current += 1; };
+  }, [activeProfile]);
   const me = trpc.auth.me.useQuery();
   const saveChart = trpc.history.saveChart.useMutation();
   const calculateChart = async (
@@ -224,46 +252,35 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     });
   };
   const refreshLiveTransit = () => {
-    if (!result || readingMode === "natal") return;
-    const now = new Date();
-    const transitTimezone = form.transitTimezone || form.timezone || "UTC";
-    const localParts = new Intl.DateTimeFormat("en-US", {
-      timeZone: transitTimezone, year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-    }).formatToParts(now);
-    const part = (type: string) => localParts.find(item => item.type === type)?.value || "";
-    calculate.mutate({
-      ...form,
-      transitDate: `${part("year")}-${part("month")}-${part("day")}`,
-      transitTime: `${part("hour")}:${part("minute")}`,
-      transitLocation: form.transitLocation || form.location,
-      transitLatitude: form.transitLatitude ?? form.latitude,
-      transitLongitude: form.transitLongitude ?? form.longitude,
-      transitTimezone: form.transitTimezone || form.timezone,
+    if (!activeProfile) return;
+    const nextForm = profileForm(activeProfile);
+    const transitTimezone = nextForm.transitTimezone || nextForm.timezone;
+    let local;
+    try { local = localDateTime(new Date(), transitTimezone); }
+    catch { setFormError("The transit timezone is invalid. Resolve your current city again."); return; }
+    const version = ++liveRequest.current;
+    setFormError("");
+    liveCalculate.mutate({
+      ...nextForm,
+      transitDate: local.date,
+      transitTime: local.time,
       worldview,
-      readingScope: readingMode,
-      birthTimeKnown: Boolean(form.time),
+      readingScope: "combined",
+      birthTimeKnown: Boolean(nextForm.time),
+    }, {
+      onSuccess: data => { if (version === liveRequest.current) setEnergyChart(data); },
+      onError: error => { if (version === liveRequest.current) setFormError(`Transit refresh failed: ${error.message}`); },
     });
   };
+  const needsLiveEnergy = section === "home" || section === "energy" || (section === "guide" && mainTab === "weather");
   useEffect(() => {
-    if (
-      !result ||
-      readingMode === "natal" ||
-      (form.transitDate && form.transitTime)
-    )
-      return;
+    if (!activeProfile || !needsLiveEnergy) return;
+    if (!energyChart || energyChart.worldview !== worldview || Date.now() - Date.parse(energyChart.transitDate) >= 5 * 60 * 1000) refreshLiveTransit();
     const id = window.setInterval(refreshLiveTransit, 5 * 60 * 1000);
-    return () => window.clearInterval(id);
-  }, [result, readingMode, worldview, form]);
-  // Energy requires natal-to-current-transit contacts, not a natal-only snapshot.
-  // Keep the initial natal chart intact until the user opens the Energy section.
-  useEffect(() => {
-    if (section !== "energy" || !activeProfile || !result || calculate.isPending) return;
-    if (result.readingScope === "natal") {
-      setReadingMode("combined");
-      void calculateChart(worldview, "combined");
-    }
-  }, [section, activeProfile, result, calculate.isPending]);
+    const onVisible = () => { if (document.visibilityState === "visible") refreshLiveTransit(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { window.clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
+  }, [activeProfile, needsLiveEnergy, worldview]);
 
   const handleSaveProfile = async (newProfile: UserProfileData, previousProfile?: UserProfileData) => {
     if (previousProfile) saveEditedProfile(previousProfile, newProfile);
@@ -289,7 +306,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     setWorldview("agent-vs-god");
     setReadingMode("natal");
     navigate("/chart");
-    await calculateChart("agent-vs-god", "natal", nextForm);
+    // The profile effect calculates the saved natal chart from the new profile.
     setIsProfileModalOpen(false);
   };
 
@@ -316,53 +333,13 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
   };
 
   useEffect(() => {
-    if (activeProfile) {
-      const nextForm = {
-        location: activeProfile.location,
-        latitude: activeProfile.latitude,
-        longitude: activeProfile.longitude,
-        timezone: activeProfile.timezone,
-        date: activeProfile.date,
-        time: activeProfile.time,
-        transitLocation: activeProfile.transitLocation || activeProfile.location,
-        transitLatitude: activeProfile.transitLatitude ?? activeProfile.latitude,
-        transitLongitude: activeProfile.transitLongitude ?? activeProfile.longitude,
-        transitTimezone: activeProfile.transitTimezone || activeProfile.timezone,
-        transitDate: "",
-        transitTime: "",
-      };
-      setForm(nextForm);
-      setLocationQuery(activeProfile.location);
-      setTransitLocationQuery(nextForm.transitLocation);
-      if (!result && !calculate.isPending) void calculateChart(worldview, readingMode, nextForm);
-    }
-  }, []);
-
-  useEffect(() => {
-    const onTransitUpdate = (event: Event) => {
-      const detail = (event as CustomEvent<{
-        transitLocation: string;
-        transitLatitude: number;
-        transitLongitude: number;
-        transitTimezone: string;
-      }>).detail;
-      if (!detail) return;
-      setForm(prev => {
-        const next = {
-          ...prev,
-          transitLocation: detail.transitLocation,
-          transitLatitude: detail.transitLatitude,
-          transitLongitude: detail.transitLongitude,
-          transitTimezone: detail.transitTimezone,
-        };
-        void calculateChart(worldview, readingMode, next);
-        return next;
-      });
-      setTransitLocationQuery(detail.transitLocation);
-    };
-    window.addEventListener("fg:transit-location-updated", onTransitUpdate);
-    return () => window.removeEventListener("fg:transit-location-updated", onTransitUpdate);
-  }, [worldview, readingMode]);
+    if (!activeProfile) return;
+    const next = profileForm(activeProfile);
+    setForm(next);
+    setLocationQuery(next.location);
+    setTransitLocationQuery(next.transitLocation);
+    if (!result) void calculateChart(worldview, "natal", next);
+  }, [activeProfile]);
   return (
     <div className="relative min-h-screen isolate bg-transparent text-slate-100 selection:bg-violet-400/30">
       <div
@@ -471,8 +448,8 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         {activeProfile && section === "home" && (
           <ProfileHomeScreen
             profile={activeProfile}
-            chart={result}
-            calculating={calculate.isPending}
+            chart={energyChart ?? result}
+            calculating={calculate.isPending || liveCalculate.isPending}
             onEditProfile={() => setIsProfileModalOpen(true)}
             onSwitchProfile={handleClearProfile}
             onRefreshTransits={refreshLiveTransit}
@@ -503,7 +480,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             )}
             {section === "guide" && (
               <ProfileGuideScreen
-                result={result}
+                result={mainTab === "weather" ? energyChart ?? result : result}
                 mainTab={mainTab}
                 setMainTab={setMainTab}
                 worldview={worldview}
@@ -523,7 +500,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             )}
           </>
         )}
-        {activeProfile && section === "energy" && <EnergyPage onRefresh={refreshLiveTransit} calculating={calculate.isPending} />}
+        {activeProfile && section === "energy" && <EnergyPage onRefresh={refreshLiveTransit} calculating={liveCalculate.isPending} error={formError} />}
         {activeProfile && section === "explore" && <ExplorePage />}
         </Suspense>
       </main>

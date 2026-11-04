@@ -1,3 +1,4 @@
+import { calculateHarmonicForecast } from "./harmonicForecast";
 import { buildVimshottariTimeline, getAshtakavargaVisual } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
 import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
@@ -154,6 +155,9 @@ export const appRouter = router({
     calculate: publicProcedure
       .input(chartInput)
       .mutation(({ input }) => calculateChart(input)),
+    harmonicForecast: publicProcedure
+      .input(z.object({ chart: chartInput, start: z.string().datetime(), steps: z.number().int().min(1).max(48).default(48) }))
+      .mutation(({ input }) => calculateHarmonicForecast(input.chart, input.start, input.steps)),
     masterChart: publicProcedure
       .input(
         chartInput.extend({

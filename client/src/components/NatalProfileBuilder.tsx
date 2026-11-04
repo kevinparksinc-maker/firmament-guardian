@@ -50,6 +50,7 @@ export interface UserProfileData {
 }
 
 export const CITY_PRESETS = [
+  { label: "Las Vegas, NV", full: "Las Vegas, Nevada, USA", lat: 36.1699, lng: -115.1398, tz: "America/Los_Angeles" },
   { label: "Dallas, TX", full: "Dallas, Texas, USA", lat: 32.7767, lng: -96.797, tz: "America/Chicago" },
   { label: "Los Angeles, CA", full: "Los Angeles, California, USA", lat: 34.0522, lng: -118.2437, tz: "America/Los_Angeles" },
   { label: "New York, NY", full: "New York, New York, USA", lat: 40.7128, lng: -74.006, tz: "America/New_York" },
@@ -566,7 +567,7 @@ export function NatalProfileBuilder({
                 />
                 <Button type="button" variant="outline" disabled={resolvingTransitCity} onClick={() => void handleResolveTransitCity()}>{resolvingTransitCity ? "Resolving…" : "Verify current city coordinates"}</Button>
                 {verifiedTransitCity === formData.transitLocation && <p className="text-xs text-emerald-300">Verified: {formData.transitLatitude?.toFixed(4)}, {formData.transitLongitude?.toFixed(4)} · {formData.transitTimezone}</p>}
-                {transitCityError && <p className="text-xs text-rose-300">{transitCityError}</p>
+                {transitCityError && <p className="text-xs text-rose-300">{transitCityError}</p>}
               </div>
             )}
           </div>
