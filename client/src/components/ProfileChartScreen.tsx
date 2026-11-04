@@ -26,12 +26,11 @@ import {
 } from "lucide-react";
 import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
 import { ChartWheel } from "@/components/ChartWheel";
-import { InterpretationPanel } from "@/components/InterpretationPanel";
+import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
 import { FixedStarIntensityVisualizer } from "@/components/FixedStarIntensityVisualizer";
 import { SystematicDeconstruction } from "@/components/SystematicDeconstruction";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
-import { FIXED_STARS } from "../../../shared/hybrid";
 
 export type ProfileChartScreenProps = {
   chart: ChartResult | null;
@@ -118,14 +117,6 @@ export function ProfileChartScreen({
   const [chartViewMode, setChartViewMode] = useState<"diamond" | "wheel">("diamond");
   const [interpretBody, setInterpretBody] = useState<string | null>(null);
 
-  const allBodies = useMemo(() => {
-    if (!chart) return [];
-    return [...chart.movingBodies, chart.ascendant, chart.descendant, chart.northNode, chart.southNode].filter(
-      (b): b is ChartRow => Boolean(b && Number.isFinite(b.longitude))
-    );
-
-  }, [chart]);
-
   const sun = chart?.movingBodies.find(b => b.name === "Sun");
   const moon = chart?.movingBodies.find(b => b.name === "Moon");
   const asc = chart?.ascendant;
@@ -145,28 +136,6 @@ export function ProfileChartScreen({
     });
     return { elements, modalities };
   }, [chart]);
-
-  // Fixed Star contacts within 2.0 degrees
-  const starContacts = useMemo(() => {
-    if (!chart) return [];
-    const contacts: Array<{ star: string; planet: string; orb: number; meaning: string }> = [];
-    allBodies.forEach(b => {
-      FIXED_STARS.forEach(([starName, starLon]) => {
-        const diff = Math.abs(b.longitude - starLon);
-        const dist = Math.min(diff, 360 - diff);
-        if (dist <= 2.0) {
-          contacts.push({
-            star: starName,
-            planet: b.name,
-            orb: dist,
-            meaning: `Galactic fixed star beacon providing high spiritual or leadership charge.`,
-          });
-        }
-      });
-    });
-    return contacts.sort((a, b) => a.orb - b.orb);
-  }, [chart, allBodies]);
-
 
   if (!chart) {
     return (
@@ -302,11 +271,7 @@ export function ProfileChartScreen({
               Close
             </button>
           </div>
-          <InterpretationPanel
-            chart={chart}
-            initialMode={readingMode}
-            initialQuestion={`Provide a comprehensive esoteric interpretation of ${interpretBody} in my chart: exact degrees, dispositors, sacred geometry, Nakshatra, decan, and real-life manifestations.`}
-          />
+          <FocusedPlacementReading chart={chart} name={interpretBody} />
         </section>
       )}
 

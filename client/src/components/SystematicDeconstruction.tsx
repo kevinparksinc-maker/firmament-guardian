@@ -1,3 +1,4 @@
+import { FIXED_STAR_CANON_RECORDS } from "../../../server/astrologyKnowledge/canon/fixedStarsAndLots";
 import { describeAspectPair } from "@shared/energyInterpretation";
 import { ENERGY_MAX_ORB } from "@/lib/energyScoring";
 import { useState, useMemo } from "react";
@@ -560,12 +561,15 @@ export function SystematicDeconstruction({
         const diff = Math.abs(b.longitude - starLon);
         const dist = Math.min(diff, 360 - diff);
         if (dist <= 2.0) {
+          const doctrine = FIXED_STAR_CANON_RECORDS.find(record => record.name === starName);
           contacts.push({
             star: starName,
             starLon,
             planet: b.name,
             orb: dist,
-            meaning: `Galactic fixed star beacon providing high spiritual or leadership charge.`,
+            meaning: doctrine && doctrine.ptolemaicPlanetaryNature !== "Not yet source-verified"
+              ? `${b.name} activates ${starName} at ${dist.toFixed(2)}° orb. ${doctrine.traditionalMeaning} Constructive expression: ${doctrine.giftWhenIntegrated} Pressure to recognize: ${doctrine.nemesisOrTest}`
+              : `The ${starName}–${b.name} contact is calculated at ${dist.toFixed(2)}° orb. No sourced star-specific interpretation is available in the current Canon.`,
           });
         }
       });

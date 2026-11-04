@@ -41,7 +41,7 @@ export function HarmonicFlowTimeline({ chart }: { chart: ChartResult }) {
         <p className="font-semibold text-cyan-200">{format(point.moment)} · {result.timezone}</p>
         {point.score ? <>
           <p>{point.score.signal} · Harmony {point.score.flowPct}% ({point.score.flowWeight} points) · Friction {point.score.frictionPct}% ({point.score.frictionWeight} points)</p>
-          <p>{point.score.flowWeight > point.score.frictionWeight ? "Do: coordinate, communicate and advance a prepared plan. Avoid: assuming an easy contact removes practical limits." : "Do: slow down, check details and direct effort into one task. Avoid: rushed commitments and unnecessary confrontation."}</p>
+          {point.score.tightest && <p>Closest contact: {point.score.tightest.transit} {point.score.tightest.aspect} natal {point.score.tightest.natal} · {point.score.tightest.orb.toFixed(2)}° orb · {point.score.tightest.strength} weighted points. Open the evidence below to compare the other contacts at this moment.</p>}
           <details><summary className="cursor-pointer text-cyan-200">Contact evidence ({point.score.contactsCount})</summary>
             <ul className="mt-2 space-y-1 text-xs">{[...point.score.contacts].sort((a,b) => a.orb - b.orb).map(c => <li key={c.id}>{c.transit} {c.aspect} natal {c.natal} · {c.orb.toFixed(2)}° · {c.intensity}/5 · {c.stars} × {c.natalStars} × {c.majorFactor} · {c.strength} points</li>)}</ul>
           </details>

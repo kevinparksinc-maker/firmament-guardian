@@ -10,7 +10,7 @@ export async function synthesizeChartForReading(
   chart: ChartResult,
   mode: "natal" | "transit" | "combined",
   question: string
-): Promise<{ synthesis: SynthesisResult; context: string }> {
+): Promise<{ synthesis: SynthesisResult; context: string; canonicalChart: ChartResult }> {
   const snapshot = mode === "natal" && chart.worldview === "agent-vs-god"
     ? await getMasterNatalChart({ ...chart.input, mode })
     : await buildUnifiedMasterChart({ ...chart.input, mode });
@@ -107,5 +107,5 @@ export async function synthesizeChartForReading(
       ...(method.notes ? [`NOTES: ${method.notes}`] : []),
     ].join("\\n")),
   ].join("\n");
-  return { synthesis, context };
+  return { synthesis, context, canonicalChart };
 }

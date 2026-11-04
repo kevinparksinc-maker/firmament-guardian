@@ -1,3 +1,4 @@
+import { readingCacheIdentity } from "@shared/readingIdentity";
 import { useEffect, useRef, useState } from "react";
 import {
   BookOpen,
@@ -48,21 +49,15 @@ const READING_MEMORY_CACHE = new Map<
   { interpretation: Interpretation; messages: Message[] }
 >();
 
-function getReadingCacheKey(chart: ChartResult, mode: ReadingMode): string {
-  const loc = chart.input.location || "god-view";
-  const date = chart.input.date || "live";
-  const time = chart.input.time || "none";
-  const natalSignature = chart.movingBodies.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
-  const transitSignature = chart.transits.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
-  const inputSignature = JSON.stringify(chart.input);
-  return `absolute-reading-v6-synthesis-primary:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${inputSignature}:${natalSignature}:${transitSignature}`;
-}
+const getReadingCacheKey = readingCacheIdentity;
 
 function loadCachedReading(
   chart: ChartResult,
-  mode: ReadingMode
+  mode: ReadingMode,
+  question = "",
+  accountId = "guest"
 ): { interpretation: Interpretation; messages: Message[] } | null {
-  const key = getReadingCacheKey(chart, mode);
+  const key = getReadingCacheKey(chart, mode, question, accountId);
   const inMem = READING_MEMORY_CACHE.get(key);
   if (inMem) return inMem;
   try {
@@ -101,10 +96,12 @@ function saveCachedReading(
   chart: ChartResult,
   mode: ReadingMode,
   interpretation: Interpretation | null,
-  messages: Message[]
+  messages: Message[],
+  question = "",
+  accountId = "guest"
 ) {
   if (!interpretation) return;
-  const key = getReadingCacheKey(chart, mode);
+  const key = getReadingCacheKey(chart, mode, question, accountId);
   const payload = { interpretation, messages };
   READING_MEMORY_CACHE.set(key, payload);
   try {
@@ -235,20 +232,23 @@ function InterpretationPanelInner({
   initialMode = "combined",
   initialQuestion = "",
   onModeChange,
+  cacheScope = "guest",
 }: {
   chart: ChartResult;
   initialMode?: ReadingMode;
   initialQuestion?: string;
   onModeChange?: (mode: ReadingMode) => void;
+  cacheScope?: string;
 }) {
   const [mode, setMode] = useState<ReadingMode>(initialMode);
   const prevInitialModeRef = useRef<ReadingMode>(initialMode);
   const [activeQuestion, setActiveQuestion] = useState<string>(initialQuestion);
+  const [readingQuestion, setReadingQuestion] = useState(initialQuestion);
   const [interpretation, setInterpretation] = useState<Interpretation | null>(
-    () => loadCachedReading(chart, initialMode)?.interpretation ?? null
+    () => loadCachedReading(chart, initialMode, initialQuestion, cacheScope)?.interpretation ?? null
   );
   const [messages, setMessages] = useState<Message[]>(
-    () => loadCachedReading(chart, initialMode)?.messages ?? []
+    () => loadCachedReading(chart, initialMode, initialQuestion, cacheScope)?.messages ?? []
   );
   const [isGeneratingReading, setIsGeneratingReading] = useState(false);
   const [collapsedChapters, setCollapsedChapters] = useState<
@@ -264,7 +264,7 @@ function InterpretationPanelInner({
       prevInitialModeRef.current = initialMode;
       if (!isGeneratingReading && initialMode !== mode) {
         setMode(initialMode);
-        const cached = loadCachedReading(chart, initialMode);
+        const cached = loadCachedReading(chart, initialMode, initialQuestion, cacheScope);
         setInterpretation(cached?.interpretation ?? null);
         setMessages(cached?.messages ?? []);
       }
@@ -273,9 +273,9 @@ function InterpretationPanelInner({
 
   useEffect(() => {
     if (interpretation) {
-      saveCachedReading(chart, mode, interpretation, messages);
+      saveCachedReading(chart, mode, interpretation, messages, readingQuestion, cacheScope);
     }
-  }, [chart, mode, interpretation, messages]);
+  }, [chart, mode, interpretation, messages, readingQuestion, cacheScope]);
 
   const [oralQuestion, setOralQuestion] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -300,7 +300,8 @@ function InterpretationPanelInner({
         if (request === masterSynthesisRequest.current) setVisibleMasterSynthesis(data);
       },
     });
-  }, [chart, mode]);
+    return () => { masterSynthesisRequest.current++; };
+  }, [chart, mode, activeQuestion]);
   const chapterMutation = trpc.interpretation.chapter.useMutation();
   const chat = trpc.interpretation.followUp.useMutation({
     onSuccess: answer => {
@@ -329,7 +330,7 @@ function InterpretationPanelInner({
   const generateChapterAt = async (
     base: Interpretation,
     index: number,
-    questionOverride = activeQuestion
+    questionOverride = readingQuestion
   ) => {
     const chapter = base.chapters[index];
     if (!chapter) return;
@@ -357,7 +358,7 @@ function InterpretationPanelInner({
         ),
       };
       setInterpretation(updatedBase);
-      saveCachedReading(chart, mode, updatedBase, messages);
+      saveCachedReading(chart, mode, updatedBase, messages, questionOverride, cacheScope);
       setCollapsedChapters(prev => ({ ...prev, [chapter.id]: false }));
       const nextIndex = index + 1;
       if (nextIndex < base.chapters.length)
@@ -374,6 +375,7 @@ function InterpretationPanelInner({
   };
   const run = async (questionOverride?: string) => {
     const q = (questionOverride ?? activeQuestion).trim();
+    setReadingQuestion(q);
     if (questionOverride !== undefined) setActiveQuestion(questionOverride);
     setInterpretation(null);
     setMessages([]);
@@ -388,7 +390,7 @@ function InterpretationPanelInner({
       });
       const initial = { ...base, chapters: base.chapters as Chapter[] };
       setInterpretation(initial);
-      saveCachedReading(chart, mode, initial, []);
+      saveCachedReading(chart, mode, initial, [], q, cacheScope);
       await generateChapterAt(initial, 0, q);
     } finally {
       setIsGeneratingReading(false);
@@ -504,7 +506,8 @@ function InterpretationPanelInner({
     prevInitialModeRef.current = nextMode;
     setMode(nextMode);
     onModeChange?.(nextMode);
-    const cached = loadCachedReading(chart, nextMode);
+    const cached = loadCachedReading(chart, nextMode, activeQuestion, cacheScope);
+    setReadingQuestion(activeQuestion);
     setInterpretation(cached?.interpretation ?? null);
     setMessages(cached?.messages ?? []);
     setCollapsedChapters({});
@@ -1081,7 +1084,9 @@ function InterpretationPanelInner({
 }
 
 
-/** Remount reading state when the canonical chart identity changes. */
+/** Remount when the account, selected question or canonical chart changes. */
 export function InterpretationPanel(props: Parameters<typeof InterpretationPanelInner>[0]) {
-  return <InterpretationPanelInner key={getReadingCacheKey(props.chart, props.initialMode ?? "combined")} {...props} />;
+  const me = trpc.auth.me.useQuery(undefined, { retry: false });
+  const accountId = me.data?.openId || "guest";
+  return <InterpretationPanelInner key={getReadingCacheKey(props.chart, props.initialMode ?? "combined", props.initialQuestion || "", accountId)} {...props} cacheScope={accountId} />;
 }

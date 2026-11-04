@@ -1,3 +1,4 @@
+import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
 import React, { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import {
@@ -44,63 +45,6 @@ const PLANET_GLYPHS: Record<string, string> = {
   Jupiter: "♃", Saturn: "♄", Uranus: "♅", Neptune: "♆", Pluto: "♇",
   "North Node": "☊", "South Node": "☋", Ascendant: "AC",
 };
-
-// Contact interpretation must be derived from chart evidence, not canned planet advice.
-const SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"] as const;
-const ELEMENT_DECANS: Record<string, string[]> = {
-  Aries: ["Aries", "Leo", "Sagittarius"], Leo: ["Leo", "Sagittarius", "Aries"], Sagittarius: ["Sagittarius", "Aries", "Leo"],
-  Taurus: ["Taurus", "Virgo", "Capricorn"], Virgo: ["Virgo", "Capricorn", "Taurus"], Capricorn: ["Capricorn", "Taurus", "Virgo"],
-  Gemini: ["Gemini", "Libra", "Aquarius"], Libra: ["Libra", "Aquarius", "Gemini"], Aquarius: ["Aquarius", "Gemini", "Libra"],
-  Cancer: ["Cancer", "Scorpio", "Pisces"], Scorpio: ["Scorpio", "Pisces", "Cancer"], Pisces: ["Pisces", "Cancer", "Scorpio"],
-};
-
-type EvidenceRow = ChartResult["movingBodies"][number];
-function describePlacement(row: EvidenceRow | undefined, label: string): string {
-  if (!row || !Number.isFinite(row.longitude)) return `${label}: placement evidence unavailable`;
-  const longitude = ((row.longitude % 360) + 360) % 360;
-  const sign = SIGNS[Math.floor(longitude / 30)];
-  const degree = longitude % 30;
-  const decanIndex = Math.min(2, Math.floor(degree / 10));
-  const decan = ELEMENT_DECANS[sign][decanIndex];
-  const house = row.agentHouse ?? row.house;
-  const starEvidence = row.royalStarContacts?.length
-    ? `; ${row.royalStarContacts.length} recorded royal-star contact(s)` : "";
-  return `${label}: ${degree.toFixed(2)}° ${sign}, ${decan} elemental-family decan${Number.isFinite(house) && house > 0 ? `, house ${house}` : ", house unavailable"}${starEvidence}`;
-}
-
-const PLANET_THEMES: Record<string, string> = {
-  Sun: "identity, purpose and visibility", Moon: "emotional needs, habits and daily rhythm",
-  Mercury: "thinking, decisions and communication", Venus: "relationships, values and enjoyment",
-  Mars: "initiative, assertion and boundaries", Jupiter: "growth, opportunity and judgment",
-  Saturn: "responsibility, discipline and limits", Uranus: "change and independence",
-  Neptune: "imagination, ideals and uncertainty", Pluto: "power, control and transformation",
-  "North Node": "development and unfamiliar direction", "South Node": "familiar patterns and release",
-  Ascendant: "self-presentation and immediate responses", Descendant: "partnership and negotiation",
-};
-const ASPECT_ACTIONS: Record<string, string> = {
-  conjunction: "Bring the two themes into one deliberate action; their energies concentrate together.",
-  trine: "Use the available ease to make progress where these two life areas support each other.",
-  sextile: "Act on an opening that lets these two themes cooperate; participation develops the opportunity.",
-  square: "Identify the competing demands and choose a practical adjustment before pushing harder.",
-  opposition: "Address both sides of the tension through boundaries, negotiation and perspective.",
-  semisextile: "Make a small adjustment between adjacent concerns rather than forcing a major change.",
-  semisquare: "Resolve a recurring irritation with one concrete correction.",
-  quincunx: "Rework expectations where the two needs do not naturally fit together.",
-};
-
-function interpretContact(contact: { transit: string; natal: string; aspect: string; orb: number }, chart: ChartResult | null | undefined) {
-  const moving = chart?.transits?.find(row => row.name === contact.transit);
-  const rooted = chart?.movingBodies?.find(row => row.name === contact.natal);
-  const movingEvidence = describePlacement(moving, `Transit ${contact.transit}`);
-  const natalEvidence = describePlacement(rooted, `Natal ${contact.natal}`);
-  const frame = chart?.worldview === "god" ? "God View" : "Agent View";
-  const relation = contact.aspect === "trine" || contact.aspect === "conjunction" || contact.aspect === "sextile"
-    ? "harmonious" : "frictional";
-  return {
-    theme: `${contact.transit} ${contact.aspect} natal ${contact.natal} · ${contact.orb.toFixed(2)}° orb`,
-    advice: `WHAT — Transit ${contact.transit} activates ${PLANET_THEMES[contact.transit] || contact.transit}, meeting natal ${contact.natal} through ${PLANET_THEMES[contact.natal] || contact.natal} in a ${relation} ${contact.aspect}. WHY — ${movingEvidence}. ${natalEvidence}. HOW — ${ASPECT_ACTIONS[contact.aspect]} Use the recorded houses and decan families to locate that action in the ${frame}. CONSEQUENCE — The ${contact.orb.toFixed(2)}° orb measures geometric closeness, not a guaranteed outcome. MEANING — Read this contact through the recorded placements and its relative weight in the full chart.`,
-  };
-}
 
 export default function EnergyPage({ onRefresh, calculating = false, error = "" }: { onRefresh?: () => void; calculating?: boolean; error?: string }) {
   const [path, navigate] = useLocation();
@@ -376,7 +320,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
             const isFlow = ENERGY_ASPECT_FLOW[c.aspect] === 1;
             const isFriction = ENERGY_ASPECT_FLOW[c.aspect] === -1;
             const symbol = ASPECT_SYMBOLS[c.aspect] || c.aspect;
-            const interpretation = interpretContact(c, chart);
+
             const isExpanded = expandedContactId === c.id;
 
             return (
@@ -421,10 +365,10 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-3 border-t border-white/10 pt-3 space-y-2 animate-in fade-in duration-200">
-                    <p className="text-xs font-semibold text-[#D9B66F]">{interpretation.theme}</p>
+                  <div onClick={event => event.stopPropagation()} className="mt-3 border-t border-white/10 pt-3 space-y-2 animate-in fade-in duration-200">
+                    <p className="text-xs font-semibold text-[#D9B66F]">{`${c.transit} ${c.aspect} natal ${c.natal} · ${c.orb.toFixed(2)}° orb`}</p>
                     <p className="text-xs text-cyan-200">{c.intensity} intensity × {c.stars} transit stars × {c.natalStars} natal stars × {c.majorFactor} aspect weight = {c.strength} points</p>
-                    <p className="text-xs text-slate-300 leading-relaxed">{interpretation.advice}</p>
+                    {chart && <FocusedPlacementReading chart={chart} name={c.transit} otherName={c.natal} kind="contact" layer="transit"/>}
                     <div className="flex justify-end pt-1">
                       <button
                         type="button"

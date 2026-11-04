@@ -1,3 +1,5 @@
+import { buildChartBriefing } from "./chartBriefing";
+import { buildFocusedReading } from "./focusedReading";
 import { calculateHarmonicForecast } from "./harmonicForecast";
 import { buildVimshottariTimeline, getAshtakavargaVisual } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
 import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
@@ -320,6 +322,10 @@ export const appRouter = router({
       }),
   }),
   interpretation: router({
+    chartBriefing: publicProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
+    focusedPlacement: publicProcedure
+      .input(z.object({ chart: chartPayload, target: z.object({ kind: z.enum(["placement", "star", "contact"]), name: z.string().min(1).max(80), otherName: z.string().min(1).max(80).optional(), layer: z.enum(["natal", "transit"]) }) }))
+      .mutation(({ input }) => buildFocusedReading(input.chart, input.target)),
     host: publicProcedure
       .input(
         z.object({
