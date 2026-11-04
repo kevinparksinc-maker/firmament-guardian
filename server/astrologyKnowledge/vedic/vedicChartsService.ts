@@ -36,8 +36,8 @@ export function vedicChartsFromMasterNatal(snapshot: UnifiedMasterChartSnapshot)
     ascendantLongitude: state.ascendant.longitude,
     planets: [
       ...state.planets.map(p => ({ name: p.name, longitude: p.longitude })),
-      { name: snapshot.natal!.northNode.name, longitude: snapshot.natal!.northNode.longitude },
-      { name: snapshot.natal!.southNode.name, longitude: snapshot.natal!.southNode.longitude },
+      { name: state.northNode.name, longitude: state.northNode.longitude },
+      { name: state.southNode.name, longitude: state.southNode.longitude },
     ],
     d1HouseCusps: state.houses.map(h => h.cusp),
   });
