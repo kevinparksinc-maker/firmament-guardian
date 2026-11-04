@@ -26,13 +26,13 @@ export default function SynastryPage() {
             <span className="text-xs text-slate-400 uppercase tracking-wider">Relationship Astrology</span>
           </div>
           <h1 className="font-serif text-3xl font-semibold text-white sm:text-4xl flex items-center gap-3">
-            <span>Synastry Studio</span>
+            <span>Chemistry & Synastry Studio</span>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30">
               <Heart size={18} />
             </span>
           </h1>
           <p className="text-sm text-slate-300 max-w-2xl">
-            Compare two celestial blueprints for romantic, business, or friendship resonance. Analyze dual-wheel aspects, house overlays, and composite harmony.
+            Compare two celestial blueprints across romantic relationships, family bonds, friendships, mentorships and working relationships. Add a partner, parent, child, sibling or friend to examine dual-wheel aspects, house overlays, planetary chemistry and relationship patterns.
           </p>
         </div>
 
