@@ -832,7 +832,7 @@ function InterpretationPanelInner({
                         ? "Opening"
                         : "Queued"}
                   </span>
-                  <span className="mt-1 block truncate text-xs font-medium">
+                  <span className="mt-1 block whitespace-normal break-words text-xs font-medium">
                     {chapter.title}
                   </span>
                 </button>

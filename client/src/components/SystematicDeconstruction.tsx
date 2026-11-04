@@ -1,3 +1,5 @@
+import { describeAspectPair } from "@shared/energyInterpretation";
+import { ENERGY_MAX_ORB } from "@/lib/energyScoring";
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import {
@@ -502,34 +504,30 @@ export function SystematicDeconstruction({
           "Harmonious Flow";
         let interpretation = "";
 
-        if (Math.abs(ang - 0) <= 6.5) {
+        if (Math.abs(ang - 0) <= ENERGY_MAX_ORB) {
           aspectName = "Conjunction";
           target = 0;
-          quality = "Focal Conjunction";
-          interpretation = `Unified fusion where ${p1.name} and ${p2.name} operate as an indivisible psychic unit.`;
-        } else if (Math.abs(ang - 60) <= 5.0) {
+          quality = "Harmonious Flow";
+        } else if (Math.abs(ang - 60) <= ENERGY_MAX_ORB) {
           aspectName = "Sextile";
           target = 60;
           quality = "Harmonious Flow";
-          interpretation = `Cooperative resonance opening doors for active synthesis and mutual support.`;
-        } else if (Math.abs(ang - 90) <= 6.0) {
+        } else if (Math.abs(ang - 90) <= ENERGY_MAX_ORB) {
           aspectName = "Square";
           target = 90;
           quality = "Dynamic Tension";
-          interpretation = `Frictional catalytic demand forcing decisive inner growth and evolutionary maturity.`;
-        } else if (Math.abs(ang - 120) <= 6.0) {
+        } else if (Math.abs(ang - 120) <= ENERGY_MAX_ORB) {
           aspectName = "Trine";
           target = 120;
           quality = "Harmonious Flow";
-          interpretation = `Effortless talent and graceful elemental circulation between ${p1.name} and ${p2.name}.`;
-        } else if (Math.abs(ang - 180) <= 6.5) {
+        } else if (Math.abs(ang - 180) <= ENERGY_MAX_ORB) {
           aspectName = "Opposition";
           target = 180;
           quality = "Dynamic Tension";
-          interpretation = `Polarized confrontation across the axis requiring relational dialogue and conscious balance.`;
         }
 
         if (aspectName) {
+          interpretation = describeAspectPair(p1, p2, aspectName, Math.abs(ang - target));
           aspects.push({
             p1,
             p2,

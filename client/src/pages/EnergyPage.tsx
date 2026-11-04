@@ -20,6 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
+import { EnergyScoringKey } from "@/components/EnergyScoringKey";
 import { TransitLocationBar } from "@/components/TransitLocationBar";
 import { HarmonicFlowTimeline } from "@/components/HarmonicFlowTimeline";
 import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
@@ -188,7 +189,8 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
             <p className="mt-1 font-semibold text-white">
               {profile?.location || "Birth Location"} · {profile?.date} {profile?.time}
             </p>
-            <p className="text-[11px] text-slate-400">Zero axial tilt · Aldebaran Framework</p>
+            <p className="text-[11px] text-slate-400">{profile?.timezone}</p>
+            <Link href="/profile" className="mt-2 inline-block text-cyan-200 underline">Verify or edit birth date, time and place →</Link>
           </div>
 
           <div className="rounded-xl border border-cyan-400/30 bg-cyan-950/20 p-3 text-xs">
@@ -208,6 +210,8 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
       {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
       {!chart && <p role="status">{calculating ? "Calculating current transit contacts…" : "Refresh Sky to calculate your current energy."}</p>}
       <nav aria-label="Energy pages" className="flex flex-wrap gap-3 text-sm text-cyan-200">{[{href:"/energy",label:"Overview"},{href:"/energy/contacts",label:"Contact ledger"},{href:"/forecast",label:"30-minute forecast"},{href:"/energy/consultation",label:"Interpretation"}].map(item=><Link key={item.href} href={item.href} aria-current={path===item.href?"page":undefined} className={`rounded-xl border px-4 py-3 ${path===item.href?"border-amber-200/50 bg-amber-200/10 text-amber-100":"border-white/15"}`}>{item.label}</Link>)}</nav>
+      <p className="text-sm leading-6 text-slate-400">Personal contacts compare current transit bodies with your natal placements and angles. Independent Sky counts pairs within one event sky. The totals can differ even at the same place and time.</p>
+      <EnergyScoringKey />
       {/* SECTION 2: MAIN ENERGY GAUGE — RESPONSIVE SEMICIRCULAR GAUGE */}
       {energyData && page === "summary" && (
         <section
@@ -324,7 +328,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
                     ? "Cosmic weather is highly supportive. Favorable alignments invite confident outreach, relationship cultivation, and strategic launches."
                     : energyData.signal === "Dynamic Friction"
                     ? "Dynamic tension dominates the skies. Conserve your energy, resist hasty confrontation, and redirect internal pressure into meticulous craftsmanship."
-                    : "The heavens strike an exact equilibrium between creative flow and evolutionary tension. Balance bold initiative with calculated patience."}
+                    : energyData.contactsCount === 0 ? "No personal contacts fall within the 5° orb at this moment. Select another time or refresh the sky." : "Both harmony and friction are present. Compare their weighted totals and the individual contact evidence before choosing your focus."}
                 </p>
               </div>
             </div>
@@ -341,7 +345,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
               Precise Celestial Geometry
             </span>
             <h2 className="font-serif text-2xl font-bold text-white">
-              Planetary Contact Ledger ({filteredContacts.length})
+              Personal Transit-to-Natal Contacts {calculating ? "· Updating…" : energyData ? `(${filteredContacts.length} of ${energyData.contactsCount})` : "· Awaiting calculation"}
             </h2>
           </div>
 
@@ -364,6 +368,8 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
           </div>
         </div>
 
+        {calculating && <p role="status" className="text-sm text-cyan-200">Calculating contacts for the selected transit time and location…</p>}
+        {!calculating && energyData && filteredContacts.length === 0 && <p role="status" className="rounded-xl border border-white/10 p-4 text-sm text-slate-300">{energyData.contactsCount ? "No contacts match this filter. Select All to see the complete ledger." : "No personal transit-to-natal contacts fall within the 5° orb at this calculated moment."}</p>}
         {/* Aspects Grid */}
         <div className="grid gap-3 sm:grid-cols-2">
           {filteredContacts.map((c) => {

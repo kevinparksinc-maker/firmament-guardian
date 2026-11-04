@@ -1,4 +1,5 @@
 import sweph from "sweph";
+import { knownCity } from "../shared/profileLocations";
 import { localDateTime } from "../shared/transitTime";
 import { ascendantFromSunrise, type FixedVector } from "./sunriseAscendant";
 import tzLookup from "tz-lookup";
@@ -291,6 +292,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
 
 export async function geocodeLocation(query: string) {
   const normalizedQuery = query.trim();
+  const preset = knownCity(normalizedQuery);
+  if (preset) return { label: preset.label, latitude: preset.latitude, longitude: preset.longitude, timezone: preset.timezone };
   // Resolve explicit US state names within the United States rather than accepting an unrelated worldwide first match.
   const explicitlyUS = /\b(?:USA|United States|Texas|Nevada|California|Florida|New York|Illinois|Arizona|Colorado)\b/i.test(normalizedQuery);
   const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5${explicitlyUS ? "&countrycodes=us" : ""}&q=${encodeURIComponent(normalizedQuery)}`;

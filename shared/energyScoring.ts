@@ -6,7 +6,7 @@ export const ENERGY_ASPECT_FLOW: Record<TransitContact["aspect"] | MinorTransitC
   conjunction: 1, trine: 1, sextile: 1, square: -1, opposition: -1,
   semisextile: 1, semisquare: -1, quincunx: -1,
 };
-const PLANET_STARS: Record<string, number> = {
+export const ENERGY_PLANET_STARS: Record<string, number> = {
   Sun: 5, Moon: 5, Mars: 5, Jupiter: 5, Saturn: 5, Pluto: 5,
   Mercury: 4, Neptune: 4, Venus: 3, Uranus: 3,
   "North Node": 4, "South Node": 4, Ascendant: 4, Descendant: 4,
@@ -24,8 +24,8 @@ export function calculateEnergyRead(chart: ChartResult | null | undefined) {
       .map(contact => {
         const intensity = energyIntensity(contact.orb);
         const majorFactor = MAJOR.has(contact.aspect) ? 1 : 0.5;
-        const stars = PLANET_STARS[body.name] ?? 3;
-        const natalStars = PLANET_STARS[contact.natalName] ?? 3;
+        const stars = ENERGY_PLANET_STARS[body.name] ?? 3;
+        const natalStars = ENERGY_PLANET_STARS[contact.natalName] ?? 3;
         const strength = intensity * stars * natalStars * majorFactor;
         return {
           ...contact, transit: body.name, natal: contact.natalName,

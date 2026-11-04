@@ -1,3 +1,4 @@
+import { KNOWN_CITIES } from "@shared/profileLocations";
 import React, { useState, useEffect } from "react";
 import {
   Sparkles,
@@ -50,8 +51,7 @@ export interface UserProfileData {
 }
 
 export const CITY_PRESETS = [
-  { label: "Las Vegas, NV", full: "Las Vegas, Nevada, USA", lat: 36.1699, lng: -115.1398, tz: "America/Los_Angeles" },
-  { label: "Dallas, TX", full: "Dallas, Texas, USA", lat: 32.7767, lng: -96.797, tz: "America/Chicago" },
+  ...KNOWN_CITIES.map(city => ({ label: city.shortLabel, full: city.label, lat: city.latitude, lng: city.longitude, tz: city.timezone })),
   { label: "Los Angeles, CA", full: "Los Angeles, California, USA", lat: 34.0522, lng: -118.2437, tz: "America/Los_Angeles" },
   { label: "New York, NY", full: "New York, New York, USA", lat: 40.7128, lng: -74.006, tz: "America/New_York" },
   { label: "Atlanta, GA", full: "Atlanta, Georgia, USA", lat: 33.749, lng: -84.388, tz: "America/New_York" },
