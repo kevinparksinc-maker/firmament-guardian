@@ -199,12 +199,13 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview === "god" && readingScope !== "transit" && !input.date) throw new Error("God View Natal readings require a birth date; birth time and location are optional.");
   const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
-  const houseResult: any = hasAgentLocation ? (sweph as any).houses_ex(jd, 0, input.latitude, input.longitude, "E") : null;
-  const asc = hasAgentLocation ? (input.sunriseAnchor
-    ? ascendantFromSunrise({ ...input.sunriseAnchor, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
-    : Number(houseResult?.data?.points?.[0] ?? houseResult?.points?.[0])) : null;
-  const mc = hasAgentLocation ? Number(houseResult?.data?.points?.[1] ?? houseResult?.points?.[1]) : null;
-  if (hasAgentLocation && Number.isNaN(asc)) throw new Error("Swiss Ephemeris failed to calculate the Ascendant for Equal House.");
+  if (hasAgentLocation && !input.sunriseAnchor)
+    throw new Error("Master Celestial: verified natal sunrise UTC and equatorial Sun XYZ anchor required. No fallback Ascendant.");
+  const asc = hasAgentLocation
+    ? ascendantFromSunrise({ ...input.sunriseAnchor!, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
+    : null;
+  // MC requires a separately verified fixed-frame meridian solver. Never substitute Swiss houses_ex.
+  const mc: number | null = null;
   const houses = fixedHouseRows(worldview, asc);
   const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
   const planetNames = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
@@ -220,8 +221,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
     "Planetary positions are computed from geocentric equatorial Cartesian XYZ (Moshier, equatorial, XYZ, speed); the zero direction is the ephemeris equatorial X axis at the observation date. No sidereal flag or Aldebaran subtraction is applied.",
-    input.sunriseAnchor ? "Natal Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Natal Ascendant: conventional non-sidereal Swiss houses_ex fallback; sunrise anchor not supplied. This is not the sunrise XYZ model.",
-    input.transitSunriseAnchor ? "Transit Ascendant: sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded." : "Transit Ascendant: conventional non-sidereal Swiss houses_ex fallback when sunrise anchor is missing; not the sunrise XYZ model.",
+    "Natal Ascendant: sunrise XYZ required; no alternative solver is permitted.",
+    "Transit Ascendant: sunrise XYZ required when transit location is used; no alternative solver is permitted.",
     input.xyzPositions ? "Supplied XYZ vectors override matching natal planetary longitudes in the fixed 360° plane; missing bodies retain Swiss Ephemeris positions." : "Planetary angles are geocentric equatorial XY angles; Moon also has a separate topocentric equatorial correction.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value));
@@ -230,11 +231,11 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview !== "god" && transitInputsPresent && !transitLocationResolved) throw new Error("Transit location must be resolved before calculating transit houses.");
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
-  const transitHouseResult: any = transitHasLocation ? (sweph as any).houses_ex(transitJd, 0, input.transitLatitude, input.transitLongitude, "E") : null;
-  const transitAsc = transitHasLocation ? (input.transitSunriseAnchor
-    ? ascendantFromSunrise({ ...input.transitSunriseAnchor, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant
-    : Number(transitHouseResult?.data?.points?.[0] ?? transitHouseResult?.points?.[0])) : null;
-  if (transitHasLocation && Number.isNaN(transitAsc)) throw new Error("Swiss Ephemeris failed to calculate the transit Ascendant for Equal House.");
+  if (transitHasLocation && !input.transitSunriseAnchor)
+    throw new Error("Master Celestial: verified transit sunrise UTC and equatorial Sun XYZ anchor required. No fallback Ascendant.");
+  const transitAsc = transitHasLocation
+    ? ascendantFromSunrise({ ...input.transitSunriseAnchor!, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant
+    : null;
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
   const transits: TransitRow[] = planetNames.map((name, i) => { const xyz = input.transitXYZPositions?.[name]; const automatic = xyz ? undefined : calculatedXYZ(transitJd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: safeCalc(transitJd, i).speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
