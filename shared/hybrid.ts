@@ -7,6 +7,16 @@ export const ZODIAC_SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virg
 export const FIXED_STARS = [
   ["Hamal", 12.9333], ["Algol", 31.4333], ["Aldebaran", 45], ["Rigel", 52.1], ["Polaris", 63.8333],
   ["Sirius", 79.35], ["Regulus", 135], ["Spica", 179.1], ["Antares", 225.0167], ["Fomalhaut", 315],
+  // Additional permanent anchors: 2026 catalog ecliptic longitudes calibrated
+  // by subtracting 25°09' (Aldebaran 70°09' -> fixed 45°). No runtime drift.
+  // Pleiades is a stellar cluster represented by its Alcyone reference point.
+  ["Pleiades", 35.2], ["Betelgeuse", 63.9667], ["Bellatrix", 56.1667],
+  ["Alnitak", 59.9], ["Alnilam", 58.6833], ["Mintaka", 57.5833],
+  ["Castor", 85.45], ["Pollux", 88.4333], ["Procyon", 90.9833],
+  ["Capella", 57.0667], ["Arcturus", 179.45], ["Vega", 260.5333],
+  ["Deneb", 310.5333], ["Altair", 276.9999], ["Canopus", 80.1667],
+  ["Alhena", 74.3167], ["Denebola", 146.8333],
+  ["Zubenelgenubi", 200.3], ["Nunki", 287.6], ["Markab", 328.7],
 ] as const;
 
 export const NAKSHATRAS = ["Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"] as const;
