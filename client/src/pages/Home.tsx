@@ -523,7 +523,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
             )}
           </>
         )}
-        {activeProfile && section === "energy" && <EnergyPage />}
+        {activeProfile && section === "energy" && <EnergyPage onRefresh={refreshLiveTransit} calculating={calculate.isPending} />}
         {activeProfile && section === "explore" && <ExplorePage />}
         </Suspense>
       </main>
