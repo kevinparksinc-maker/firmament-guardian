@@ -99,3 +99,46 @@ export function resolveVedicTimingAndAshtakavarga(chart:ChartResult):EvidenceIte
   return [...dasha,{id:"vedic-ashtakavarga-calculation-error",tradition:"vedic",category:"uncertainty",technique:"ashtakavarga",subject:"Ashtakavarga",statement:"Ashtakavarga calculation failed safely: "+(error instanceof Error?error.message:String(error))+". No inferred score is supplied.",concepts:["ashtakavarga","calculation-error"],polarity:"neutral",strength:0,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:TRACE("ashtakavarga","vedic-ashtakavarga-classical")}];
  }
 }
+
+/** Structured, deterministic Vimshottari periods for the visual timeline.
+ * Uses the same Moon, nakshatra order, balance, and 365.25-day year
+ * as dashaEvidence; no additional ephemeris or Ascendant calculation.
+ */
+export function buildVimshottariTimeline(chart: ChartResult, asOf: Date = new Date()) {
+  if (chart.input.birthTimeKnown === false || !chart.input.time || !chart.input.timezone)
+    return { available: false as const, reason: "A verified birth time and timezone are required for an exact Dasha timeline." };
+  const moon = chart.movingBodies.find(row => row.name === "Moon");
+  const birth = Date.parse(chart.utc);
+  if (!moon || !Number.isFinite(moon.longitude) || !Number.isFinite(birth))
+    return { available: false as const, reason: "The natal Moon or birth epoch is missing." };
+  const longitude = normalizeLongitude(moon.longitude);
+  const span = 360 / 27;
+  const starIndex = Math.floor(longitude / span);
+  const firstLord = ORDER[starIndex % 9];
+  const balanceYears = (1 - (longitude - starIndex * span) / span) * YEARS[firstLord];
+  const birthDay = birth / 86400000;
+  let cursor = birthDay - (YEARS[firstLord] - balanceYears) * 365.25;
+  const now = asOf.getTime() / 86400000;
+  const periods = Array.from({ length: 18 }, (_, index) => {
+    const lord = ORDER[(ORDER.indexOf(firstLord) + index) % 9];
+    const start = cursor;
+    const end = start + YEARS[lord] * 365.25;
+    cursor = end;
+    const antardashas = subperiods(start, end, lord).map(ad => ({
+      lord: ad.lord, start: dateLabel(ad.start), end: dateLabel(ad.end),
+      active: now >= ad.start && now < ad.end,
+      pratyantardashas: subperiods(ad.start, ad.end, ad.lord).map(pd => ({
+        lord: pd.lord, start: dateLabel(pd.start), end: dateLabel(pd.end),
+        active: now >= pd.start && now < pd.end,
+      })),
+    }));
+    return { lord, start: dateLabel(start), end: dateLabel(end),
+      active: now >= start && now < end, antardashas };
+  });
+  return {
+    available: true as const, coordinateFrame: "guardian-fixed-zero-reference" as const,
+    moonLongitude: longitude, birthNakshatra: NAKSHATRAS[starIndex],
+    startingLord: firstLord, balanceYears, asOf: asOf.toISOString(),
+    periods, yearLengthDays: 365.25,
+  };
+}
