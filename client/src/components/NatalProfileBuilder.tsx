@@ -208,6 +208,10 @@ export function NatalProfileBuilder({
       setFormError("Please enter your birth date.");
       return;
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.date) || !Number.isFinite(Date.parse(`${formData.date}T00:00:00.000Z`))) {
+      setFormError("Please enter a valid birth date in YYYY-MM-DD format.");
+      return;
+    }
     if (!formData.birthTimeUnknown && !formData.time) {
       setFormError("Please provide your birth time or check 'Exact birth time unknown'.");
       return;
@@ -221,8 +225,8 @@ export function NatalProfileBuilder({
       ...formData,
       time: formData.birthTimeUnknown ? "12:00" : formData.time,
       transitLocation: formData.transitLocation || formData.location,
-      transitLatitude: formData.transitLatitude || formData.latitude,
-      transitLongitude: formData.transitLongitude || formData.longitude,
+      transitLatitude: formData.transitLatitude ?? formData.latitude,
+      transitLongitude: formData.transitLongitude ?? formData.longitude,
       transitTimezone: formData.transitTimezone || formData.timezone,
     };
 
