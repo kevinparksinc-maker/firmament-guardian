@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { BookOpen, Diamond, House, LayoutGrid, Zap } from "lucide-react";
+import { BookOpen, Diamond, House, LayoutGrid, MoonStar, Zap } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { trpc } from "@/lib/trpc";
 
@@ -13,6 +13,7 @@ export function PrimaryProfileNavigation() {
     { href: "/chart", label: "Chart", Icon: Diamond, active: path === "/chart" },
     { href: "/energy", label: "Energy", Icon: Zap, active: path.startsWith("/energy") || path === "/forecast" || path === "/transit-sky" },
     { href: "/reading", label: "Readings", Icon: BookOpen, active: path.startsWith("/reading") || path === "/life-story" || path === "/guide" },
+    { href: "/horary", label: "Horary", Icon: MoonStar, active: path === "/horary" },
     {
       href: "/explore",
       label: "Explore",
@@ -20,7 +21,6 @@ export function PrimaryProfileNavigation() {
       active:
         path === "/explore" ||
         path === "/synastry" ||
-        path === "/horary" ||
         path === "/sky" ||
         path === "/zodiac-readings" ||
         path === "/history" || path === "/profiles" || path === "/account",
@@ -30,7 +30,7 @@ export function PrimaryProfileNavigation() {
   return (
     <nav
       aria-label="Mobile bottom navigation dock"
-      className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-white/10 bg-[#080B14]/94 px-2 py-1.5 pb-[max(10px,env(safe-area-inset-bottom))] shadow-[0_-15px_40px_rgba(0,0,0,0.75)] backdrop-blur-2xl md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-6 border-t border-white/10 bg-[#080B14]/94 px-2 py-1.5 pb-[max(10px,env(safe-area-inset-bottom))] shadow-[0_-15px_40px_rgba(0,0,0,0.75)] backdrop-blur-2xl md:hidden"
     >
       {navItems.map((item) => {
         const Icon = item.Icon;
