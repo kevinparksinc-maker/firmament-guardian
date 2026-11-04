@@ -255,6 +255,16 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     const id = window.setInterval(refreshLiveTransit, 5 * 60 * 1000);
     return () => window.clearInterval(id);
   }, [result, readingMode, worldview, form]);
+  // Energy requires natal-to-current-transit contacts, not a natal-only snapshot.
+  // Keep the initial natal chart intact until the user opens the Energy section.
+  useEffect(() => {
+    if (section !== "energy" || !activeProfile || !result || calculate.isPending) return;
+    if (result.readingScope === "natal") {
+      setReadingMode("combined");
+      void calculateChart(worldview, "combined");
+    }
+  }, [section, activeProfile, result, calculate.isPending]);
+
   const handleSaveProfile = async (newProfile: UserProfileData, previousProfile?: UserProfileData) => {
     if (previousProfile) saveEditedProfile(previousProfile, newProfile);
     else setActiveProfile(newProfile);
