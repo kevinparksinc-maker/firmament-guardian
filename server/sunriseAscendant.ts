@@ -1,9 +1,9 @@
 /**
- * Sunrise-anchored rising point on the user's ZERO-TILT fixed wheel.
+ * The Absolute custom sunrise Sun-angle plus sidereal rotation Ascendant.
  *
  * Coordinates must be expressed in one fixed equatorial XYZ frame:
  * X=0 degrees of the wheel, Y=90 degrees, Z=north celestial pole.
- * The observer latitude and solar declination affect the sunrise hour angle.
+ * Observer latitude determines sunrise time upstream, not an additional horizon offset.
  * No tropical longitude, ayanamsha, obliquity or precession adjustment is applied here.
  *
  * Sunrise itself must be obtained independently for the historical date/location;
@@ -58,7 +58,9 @@ export function ascendantFromSunrise(input: {
   if (elapsedHours < 0 || elapsedHours > 24) {
     throw new Error("Sunrise anchor must precede the event by no more than 24 hours.");
   }
-  const sunriseHorizon = sunriseEasternHorizonLongitude(input.sunriseSunXYZ, input.latitude);
+  // The Absolute's sole custom ASC rule: Sun equatorial XY angle at sunrise
+  // plus elapsed sidereal rotation. Do NOT substitute the geometric horizon intersection.
+  const sunriseHorizon = solarAnglesFromFixedXYZ(input.sunriseSunXYZ).longitude;
   return {
     ascendant: normalizeDegrees(sunriseHorizon + elapsedHours * SIDEREAL_DEGREES_PER_UTC_HOUR),
     sunriseHorizon,
@@ -66,6 +68,6 @@ export function ascendantFromSunrise(input: {
     elapsedHours,
     sunriseUtc: new Date(sunriseMillis).toISOString(),
     eventUtc: new Date(eventMillis).toISOString(),
-    model: "fixed-equatorial-xyz-zero-tilt-sunrise-v1" as const,
+    model: "sun-equatorial-xyz-at-sunrise-plus-sidereal-rotation-v1" as const,
   };
 }
