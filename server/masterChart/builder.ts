@@ -531,6 +531,7 @@ export async function buildUnifiedMasterChart(
       elementalFamilyRuler: canon.triplicitySubRuler,
       traditionalTitle: canon.traditionalTitle,
       behavioralNuance: canon.behavioralNuance,
+      reading: `${p.name} in ${canon.sign}, decan ${canon.index}: ${canon.behavioralNuance}. Elemental-family ruler: ${canon.triplicitySubRuler}. This is the decan-layer interpretation to be reconciled with the planet\'s house, aspects, dignities, and other natal testimony.`,
     };
   });
 
