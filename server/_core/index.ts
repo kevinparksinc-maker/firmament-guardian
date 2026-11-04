@@ -38,6 +38,7 @@ async function startServer() {
     }
   }
   const app = express();
+  app.set("trust proxy", 1);
   const server = createServer(app);
   app.get(["/health", "/healthz"], (_req, res) => {
     res.status(200).json({ ok: true });

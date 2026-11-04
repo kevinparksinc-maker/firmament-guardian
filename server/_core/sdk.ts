@@ -303,6 +303,7 @@ class SDKServer {
     let user = await db.getUserByOpenId(sessionUserId);
 
     // If user not in DB, sync from OAuth server automatically
+    if (!user && sessionUserId.startsWith("account:")) throw ForbiddenError("Account no longer exists");
     if (!user) {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionToken ?? "");

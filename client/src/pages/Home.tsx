@@ -66,7 +66,7 @@ function profileForm(profile: UserProfileData) {
 
 type ReadingMode = "natal" | "transit" | "combined";
 export default function Home({ section = "home" }: { section?: ProfileSection }) {
-  const { profile: activeProfile, setProfile: setActiveProfile, saveEditedProfile, chart: result, setChart: setResult, energyChart, setEnergyChart } = useProfileSession();
+  const { profile: activeProfile, setProfile: setActiveProfile, saveEditedProfile, chart: result, setChart: setResult, energyChart, setEnergyChart, deviceProfilesCount, importDeviceProfiles } = useProfileSession();
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
   const [worldview, setWorldview] = useState<Worldview>(result?.worldview ?? "agent");
@@ -370,6 +370,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         {/* Core Natal Profile Building Gate - First Page Requirement */}
         {!activeProfile && (
           <>
+            {deviceProfilesCount > 0 && <section className="mx-auto mb-8 max-w-2xl space-y-3 rounded-2xl border border-cyan-300/25 p-5 text-slate-200"><h2 className="font-serif text-xl">Your existing device profiles are safe</h2><p className="text-sm">Bring the profiles previously saved on this device into this account.</p><button type="button" onClick={importDeviceProfiles} className="rounded-xl border border-cyan-300/40 px-4 py-3 text-cyan-100">Import existing device profiles</button></section>}
             <NatalProfileBuilder
               mode="inline-gate"
               currentProfile={activeProfile}
@@ -421,6 +422,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
 
             <SavedProfilePicker onLoad={handleSaveProfile} />
 
+            {deviceProfilesCount > 0 && <section className="mx-auto mb-8 max-w-2xl space-y-3 rounded-2xl border border-cyan-300/25 p-5 text-slate-200"><h2 className="font-serif text-xl">Your existing device profiles are safe</h2><p className="text-sm">Bring the profiles previously saved on this device into this account.</p><button type="button" onClick={importDeviceProfiles} className="rounded-xl border border-cyan-300/40 px-4 py-3 text-cyan-100">Import existing device profiles</button></section>}
             <NatalProfileBuilder
               mode="inline-gate"
               currentProfile={activeProfile}

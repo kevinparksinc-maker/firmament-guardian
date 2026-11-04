@@ -11,8 +11,8 @@ export function PrimaryProfileNavigation() {
   const navItems = [
     { href: "/", label: "Home", Icon: House, active: path === "/" },
     { href: "/chart", label: "Chart", Icon: Diamond, active: path === "/chart" },
-    { href: "/energy", label: "Energy", Icon: Zap, active: path === "/energy" },
-    { href: "/reading", label: "Readings", Icon: BookOpen, active: path === "/reading" },
+    { href: "/energy", label: "Energy", Icon: Zap, active: path.startsWith("/energy") || path === "/forecast" || path === "/transit-sky" },
+    { href: "/reading", label: "Readings", Icon: BookOpen, active: path.startsWith("/reading") || path === "/life-story" || path === "/guide" },
     {
       href: "/explore",
       label: "Explore",
@@ -23,7 +23,7 @@ export function PrimaryProfileNavigation() {
         path === "/horary" ||
         path === "/sky" ||
         path === "/zodiac-readings" ||
-        path === "/history",
+        path === "/history" || path === "/profiles" || path === "/account",
     },
   ];
 

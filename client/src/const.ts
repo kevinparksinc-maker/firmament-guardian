@@ -29,40 +29,25 @@ function loadRuntimeConfig() {
 // configuration keeps the public project ID and OAuth portal out of the static
 // build, so the same artifact works in Preview and production.
 export const startLogin = async (): Promise<void> => {
+  window.location.assign(`/account?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+};
+
+/** Optional migration sign-in for accounts created through the original provider. */
+export const startLegacyLogin = async (): Promise<void> => {
   try {
     const { appId, oauthPortalUrl } = await loadRuntimeConfig();
-    if (!appId || !oauthPortalUrl) {
-      if (typeof window !== "undefined" && sessionStorage.getItem("manus-cookie")) {
-        return;
-      }
-      const resp = await fetch("/api/oauth/demo-login", {
-        method: "POST",
-        credentials: "include",
-      });
-      if (resp.ok) {
-        const data = (await resp.json()) as { token?: string };
-        if (data.token) {
-          try {
-            sessionStorage.setItem("manus-cookie", `${COOKIE_NAME}=${data.token}`);
-          } catch {}
-        }
-      }
-      return;
-    }
-
+    if (!appId || !oauthPortalUrl) throw new Error("The original sign-in provider is not configured on this server. Use your independent account, or contact the app owner to restore original-account access.");
     const redirectUri = `${window.location.origin}/api/oauth/callback`;
     const nonce = crypto.randomUUID();
     document.cookie = `${OAUTH_STATE_COOKIE}=${nonce}; Path=/; Max-Age=600; SameSite=None; Secure`;
-    const state = encodeOAuthState({ redirectUri, nonce });
-
     const url = new URL(`${oauthPortalUrl.replace(/\/$/, "")}/app-auth`);
     url.searchParams.set("appId", appId);
     url.searchParams.set("redirectUri", redirectUri);
-    url.searchParams.set("state", state);
+    url.searchParams.set("state", encodeOAuthState({ redirectUri, nonce }));
     url.searchParams.set("responseType", "code");
-
     window.location.assign(url.toString());
   } catch (error) {
-    console.error("[OAuth] Unable to begin sign-in", error);
+    window.dispatchEvent(new CustomEvent("fg:auth-error", { detail: { message: error instanceof Error ? error.message : "Unable to start sign-in." } }));
+    throw error;
   }
 };

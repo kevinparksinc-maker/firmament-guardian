@@ -1,3 +1,4 @@
+import { useLocation } from "wouter";
 import React, { useState } from "react";
 import {
   Sparkles,
@@ -21,18 +22,21 @@ import type { SynthesisResult } from "../../../server/astrologyKnowledge/synthes
 
 export interface MasterSynthesizerPanelProps {
   chart: ChartResult;
+  presentation?: "summary" | "full" | "evidence";
   initialQuestion?: string;
 }
 
 export function MasterSynthesizerPanel({
   chart,
   initialQuestion,
+  presentation = "full",
 }: MasterSynthesizerPanelProps) {
+  const [, navigate] = useLocation();
   const [question, setQuestion] = useState(
     initialQuestion || "What is my core life trajectory, purpose, and highest calling?"
   );
   const [expandedThemeId, setExpandedThemeId] = useState<string | null>(null);
-  const [showEvidenceDrawer, setShowEvidenceDrawer] = useState(false);
+  const [showEvidenceDrawer, setShowEvidenceDrawer] = useState(presentation === "evidence");
   const [activeEvidenceFilter, setActiveEvidenceFilter] = useState<string | null>(null);
 
   const synthesizeMutation = trpc.interpretation.masterSynthesize.useMutation();
@@ -101,6 +105,8 @@ export function MasterSynthesizerPanel({
         </form>
       </div>
 
+      {synthesizeMutation.error && <p role="alert" className="rounded-xl border border-rose-300/30 bg-rose-950/30 p-4 text-sm text-rose-200">{synthesizeMutation.error.message} Your chart is preserved; use Synthesize to try again.</p>}
+
       {synthesizeMutation.isPending && !result && (
         <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-cyan-500/20 bg-slate-950/80 backdrop-blur-md">
           <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin mb-4" />
@@ -113,6 +119,7 @@ export function MasterSynthesizerPanel({
 
       {result && (
         <div className="space-y-6">
+          {presentation !== "evidence" && <>
           {/* Executive Dominant Conclusion */}
           <div className="rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/70 p-6 shadow-2xl backdrop-blur-md relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
@@ -139,7 +146,7 @@ export function MasterSynthesizerPanel({
                 Snapshot: {result.snapshotId} • Mode: {result.mode.toUpperCase()}
               </span>
               <button
-                onClick={() => setShowEvidenceDrawer(!showEvidenceDrawer)}
+                onClick={() => { if (presentation === "summary") navigate("/reading/evidence"); else setShowEvidenceDrawer(!showEvidenceDrawer); }}
                 className="text-cyan-400 hover:text-cyan-300 font-mono text-xs underline flex items-center gap-1"
               >
                 {showEvidenceDrawer ? "Hide Calculation Evidence" : "How was this calculated? (View Evidence Drawer)"}
@@ -147,8 +154,10 @@ export function MasterSynthesizerPanel({
             </div>
           </div>
 
+          </>}
+          {presentation === "full" && <>
           {/* Integrated Flow Narrative */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6 shadow-xl backdrop-blur-md space-y-4">
+          <details className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6 space-y-4"><summary className="cursor-pointer text-sm text-cyan-200">Read the integrated narrative</summary>
             <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               Integrated Narrative
@@ -160,7 +169,7 @@ export function MasterSynthesizerPanel({
                 </p>
               ))}
             </div>
-          </div>
+          </details>
 
           {/* Human Domain Themes Grid */}
           <div className="space-y-4">
@@ -290,8 +299,9 @@ export function MasterSynthesizerPanel({
             </div>
           )}
 
+          </>}
           {/* Expandable "How was this calculated?" Evidence Drawer */}
-          {showEvidenceDrawer && (
+          {(presentation === "evidence" || presentation === "full" && showEvidenceDrawer) && (
             <div className="rounded-2xl border border-cyan-500/30 bg-slate-950 p-6 shadow-2xl space-y-5">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">

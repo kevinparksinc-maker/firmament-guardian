@@ -14,6 +14,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SovereignTierProvider } from "./components/SovereignTierModal";
 // Route-level splitting: the large sky map and horary engine UI do not block the home screen.
+const SavedProfilesPage = lazy(() => import("./pages/SavedProfilesPage"));
+const AccountPage = lazy(() => import("./pages/AccountPage"));
 const Home = lazy(() => import("./pages/Home"));
 const LegacyHome = lazy(() => import("./pages/LegacyHome"));
 const HoraryPage = lazy(() => import("./pages/HoraryPage"));
@@ -26,18 +28,29 @@ const StandaloneTransitPage = lazy(() => import("./pages/StandaloneTransitPage")
 const ExplorePage = lazy(() => import("./pages/ExplorePage"));
 
 function AccountEntryGate({ children }: { children: React.ReactNode }) {
-  // Gracefully load account info in the background without blocking the observatory preview
-  trpc.auth.me.useQuery(undefined, { retry: false });
-  return <>{children}</>;
+  const me = trpc.auth.me.useQuery(undefined, { retry: false });
+  const [path] = useLocation();
+  const publicPage = ["/account", "/horary", "/sky", "/zodiac-readings"].includes(path);
+  const accountId = me.data?.openId || "guest";
+  return <ProfileSessionProvider key={accountId} accountId={accountId}><CelestialCommandShell>
+    {me.isLoading ? <p role="status" className="p-8 text-center text-slate-300">Checking your session…</p> : me.error ? <div role="alert" className="p-8 text-slate-200">Unable to check your account. Your device profiles are preserved.<button type="button" onClick={() => void me.refetch()} className="ml-3 text-cyan-200 underline">Try again</button></div> : me.data || publicPage ? children : <AccountPage />}
+  </CelestialCommandShell></ProfileSessionProvider>;
 }
 
 function Router() {
   const [path] = useLocation();
   const { profile } = useProfileSession();
   // A signed-in visitor must finish the birth profile before opening other observatory modules.
-  if (!profile && path !== "/" && path !== "/legacy" && path !== "/horary" && path !== "/zodiac-readings" && path !== "/sky" && path !== "/history") return <Redirect to="/" />;
+  if (!profile && path !== "/account" && path !== "/profiles" && path !== "/" && path !== "/legacy" && path !== "/horary" && path !== "/zodiac-readings" && path !== "/sky" && path !== "/history") return <Redirect to="/" />;
   return (
     <Switch>
+      <Route path="/account" component={AccountPage} />
+      <Route path="/profiles" component={SavedProfilesPage} />
+      <Route path="/reading/depth"><Home section="reading" /></Route>
+      <Route path="/reading/evidence"><Home section="reading" /></Route>
+      <Route path="/energy/contacts"><Home section="energy" /></Route>
+      <Route path="/energy/consultation"><Home section="energy" /></Route>
+      <Route path="/forecast"><Home section="energy" /></Route>
       {PROFILE_TABS.map(tab => (
         <Route key={tab.href} path={tab.href}><Home section={tab.section} /></Route>
       ))}
@@ -83,13 +96,11 @@ function App() {
         <TooltipProvider>
           <SovereignTierProvider>
             <Toaster />
-            <ProfileSessionProvider>
-            <CelestialCommandShell>
+
             <Suspense fallback={<main role="status" className="flex min-h-[55vh] items-center justify-center px-6 text-center text-sm text-cyan-100"><div className="rounded-2xl border border-cyan-200/20 bg-slate-950/70 px-6 py-5" aria-live="polite">Opening your celestial observatory…</div></main>}>
               <AccountEntryGate><Router /></AccountEntryGate>
             </Suspense>
-            </CelestialCommandShell>
-            </ProfileSessionProvider>
+
           </SovereignTierProvider>
         </TooltipProvider>
       </ThemeProvider>

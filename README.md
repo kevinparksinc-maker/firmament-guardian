@@ -50,3 +50,12 @@ unauthenticated readiness endpoint. The published frontend is built into
 ## Configuration
 
 This app needs environment variables (database, auth, LLM). Create a local `.env` file; it is git-ignored and should never be committed.
+
+
+### Independent account sign-in
+
+`/account` provides email/password registration and sign-in without the original OAuth provider. Configure a persistent MySQL `DATABASE_URL` and a unique production `JWT_SECRET` (at least 32 characters). Apply the existing Drizzle schema to a new database before launch. The credentials table is created idempotently on the first account request; users and saved-record tables use the existing schema. Passwords are salted with scrypt, sessions use HttpOnly cookies, and registration never attaches a password to an existing OAuth identity by matching its email.
+
+Production does not create temporary account/chart records when database configuration is absent. Original OAuth sign-in remains available for existing accounts when its provider is configured. Old device profiles are preserved and can be explicitly imported after signing in. Device profile storage is scoped by account; signing out clears cached private API results.
+
+The primary index is `/explore`. Readings use `/reading`, `/reading/depth`, and `/reading/evidence`. Energy uses `/energy`, `/energy/contacts`, `/forecast`, and `/energy/consultation`. The floating AI guide is mounted once in the shared shell and keeps its conversation across client-side navigation, resetting when the active birth profile changes.

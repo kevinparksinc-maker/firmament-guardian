@@ -102,6 +102,8 @@ function interpretContact(contact: { transit: string; natal: string; aspect: str
 }
 
 export default function EnergyPage({ onRefresh, calculating = false, error = "" }: { onRefresh?: () => void; calculating?: boolean; error?: string }) {
+  const [path, navigate] = useLocation();
+  const page = path === "/forecast" ? "forecast" : path.endsWith("/contacts") ? "contacts" : path.endsWith("/consultation") ? "consultation" : "summary";
   const { energyChart: chart, profile } = useProfileSession();
   const [selectedPlanetFilter, setSelectedPlanetFilter] = useState<string | null>(null);
   const [aspectCategory, setAspectCategory] = useState<"all" | "harmonious" | "challenging" | "dynamic">("all");
@@ -135,6 +137,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
     const questionToAsk = q || customQuestion;
     if (!questionToAsk.trim()) return;
     setActiveInterpreterQuestion(questionToAsk);
+    if (page !== "consultation") { navigate(`/energy/consultation?question=${encodeURIComponent(questionToAsk)}`); return; }
     document.getElementById("energy-master-interpreter")?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -156,10 +159,10 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
               </span>
             </div>
             <h1 className="mt-1 font-serif text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Signature Cosmic Energy Read
+              {page === "summary" ? "Your Current Energy" : page === "contacts" ? "Energy Contact Ledger" : page === "forecast" ? "Personal Harmonic Flow Clock" : "Transit Interpretation"}
             </h1>
             <p className="mt-1 text-xs text-slate-300">
-              Separating natal birth coordinates from real-time GPS transit horizons.
+              Read the current sky in relation to your birth chart.
             </p>
           </div>
 
@@ -204,8 +207,9 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
 
       {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
       {!chart && <p role="status">{calculating ? "Calculating current transit contacts…" : "Refresh Sky to calculate your current energy."}</p>}
+      <nav aria-label="Energy pages" className="flex flex-wrap gap-3 text-sm text-cyan-200">{[{href:"/energy",label:"Overview"},{href:"/energy/contacts",label:"Contact ledger"},{href:"/forecast",label:"30-minute forecast"},{href:"/energy/consultation",label:"Interpretation"}].map(item=><Link key={item.href} href={item.href} aria-current={path===item.href?"page":undefined} className={`rounded-xl border px-4 py-3 ${path===item.href?"border-amber-200/50 bg-amber-200/10 text-amber-100":"border-white/15"}`}>{item.label}</Link>)}</nav>
       {/* SECTION 2: MAIN ENERGY GAUGE — RESPONSIVE SEMICIRCULAR GAUGE */}
-      {energyData && (
+      {energyData && page === "summary" && (
         <section
           aria-label="Main Cosmic Energy Gauge"
           className="relative overflow-hidden rounded-3xl border border-cyan-400/30 bg-[linear-gradient(135deg,#080B14_0%,#101628_60%,#092138_100%)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.6)] sm:p-8"
@@ -328,6 +332,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
         </section>
       )}
 
+      {page === "contacts" && <>
       {/* SECTION 3: PLANETARY ASPECT LEDGER */}
       <section aria-label="Active Planetary Aspects Ledger" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -434,11 +439,12 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
         </div>
       </section>
 
-      {chart && <HarmonicFlowTimeline chart={chart} />}
+      </>}
+      {page === "forecast" && chart && <HarmonicFlowTimeline chart={chart} />}
 
       {/* SECTION 4: FORECAST TIMELINE */}
       <div className="flex justify-end"><Link href="/transit-sky" className="rounded-xl border border-cyan-300/40 bg-cyan-950/30 px-4 py-2 text-sm font-semibold text-cyan-200">Open Independent Transit Chart →</Link></div>
-      <section aria-label="Transit Weather Timeline" className="space-y-4">
+      {page === "forecast" && <section aria-label="Transit Weather Timeline" className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">
@@ -453,6 +459,8 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
         {chart && <TransitWeatherTimeline chart={chart} />}
       </section>
 
+      }
+      {page === "consultation" && <>
       {/* SECTION 5: MASTER INTERPRETER DEEP QUERY */}
       <section
         id="energy-master-interpreter"
@@ -477,12 +485,13 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
             chart={chart}
             initialMode="transit"
             initialQuestion={
-              activeInterpreterQuestion ||
+              new URLSearchParams(window.location.search).get("question") || activeInterpreterQuestion ||
               "What is the single most important planetary transit active for me right now, and how should I align my actions today?"
             }
           />
         )}
       </section>
+      </>}
     </div>
   );
 }

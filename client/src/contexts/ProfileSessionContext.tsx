@@ -18,28 +18,28 @@ function ensureId(p: UserProfileData): UserProfileData {
   return p.id ? p : { ...p, id: crypto.randomUUID() };
 }
 
-function readSavedProfiles(): UserProfileData[] {
+function readSavedProfiles(key = SAVED_PROFILES_KEY): UserProfileData[] {
   if (typeof window === "undefined") return [];
   try {
-    const value = JSON.parse(window.localStorage.getItem(SAVED_PROFILES_KEY) || "[]");
+    const value = JSON.parse(window.localStorage.getItem(key) || "[]");
     const valid = Array.isArray(value) ? value.filter((p): p is UserProfileData => Boolean(p && typeof p.name === "string" && typeof p.date === "string" && typeof p.location === "string")) : [];
     const migrated = valid.map(p => ensureId(repairProfileLocations(p)));
-    if (JSON.stringify(valid) !== JSON.stringify(migrated)) window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(migrated));
+    if (JSON.stringify(valid) !== JSON.stringify(migrated)) window.localStorage.setItem(key, JSON.stringify(migrated));
     return migrated;
   } catch { return []; }
 }
 
 
-function readProfile(): UserProfileData | null {
+function readProfile(profileKey = PROFILE_KEY, savedKey = SAVED_PROFILES_KEY): UserProfileData | null {
   if (typeof window === "undefined") return null;
   try {
-    const stored = window.localStorage.getItem(PROFILE_KEY);
+    const stored = window.localStorage.getItem(profileKey);
     if (stored) {
       const parsed = JSON.parse(stored) as UserProfileData;
       if (parsed && typeof parsed.name === "string" && parsed.location) {
-        const saved = readSavedProfiles().find(p => p.id === parsed.id || legacyKey(p) === legacyKey(parsed));
+        const saved = readSavedProfiles(savedKey).find(p => p.id === parsed.id || legacyKey(p) === legacyKey(parsed));
         const migrated = saved || ensureId(repairProfileLocations(parsed));
-        if (JSON.stringify(parsed) !== JSON.stringify(migrated)) window.localStorage.setItem(PROFILE_KEY, JSON.stringify(migrated));
+        if (JSON.stringify(parsed) !== JSON.stringify(migrated)) window.localStorage.setItem(profileKey, JSON.stringify(migrated));
         return migrated;
       }
     }
@@ -51,6 +51,8 @@ function readProfile(): UserProfileData | null {
 
 type ProfileSession = {
   profile: UserProfileData | null;
+  deviceProfilesCount: number;
+  importDeviceProfiles: () => void;
   chart: ChartResult | null;
   energyChart: ChartResult | null;
   setEnergyChart: Dispatch<SetStateAction<ChartResult | null>>;
@@ -70,11 +72,14 @@ type ProfileSession = {
 
 const ProfileSessionContext = createContext<ProfileSession | null>(null);
 
-export function ProfileSessionProvider({ children }: { children: ReactNode }) {
-  const [profile, updateProfile] = useState<UserProfileData | null>(readProfile);
+export function ProfileSessionProvider({ children, accountId = "guest" }: { children: ReactNode; accountId?: string }) {
+  const PROFILE_KEY = `fg:account:${accountId}:active-profile`;
+  const SAVED_PROFILES_KEY = `fg:account:${accountId}:saved-profiles`;
+  const [deviceProfilesCount, setDeviceProfilesCount] = useState(() => { try { return window.localStorage.getItem(`fg:account:${accountId}:device-imported`) ? 0 : Math.max(readSavedProfiles().length, readProfile() ? 1 : 0); } catch { return 0; } });
+  const [profile, updateProfile] = useState<UserProfileData | null>(() => readProfile(PROFILE_KEY, SAVED_PROFILES_KEY));
   const [chart, setChart] = useState<ChartResult | null>(null);
   const [energyChart, setEnergyChart] = useState<ChartResult | null>(null);
-  const [savedProfiles, setSavedProfiles] = useState<UserProfileData[]>(readSavedProfiles);
+  const [savedProfiles, setSavedProfiles] = useState<UserProfileData[]>(() => readSavedProfiles(SAVED_PROFILES_KEY));
 
   const setProfile = useCallback((next: UserProfileData | null) => {
     const saved = next ? ensureId(repairProfileLocations(next)) : null;
@@ -85,7 +90,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
     try {
       if (saved) {
         window.localStorage.setItem(PROFILE_KEY, JSON.stringify(saved));
-        const existing = readSavedProfiles();
+        const existing = readSavedProfiles(SAVED_PROFILES_KEY);
         const withoutMatch = existing.filter(p => profileId(p) !== profileId(saved));
         const updated = [saved, ...withoutMatch].slice(0, 100);
         window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
@@ -104,7 +109,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
     setEnergyChart(null);
     if (typeof window === "undefined") return;
     try {
-      const updated = [saved, ...readSavedProfiles().filter(p =>
+      const updated = [saved, ...readSavedProfiles(SAVED_PROFILES_KEY).filter(p =>
         profileId(p) !== profileId(previous) && profileId(p) !== profileId(saved) && legacyKey(p) !== legacyKey(previous)
       )].slice(0, 100);
       window.localStorage.setItem(PROFILE_KEY, JSON.stringify(saved));
@@ -117,7 +122,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteSavedProfile = useCallback((target: UserProfileData) => {
-    const updated = readSavedProfiles().filter(p => profileId(p) !== profileId(target));
+    const updated = readSavedProfiles(SAVED_PROFILES_KEY).filter(p => profileId(p) !== profileId(target));
     const isActive = profile && (profileId(profile) === profileId(target) || legacyKey(profile) === legacyKey(target));
     try {
       window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
@@ -133,7 +138,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
   }, [profile]);
 
   const importProfiles = useCallback((incoming: UserProfileData[]): number => {
-    const existing = readSavedProfiles();
+    const existing = readSavedProfiles(SAVED_PROFILES_KEY);
     const known = new Set(existing.map(profileId));
     const added: UserProfileData[] = [];
     for (const candidate of incoming) {
@@ -160,8 +165,8 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const sync = () => {
-      setSavedProfiles(readSavedProfiles());
-      const updated = readProfile();
+      setSavedProfiles(readSavedProfiles(SAVED_PROFILES_KEY));
+      const updated = readProfile(PROFILE_KEY, SAVED_PROFILES_KEY);
       updateProfile(current => {
         if (JSON.stringify(current) === JSON.stringify(updated)) return current;
         setChart(null);
@@ -196,7 +201,7 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
       if (typeof window !== "undefined") {
         try {
           window.localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
-          const existing = readSavedProfiles();
+          const existing = readSavedProfiles(SAVED_PROFILES_KEY);
           const withoutMatch = existing.filter(p => profileId(p) !== profileId(next));
           const updated = [next, ...withoutMatch].slice(0, 100);
           window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
@@ -208,8 +213,18 @@ export function ProfileSessionProvider({ children }: { children: ReactNode }) {
     window.dispatchEvent(new CustomEvent("fg:transit-location-updated", { detail: transit }));
   }, []);
 
+  const importDeviceProfiles = useCallback(() => {
+    if (accountId === "guest") return;
+    const legacy = readSavedProfiles();
+    const active = readProfile();
+    importProfiles(legacy.length ? legacy : active ? [active] : []);
+    if (active || legacy[0]) setProfile(active || legacy[0]);
+    try { window.localStorage.setItem(`fg:account:${accountId}:device-imported`, "true"); } catch {}
+    setDeviceProfilesCount(0);
+  }, [accountId, importProfiles, setProfile]);
+
   const value = useMemo(
-    () => ({ profile, chart, energyChart, setEnergyChart, savedProfiles, setProfile, saveEditedProfile, importProfiles, updateTransitLocation, setChart, deleteSavedProfile }),
+    () => ({ deviceProfilesCount, importDeviceProfiles, profile, chart, energyChart, setEnergyChart, savedProfiles, setProfile, saveEditedProfile, importProfiles, updateTransitLocation, setChart, deleteSavedProfile }),
     [profile, chart, energyChart, setEnergyChart, savedProfiles, setProfile, saveEditedProfile, importProfiles, updateTransitLocation, deleteSavedProfile]
   );
   return <ProfileSessionContext.Provider value={value}>{children}</ProfileSessionContext.Provider>;

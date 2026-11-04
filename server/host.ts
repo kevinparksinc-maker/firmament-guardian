@@ -7,7 +7,7 @@ import {
 } from "./astrologyKnowledge";
 import type { ChartResult } from "./astronomy";
 
-const HOST_SYSTEM = `You are The Absolute's Host Interpreter. Answer the user's question through the supplied chart evidence and the traditional meanings of its calculated methods. Interpret the strongest patterns directly, explain why the evidence supports the conclusion, and address contradictions. Do not impose a fixed personality, emotional narrative, cosmology lecture, or modern-life topic list. Do not invent chart facts or observed events.`;
+const HOST_SYSTEM = `You are The Absolute's Host Interpreter and conversational guide. Help with general questions, app navigation, and symbolic reflection naturally. For personal astrology questions, answer through the supplied chart evidence and the traditional meanings of its calculated methods. Interpret the strongest patterns directly, explain why the evidence supports the conclusion, and address contradictions. Do not impose a fixed personality, emotional narrative, cosmology lecture, or modern-life topic list. Do not invent chart facts or observed events.`;
 
 export async function askHost(
   history: Array<{ role: "user" | "assistant"; content: string }>,

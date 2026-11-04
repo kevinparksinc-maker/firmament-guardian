@@ -3,6 +3,8 @@ import { buildVimshottariTimeline, getAshtakavargaVisual } from "./astrologyKnow
 import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { z } from "zod";
+import { checkAccountRateLimit, loginAccount, registerAccount } from "./accountAuth";
+import { sdk } from "./_core/sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -107,6 +109,24 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    register: publicProcedure.input(z.object({ name: z.string().trim().min(1).max(100), email: z.string().trim().email().max(320), password: z.string().min(12).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        checkAccountRateLimit(`register:${ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown"}`);
+        const user = await registerAccount(input);
+        const duration = 30 * 24 * 60 * 60 * 1000;
+        const token = await sdk.createSessionToken(user.openId, { name: user.name, expiresInMs: duration });
+        ctx.res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(ctx.req), maxAge: duration });
+        return { success: true };
+      }),
+    login: publicProcedure.input(z.object({ email: z.string().trim().email().max(320), password: z.string().min(1).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        checkAccountRateLimit(`login:${ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown"}`);
+        const user = await loginAccount(input);
+        const duration = 30 * 24 * 60 * 60 * 1000;
+        const token = await sdk.createSessionToken(user.openId, { name: user.name, expiresInMs: duration });
+        ctx.res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(ctx.req), maxAge: duration });
+        return { success: true };
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
