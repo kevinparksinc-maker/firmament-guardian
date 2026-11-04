@@ -13,7 +13,14 @@ describe("Canonical synthesis reading bridge", () => {
     const chart = await calculateChart(input);
     const result = await synthesizeChartForReading(chart, "natal", "What does this chart say?");
     expect(result.synthesis.methodFindings.length).toBe(16);
+    expect(result.synthesis.canonApplications.length).toBeGreaterThan(0);
+    expect(result.synthesis.canonApplications.some(application =>
+      application.ruleId === "firmament-canon-dossier" &&
+      application.calculationEvidenceIds.includes("planet-sun")
+    )).toBe(true);
     expect(result.context).toContain("CALCULATED METHOD FINDINGS");
+    expect(result.context).toContain("CANON RULE APPLICATIONS");
+    expect(result.context).toContain("firmament-canon-dossier");
     expect(result.context).toContain("vedic-nakshatras-and-padas");
   });
 

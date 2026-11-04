@@ -16,7 +16,8 @@ export async function synthesizeMasterReading(
   const { snapshot, readingMode } = input;
 
   // 1. Extract normalized propositions across all available traditions and methods
-  const propositions = extractPropositionsFromSnapshot(snapshot);
+  const canonApplications = input.canonApplications ?? [];
+  const propositions = extractPropositionsFromSnapshot(snapshot, canonApplications);
 
   // 2. Cluster into human domain themes and reconcile tensions
   const { themes, tensions } = clusterPropositionsIntoThemes(propositions);
@@ -73,6 +74,9 @@ export async function synthesizeMasterReading(
   // Emit each computed finding so no doctrine disappears behind a generic summary.
   const integratedNarrative: string[] = [
     `Method inventory (every recorded layer): ${methodCounts.join("; ")}.`,
+    ...canonApplications.map(application =>
+      `Canon rule applied to ${application.subject}: [${application.ruleId}] ${application.statement} Source: ${application.sourceTitle}. Matched calculation evidence: ${application.calculationEvidenceIds.join(", ")}.`
+    ),
     ...orderedThemes.map(theme =>
       `${theme.humanTheme}. WHAT: ${theme.primaryConclusion} WHY/HOW: ${theme.whyHow} CONSEQUENCE: ${theme.consequences} MEANING: ${theme.deeperMeaning} Evidence: ${theme.evidenceIds.join(", ")}.`
     ),
@@ -113,6 +117,15 @@ export async function synthesizeMasterReading(
       .map(id => id.slice("prop-method-".length).replace(/-([0-9]+|remaining)$/, ""))
   );
   const uninterpretedMethods = computedLayers.filter(layer => !interpretedMethodIds.has(layer.id));
+  const linkedPropositionIds = new Set(themes.flatMap(theme => theme.linkedPropositionIds));
+  const interpretedCanonEvidenceIds = new Set(
+    propositions
+      .filter(proposition => linkedPropositionIds.has(proposition.id))
+      .flatMap(proposition => (proposition.canonApplications ?? []).map(application => application.canonEvidenceId))
+  );
+  const missingCanonApplications = canonApplications.filter(application =>
+    application.confidence !== "reference-only" && !interpretedCanonEvidenceIds.has(application.canonEvidenceId)
+  );
   const groundedRatio = expectedEvidenceIds.size === 0
     ? 1
     : (expectedEvidenceIds.size - missingEvidenceIds.length) / expectedEvidenceIds.size;
@@ -121,13 +134,19 @@ export async function synthesizeMasterReading(
     unsupportedClaims: [
       ...missingEvidenceIds.map(id => `Not incorporated into interpreted themes: ${id}`),
       ...uninterpretedMethods.map(layer => `Computed method missing from interpreted themes: ${layer.id}`),
+      ...missingCanonApplications.map(application => `Canon rule not applied to an interpreted proposition: ${application.ruleId} (${application.canonEvidenceId})`),
     ],
-    passed: missingEvidenceIds.length === 0 && uninterpretedMethods.length === 0,
+    passed: missingEvidenceIds.length === 0 && uninterpretedMethods.length === 0 && missingCanonApplications.length === 0,
   };
   // Report method coverage explicitly; reference-only or unavailable layers are never
   // described as calculated. The raw evidence remains available in the snapshot.
   integratedNarrative.push(
     `Calculation coverage: ${ledger.filter(l => l.status === "computed-with-result").length} methods returned results, ${methodLedgerSummary.referenceOnly} are reference-only, ${methodLedgerSummary.notApplicable} are not applicable, and ${methodLedgerSummary.failed} failed. ${missingEvidenceIds.length === 0 ? "All recorded computed evidence IDs are incorporated into interpreted themes." : `${missingEvidenceIds.length} computed evidence IDs are not incorporated into interpreted themes.`}`
+  );
+  integratedNarrative.push(
+    missingCanonApplications.length === 0
+      ? `Canon coverage: ${canonApplications.length} retrieved rule applications are linked to interpreted chart propositions.`
+      : `Canon coverage incomplete: ${missingCanonApplications.length} retrieved rule applications are not linked to interpreted chart propositions.`
   );
 
   return {
@@ -149,6 +168,7 @@ export async function synthesizeMasterReading(
         : undefined,
     methodLedgerSummary,
     evidenceTraceMap,
+    canonApplications,
     qualityAudit,
   };
 }

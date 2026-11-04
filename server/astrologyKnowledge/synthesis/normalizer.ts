@@ -1,6 +1,6 @@
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
-import type { InterpretedProposition } from "./types";
+import type { CanonRuleApplication, InterpretedProposition } from "./types";
 
 function getSign(longitude: number): string {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
@@ -22,7 +22,8 @@ export function describeComputedFinding(finding: unknown): string {
 }
 
 export function extractPropositionsFromSnapshot(
-  snapshot: UnifiedMasterChartSnapshot
+  snapshot: UnifiedMasterChartSnapshot,
+  canonApplications: CanonRuleApplication[] = []
 ): InterpretedProposition[] {
   const propositions: InterpretedProposition[] = [];
   // Register every calculated doctrine in the synthesis evidence stream, not only
@@ -413,5 +414,26 @@ export function extractPropositionsFromSnapshot(
     }
   }
 
-  return propositions;
+  if (!canonApplications.length) return propositions;
+
+  return propositions.map(proposition => {
+    const applied = canonApplications.filter(application =>
+      application.calculationEvidenceIds.some(evidenceId =>
+        proposition.supportingEvidenceIds.includes(evidenceId)
+      )
+    );
+    if (!applied.length) return proposition;
+
+    return {
+      ...proposition,
+      canonRuleIds: Array.from(new Set(applied.map(application => application.ruleId))),
+      canonApplications: applied.map(application => ({
+        canonEvidenceId: application.canonEvidenceId,
+        ruleId: application.ruleId,
+        sourceTitle: application.sourceTitle,
+        statement: application.statement,
+      })),
+      plainLanguageMeaning: `${proposition.plainLanguageMeaning} Canon application: ${applied.map(application => `[${application.ruleId}] ${application.statement}`).join(" ")}`,
+    };
+  });
 }

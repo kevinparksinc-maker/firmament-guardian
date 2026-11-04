@@ -97,10 +97,10 @@ export function clusterPropositionsIntoThemes(
     }
 
     const consequenceParts = [
-      ...supportive.map(p => `Potential strength or gift — ${p.themeTitle}: ${p.plainLanguageMeaning}`),
-      ...difficult.map(p => `Potential challenge or cost — ${p.themeTitle}: ${p.plainLanguageMeaning}`),
+      ...supportive.map(p => `Potential strength or gift — ${p.themeTitle}: ${p.plainLanguageMeaning} Evidence: ${p.supportingEvidenceIds.join(", ")}`),
+      ...difficult.map(p => `Potential challenge or cost — ${p.themeTitle}: ${p.plainLanguageMeaning} Evidence: ${p.supportingEvidenceIds.join(", ")}`),
     ];
-    if (!consequenceParts.length) consequenceParts.push(...ordered.map(p => p.plainLanguageMeaning));
+    if (!consequenceParts.length) consequenceParts.push(...ordered.map(p => `${p.plainLanguageMeaning} Evidence: ${p.supportingEvidenceIds.join(", ")}`));
 
     themes.push({
       id: `theme-${domain}`,
@@ -112,11 +112,11 @@ export function clusterPropositionsIntoThemes(
         ...combined,
         ...relationships.map(r => `CROSS-METHOD CONNECTION: ${r}`),
       ].join("\n"),
-      concreteManifestations: ordered.map(p =>
-        `${p.themeTitle}: ${p.plainLanguageMeaning} The relevant chart condition is ${p.causalMechanism}; consider how this traditional expression may appear in the life area being examined.`
+      concreteManifestations: ordered.slice(0, 4).map(p =>
+        `${p.themeTitle}: ${p.plainLanguageMeaning} The relevant chart condition is ${p.causalMechanism}; consider how this traditional expression may appear in the life area being examined. Evidence: ${p.supportingEvidenceIds.join(", ")}`
       ),
       consequences: consequenceParts.join("\n"),
-      deeperMeaning: `The combined pattern in ${DOMAIN_TITLES[domain]} brings together ${ordered.map(p => p.themeTitle).join("; ")}. ${reconciliation} Each factor modifies the full interpretation through its recorded strength, condition, frame, and traditional meaning.`,
+      deeperMeaning: `Symbolic interpretation of the combined pattern in ${DOMAIN_TITLES[domain]}: ${ordered.map(p => p.themeTitle).join("; ")}. ${reconciliation} Each factor modifies the full interpretation through its recorded strength, condition, frame, and traditional meaning.`,
       convergenceAssessment: {
         independentTraditions: traditions,
         corroborationLevel,

@@ -1,5 +1,18 @@
 import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
 
+export interface CanonRuleApplication {
+  canonEvidenceId: string;
+  ruleId: string;
+  sourceId: string;
+  sourceTitle: string;
+  technique: string;
+  subject: string;
+  statement: string;
+  calculationEvidenceIds: string[];
+  confidence: "high" | "moderate" | "low" | "reference-only";
+  implementationStatus?: "implemented" | "incomplete";
+}
+
 export type HumanDomain =
   | "identity"
   | "purpose_work"
@@ -15,6 +28,7 @@ export interface SynthesisInput {
   snapshot: UnifiedMasterChartSnapshot;
   readingMode: "natal" | "transit" | "combined";
   userQuestion?: string;
+  canonApplications?: CanonRuleApplication[];
 }
 
 export interface InterpretedProposition {
@@ -30,6 +44,8 @@ export interface InterpretedProposition {
   supportingEvidenceIds: string[];
   opposingEvidenceIds: string[];
   sourceDoctrineIds: string[];
+  canonRuleIds?: string[];
+  canonApplications?: Array<Pick<CanonRuleApplication, "canonEvidenceId" | "ruleId" | "sourceTitle" | "statement">>;
 }
 
 export interface SynthesizedTheme {
@@ -85,6 +101,7 @@ export interface SynthesisResult {
     failed: number;
   };
   evidenceTraceMap: Record<string, string[]>;
+  canonApplications: CanonRuleApplication[];
   qualityAudit: {
     groundedRatio: number; // 1.0 (100% of claims grounded in evidence IDs)
     unsupportedClaims: string[];

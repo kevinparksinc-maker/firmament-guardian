@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildUnifiedMasterChart } from "./masterChart";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis/synthesizer";
 import { extractPropositionsFromSnapshot } from "./astrologyKnowledge/synthesis/normalizer";
+import type { CanonRuleApplication } from "./astrologyKnowledge/synthesis/types";
 
 const input = {
   location: "Alexandria, Egypt", latitude: 31.2001, longitude: 29.9187,
@@ -50,5 +51,36 @@ describe("Unified synthesis method-coverage contract", () => {
     expect(xiu?.status).toBe("reference-only");
     expect(synthesis.themes.flatMap(theme => theme.linkedPropositionIds)
       .some(id => id.startsWith("prop-method-chinese-lunar-mansions-xiu-"))).toBe(false);
+  });
+
+  it("changes the interpretation when a matched Canon rule changes and fails when the rule is detached", async () => {
+    const snapshot = await buildUnifiedMasterChart(input);
+    const application: CanonRuleApplication = {
+      canonEvidenceId: "canon-placement-sun",
+      ruleId: "test-sun-rule",
+      sourceId: "test-canon",
+      sourceTitle: "Test Canon",
+      technique: "canon-placement-dossier",
+      subject: "Sun",
+      statement: "Sun rule version A applies to the calculated Sun placement.",
+      calculationEvidenceIds: ["planet-sun"],
+      confidence: "high",
+      implementationStatus: "implemented",
+    };
+    const applied = await synthesizeMasterReading({
+      snapshot,
+      readingMode: "natal",
+      canonApplications: [application],
+    });
+    expect(applied.integratedNarrative.join("\n")).toContain(application.statement);
+    expect(applied.canonApplications[0].ruleId).toBe("test-sun-rule");
+
+    const detached = await synthesizeMasterReading({
+      snapshot,
+      readingMode: "natal",
+      canonApplications: [{ ...application, calculationEvidenceIds: [] }],
+    });
+    expect(detached.qualityAudit.passed).toBe(false);
+    expect(detached.qualityAudit.unsupportedClaims.some(claim => claim.includes("test-sun-rule"))).toBe(true);
   });
 });

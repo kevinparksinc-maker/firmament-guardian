@@ -1,5 +1,7 @@
 import type { ChartResult } from "../../astronomy";
 import { buildUnifiedMasterChart, getMasterNatalChart } from "../../masterChart/builder";
+import { canonDossierToEvidenceItems, retrieveChartCanonDossier } from "../canon/retriever";
+import { buildCanonRuleApplications } from "./canonApplications";
 import { synthesizeMasterReading } from "./synthesizer";
 import type { SynthesisResult } from "./types";
 
@@ -44,7 +46,27 @@ export async function synthesizeChartForReading(
     console.error("[MASTER_METHOD_FAILED] Required calculated methods failed:", failedIds);
     throw new Error(`MASTER_METHOD_FAILED: Calculated method(s) failed: ${failedIds}.`);
   }
-  const synthesis = await synthesizeMasterReading({ snapshot, readingMode: mode, userQuestion: question });
+
+  // The Master Chart remains the only calculation source. Its canonical natal
+  // ChartResult is passed to the existing deterministic retriever; no second
+  // astronomical calculation or alternate house/frame pipeline is introduced.
+  const canonicalChart = snapshot.natal ?? chart;
+  const canonDossier = retrieveChartCanonDossier(canonicalChart);
+  const canonEvidence = canonDossierToEvidenceItems(canonDossier);
+  const canonApplications = buildCanonRuleApplications(snapshot, canonEvidence);
+  const applicableCanonApplications = canonApplications.filter(application =>
+    application.calculationEvidenceIds.length > 0
+  );
+  if (applicableCanonApplications.length === 0) {
+    throw new Error("CANON_RETRIEVAL_FAILED: Retrieved Canon rules could not be matched to Master Chart evidence.");
+  }
+
+  const synthesis = await synthesizeMasterReading({
+    snapshot,
+    readingMode: mode,
+    userQuestion: question,
+    canonApplications: applicableCanonApplications,
+  });
   if (!synthesis.qualityAudit.passed) {
     console.error("[SYNTHESIS_COVERAGE_FAILED] Uninterpreted calculated evidence:", synthesis.qualityAudit.unsupportedClaims);
     throw new Error("SYNTHESIS_COVERAGE_FAILED: Not all calculated evidence was incorporated into the synthesis.");
@@ -52,7 +74,10 @@ export async function synthesizeChartForReading(
   const context = [
     `UNIFIED MASTER SYNTHESIS — SNAPSHOT ${synthesis.snapshotId}`,
     `Computed methods: ${synthesis.methodLedgerSummary.computedWithResult} / ${synthesis.methodLedgerSummary.totalEvaluated}; quality audit: ${synthesis.qualityAudit.passed ? "passed" : "incomplete"}.`,
+    `CANON RULE APPLICATIONS: ${synthesis.canonApplications.length} retrieved rules matched to calculated evidence.`,
+    ...synthesis.canonApplications.map(application => `CANON [${application.ruleId}] ${application.subject} → calculation evidence ${application.calculationEvidenceIds.join(", ")}; source: ${application.sourceTitle}; statement: ${application.statement}`),
     `Dominant conclusion: ${synthesis.dominantConclusion}`,
+    "CALCULATED METHOD FINDINGS — each layer below is retained with its evidence and Canon applications.",
     "PLANETARY PERSONALITY SYNTHESIS CONTRACT: Treat each planet as an individual chart-specific character, not a dictionary entry. For every relevant planet, synthesize its actual placement, house, available dignity/strength, decan, mansions, fixed-star contacts, aspects, receptions, dispositors, timing, and God/Agent frame differences. Do not claim a layer was calculated unless it appears in the method findings. Explain how layers MODIFY one another, including contradictions and limits; describe temperament, motivation, behavioral expression, strength, vulnerability, relational dynamics, and mature expression. Trace each meaningful conclusion to supplied evidence IDs. Present the chain WHAT → WHY → HOW → CONSEQUENCE → MEANING. Prioritize Mars when the question concerns Mars, Scorpio, will, anger, initiative, or courage; distinguish traditional Scorpio rulership by Mars from modern Pluto association. No generic planet-only paragraph may substitute for chart-specific synthesis.",
     "VEDIC DIVISIONAL CHART READING: D1 is the natal foundation. D2 Hora describes resources, D3 Drekkana siblings and initiative, D9 Navamsha dharma and relational/planetary maturity, and D10 Dashamsha vocation. These charts are derived from natal longitudes, not separate astronomical recalculations. Compare specific planetary sign, divisional house and Ascendant placements against D1, explain convergence and tension, and quote formula evidence. Never invent uncomputed strength scores, Yogas or missing chart data. Do not confuse Guardian fixed-frame divisions with Lahiri-sidereal Jyotish.",
     "AUTHORITATIVE DERIVED DIVISIONAL CHART DATA:",
