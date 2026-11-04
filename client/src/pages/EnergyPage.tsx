@@ -80,9 +80,8 @@ function interpretContact(contact: { transit: string; natal: string; aspect: str
   };
 }
 
-export default function EnergyPage() {
+export default function EnergyPage({ onRefresh, calculating = false }: { onRefresh?: () => void; calculating?: boolean }) {
   const { chart, profile } = useProfileSession();
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedPlanetFilter, setSelectedPlanetFilter] = useState<string | null>(null);
   const [aspectCategory, setAspectCategory] = useState<"all" | "harmonious" | "challenging" | "dynamic">("all");
   const [expandedContactId, setExpandedContactId] = useState<string | null>(null);
@@ -90,9 +89,7 @@ export default function EnergyPage() {
   const [activeInterpreterQuestion, setActiveInterpreterQuestion] = useState<string | null>(null);
 
   const handleRefreshTransits = () => {
-    setIsRefreshing(true);
-    window.dispatchEvent(new Event("fg:transit-location-updated"));
-    setTimeout(() => setIsRefreshing(false), 700);
+    onRefresh?.();
   };
 
   const energyData = useMemo(() => calculateEnergyRead(chart), [chart]);
@@ -148,12 +145,12 @@ export default function EnergyPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              disabled={isRefreshing}
+              disabled={calculating || !onRefresh}
               onClick={handleRefreshTransits}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D9B66F]/40 bg-[#D9B66F]/10 px-4 text-xs font-semibold text-[#D9B66F] transition-all hover:bg-[#D9B66F]/20 active:scale-95 disabled:opacity-50"
             >
-              <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
-              <span>{isRefreshing ? "Recalculating..." : "Refresh Sky"}</span>
+              <RefreshCw size={14} className={calculating ? "animate-spin" : ""} />
+              <span>{calculating ? "Recalculating..." : "Refresh Sky"}</span>
             </button>
           </div>
         </div>
