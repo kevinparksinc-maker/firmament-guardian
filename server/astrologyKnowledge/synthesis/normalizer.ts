@@ -356,6 +356,7 @@ export function extractPropositionsFromSnapshot(
     "vedic-vargas-divisional": "purpose_work",
     "vedic-dasha-and-ashtakavarga": "timing",
     "vedic-graha-drishti": "autonomy_power",
+    "chinese-lunar-mansions-xiu": "identity",
     "elemental-decans": "identity",
     "kabbalah-sefer-yetzirah": "choices_obstacles",
     "genesis-behavioral-patterns": "choices_obstacles",
@@ -377,7 +378,9 @@ export function extractPropositionsFromSnapshot(
       propositions.push({
         id: `prop-method-${layer.id}-${index}`,
         themeTitle: `${layer.name} — finding ${index + 1}`,
-        plainLanguageMeaning: `${layer.name}: ${describeComputedFinding(finding)}`,
+        plainLanguageMeaning: typeof finding === "object" && finding !== null && typeof (finding as Record<string, unknown>).reading === "string"
+          ? `${layer.name} — layer reading: ${(finding as Record<string, unknown>).reading}; calculated evidence: ${describeComputedFinding(finding)}`
+          : `${layer.name}: ${describeComputedFinding(finding)}`,
         domain: domains[layer.id] ?? "identity",
         causalMechanism: `${layer.technique}; ${layer.frame}; ${layer.calculationVersion}`,
         valence,
