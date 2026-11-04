@@ -99,7 +99,7 @@ const CARTESIAN_XYZ_FLAG = 4096;
 const SPEED_FLAG = 256;
 const TOPOCENTRIC_FLAG = 32768;
 const EQUATORIAL_XYZ_FLAGS = MOSHIER_FLAGS | EQUATORIAL_FLAG | CARTESIAN_XYZ_FLAG | SPEED_FLAG;
-function ephemerisXYZ(jd: number, planet: number, extraFlags = 0) {
+export function ephemerisXYZ(jd: number, planet: number, extraFlags = 0) {
   const result: any = (sweph as any).calc_ut(jd, planet, EQUATORIAL_XYZ_FLAGS | extraFlags);
   const data = result?.data ?? result;
   if (!data || ![data[0], data[1], data[2]].every((n: unknown) => typeof n === "number" && Number.isFinite(n)))

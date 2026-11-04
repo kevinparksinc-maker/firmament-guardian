@@ -112,23 +112,28 @@ function separation(a: number, b: number) {
   return Math.abs(((normalizeLongitude(a - b) + 180) % 360) - 180);
 }
 
-function aspectBetween(a: HoraryPlacement, b: HoraryPlacement): HoraryAspect | null {
+export function aspectBetween(a: HoraryPlacement, b: HoraryPlacement): HoraryAspect | null {
   const distance = separation(a.longitude, b.longitude);
   const closest = ASPECT_TARGETS.map(([target, aspect]) => ({ aspect, orb: Math.abs(distance - target) }))
     .sort((left, right) => left.orb - right.orb)[0];
   if (!closest || closest.orb > ASPECT_ORB_DEGREES) return null;
 
-  // Planetary speeds are in degrees/day. A short linear projection is used only
-  // to label the current contact's phase, not to predict future events.
-  const nextDayOrb = Math.abs(separation(a.longitude + a.speed, b.longitude + b.speed) - ASPECT_TARGETS.find(([, aspect]) => aspect === closest.aspect)![0]);
-  const phase = Math.abs(nextDayOrb - closest.orb) < 0.001
+  // Use the instantaneous change in the signed angular error. A full-day
+  // projection can jump across perfection (especially for the Moon) and label
+  // an approaching contact as separating.
+  const signedDistance = ((normalizeLongitude(a.longitude - b.longitude) + 180) % 360) - 180;
+  const target = ASPECT_TARGETS.find(([, aspect]) => aspect === closest.aspect)![0];
+  const signedTarget = signedDistance < 0 ? -target : target;
+  const error = signedDistance - signedTarget;
+  const relativeSpeed = a.speed - b.speed;
+  const phase = Math.abs(error) < 1e-7 || Math.abs(relativeSpeed) < 1e-7
     ? "unclear"
-    : nextDayOrb < closest.orb ? "applying" : "separating";
+    : error * relativeSpeed < 0 ? "applying" : "separating";
   return { first: a.name, second: b.name, aspect: closest.aspect, orb: Number(closest.orb.toFixed(2)), phase };
 }
 
 function uniquePairs(placements: HoraryPlacement[], names: string[]) {
-  const selected = names.map(name => placements.find(placement => placement.name === name)).filter((row): row is HoraryPlacement => Boolean(row));
+  const selected = Array.from(new Set(names)).map(name => placements.find(placement => placement.name === name)).filter((row): row is HoraryPlacement => Boolean(row));
   const pairs: Array<[HoraryPlacement, HoraryPlacement]> = [];
   for (let i = 0; i < selected.length; i += 1) {
     for (let j = i + 1; j < selected.length; j += 1) pairs.push([selected[i], selected[j]]);
@@ -172,7 +177,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     : undefined;
   // Without a natal profile there is nothing for the question-moment sky to contact.
   // Do not compare the question chart against itself: that invents natal contacts.
-  const transitChart = natalChart ?? { ...calculated, transits: calculated.transits.map(row => ({ ...row, natalContacts: [] })) };
+  const transitChart = natalChart ?? { ...calculated, transits: calculated.transits.map(row => ({ ...row, natalContacts: [], minorNatalContacts: [] })) };
   const godChart = await calculateChart({
     location: "",
     latitude: 0,
@@ -333,10 +338,10 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Question: ${input.question}`,
     `Question asked at: ${askedAt} UTC (${input.date} ${input.time} local; ${input.timezone})`,
     `Location: ${input.location} (${input.latitude.toFixed(4)}, ${input.longitude.toFixed(4)})`,
-    `House system: Equal House, with 30-degree cusps from the calculated Ascendant. Planetary longitudes are geocentric; a separate topocentric (parallax-corrected) Moon longitude is available but is not used for houses or aspects.`,
+    `Coordinate model: equatorial ephemeris XYZ projected into the fixed firmament frame, without tropical/sidereal conversion. House system: Equal House, with 30-degree cusps from the sunrise-anchored Ascendant and elapsed sidereal rotation. Planetary longitudes are geocentric; a separate topocentric (parallax-corrected) Moon longitude is available but is not used for houses or aspects.`,
     `Question topic: ${topic.label} (${ordinal(input.topicHouse)} house from the ${input.subject === "querent" ? "querent" : "other person"}).`,
     `Ascendant: ${ascendant.display} (${ascendantSign}); querent's primary ruler: ${querentRuler}.`,
-    `Person asked about: ${input.subject === "querent" ? "the querent (House 1)" : "another person (House 7)"}; that person's ruler: ${subjectRuler}.`,
+    `Person asked about: ${input.subject === "querent" ? "the querent (House 1)" : `another person (House ${subjectHouse})`}; that person's ruler: ${subjectRuler}.`,
     `Topic house: house ${input.topicHouse} counted from the person asked about is actual chart house ${actualTopicHouse}; cusp sign ${houses[actualTopicHouse - 1].sign}; topic ruler ${topicRuler}.`,
     `Significator roles: querent = House 1 ruler ${querentRuler}; person asked about = House ${subjectHouse} ruler ${subjectRuler}; matter = actual chart House ${actualTopicHouse} ruler ${topicRuler}. Traditional judgment compares ${input.subject === "querent" ? `the querent ruler ${querentRuler}` : `the subject ruler ${subjectRuler}`} with matter ruler ${topicRuler}; retain the querent ruler as context. Do not interchange these roles.`,
     `Moon: ${moon.display}, ${moon.sign}, house ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
@@ -361,7 +366,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     transitEvidence,
     godEvidence,
     "Three-layer reading rule: keep the NATAL / AGENT, TRANSIT / QUESTION-MOMENT, and GOD VIEW / GEOCENTRIC evidence sets explicitly separate. Use natal houses only for the person layer; use transit contacts to describe activation; use God View for the whole-sky context. Never turn God View into local houses or a personal Ascendant.",
-    "Method boundary: the traditional layer now calculates configured Lots, dignity/debility indicators, reception, close fixed-star testimony, radicality cautions, a non-deterministic perfection timing aid, and lunar mansion/Manzil/Decan overlays. It still does not calculate every traditional doctrine, including prohibition, collection/translation of light, all sect/ruler conditions, or a complete traditional timing judgment; do not invent those factors.",
+    "Method boundary: the traditional layer now calculates configured Lots, dignity/debility indicators, reception, close fixed-star testimony, radicality cautions, a non-deterministic perfection timing aid, and lunar mansion/Manzil/Decan overlays. Configured perfection records include direct contact, translation, collection, and prohibition when supported by the supplied evidence. This is not an exhaustive implementation of every traditional doctrine or a complete traditional event-timing judgment; do not invent records that were not returned.",
   ].join("\n\n");
   const judgmentEvidenceText = [
     `Question: ${input.question}`,
@@ -512,7 +517,7 @@ export async function openHoraryQuestion(input: HoraryInput) {
     console.warn("[Horary] Supplemental Master synthesis unavailable", {
       category: error instanceof Error ? "master_error" : "unknown",
     });
-    throw new Error("HORARY_MASTER_SYNTHESIS_FAILED: Required master synthesis unavailable.");
+    chart.unifiedSynthesisContext = "Supplemental Master synthesis unavailable; use only the calculated Horary and Canon evidence below.";
   }
   const coreReading = deterministicHoraryReading(chart);
   const reading = await answer([
@@ -524,7 +529,7 @@ export async function openHoraryQuestion(input: HoraryInput) {
       const category = error instanceof Error && /time|abort|deadline/i.test(error.message) ? "timeout" : "provider_error";
       // Deliberately exclude prompts, provider responses and credentials from logs.
       console.warn("[Horary] AI synthesis unavailable; deterministic fallback used", { category });
-      throw new Error(`HORARY_AI_FAILED: AI interpretation unavailable (${category}).`);
+      return { reading: coreReading, synthesisStatus: "deterministic_fallback" as const };
     },
   );
   return { chart, ...reading };

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
 vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
 
-import { calculateHoraryChart, horaryFollowUp, openHoraryQuestion, type HoraryInput } from "./horary";
+import { aspectBetween, calculateHoraryChart, horaryFollowUp, openHoraryQuestion, type HoraryInput } from "./horary";
 import { calculateTraditionalHorary } from "./horaryTraditional";
 
 const sampleInput: HoraryInput = {
@@ -194,6 +194,7 @@ describe("horary astrology", () => {
 
     const result = await openHoraryQuestion(sampleInput);
 
+    expect(result.synthesisStatus).toBe("deterministic_fallback");
     expect(result.reading).toContain("## Judgment");
     expect(result.reading).toContain(result.chart.traditional.judgment.verdict);
     expect(result.reading).toContain("deterministic chart");
@@ -233,5 +234,50 @@ describe("horary astrology", () => {
     expect(messages.some(message => message.content.includes("Original horary judgment evidence"))).toBe(true);
     expect(messages.some(message => message.content.includes("Will the hypothetical applicant accept the new role?"))).toBe(true);
     expect(messages[0].content).toContain("Keep the original chart and question fixed");
+  });
+});
+
+
+describe("instantaneous Horary contact phase", () => {
+  const body = (name: string, longitude: number, speed: number) => ({ name, longitude, speed, display: "test", sign: "Aries", house: 1, retrograde: speed < 0 });
+  it.each([
+    [59, 13, 60, 0.1, "conjunction", "applying"],
+    [61, 13, 60, 0.1, "conjunction", "separating"],
+    [359, 13, 0, 0.1, "conjunction", "applying"],
+    [59, 13, 0, 0.1, "sextile", "applying"],
+    [181, -1, 0, 0, "opposition", "applying"],
+    [179, 1, 0, 0, "opposition", "applying"],
+    [60, 1, 0, 0, "sextile", "unclear"],
+    [59, 1, 0, 1, "sextile", "unclear"],
+  ] as const)("classifies %s° moving %s°/day against %s°", (a, speedA, b, speedB, aspect, phase) => {
+    const first = body("Moon", a, speedA), second = body("Mars", b, speedB);
+    expect(aspectBetween(first, second)).toMatchObject({ aspect, phase });
+    expect(aspectBetween(second, first)).toMatchObject({ aspect, phase });
+  });
+});
+
+
+describe("Horary edited inputs and natal separation", () => {
+  it("recalculates question-time houses and positions while preserving the birth layer", async () => {
+    const natal = { location: "Dallas, TX, USA", latitude: 32.7767, longitude: -96.797,
+      timezone: "America/Chicago", date: "1986-11-20", time: "10:06" };
+    const first = await calculateHoraryChart({ ...sampleInput, natal });
+    const edited = await calculateHoraryChart({ ...sampleInput, natal, time: "15:34" });
+    expect(first.natalChart!.movingBodies).toEqual(edited.natalChart!.movingBodies);
+    expect(first.transitChart.transits.find(row => row.name === "Moon")!.longitude)
+      .not.toBe(edited.transitChart.transits.find(row => row.name === "Moon")!.longitude);
+    expect(first.ascendant.longitude).not.toBe(edited.ascendant.longitude);
+    expect(first.askedAt).not.toBe(edited.askedAt);
+    for (const chart of [first, edited]) {
+      for (const placement of chart.placements) {
+        const transit = chart.transitChart.transits.find(row => row.name === placement.name);
+        if (transit) expect(transit.longitude).toBeCloseTo(placement.longitude, 8);
+      }
+    }
+  });
+  it("reports a child's actual relationship house consistently in the interpretation packet", async () => {
+    const chart = await calculateHoraryChart({ ...sampleInput, subject: "other", subjectHouse: 5, topicHouse: 9 });
+    expect(chart.evidenceText).toContain("another person (House 5)");
+    expect(chart.evidenceText).not.toContain("another person (House 7)");
   });
 });
