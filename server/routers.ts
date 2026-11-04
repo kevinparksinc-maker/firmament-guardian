@@ -1,3 +1,4 @@
+import { buildVimshottariTimeline } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
 import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { z } from "zod";
@@ -185,6 +186,10 @@ export const appRouter = router({
       ),
   }),
   vedic: router({
+    dashaTimeline: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => buildVimshottariTimeline(input.chart)),
+
     // Read a chart already saved to the signed-in account. Never recalculate
     // natal astronomy from a birth date, and never trust another user's ID.
     savedDivisionalCharts: protectedProcedure
