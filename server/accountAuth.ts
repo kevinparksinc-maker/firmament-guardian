@@ -182,3 +182,25 @@ export async function loginAccount(input: { email: string; password: string }) {
     });
   }
 }
+
+/** Check real account storage before presenting registration or sign-in fields. */
+export async function getAccountAvailability(): Promise<{ available: boolean; reason: "ready" | "not-configured" | "unreachable" | "schema-required"; message: string }> {
+  if (!process.env.DATABASE_URL?.trim()) return {
+    available: false, reason: "not-configured",
+    message: "Account sign-in is not connected yet. Existing profiles saved on this device have been preserved.",
+  };
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("No account database");
+    await Promise.race([
+      db.execute(sql`SELECT 1`),
+      new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error("Account database timeout")), 5000); }),
+    ]);
+    try { await db.select({ id: users.id }).from(users).limit(1); }
+    catch { return { available: false, reason: "schema-required", message: "The account database needs setup before sign-in can open. Existing device profiles have been preserved." }; }
+    return { available: true, reason: "ready", message: "Account connection is ready." };
+  } catch {
+    return { available: false, reason: "unreachable", message: "The account connection is temporarily unavailable. Your existing device profiles have been preserved. Try checking the connection again." };
+  } finally { if (timeout) clearTimeout(timeout); }
+}

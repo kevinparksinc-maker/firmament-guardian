@@ -69,8 +69,8 @@ export function FloatingInterpreter() {
           type="button"
           aria-label="Open AI guide"
           title="Ask the AI guide"
-          className="fixed right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-amber-200/60 bg-[#14213b] text-amber-100 shadow-lg shadow-black/50 hover:bg-[#203251] focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
-          style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}
+          className={`${profile ? "fixed right-4" : "ml-auto mr-4 mb-6"} z-40 flex h-14 w-14 items-center justify-center rounded-full border border-amber-200/60 bg-[#14213b] text-amber-100 shadow-lg shadow-black/50 hover:bg-[#203251] focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200`}
+          style={profile ? { bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" } : undefined}
         >
           <Sparkles size={25} />
         </button>

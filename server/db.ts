@@ -19,7 +19,7 @@ export async function getDb() {
     try {
       _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
-      console.warn("[Database] Failed to connect, using in-memory mock:", error);
+      console.warn("[Database] Failed to initialize the configured connection:", error);
       _db = null;
     }
   }

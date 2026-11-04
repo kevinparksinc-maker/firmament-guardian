@@ -5,7 +5,7 @@ import { buildVimshottariTimeline, getAshtakavargaVisual } from "./astrologyKnow
 import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { z } from "zod";
-import { checkAccountRateLimit, loginAccount, registerAccount } from "./accountAuth";
+import { checkAccountRateLimit, getAccountAvailability, loginAccount, registerAccount } from "./accountAuth";
 import { sdk } from "./_core/sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -110,6 +110,7 @@ const horaryQuestionInput = placeInput.extend({
 export const appRouter = router({
   system: systemRouter,
   auth: router({
+    availability: publicProcedure.query(() => getAccountAvailability()),
     me: publicProcedure.query(opts => opts.ctx.user),
     register: publicProcedure.input(z.object({ name: z.string().trim().min(1).max(100), email: z.string().trim().email().max(320), password: z.string().min(12).max(128) }))
       .mutation(async ({ ctx, input }) => {

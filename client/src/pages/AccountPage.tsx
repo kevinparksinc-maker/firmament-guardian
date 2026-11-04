@@ -15,10 +15,13 @@ export default function AccountPage() {
   const [error, setError] = useState("");
   const login = trpc.auth.login.useMutation();
   const register = trpc.auth.register.useMutation();
+  const availability = trpc.auth.availability.useQuery(undefined, { enabled: !user && !loading, retry: false, refetchOnWindowFocus: false, staleTime: 15000 });
+  const accountReady = availability.data?.available === true;
   const pending = login.isPending || register.isPending;
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
+    if (!accountReady) return;
     try {
       if (mode === "register")
         await register.mutateAsync({ name, email, password });
@@ -52,6 +55,7 @@ export default function AccountPage() {
         <h1 className="font-serif text-3xl">
           {user
             ? "Your private observatory"
+            : availability.data?.available === false ? "Account connection needed"
             : mode === "register"
               ? "Create your account"
               : "Welcome back"}
@@ -78,6 +82,12 @@ export default function AccountPage() {
           >
             Sign out
           </button>
+        </section>
+      ) : !accountReady ? (
+        <section aria-live="polite" className="space-y-4 rounded-2xl border border-amber-200/25 bg-slate-950/70 p-6">
+          <p role="status" className="text-sm leading-7 text-slate-200">{availability.isLoading ? "Checking the account connection…" : availability.data?.message || "Unable to check the account connection. Your existing device profiles are preserved."}</p>
+          <p className="text-sm leading-7 text-slate-400">Registration and sign-in will open once account storage is connected. You do not need to enter your password while this connection is unavailable.</p>
+          <button type="button" disabled={availability.isFetching} onClick={() => void availability.refetch()} className="rounded-xl border border-cyan-200/35 px-4 py-3 text-sm text-cyan-100 disabled:opacity-50">{availability.isFetching ? "Checking…" : "Check connection again"}</button>
         </section>
       ) : (
         <>
