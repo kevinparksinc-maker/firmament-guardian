@@ -260,6 +260,29 @@ export function ProfileChartScreen({
         </div>
       </section>
 
+      <section aria-label="Quick access to observatory modules" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Link href="/synastry" className="rounded-2xl border border-rose-300/25 bg-rose-950/20 p-4 transition hover:border-rose-200/50">
+          <strong className="block text-base text-white">Chemistry & Synastry</strong>
+          <span className="mt-1 block text-xs leading-5 text-slate-300">Compare with a partner, parent, child, sibling, friend, mentor or colleague. Open dual wheels, cross-aspects and house overlays.</span>
+          <span className="mt-3 inline-flex text-xs font-semibold text-rose-200">Open Chemistry Studio →</span>
+        </Link>
+        <Link href="/energy" className="rounded-2xl border border-cyan-300/25 bg-cyan-950/20 p-4 transition hover:border-cyan-200/50">
+          <strong className="block text-base text-white">Energy Observatory</strong>
+          <span className="mt-1 block text-xs leading-5 text-slate-300">See the live chart wheel, active aspects, exact orbs, energy timeline and full interpretation.</span>
+          <span className="mt-3 inline-flex text-xs font-semibold text-cyan-200">Open Energy →</span>
+        </Link>
+        <Link href="/horary" className="rounded-2xl border border-violet-300/25 bg-violet-950/20 p-4 transition hover:border-violet-200/50">
+          <strong className="block text-base text-white">Traditional Horary</strong>
+          <span className="mt-1 block text-xs leading-5 text-slate-300">Cast a separate chart for a specific question, moment and location.</span>
+          <span className="mt-3 inline-flex text-xs font-semibold text-violet-200">Open Horary →</span>
+        </Link>
+        <Link href="/explore" className="rounded-2xl border border-amber-300/25 bg-amber-950/20 p-4 transition hover:border-amber-200/50">
+          <strong className="block text-base text-white">Explore Everything</strong>
+          <span className="mt-1 block text-xs leading-5 text-slate-300">Browse every available observatory, timing, reading, relationship and account tool.</span>
+          <span className="mt-3 inline-flex text-xs font-semibold text-amber-200">Open App Directory →</span>
+        </Link>
+      </section>
+
       {/* Main Chart Graphic Display */}
       <section aria-label="Main Chart Visualizer">
         {chartViewMode === "diamond" ? (
