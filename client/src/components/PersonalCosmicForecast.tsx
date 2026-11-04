@@ -5,6 +5,30 @@ import { calculatePlanetaryHours } from "../lib/planetaryHours";
 import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
 import { TransitLocationBar } from "./TransitLocationBar";
 
+const planetThemes: Record<string, string> = {
+  Sun: "identity and purpose", Moon: "emotional needs and habits",
+  Mercury: "thinking and communication", Venus: "relationships and values",
+  Mars: "initiative and boundaries", Jupiter: "growth and opportunity",
+  Saturn: "responsibility and limits", Uranus: "change and independence",
+  Neptune: "ideals and uncertainty", Pluto: "power and transformation",
+  "North Node": "future direction", "South Node": "familiar patterns",
+};
+const aspectMeaning: Record<string, string> = {
+  conjunction: "concentrates both themes", trine: "suggests a fluid connection",
+  sextile: "suggests an opportunity to coordinate both themes",
+  square: "highlights competing demands requiring adjustment",
+  opposition: "highlights a polarity to balance",
+  semisextile: "suggests a subtle adjustment", semisquare: "suggests minor friction",
+  quincunx: "suggests a mismatch requiring adaptation",
+};
+function contactInterpretation(transit: string, natal: string, aspect: string, orb: number): string {
+  const moving = planetThemes[transit] || "the transiting planet's themes";
+  const personal = planetThemes[natal] || "the natal planet's themes";
+  const geometry = aspectMeaning[aspect] || "connects both themes";
+  const closeness = orb <= 1.25 ? "This is a tight contact." : "This contact is less exact than those with tighter orbs.";
+  return `Transiting ${transit} emphasizes ${moving}; natal ${natal} concerns ${personal}. Their ${aspect} ${geometry}. ${closeness} This is symbolic interpretation, not a guaranteed event.`;
+}
+
 const MAX_ORB = 5;
 const aspectFlow: Record<TransitContact["aspect"] | MinorTransitContact["aspect"], number> = {
   trine: 1, sextile: 1, square: -1, opposition: -1, conjunction: 1, semisextile: 1, semisquare: -1, quincunx: -1,
@@ -102,7 +126,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
             <p className="mt-1 text-[10px] text-slate-400">{contact.orb.toFixed(2)}° exact orb · within 5°</p>
           </div>;
         })}</div>
-        {!data.strongest.length && <p className="mt-3 text-xs text-slate-400">No major natal–transit contacts within the 5° orb.</p>}
+        {!data.strongest.length && <p className="mt-3 text-xs text-slate-400">No natal–transit contacts within the 5° orb, including supported minor aspects.</p>}
       </div>
       <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-[#0b1730] p-4">
         <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-cyan-200">Harmonic Energy Wave</p><h3 className="mt-1 font-serif text-lg text-white">Next 24 hours</h3></div><Clock3 size={18} className="text-cyan-200"/></div>
@@ -139,6 +163,7 @@ export function PersonalCosmicForecast({ chart, calculating, onRefresh }: { char
             </button>
             {selectedContact === id && <div className="mt-3 border-t border-white/10 pt-3 text-xs leading-5 text-slate-300">
               <p>Exact chart testimony: transiting {c.transit} forms a {c.aspect} with natal {c.natalName}, separated by {c.orb.toFixed(2)}°. This contact contributes {c.strength} weighted points under the configured 5° orb.</p>
+              <p className="mt-2">{contactInterpretation(c.transit, c.natalName, c.aspect, c.orb)}</p>
               <p className="mt-2">A complete judgment requires the planets’ signs, houses, rulerships, relevant mansions and other calculated Canon evidence. Open the Master Interpreter for chart-level synthesis; this card does not invent those missing results.</p>
               <Link href="/reading" className="mt-2 inline-block font-semibold text-cyan-200 underline underline-offset-2">Ask the Master Interpreter →</Link>
             </div>}
