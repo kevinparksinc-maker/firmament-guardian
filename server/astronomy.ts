@@ -236,6 +236,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview !== "god" && !agentViewAvailable) throw new Error("Agent View requires birth location, date, time, and timezone.");
   if (worldview === "god" && readingScope !== "transit" && !input.date) throw new Error("God View Natal readings require a birth date; birth time and location are optional.");
   const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
+  if (worldview !== "god" && (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || Math.abs(input.latitude) > 90 || Math.abs(input.longitude) > 180))
+    throw new Error("Master Celestial: valid birth coordinates are required. No default Ascendant.");
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
   const natalSunrise = hasAgentLocation ? automaticSunriseAnchor(input.date, input.latitude, input.longitude) : null;
   const asc = hasAgentLocation
