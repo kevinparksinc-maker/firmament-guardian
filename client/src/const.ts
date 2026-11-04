@@ -35,6 +35,9 @@ export const startLogin = async (): Promise<void> => {
       if (typeof window !== "undefined" && sessionStorage.getItem("manus-cookie")) {
         return;
       }
+      if (import.meta.env.PROD) {
+        throw new Error("Independent account login is not yet configured");
+      }
       const resp = await fetch("/api/oauth/demo-login", {
         method: "POST",
         credentials: "include",
