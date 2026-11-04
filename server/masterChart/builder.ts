@@ -315,10 +315,12 @@ export async function buildUnifiedMasterChart(
         return {
           body: p.name,
           orb: Math.round(orb * 100) / 100,
-          isConjunction: orb <= 3.5,
+          isConjunction: orb <= 5,
         };
       })
       .filter(c => c.isConjunction),
+    activationOrbDegrees: 5,
+    reading: `${fs.name} is a permanent stellar anchor at ${fs.display}. ${basePlanets.filter(p => { const d = Math.abs(normalizeLongitude(p.longitude) - normalizeLongitude(fs.longitude)); return Math.min(d, 360 - d) <= 5; }).map(p => `${p.name} activates it by conjunction`).join("; ") || "No natal planet activates this star within 5°"}. Historical symbolic interpretation requires an attested star-specific doctrine.`,
   }));
 
   layers["fixed-stars-royal-watchers"] = {
