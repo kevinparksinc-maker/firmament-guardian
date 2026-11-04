@@ -291,6 +291,11 @@ class SDKServer {
     }
 
     const sessionUserId = session.openId;
+    // Reject legacy shared demo cookies even if they were signed before demo-login was disabled.
+    if (sessionUserId === "local-observatory-user" &&
+        (ENV.isProduction || process.env.ENABLE_DEMO_LOGIN !== "true")) {
+      throw ForbiddenError("Shared demo sessions are disabled");
+    }
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
