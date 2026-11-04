@@ -455,7 +455,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
             initialMode="transit"
             initialQuestion={
               new URLSearchParams(window.location.search).get("question") || activeInterpreterQuestion ||
-              "What is the single most important planetary transit active for me right now, and how should I align my actions today?"
+              "Read my actual energy contacts in depth. Calculated contacts: " + (energyData?.contacts.slice(0, 18).map(c => c.transit + " " + c.aspect + " natal " + c.natal + " (orb " + c.orb.toFixed(2) + " degrees, intensity " + c.intensity + "/5, weight " + c.strength + ")").join("; ") || "No contacts within orb") + ". Explain how each contact manifests through both planetary functions and their natal and transit houses, synthesize all patterns, and separate chart evidence from interpretation. Explain what the energy is presenting in ordinary experience, not just what each aspect is called."
             }
           />
         )}
