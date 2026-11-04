@@ -103,7 +103,13 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     { query: transitLocationQuery },
     { enabled: false, retry: false }
   );
-  const calculate = trpc.hybrid.calculate.useMutation({ onSuccess: setResult });
+  const calculate = trpc.hybrid.calculate.useMutation({
+    onSuccess: setResult,
+    onError: (error) => {
+      setResult(null);
+      setFormError(`Chart calculation failed: ${error.message}`);
+    },
+  });
   const me = trpc.auth.me.useQuery();
   const saveChart = trpc.history.saveChart.useMutation();
   const calculateChart = async (
@@ -189,7 +195,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
       setFormError("Birth coordinates are invalid. Edit the profile and resolve the birth city again.");
       return;
     }
-    if (nextForm.date && (!/^\d{4}-\d{2}-\d{2}$/.test(nextForm.date) || !Number.isFinite(Date.parse(`${nextForm.date}T00:00:00.000Z`)))) {
+    if (nextForm.date && (!/^\d{4}-\d{2}-\d{2}$/.test(nextForm.date) || !Number.isFinite(Date.parse(`${nextForm.date}T00:00:00.000Z`)) || new Date(`${nextForm.date}T00:00:00.000Z`).toISOString().slice(0, 10) !== nextForm.date)) {
       setFormError("Birth date must be a valid YYYY-MM-DD date.");
       return;
     }
