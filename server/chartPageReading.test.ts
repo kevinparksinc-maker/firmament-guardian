@@ -1,102 +1,92 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
-  validateChartPageReading,
+  buildPlacementPackets,
+  validatePlacementSummaries,
   buildChartPageReading,
 } from "./chartPageReading";
-import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
-import type { ChartResult } from "./astronomy";
-vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
-vi.mock("./astrologyKnowledge/synthesis/readingBridge", () => ({
-  synthesizeChartForReading: vi.fn(),
-}));
-import { invokeLLM } from "./_core/llm";
+import { calculateChart, type ChartResult } from "./astronomy";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
-const methods = [
-  {
-    id: "placements",
-    status: "computed-with-result",
-    evidenceIds: ["sun-scorpio-h11"],
-  },
-  {
-    id: "decans",
-    status: "computed-with-result",
-    evidenceIds: ["sun-decan-3"],
-  },
-  { id: "numerology", status: "not-applicable", evidenceIds: [] },
-];
-const synthesis = { methodFindings: methods } as unknown as SynthesisResult;
-const block = {
-  what: "The Sun’s actual Scorpio placement directs identity into the eleventh house.",
-  why: "Its third elemental-family decan modifies the supplied solar placement.",
-  how: "The decan and eleventh house combine personal loyalty with collective aims.",
-  consequence:
-    "Conflicting loyalties within alliances can interrupt shared plans.",
-  meaning:
-    "Purpose develops through the specific alliances indicated by this chart.",
-  examples: [
-    "Choosing collaborators whose commitments survive a disagreement.",
-  ],
-  evidenceIds: ["sun-scorpio-h11", "sun-decan-3"],
-  linkedMethodIds: ["placements", "decans"],
-};
-const response = () => ({
-  integrated: { ...block },
-  bigThree: { ...block },
-  layers: methods.slice(0, 2).map(m => ({ ...block, methodId: m.id })),
+import { invokeLLM } from "./_core/llm";
+vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
+let chart: ChartResult;
+let packets: ReturnType<typeof buildPlacementPackets>;
+beforeAll(async () => {
+  chart = await calculateChart({
+    location: "Dallas, TX",
+    latitude: 32.7767,
+    longitude: -96.797,
+    timezone: "America/Chicago",
+    date: "1986-11-20",
+    time: "10:06",
+    worldview: "agent-vs-god",
+    readingScope: "natal",
+  });
+  const { synthesis, canonicalChart } = await synthesizeChartForReading(
+    chart,
+    "natal",
+    "Placement summaries"
+  );
+  packets = buildPlacementPackets(canonicalChart, synthesis);
 });
-describe("Chart page integrated reading contract", () => {
-  it("retains every computed layer, without inventing a numerology calculation", () => {
+const response = () => ({
+  placements: packets.map(p => ({
+    name: p.name,
+    paragraph:
+      "A compact interpretation that connects this planet’s own calculated mansion, pada, manzil and supporting conditions to a specific drive, strength and challenge in everyday life.",
+    evidenceIds: p.facts.map(f => f.id),
+    layerIds: Array.from(new Set(p.facts.map(f => f.layerId))),
+  })),
+});
+describe("Compact Chart page placement summaries", () => {
+  it("preserves Sun and Moon mansion evidence, vargas and BAV in a bounded packet", () => {
+    const sun = packets.find(p => p.name === "Sun")!;
+    const moon = packets.find(p => p.name === "Moon")!;
+    expect(sun.canon.nakshatra.name).toBe("Jyeshtha");
+    expect(moon.canon.nakshatra.name).toBe("Pushya");
+    expect(moon.canon.manzil.name).toBe("Al-Tarf");
+    expect(moon.facts.some(f => f.layerId === "vedic-vargas-divisional")).toBe(
+      true
+    );
     expect(
-      validateChartPageReading(response(), synthesis).layers.map(
-        l => l.methodId
+      moon.facts.some(
+        f =>
+          f.layerId === "vedic-dasha-and-ashtakavarga" &&
+          JSON.stringify(f.value).includes("Moon BAV total")
       )
-    ).toEqual(["placements", "decans"]);
+    ).toBe(true);
+    expect(JSON.stringify(packets).length).toBeLessThan(100_000);
   });
-  it("rejects missing, duplicate, and invented layer interpretations", () => {
-    for (const ids of [
-      ["placements"],
-      ["placements", "placements"],
-      ["placements", "numerology"],
-    ]) {
-      expect(() =>
-        validateChartPageReading(
-          {
-            ...response(),
-            layers: ids.map(methodId => ({ ...block, methodId })),
-          },
-          synthesis
-        )
-      ).toThrow("INCOMPLETE");
-    }
-  });
-  it("rejects invented evidence and disconnected dictionary readings", () => {
-    expect(() =>
-      validateChartPageReading(
-        { ...response(), integrated: { ...block, evidenceIds: ["invented"] } },
-        synthesis
-      )
-    ).toThrow("UNGROUNDED");
-    expect(() =>
-      validateChartPageReading(
-        {
-          ...response(),
-          bigThree: { ...block, linkedMethodIds: ["placements"] },
-        },
-        synthesis
-      )
-    ).toThrow("DISCONNECTED");
-    const value = response();
-    value.layers[1].evidenceIds = ["sun-scorpio-h11"];
-    expect(() => validateChartPageReading(value, synthesis)).toThrow(
-      "lacks its own"
+  it("requires every displayed planet, including the Sun, and rejects duplicates", () => {
+    expect(
+      validatePlacementSummaries(response(), packets).placements.length
+    ).toBe(chart.movingBodies.length);
+    const missingSun = response();
+    missingSun.placements = missingSun.placements.filter(p => p.name !== "Sun");
+    expect(() => validatePlacementSummaries(missingSun, packets)).toThrow(
+      "INCOMPLETE"
+    );
+    const duplicate = response();
+    duplicate.placements[0] = duplicate.placements[1];
+    expect(() => validatePlacementSummaries(duplicate, packets)).toThrow(
+      "INCOMPLETE"
     );
   });
-  it("passes the complete Canon-backed bridge context to the interpreter", async () => {
-    vi.mocked(synthesizeChartForReading).mockResolvedValue({
-      synthesis,
-      context: "ALL CALCULATED LAYERS AND MATCHED CANON",
-      canonicalChart: {} as ChartResult,
-    });
+  it("rejects sign-only summaries and invented evidence", () => {
+    const shallow = response();
+    shallow.placements[0].layerIds = [
+      "western-planets-and-signs",
+      "elemental-decans",
+    ];
+    expect(() => validatePlacementSummaries(shallow, packets)).toThrow(
+      "SHALLOW"
+    );
+    const invented = response();
+    invented.placements[0].evidenceIds.push("invented-shadbala");
+    expect(() => validatePlacementSummaries(invented, packets)).toThrow(
+      "UNGROUNDED"
+    );
+  });
+  it("requests concise paragraphs using the actual Master Interpreter and compact Canon, not the life-story context", async () => {
     vi.mocked(invokeLLM).mockResolvedValue({
       choices: [
         {
@@ -109,16 +99,18 @@ describe("Chart page integrated reading contract", () => {
       created: 0,
       model: "test",
     });
-    const result = await buildChartPageReading({} as ChartResult, "natal");
-    expect(result.reading.layers).toHaveLength(2);
-    expect(vi.mocked(invokeLLM).mock.calls[0][0].messages[1].content).toBe(
-      "ALL CALCULATED LAYERS AND MATCHED CANON"
+    const result = await buildChartPageReading(chart, "natal");
+    expect(result.placements[0].name).toBe("Sun");
+    const call = vi.mocked(invokeLLM).mock.calls[0][0];
+    expect(call.max_tokens).toBe(4500);
+    expect(call.timeoutMs).toBe(180000);
+    expect(call.messages[0].content).toContain(
+      "THE ABSOLUTE — INTERPRETATION ENGINE"
     );
-    vi.mocked(invokeLLM).mockRejectedValueOnce(
-      new Error("Provider unavailable")
-    );
-    await expect(
-      buildChartPageReading({} as ChartResult, "natal")
-    ).rejects.toThrow("Provider unavailable");
+    expect(call.messages[0].content).toContain("70–110 words");
+    expect(String(call.messages[1].content).length).toBeLessThan(101000);
+    expect(call.messages[1].content).not.toContain("UNIFIED MASTER SYNTHESIS");
+    await buildChartPageReading(chart, "natal");
+    expect(invokeLLM).toHaveBeenCalledTimes(1);
   });
 });

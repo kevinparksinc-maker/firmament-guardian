@@ -69,6 +69,8 @@ export type InvokeParams = {
   response_format?: ResponseFormat;
   model?: string;
   signal?: AbortSignal;
+  /** Per-request timeout for provider response headers. */
+  timeoutMs?: number;
   thinking?: Record<string, unknown>;
   reasoning?: Record<string, unknown>;
 };
@@ -269,6 +271,7 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
     headers: { "content-type": "application/json", "x-api-key": ENV.anthropicApiKey, "anthropic-version": "2023-06-01" },
     body: JSON.stringify(body),
     signal: params.signal,
+    timeoutMs: params.timeoutMs,
   });
   if (!response.ok) {
     const errorText = await response.text();
@@ -302,6 +305,7 @@ async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
         headers,
         body: JSON.stringify({ model, messages, ...requestOptions }),
         signal: params.signal,
+        timeoutMs: params.timeoutMs,
       });
       if (!response.ok) {
         const errorText = await response.text();
@@ -433,7 +437,7 @@ const computeBackoffDelay = (
 // returns the final Response so callers keep their existing error handling.
 const fetchWithBackoff = async (
   url: string,
-  init: FetchInit
+  init: FetchInit & { timeoutMs?: number }
 ): Promise<Response> => {
   let lastError: unknown;
 
@@ -443,15 +447,26 @@ const fetchWithBackoff = async (
       const controller = new AbortController();
       const onAbort = () => controller.abort(init.signal?.reason);
       init.signal?.addEventListener("abort", onAbort, { once: true });
-      const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS);
+      const timeoutMs = init.timeoutMs ?? LLM_REQUEST_TIMEOUT_MS;
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
       let response: Response;
       try {
-        response = await fetch(url, { ...init, signal: controller.signal });
+        const { timeoutMs: _timeoutMs, ...requestInit } = init;
+        try {
+          response = await fetch(url, { ...requestInit, signal: controller.signal });
+        } catch (error) {
+          if (controller.signal.aborted && !init.signal?.aborted) {
+            throw new Error(`AI_REQUEST_TIMEOUT: The AI service did not respond within ${Math.round(timeoutMs / 1000)} seconds. Retry this summary.`, { cause: error });
+          }
+          throw error;
+        }
       } finally {
         clearTimeout(timeout);
         init.signal?.removeEventListener("abort", onAbort);
       }
-      if (response.ok || attempt === RETRY_MAX_RETRIES) {
+      // Preserve the original body for billing, invalid-input and auth errors.
+      // Repeating a rejected 400 request hides the useful provider explanation.
+      if (response.ok || ![408, 409, 429, 500, 502, 503, 504, 529].includes(response.status) || attempt === RETRY_MAX_RETRIES) {
         return response;
       }
 
@@ -469,7 +484,8 @@ const fetchWithBackoff = async (
       await sleep(computeBackoffDelay(attempt, retryAfterMs), init.signal);
     } catch (error) {
       lastError = error;
-      if (init.signal?.aborted || attempt === RETRY_MAX_RETRIES) throw error;
+      if (init.signal?.aborted || attempt === RETRY_MAX_RETRIES ||
+          (error instanceof Error && error.message.startsWith("AI_REQUEST_TIMEOUT:"))) throw error;
       console.warn(
         `LLM request retry ${attempt + 1}/${RETRY_MAX_RETRIES} after network error`
       );
@@ -608,6 +624,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     },
     body: JSON.stringify(payload),
     signal: params.signal,
+    timeoutMs: params.timeoutMs,
   });
 
   if (!response.ok) {
