@@ -1,3 +1,4 @@
+import { buildChartPageReading } from "./chartPageReading";
 import { buildChartBriefing } from "./chartBriefing";
 import { buildFocusedReading } from "./focusedReading";
 import { calculateHarmonicForecast } from "./harmonicForecast";
@@ -323,6 +324,7 @@ export const appRouter = router({
       }),
   }),
   interpretation: router({
+    chartPage: publicProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode)),
     chartBriefing: publicProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
     focusedPlacement: publicProcedure
       .input(z.object({ chart: chartPayload, target: z.object({ kind: z.enum(["placement", "star", "contact"]), name: z.string().min(1).max(80), otherName: z.string().min(1).max(80).optional(), layer: z.enum(["natal", "transit"]) }) }))

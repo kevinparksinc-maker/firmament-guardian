@@ -276,7 +276,7 @@ export function ProfileChartScreen({
       )}
 
       {/* 25 EXPANDABLE SYSTEMATIC DECONSTRUCTION DRAWERS */}
-      <SystematicDeconstruction chart={chart} onInterpretBody={setInterpretBody} />
+      <SystematicDeconstruction chart={chart} mode={readingMode} onInterpretBody={setInterpretBody} />
 
       <VedicDivisionalCharts chart={chart} />
         <VedicDashaTimeline chart={chart} />
