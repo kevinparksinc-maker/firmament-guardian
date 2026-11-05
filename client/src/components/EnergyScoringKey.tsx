@@ -29,7 +29,7 @@ export function EnergyScoringKey() {
           Percentages are weighted scores, so they do not equal the percentage
           of contacts. With no contacts, both scores are zero.
         </p>
-        <p>The summary favors Harmony or Friction when its weighted total exceeds the other by more than 30%. Balanced Synthesis means neither side crosses that threshold; it does not mean the totals are identical.</p>
+        <p>The Energy assessment names the side with the greater weighted total and ranks the strongest contacts on each side. A close split does not imply that every life area is balanced; read the planetary pairs, placements and actions behind it.</p>
       <details>
           <summary className="cursor-pointer text-slate-200">
             Body weights

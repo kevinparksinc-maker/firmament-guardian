@@ -8,6 +8,7 @@ import App from "./App";
 import { Router as WouterRouter } from "wouter";
 import { startLogin } from "./const";
 import "./index.css";
+import { chartQueryTransport } from "@shared/trpcTransport";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
+      ...chartQueryTransport,
       url: "/api/trpc",
       transformer: superjson,
       headers() {

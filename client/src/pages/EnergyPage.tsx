@@ -1,3 +1,4 @@
+import { buildEnergyAssessment } from "@shared/energyAssessment";
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
 import React, { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
@@ -61,6 +62,8 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
   };
 
   const energyData = useMemo(() => calculateEnergyRead(chart), [chart]);
+
+  const assessment = useMemo(() => chart && energyData ? buildEnergyAssessment(chart, energyData) : null, [chart, energyData]);
 
   const filteredContacts = useMemo(() => {
     if (!energyData) return [];
@@ -217,7 +220,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
                       : "bg-cyan-950/70 text-cyan-300 border border-cyan-400/40 shadow-[0_0_12px_rgba(34,211,238,0.3)]"
                   }`}
                 >
-                  {energyData.signal}
+                  {assessment?.headline ?? energyData.signal}
                 </span>
                 <p className="mt-1 font-mono text-[11px] text-slate-400 tabular-nums">
                   Calculated sky: {currentTimeStr}
@@ -258,7 +261,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
                     </span>
                   </div>
                   <p className="mt-1 text-[11px] text-slate-300">
-                    Squares & oppositions building structural discipline and grit.
+                    Squares, oppositions, semisquares and quincunxes.
                   </p>
                 </div>
               </div>
@@ -267,13 +270,8 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9B66F]">
                   Transit Climate Assessment
                 </span>
-                <p className="text-xs text-slate-200 leading-relaxed">
-                  {energyData.signal === "Harmonious Flow"
-                    ? "Cosmic weather is highly supportive. Favorable alignments invite confident outreach, relationship cultivation, and strategic launches."
-                    : energyData.signal === "Dynamic Friction"
-                    ? "Dynamic tension dominates the skies. Conserve your energy, resist hasty confrontation, and redirect internal pressure into meticulous craftsmanship."
-                    : energyData.contactsCount === 0 ? "No personal contacts fall within the 5° orb at this moment. Select another time or refresh the sky." : "Both harmony and friction are present. Compare their weighted totals and the individual contact evidence before choosing your focus."}
-                </p>
+                <h3 className="font-semibold text-amber-100">{assessment?.headline}</h3>
+                {assessment?.paragraphs.map((paragraph, index) => <p key={index} className="text-sm text-slate-200 leading-relaxed">{paragraph}</p>)}
               </div>
             </div>
           </div>
