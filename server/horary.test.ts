@@ -185,6 +185,11 @@ describe("horary astrology", () => {
     expect(messages[1].content).toContain("LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED");
     expect(messages[1].content).toContain("GOD VIEW / AGENT VIEW RELATIONSHIP SYNTHESIS");
     expect(messages[1].content).toContain("Synthesis shown in the box:");
+    expect(messages[1].content).toContain("FULL 16/20-LAYER SYNTHESIS REPORT");
+    expect(messages[1].content).toContain("16 SELF-KNOWLEDGE DIMENSIONS");
+    expect(messages[1].content).toContain("16-SYSTEM CONVERGENCE AUDIT");
+    expect(messages[1].content).toContain("PLANET INTERACTION MATRIX");
+    expect(messages[1].content).toContain("LANGUAGE SAFETY RESTRICTIONS");
     expect(messages[1].content).toContain("This is the compact judgment evidence");
     expect(messages[1].content).toContain("FULL TECHNICAL EVIDENCE");
     expect(messages[1].content).toContain("TRADITIONAL MOON STATUS");

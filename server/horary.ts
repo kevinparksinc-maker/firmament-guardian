@@ -13,6 +13,85 @@ import { FIRMAMENT_SOVEREIGN_VOICE_STANDARD, UNIVERSAL_THREE_LAYER_DIVINATION_AR
 import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
 import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever";
 import { seferYetzirahEvidence, KABBALAH_SYNTHESIS_STANDARD } from "./astrologyKnowledge/canon/seferYetzirah";
+import type { BehavioralIntelligenceReport } from "./astrologyKnowledge/behavioral/engine";
+
+function formatFullLayerSynthesisReport(report: BehavioralIntelligenceReport) {
+  const lines = [
+    "FULL 16/20-LAYER SYNTHESIS REPORT (contextual; horary testimony remains primary)",
+    `Question: ${report.question}`,
+    `Mode: ${report.mode}; evaluated at ${report.evaluatedAt}`,
+    "",
+    "16 SELF-KNOWLEDGE DIMENSIONS",
+    ...report.allAboutYouProfile.map(item => [
+      `- ${item.question}`,
+      `  Synthesis: ${item.synthesis}`,
+      `  Astrological proof: ${item.astrologicalProof.join(" · ") || "none supplied"}`,
+    ].join("\n")),
+    "",
+    "16-SYSTEM CONVERGENCE AUDIT",
+    ...report.convergenceSimulationLab.sixteenSystems.map(item =>
+      `- ${item.system} [${item.category}; ${item.status}]: ${item.evidenceSummary}`
+    ),
+    "",
+    "COUNTERFACTUAL SIMULATION COMPARISONS",
+    ...report.convergenceSimulationLab.simulationComparisons.map(item => [
+      `- ${item.title}: ${item.hypothesisTested}`,
+      `  Baseline: ${item.surfaceOrBaselineView}`,
+      `  Convergent pattern: ${item.convergentPatternReality}`,
+      `  Verdict: ${item.verdict}`,
+    ].join("\n")),
+    "",
+    "DOMINANT BEHAVIORAL PATTERNS",
+    ...report.dominantBehaviors.map(item => [
+      `- #${item.codeNumber} ${item.name} [${item.confidenceLabel}; ${item.state}; relevance ${item.questionRelevance.toFixed(2)}]`,
+      `  Definition: ${item.definition}`,
+      `  Internal: ${item.internalExpression}`,
+      `  External: ${item.externalExpression}`,
+      `  Automatic response: ${item.automaticExpression}`,
+      `  Repeating cycle: ${item.repeatingCycle}`,
+      `  Constructive expression: ${item.constructiveExpression}`,
+      `  Shadow/cost: ${item.shadowExpression}`,
+      `  Developmental path: ${item.developmentalTrajectory.mature}`,
+      `  God ↔ Agent synthesis: ${item.godToAgentSynthesis}`,
+      `  Supporting evidence: ${item.supportingEvidence.map(e => `[${e.channel}] ${e.detail}`).join(" · ") || "none supplied"}`,
+      `  Counter-evidence: ${item.counterEvidence.join(" · ") || "none supplied"}`,
+    ].join("\n")),
+    "",
+    "POLARITY AXES AND ACTIVE CONTRADICTIONS",
+    ...[...report.polarityAxes, ...report.activeContradictions].map(item =>
+      `- ${item.leftPole} (${item.leftScore}) ↔ ${item.rightPole} (${item.rightScore}); ${item.dominantSide}; ${item.synthesis}`
+    ),
+    "",
+    "ACTIVE LIFE-EVENT AND SITUATION SIGNATURES",
+    ...report.activeLifeEvents.map(item =>
+      `- #${item.codeNumber} ${item.name} [${item.confidenceLabel}; ${item.temporalState}; relevance ${item.questionRelevance.toFixed(2)}]: ${item.definition} Developmental meaning: ${item.developmentalMeaning} God ↔ Agent: ${item.godToAgentTranslation}`
+    ),
+    "",
+    "EVENT SEQUENCES",
+    ...report.eventSequences.map(item =>
+      `- ${item.name} [strength ${item.strength.toFixed(2)}]: stages ${item.activeStages.join(" → ")}. ${item.narrative} Developmental meaning: ${item.developmentalMeaning}`
+    ),
+    "",
+    "PLANET INTERACTION MATRIX",
+    ...report.planetInteractions.map(item =>
+      `- ${item.pair} ${item.aspect} (${item.orb.toFixed(2)}°): ${item.coreTheme}; constructive: ${item.constructive}; shadow: ${item.shadow}; mechanism: ${item.behavioralMechanism}`
+    ),
+    "",
+    "ACTIVE HOUSE-AXIS ANALYSIS",
+    ...report.activeHouseAxes.map(item =>
+      `- ${item.name} — ${item.theme}: ${item.narrative} Evidence: ${item.evidence.join(" · ") || "none supplied"}`
+    ),
+    "",
+    "MATCHED VOCABULARY TAGS",
+    ...report.matchedVocabularyTags.map(item => `- #${item.code} ${item.domain} / ${item.name}: ${item.evidence}`),
+    "",
+    "LANGUAGE SAFETY RESTRICTIONS",
+    ...report.doNotClaimRestrictions.map(item => `- ${item}`),
+    "",
+    "INTERPRETATION RULE: use this report to synthesize contextual human meaning after reviewing the horary evidence. Do not let behavioral, life-event, simulation, or frame findings overrule the horary significators, receptions, perfection, radicality, or Moon testimony. Do not turn a pattern or possibility into a guaranteed event, diagnosis, biography, or claim about another person's private mind.",
+  ];
+  return lines.join("\n");
+}
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;
@@ -221,6 +300,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   const canonDossier = retrieveChartCanonDossier(calculated);
   const fullMethodPacket = buildAstrologyEvidencePacket({ ...calculated, transits: [] }, input.question, "natal");
   const fullMethodEvidence = formatEvidencePacket(fullMethodPacket);
+  const fullLayerSynthesisReport = formatFullLayerSynthesisReport(fullMethodPacket.behavioralReport);
   const kabbalahEvidenceText = seferYetzirahEvidence(calculated)
     .map(item => `- [${item.technique}] ${item.statement}`)
     .join("\n");
@@ -335,6 +415,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `RADICALITY / CONSIDERATIONS BEFORE JUDGMENT: status ${traditional.radicality.status}; ${traditional.radicality.explanation}\n${traditional.radicality.considerations.length ? traditional.radicality.considerations.map(row => `- ${row}`).join("\n") : "- No configured caution was triggered."}`,
     `TRADITIONAL EVENT-TIMING AID (degrees to perfection and modality estimate; not a guaranteed event date):\n${timingLines}`,
     `LUNAR MANSION / MANZIL / DECAN CONTEXT FOR CLASSICAL PLANETS AND ASCENDANT:\n${overlayLines}`,
+    fullLayerSynthesisReport,
     `FULL UNIVERSAL METHOD EVALUATION (all returned evidence and explicit gaps):\n${fullMethodEvidence}`,
     `SEFER YETZIRAH + FOUR WORLDS — QUESTION-MOMENT SYMBOLIC CORRESPONDENCES (textual variants, contextual only; cannot change traditional judgment):\n${kabbalahEvidenceText}`,
     `SEFER YETZIRAH — QUERENT NATAL CORRESPONDENCES (distinct from the horary moment):\n${natalKabbalahText}`,
