@@ -6,6 +6,7 @@ import {
   formatEvidencePacket,
 } from "./astrologyKnowledge";
 import type { ChartResult } from "./astronomy";
+import { buildMasterPipeline, formatMasterGateContext } from "./master-pipeline";
 
 const HOST_SYSTEM = `You are The Absolute's Host Interpreter and conversational guide. Help with general questions, app navigation, and symbolic reflection naturally. For personal astrology questions, answer through the supplied chart evidence and the traditional meanings of its calculated methods. Interpret the strongest patterns directly, explain why the evidence supports the conclusion, and address contradictions. Do not impose a fixed personality, emotional narrative, cosmology lecture, or modern-life topic list. Do not invent chart facts or observed events.`;
 
@@ -20,6 +21,8 @@ export async function askHost(
 
   if (chart && typeof chart === "object" && Array.isArray(chart.movingBodies)) {
     try {
+      const master = await buildMasterPipeline(chart, mode, question);
+      const masterContext = formatMasterGateContext(master);
       // 1. Build and format full multi-system Evidence Packet (Vedic, Arabic, Western, Behavioral)
       const packet = buildAstrologyEvidencePacket(chart, question, mode);
       const formattedPacket = formatEvidencePacket(packet);
@@ -55,6 +58,8 @@ export async function askHost(
         : "";
 
       ragContext = `
+${masterContext}
+
 === RETRIEVED USER CHART EVIDENCE (RAG CONTEXT) ===
 CHART IDENTIFIERS:
 - Birth Location: ${birthLoc}

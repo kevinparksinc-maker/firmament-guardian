@@ -15,6 +15,7 @@ import { getDecanCanonByLongitude } from "./astrologyKnowledge/canon/decans36";
 import { getManzilCanonByLongitude } from "./astrologyKnowledge/canon/manazil28";
 import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/canon/nakshatras27";
 import { overlay as canonicalOverlay } from "../shared/hybrid";
+import { buildMasterPipeline, formatMasterGateContext } from "./master-pipeline";
 
 
 const COSMOLOGY = `Interpret the supplied chart according to the traditional meanings and calculated method findings. Give direct conclusions supported by evidence, including difficult indications and timing when available. Do not invent placements, personal history, or observed events. Do not insert cosmology explanations, belief commentary, psychological coaching, or a prescribed persona.`;
@@ -996,11 +997,15 @@ export async function generateInterpretation(
   question = "What should I understand from this chart?",
   synthesisContext = ""
 ) {
+  const master = await buildMasterPipeline(chart, mode, question);
+  const masterContext = formatMasterGateContext(master);
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
-  const intelligence = `${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
-  const analysis = await analyzeChart(chart, mode, evidencePacket, synthesisContext);
-  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis, synthesisContext);
+  const intelligence = `${masterContext}\n\n${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
+  const analysis = await analyzeChart(chart, mode, evidencePacket, `${masterContext}\n\n${synthesisContext}`);
+  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, `${masterContext}\n\n${analysis}`, synthesisContext);
   return {
+    masterSnapshot: master.snapshot,
+    masterSynthesis: master.synthesis,
     intelligence,
     evidencePacket,
     behavioralReport: evidencePacket.behavioralReport,
@@ -1139,12 +1144,14 @@ export async function generateChapter(
 ) {
   const chapter = READING_CHAPTERS.find(item => item.id === chapterId);
   if (!chapter) throw new Error("That reading chapter is not available.");
+  const master = await buildMasterPipeline(chart, mode, question || chapter.title);
+  const masterContext = formatMasterGateContext(master);
   const evidencePacket = buildAstrologyEvidencePacket(
     chart,
     `${question ? `User question: ${question}\n\n` : ""}Chapter focus: ${chapter.title}. ${chapter.focus}`,
     mode
   );
-  const facts = `${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
+  const facts = `${masterContext}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
   const context = completedChapters.length
     ? `Already written chapters, full text below. Do not repeat any point, placement meaning, scene, or advice already made in them. Stay consistent with every fact they state, and put new weight on evidence they left untouched.${chapterId === "mirror" ? " This is the Mirror: synthesize across all chapters into the few threads that actually connect them. Do not re-list evidence." : ""}\n\n${completedChapters.join("\n\n---\n\n")}`
     : "This is the opening chapter; establish the emotional and narrative foundation.";
@@ -1177,6 +1184,8 @@ export async function followUp(
   question: string,
   mode: ReadingMode = "combined"
 ) {
+  const master = await buildMasterPipeline(chart, mode, question);
+  const masterContext = formatMasterGateContext(master);
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
   const messages: Message[] = [
     {
@@ -1187,7 +1196,7 @@ export async function followUp(
     },
     {
       role: "user",
-      content: `Chart facts:\n${JSON.stringify(chartFacts(chart, mode))}\n\n${formatEvidencePacket(evidencePacket)}\n\nChart Intelligence:\n${interpretation.intelligence}\n\nGenerated reading:\n${interpretation.reading}`,
+      content: `${masterContext}\n\nChart facts:\n${JSON.stringify(chartFacts(chart, mode))}\n\n${formatEvidencePacket(evidencePacket)}\n\nChart Intelligence:\n${interpretation.intelligence}\n\nGenerated reading:\n${interpretation.reading}`,
     },
     ...withCurrentQuestion(history, question, 12),
   ];

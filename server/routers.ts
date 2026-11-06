@@ -45,6 +45,7 @@ import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
 import { buildUnifiedMasterChart, getMasterNatalChart } from "./masterChart/builder";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
+import { buildMasterPipeline } from "./master-pipeline";
 
 
 const chartInput = z.object({
@@ -307,9 +308,15 @@ export const appRouter = router({
           mode: z.enum(["natal", "transit", "combined"]).default("combined"),
         })
       )
-      .query(({ input }) =>
-        evaluateBehavioralIntelligence(input.chart, input.question, input.mode)
-      ),
+      .query(async ({ input }) => {
+        const master = await buildMasterPipeline(input.chart, input.mode, input.question);
+        const report = evaluateBehavioralIntelligence(input.chart, input.question, input.mode);
+        return {
+          ...report,
+          masterSnapshot: master.snapshot,
+          masterSynthesis: master.synthesis,
+        };
+      }),
     diagnose: publicProcedure
       .input(
         chartResultInput.extend({
