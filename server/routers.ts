@@ -1,3 +1,4 @@
+import { buildEnergyReading } from "./energyReading";
 import { buildChartPageReading } from "./chartPageReading";
 import { buildChartBriefing } from "./chartBriefing";
 import { buildFocusedReading } from "./focusedReading";
@@ -329,6 +330,7 @@ export const appRouter = router({
       }),
   }),
   interpretation: router({
+    energyReading: publicProcedure.input(chartResultInput).mutation(({ input }) => buildEnergyReading(input.chart)),
     chartPage: publicProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode)),
     chartBriefing: publicProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
     focusedPlacement: publicProcedure

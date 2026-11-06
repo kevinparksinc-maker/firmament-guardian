@@ -1,6 +1,7 @@
-import { buildEnergyAssessment } from "@shared/energyAssessment";
+import { readingCacheIdentity } from "@shared/readingIdentity";
+import { trpc } from "@/lib/trpc";
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Activity,
@@ -28,7 +29,7 @@ import { HarmonicFlowTimeline } from "@/components/HarmonicFlowTimeline";
 import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
-import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
+import { ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
 
 const ASPECT_SYMBOLS: Record<TransitContact["aspect"] | MinorTransitContact["aspect"], string> = {
   conjunction: "☌",
@@ -61,9 +62,28 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
     onRefresh?.();
   };
 
-  const energyData = useMemo(() => calculateEnergyRead(chart), [chart]);
-
-  const assessment = useMemo(() => chart && energyData ? buildEnergyAssessment(chart, energyData) : null, [chart, energyData]);
+  const synthesisRequest = trpc.interpretation.energyReading.useMutation();
+  type Reading = NonNullable<typeof synthesisRequest.data>;
+  const [resolved, setResolved] = useState<{ key: string; reading: Reading } | null>(null);
+  const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
+  const [retry, setRetry] = useState(0);
+  const readingKey = chart ? readingCacheIdentity(chart, "combined", "energy-overview-v1") : "";
+  useEffect(() => {
+    let active = true;
+    setResolved(null);
+    setFailure(null);
+    if (chart && !calculating) {
+      synthesisRequest.mutateAsync({ chart }).then(reading => {
+        if (active) setResolved({ key: readingKey, reading });
+      }).catch(error => {
+        if (active) setFailure({ key: readingKey, message: error instanceof Error ? error.message : "Energy synthesis failed." });
+      });
+    }
+    return () => { active = false; };
+  }, [readingKey, retry, calculating]);
+  const reading = !calculating && resolved?.key === readingKey ? resolved.reading : null;
+  const synthesisError = failure?.key === readingKey ? failure.message : null;
+  const energyData = reading?.score;
 
   const filteredContacts = useMemo(() => {
     if (!energyData) return [];
@@ -158,7 +178,24 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
       {!chart && <p role="status">{calculating ? "Calculating current transit contacts…" : "Refresh Sky to calculate your current energy."}</p>}
       <nav aria-label="Energy pages" className="flex flex-wrap gap-3 text-sm text-cyan-200">{[{href:"/energy",label:"Overview"},{href:"/energy/contacts",label:"Contact ledger"},{href:"/forecast",label:"30-minute forecast"},{href:"/energy/consultation",label:"Interpretation"}].map(item=><Link key={item.href} href={item.href} aria-current={path===item.href?"page":undefined} className={`rounded-xl border px-4 py-3 ${path===item.href?"border-amber-200/50 bg-amber-200/10 text-amber-100":"border-white/15"}`}>{item.label}</Link>)}</nav>
       <p className="text-sm leading-6 text-slate-400">Personal contacts compare current transit bodies with your natal placements and angles. Independent Sky counts pairs within one event sky. The totals can differ even at the same place and time.</p>
-      <EnergyScoringKey />
+      {chart && !reading && !synthesisError && <p role="status" className="rounded-2xl border border-cyan-300/30 p-6 text-cyan-100">Synthesizing your natal chart, current contacts and Canon before presenting your energy…</p>}
+      {synthesisError && <div role="alert" className="space-y-3 rounded-2xl border border-rose-300/30 p-6 text-rose-200">
+        <p>Energy synthesis could not be completed: {synthesisError}</p>
+        <button type="button" onClick={() => setRetry(value => value + 1)} className="underline">Retry synthesis</button>
+      </div>}
+      {reading && <section aria-label="Synthesized Current Energy" className="space-y-4 rounded-3xl border border-amber-200/30 bg-[#080B14]/90 p-6 sm:p-8">
+        <h2 className="font-serif text-2xl text-amber-100">{reading.headline}</h2>
+        <p className="text-xs text-slate-400">Calculated sky: {currentTimeStr}</p>
+        {reading.paragraphs.map((paragraph, index) => <p key={index} className="text-sm leading-7 text-slate-200">{paragraph.text}</p>)}
+        {!reading.score.contactsCount && <p className="text-sm text-slate-200">No personal contacts fall within the configured 5° orb at this calculated moment.</p>}
+        <details className="text-xs text-slate-400">
+          <summary className="cursor-pointer text-cyan-200">Synthesis evidence</summary>
+          <p className="mt-3 break-all">Snapshot: {reading.snapshotId}</p>
+          <p className="mt-2">Methods reviewed: {reading.methodsReviewed.join(", ")}</p>
+          {reading.paragraphs.map((paragraph, index) => <p key={index} className="mt-2">Paragraph {index + 1}: {paragraph.contactIds.join(", ")} · {paragraph.methodIds.join(", ")}</p>)}
+        </details>
+      </section>}
+      {reading && <EnergyScoringKey />}
       {/* SECTION 2: MAIN ENERGY GAUGE — RESPONSIVE SEMICIRCULAR GAUGE */}
       {energyData && page === "summary" && (
         <section
@@ -220,7 +257,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
                       : "bg-cyan-950/70 text-cyan-300 border border-cyan-400/40 shadow-[0_0_12px_rgba(34,211,238,0.3)]"
                   }`}
                 >
-                  {assessment?.headline ?? energyData.signal}
+                  {energyData.signal}
                 </span>
                 <p className="mt-1 font-mono text-[11px] text-slate-400 tabular-nums">
                   Calculated sky: {currentTimeStr}
@@ -266,19 +303,13 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-4 space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9B66F]">
-                  Transit Climate Assessment
-                </span>
-                <h3 className="font-semibold text-amber-100">{assessment?.headline}</h3>
-                {assessment?.paragraphs.map((paragraph, index) => <p key={index} className="text-sm text-slate-200 leading-relaxed">{paragraph}</p>)}
-              </div>
+
             </div>
           </div>
         </section>
       )}
 
-      {page === "contacts" && <>
+      {reading && page === "contacts" && <>
       {/* SECTION 3: PLANETARY ASPECT LEDGER */}
       <section aria-label="Active Planetary Aspects Ledger" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -388,11 +419,11 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
       </section>
 
       </>}
-      {page === "forecast" && chart && <HarmonicFlowTimeline chart={chart} />}
+      {reading && page === "forecast" && chart && <HarmonicFlowTimeline chart={chart} />}
 
       {/* SECTION 4: FORECAST TIMELINE */}
       <div className="flex justify-end"><Link href="/transit-sky" className="rounded-xl border border-cyan-300/40 bg-cyan-950/30 px-4 py-2 text-sm font-semibold text-cyan-200">Open Independent Transit Chart →</Link></div>
-      {page === "forecast" && <section aria-label="Transit Weather Timeline" className="space-y-4">
+      {reading && page === "forecast" && <section aria-label="Transit Weather Timeline" className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">
@@ -408,7 +439,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
       </section>
 
       }
-      {page === "consultation" && <>
+      {reading && page === "consultation" && <>
       {/* SECTION 5: MASTER INTERPRETER DEEP QUERY */}
       <section
         id="energy-master-interpreter"
