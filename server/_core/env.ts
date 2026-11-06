@@ -22,6 +22,8 @@ export const ENV = {
   manusApiBrowserKey: process.env.MANUS_API_BROWSER_KEY ?? "",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  groqApiKey: process.env.GROQ_API_KEY?.trim() ?? "",
+  groqModel: process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-120b",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   openaiApiBase: process.env.OPENAI_API_BASE ?? process.env.OPENAI_BASE_URL ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",

@@ -227,8 +227,8 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
-    throw new Error("GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
 
@@ -250,6 +250,57 @@ const readableAssistantText = (result: ProviderResponse): string => {
   if (typeof result.output_text === "string" && result.output_text.trim()) return result.output_text;
   return result.output?.flatMap(item => item.content ?? []).map(item => item.text ?? "").filter(Boolean).join("\n") ?? "";
 };
+
+// All interpretation callers use this adapter, including legacy Claude model hints.
+// A Groq failure stays a Groq failure: never fall through to paid providers.
+async function invokeGroq(params: InvokeParams): Promise<InvokeResult> {
+  const messages = params.messages.map(message => {
+    const { name: _name, ...normalized } = normalizeMessage(message);
+    if (ensureArray(message.content).some(part => typeof part !== "string" && part.type !== "text")) {
+      throw new Error("GROQ_UNSUPPORTED_CONTENT: The configured interpreter accepts text only.");
+    }
+    return normalized;
+  });
+  const payload: Record<string, unknown> = {
+    model: ENV.groqModel,
+    messages,
+    max_completion_tokens: params.max_tokens ?? params.maxTokens ?? 4096,
+  };
+  if (ENV.groqModel.startsWith("openai/gpt-oss-")) {
+    payload.reasoning_effort = "low";
+    payload.include_reasoning = false;
+  }
+  if (params.tools?.length) payload.tools = params.tools;
+  const toolChoice = normalizeToolChoice(params.toolChoice ?? params.tool_choice, params.tools);
+  if (toolChoice) payload.tool_choice = toolChoice;
+  const format = normalizeResponseFormat(params);
+  if (format) payload.response_format = format;
+  const response = await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ENV.groqApiKey}` },
+    body: JSON.stringify(payload),
+    signal: params.signal,
+    timeoutMs: params.timeoutMs,
+  });
+  if (!response.ok) {
+    // Provider response bodies can echo private chart prompts; expose only status.
+    const retryAfter = response.headers.get("retry-after");
+    throw new Error(`GROQ_REQUEST_FAILED: HTTP ${response.status}. ${response.status === 429
+      ? `Groq usage limit reached.${retryAfter ? ` Retry after ${retryAfter} seconds.` : " Try again later."}`
+      : response.status === 401 ? "Check GROQ_API_KEY in the server environment."
+      : response.status === 413 ? "This reading exceeds the Groq account request limit."
+      : "Groq could not complete this reading; check account limits and model access."}`);
+  }
+  const result = await response.json() as InvokeResult;
+  const choice = result.choices?.[0];
+  if (choice?.finish_reason === "length") {
+    throw new Error("GROQ_INCOMPLETE_READING: The response reached its token limit. Request a shorter section.");
+  }
+  if (!responseContentToText(choice?.message?.content).trim() && !choice?.message?.tool_calls?.length) {
+    throw new Error("GROQ_EMPTY_READING: Groq returned no interpretation.");
+  }
+  return result;
+}
 
 async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
   const system = params.messages.filter(message => message.role === "system").map(message => contentToText(message.content)).join("\n\n");
@@ -379,7 +430,9 @@ const RETRY_MAX_DELAY_MS = 30_000;
 const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
 export function getLLMProviderStatus() {
-  const provider = ENV.anthropicApiKey
+  const provider = ENV.groqApiKey
+    ? "groq"
+    : ENV.anthropicApiKey
     ? "anthropic"
     : ENV.openaiApiKey && ENV.openaiApiBase
       ? "openai-compatible"
@@ -553,6 +606,7 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
+  if (ENV.groqApiKey) return invokeGroq(params);
   if (ENV.anthropicApiKey) return invokeAnthropic(params);
   if (ENV.openaiApiKey && ENV.openaiApiBase) return invokeOpenAI(params);
   if (ENV.geminiApiKey && !ENV.forgeApiKey) return invokeGemini(params);
@@ -652,12 +706,12 @@ export type ModelsResponse = {
 export async function listLLMModels(): Promise<ModelsResponse> {
   assertApiKey();
 
-  const url = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+  const url = ENV.groqApiKey ? "https://api.groq.com/openai/v1/models" : ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
     ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
     : "https://forge.manus.im/v1/models";
 
   const response = await fetchWithBackoff(url, {
-    headers: { authorization: `Bearer ${ENV.forgeApiKey}` },
+    headers: { authorization: `Bearer ${ENV.groqApiKey || ENV.forgeApiKey}` },
   });
 
   if (!response.ok) {

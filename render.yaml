@@ -12,8 +12,10 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
-      - key: ANTHROPIC_API_KEY
+      - key: GROQ_API_KEY
         sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
       - key: DATABASE_URL
         sync: false
       - key: OAUTH_SERVER_URL
