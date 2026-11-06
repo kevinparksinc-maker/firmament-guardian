@@ -44,7 +44,10 @@ export async function buildMasterPipeline(
   const failed = snapshot.methodExecutionLedger.filter(layer =>
     ["failed", "not-implemented"].includes(layer.status)
   );
-  if (!snapshot.validation.complete || failed.length > 0) {
+  // Reference-only canon is an explicit historical limitation, not a failed
+  // calculation. It remains visible in snapshot.validation.warnings while
+  // failed and unimplemented layers still block all chart-aware output.
+  if (failed.length > 0) {
     const detail = failed.map(layer => `${layer.id}: ${layer.status}`).join(", ");
     throw new Error(
       `Master Chart validation failed; no interpretation was emitted.${detail ? ` ${detail}` : ""}`

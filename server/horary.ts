@@ -415,7 +415,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   };
 }
 
-const HORARY_SYSTEM = `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY READING PRESENTATION — FLEXIBLE\nThe three-wheel framework guides examination, not the conclusion or format. Select the order, emphasis, and level of detail that best answer the actual question. No exact headings or mandatory emotional preamble. Give clear evidence for conclusions, including challenging and contradictory testimony.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
+const HORARY_SYSTEM = `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY READING PRESENTATION — FLEXIBLE\nThe three-wheel framework guides examination, not the conclusion or format. Select the order, emphasis, and level of detail that best answer the actual question. No exact headings or mandatory emotional preamble. Give clear evidence for conclusions, including challenging and contradictory testimony.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
 
 function responseText(content: string | Array<{ type: string; text?: string }> | undefined) {
   return typeof content === "string"

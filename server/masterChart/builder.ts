@@ -755,6 +755,9 @@ export async function buildUnifiedMasterChart(
     layers,
     methodExecutionLedger,
     validation: {
+      // Keep validation.complete conservative: reference-only canon remains
+      // disclosed as incomplete in the snapshot contract. The interpretation
+      // gate separately distinguishes that status from failed calculations.
       complete: failedMethods.length === 0 && unavailableMethods.length === 0,
       errors: failedMethods.map(l => `${l.name}: ${l.errorCode ?? "calculation failed"}`),
       warnings: methodWarnings,
