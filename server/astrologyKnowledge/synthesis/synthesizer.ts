@@ -5,6 +5,7 @@ import type {
 } from "./types";
 import { extractPropositionsFromSnapshot } from "./normalizer";
 import { clusterPropositionsIntoThemes } from "./clustering";
+import { buildMethodOutcomes } from "./methodOutcomes";
 
 function getSign(longitude: number): string {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
@@ -17,6 +18,7 @@ export async function synthesizeMasterReading(
 
   // 1. Extract normalized propositions across all available traditions and methods
   const canonApplications = input.canonApplications ?? [];
+  const methodOutcomes = buildMethodOutcomes(snapshot, canonApplications);
   const propositions = extractPropositionsFromSnapshot(snapshot, canonApplications);
 
   // 2. Cluster into human domain themes and reconcile tensions
@@ -74,6 +76,9 @@ export async function synthesizeMasterReading(
   // Emit each computed finding so no doctrine disappears behind a generic summary.
   const integratedNarrative: string[] = [
     `Method inventory (every recorded layer): ${methodCounts.join("; ")}.`,
+    ...methodOutcomes.map(outcome =>
+      `METHOD OUTCOME [${outcome.methodId}] scope=${outcome.chartScope} frame=${outcome.frame} status=${outcome.status}. Interpretation: ${outcome.interpretation} Judgment: ${outcome.judgment} Contribution: ${outcome.contribution} Evidence: ${outcome.evidenceIds.join(", ") || "none"}. Limitations: ${outcome.strengthAndLimitations.join(" | ") || "none"}.`
+    ),
     ...canonApplications.map(application =>
       `Canon rule applied to ${application.subject}: [${application.ruleId}] ${application.statement} Source: ${application.sourceTitle}. Matched calculation evidence: ${application.calculationEvidenceIds.join(", ")}.`
     ),
@@ -126,6 +131,7 @@ export async function synthesizeMasterReading(
   const missingCanonApplications = canonApplications.filter(application =>
     application.confidence !== "reference-only" && !interpretedCanonEvidenceIds.has(application.canonEvidenceId)
   );
+  const incompleteMethodOutcomes = methodOutcomes.filter(outcome => outcome.status === "failed");
   const groundedRatio = expectedEvidenceIds.size === 0
     ? 1
     : (expectedEvidenceIds.size - missingEvidenceIds.length) / expectedEvidenceIds.size;
@@ -155,6 +161,11 @@ export async function synthesizeMasterReading(
     dominantConclusion,
     integratedNarrative,
     methodFindings,
+    methodOutcomes,
+    methodOutcomeAudit: {
+      complete: incompleteMethodOutcomes.length === 0,
+      incompleteMethodIds: incompleteMethodOutcomes.map(outcome => outcome.methodId),
+    },
     themes,
     contradictionsAndTensions: tensions,
     timingOverview:

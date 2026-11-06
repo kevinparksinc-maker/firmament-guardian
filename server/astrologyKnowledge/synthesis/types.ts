@@ -31,6 +31,35 @@ export interface SynthesisInput {
   canonApplications?: CanonRuleApplication[];
 }
 
+export type MethodOutcomeStatus =
+  | "interpreted"
+  | "reference-only"
+  | "not-applicable"
+  | "failed";
+
+export interface MethodOutcomeFinding {
+  evidenceId: string;
+  label: string;
+  calculatedValue: string;
+}
+
+export interface MethodOutcome {
+  methodId: string;
+  methodName: string;
+  tradition: string;
+  chartScope: "natal" | "event";
+  frame: "god" | "agent" | "shared" | "transit";
+  status: MethodOutcomeStatus;
+  calculatedFindings: MethodOutcomeFinding[];
+  canonApplications: CanonRuleApplication[];
+  interpretation: string;
+  judgment: string;
+  contribution: string;
+  evidenceIds: string[];
+  strengthAndLimitations: string[];
+  missingCanon: boolean;
+}
+
 export interface InterpretedProposition {
   id: string;
   themeTitle: string;
@@ -83,6 +112,7 @@ export interface SynthesisResult {
   dominantConclusion: string;
   integratedNarrative: string[];
   methodFindings: Array<{ id: string; name: string; tradition: string; status: string; frame: string; evidenceIds: string[]; sourceIds: string[]; resultCount: number; findings: Array<{ label: string; details: string }>; notes?: string }>;
+  methodOutcomes: MethodOutcome[];
   themes: SynthesizedTheme[];
   contradictionsAndTensions: Array<{
     polarities: string;
@@ -102,6 +132,10 @@ export interface SynthesisResult {
   };
   evidenceTraceMap: Record<string, string[]>;
   canonApplications: CanonRuleApplication[];
+  methodOutcomeAudit: {
+    complete: boolean;
+    incompleteMethodIds: string[];
+  };
   qualityAudit: {
     groundedRatio: number; // 1.0 (100% of claims grounded in evidence IDs)
     unsupportedClaims: string[];

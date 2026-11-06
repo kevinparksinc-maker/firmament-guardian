@@ -13,6 +13,10 @@ describe("Canonical synthesis reading bridge", () => {
     const chart = await calculateChart(input);
     const result = await synthesizeChartForReading(chart, "natal", "What does this chart say?");
     expect(result.synthesis.methodFindings.length).toBe(16);
+    expect(result.synthesis.methodOutcomes.length).toBe(16);
+    expect(result.synthesis.methodOutcomes.every(outcome => outcome.interpretation.length > 0)).toBe(true);
+    expect(result.context).toContain("methodOutcomes");
+    expect(result.context).toContain("methodOutcomeAudit");
     expect(result.synthesis.canonApplications.length).toBeGreaterThan(0);
     expect(result.synthesis.canonApplications.some(application =>
       application.ruleId === "firmament-canon-dossier" &&
