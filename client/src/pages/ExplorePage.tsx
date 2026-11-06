@@ -16,6 +16,11 @@ export default function ExplorePage() {
           deeper evidence when you need them.
         </p>
       </header>
+      <Link href="/horary" className="block rounded-2xl border border-amber-300/40 bg-amber-300/10 p-5 transition hover:border-amber-200/70">
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-200">Featured observatory</p>
+        <h2 className="mt-2 font-serif text-2xl text-white">Open Horary Chamber →</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-300">Ask a specific question, cast its event-time chart, and inspect the God and Agent frames with traditional testimony.</p>
+      </Link>
       <label className="block space-y-2 text-sm text-slate-300">
         <span>Search all pages</span>
         <input
