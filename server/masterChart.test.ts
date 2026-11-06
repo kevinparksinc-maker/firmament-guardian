@@ -163,7 +163,7 @@ describe("Unified Master Chart Architecture", () => {
     expect(snapshot.natal?.transitHouseFrame).toBe("god-fixed");
     expect(snapshot.natal?.ascendant).toBeNull();
     expect(snapshot.natal?.houses).toEqual(Array.from({ length: 12 }, (_, i) => i * 30));
-    expect(Number.isFinite(snapshot.baseCelestialState.ascendant.longitude)).toBe(true);
+    expect(Number.isFinite(snapshot.baseCelestialState.ascendant!.longitude)).toBe(true);
     for (const body of snapshot.natal!.movingBodies) {
       expect(body.house).toBe(Math.floor(body.longitude / 30) + 1);
       expect(body.longitude).toBe(snapshot.baseCelestialState.planets.find(row => row.name === body.name)!.longitude);

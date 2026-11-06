@@ -1,4 +1,5 @@
-import { calculateChart, type ChartResult } from "../astronomy";
+import { calculateMasterChart as calculateChart } from "../masterChart/entry";
+import { type ChartResult } from "../astronomy";
 import type { Evidence, GameChartSnapshot } from "../../shared/simulationLab/contracts";
 
 export type GameChartRequest = Readonly<{
@@ -71,6 +72,7 @@ export async function buildMasterGameChart(request: GameChartRequest): Promise<C
     chartEvidence: chartEvidence(chart),
     physicalEvidence: [],
     chartVersion: request.chartVersion,
+    masterMethods: chart.methodBindings,
   };
   return { snapshot, chart };
 }

@@ -1,14 +1,12 @@
 import {
-  calculateChart,
   aspectBetween,
   minorAspectBetween,
   type ChartResult,
   type ChartRow,
 } from "./astronomy";
-import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+import { synthesizeChartForReading, synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
 import { retrievePlacementDossier } from "./astrologyKnowledge/canon/retriever";
 import { FIXED_STAR_CANON_RECORDS } from "./astrologyKnowledge/canon/fixedStarsAndLots";
-import { localDateTime } from "../shared/transitTime";
 import { describeAspectPair } from "../shared/energyInterpretation";
 
 export type FocusTarget = {
@@ -37,45 +35,16 @@ export async function buildFocusedReading(
   target: FocusTarget
 ): Promise<FocusedReading> {
   const question = `Explain ${target.name} through its actual placement, conditions and contacts; no generic substitution.`;
-  const natalVerification = await synthesizeChartForReading(
-    chart,
-    "natal",
-    question
+  const verification = await synthesizeChartForReading(
+    chart, target.layer === "transit" ? "combined" : "natal", question
   );
-  let sourceChart = chart;
-  if (target.layer === "transit") {
-    const timezone = chart.input.transitTimezone || chart.input.timezone;
-    const local = localDateTime(new Date(chart.transitDate), timezone);
-    sourceChart = await calculateChart({
-      ...chart.input,
-      location: chart.input.transitLocation || chart.input.location,
-      latitude: chart.input.transitLatitude ?? chart.input.latitude,
-      longitude: chart.input.transitLongitude ?? chart.input.longitude,
-      timezone,
-      date: local.date,
-      time: local.time,
-      readingScope: "natal",
-      xyzPositions: chart.input.transitXYZPositions,
-    });
-    for (const row of chart.transits) {
-      const event = [
-        ...sourceChart.movingBodies,
-        sourceChart.northNode,
-        sourceChart.southNode,
-      ].find(body => body.name === row.name);
-      if (
-        !event ||
-        Math.abs(((event.longitude - row.longitude + 540) % 360) - 180) > 0.01
-      )
-        throw new Error(
-          `Transit evidence changed for ${row.name}. Refresh the chart before opening this reading.`
-        );
-    }
-  }
-  const { canonicalChart, synthesis } =
-    target.layer === "transit"
-      ? await synthesizeChartForReading(sourceChart, "natal", question)
-      : natalVerification;
+  const natalVerification = verification;
+  const eventSnapshot = verification.snapshot.transit?.framework;
+  if (target.layer === "transit" && !eventSnapshot)
+    throw new Error("TRANSIT_FRAMEWORK_MISSING: Refresh the chart to calculate the current sky's method formation.");
+  const { canonicalChart, synthesis } = target.layer === "transit"
+    ? await synthesizeMasterSnapshot(eventSnapshot!, "natal", question)
+    : verification;
   const bodies: ChartRow[] = [
     ...canonicalChart.movingBodies,
     canonicalChart.ascendant,

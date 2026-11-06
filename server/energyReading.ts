@@ -1,3 +1,4 @@
+import { packSynthesis } from "./astrologyKnowledge/synthesis/context";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { ChartResult } from "./astronomy";
@@ -14,6 +15,7 @@ const readingSchema = z.object({
         text: z.string().trim().min(80).max(2200),
         contactIds: z.array(z.string()).min(1),
         methodIds: z.array(z.string()).min(1),
+        evidenceIds: z.array(z.string()).min(2),
       })
     )
     .min(3)
@@ -41,15 +43,36 @@ export function validateEnergyReading(
     throw new Error(
       "ENERGY_SYNTHESIS_INCOMPLETE: Every method must be reviewed before output."
     );
+  const evidence = new Set(
+    synthesis.methodFindings.flatMap(method => method.evidenceIds)
+  );
   for (const paragraph of reading.paragraphs) {
     if (
       paragraph.contactIds.some(id => !contacts.has(id)) ||
-      paragraph.methodIds.some(id => !methods.has(id))
+      paragraph.methodIds.some(id => !methods.has(id)) ||
+      paragraph.evidenceIds.some(id => !evidence.has(id))
     )
       throw new Error(
         "ENERGY_SYNTHESIS_UNGROUNDED: Reading cites unavailable contacts or methods."
       );
   }
+  const usedMethods = new Set(reading.paragraphs.flatMap(p => p.methodIds));
+  const depthMethods = new Set([
+    "vedic-nakshatras-and-padas",
+    "arabic-lunar-manazil",
+    "elemental-decans",
+    "fixed-stars-royal-watchers",
+  ]);
+  const missingDepth = synthesis.methodFindings.filter(
+    method =>
+      method.status === "computed-with-result" &&
+      depthMethods.has(method.id.replace(/^transit:/, "")) &&
+      !usedMethods.has(method.id)
+  );
+  if (missingDepth.length)
+    throw new Error(
+      `ENERGY_SYNTHESIS_SHALLOW: Reading omits ${missingDepth.map(m => m.id).join(", ")}.`
+    );
   const cited = new Set(reading.paragraphs.flatMap(p => p.contactIds));
   for (const group of [score.harmonious, score.challenging]) {
     if (group.length && !group.some(c => cited.has(c.id)))
@@ -82,14 +105,14 @@ export async function generateEnergyReading(chart: ChartResult) {
       methodsReviewed: synthesis.methodFindings.map(m => m.id),
     };
   const result = await invokeLLM({
-    max_tokens: 2400,
+    max_tokens: 3200,
     timeoutMs: 180_000,
     response_format: { type: "json_object" },
     messages: [
       {
         role: "system",
         content: buildAstrologyInterpreterSystem(
-          `Write the final compact Energy overview, 3–6 connected paragraphs, about 300–450 words total. This is the final synthesis before the user's scores and chart evidence are displayed. Read ALL supplied Master method findings and Canon applications. Explain the dominant interaction, how actual placements and available conditions modify the strongest personal transit contacts, their concrete consequences, and how specific support interacts with specific pressure. Distinguish event houses from natal houses, God from Agent, and transient conditions from natal traits. Do not invent easing windows without forecast evidence. Do not substitute planet dictionaries, aspect slogans, a method inventory, repeated advice, a life story, or percentages alone for synthesis. Explain both support and friction without forcing a happy resolution. Return JSON {"headline":"...","paragraphs":[{"text":"...","contactIds":["exact supplied contact ID"],"methodIds":["exact supplied method ID"]}],"methodsReviewed":["every supplied method ID, including unavailable statuses"]}. Every paragraph must connect actual contacts to method findings; list only the methods used in that paragraph. Scores are model weights, never event probabilities.`
+          `Write the final compact Energy overview, 3–6 connected paragraphs, about 300–450 words total. This is the final synthesis before the user's scores and chart evidence are displayed. Read ALL supplied Master method findings and Canon applications. Explain the dominant interaction, how actual placements and available conditions modify the strongest personal transit contacts, their concrete consequences, and how specific support interacts with specific pressure. For the principal contacts, explain how BOTH the transit planet’s and natal target’s supplied nakshatra/pada, Arabic manzil, elemental-family decan and actual fixed-star activations modify the interaction; do not merely list their names. An empty star-contact list means no activation, not a missing planet meaning. Distinguish event houses from natal houses, God from Agent, and transient conditions from natal traits. Do not invent easing windows without forecast evidence. Do not substitute planet dictionaries, aspect slogans, a method inventory, repeated advice, a life story, or percentages alone for synthesis. Explain both support and friction without forcing a happy resolution. Return JSON {"headline":"...","paragraphs":[{"text":"...","contactIds":["exact supplied contact ID"],"methodIds":["exact supplied method ID"],"evidenceIds":["exact calculated natal evidence ID","exact calculated transit: evidence ID"]}],"methodsReviewed":["every supplied method ID, including unavailable statuses"]}. Every paragraph must connect actual contacts to method findings and cite the exact calculated evidence IDs. Across the reading, actually USE and cite the natal and transit nakshatra/pada, Arabic manzil, elemental-decan and fixed-star layers; explain no activation where a star list is empty. A methodsReviewed list alone cannot satisfy depth; list only the methods used in that paragraph. Scores are model weights, never event probabilities.`
         ),
       },
       {
@@ -97,20 +120,7 @@ export async function generateEnergyReading(chart: ChartResult) {
         content: JSON.stringify({
           // Preserve every method and Canon application once. The bridge's prose
           // repeats raw findings inside themes and can exceed provider context limits.
-          synthesis: {
-            snapshotId: synthesis.snapshotId,
-            qualityAudit: synthesis.qualityAudit,
-            methodFindings: synthesis.methodFindings,
-            canonApplications: synthesis.canonApplications,
-            themes: synthesis.themes.map(theme => ({
-              id: theme.id,
-              humanTheme: theme.humanTheme,
-              consequences: theme.consequences,
-              deeperMeaning: theme.deeperMeaning,
-              evidenceIds: theme.evidenceIds,
-            })),
-            contradictionsAndTensions: synthesis.contradictionsAndTensions,
-          },
+          synthesis: packSynthesis(synthesis),
           moment: canonicalChart.transitDate,
           natal: {
             location: canonicalChart.input.location,

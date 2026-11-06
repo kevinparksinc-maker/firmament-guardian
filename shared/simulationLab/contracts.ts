@@ -14,6 +14,7 @@ export type GameChartSnapshot = Readonly<{
   /** Physical observations are recorded separately from symbolic chart evidence. */
   physicalEvidence: readonly Evidence[];
   chartVersion: string;
+  masterMethods?: import("../../server/masterChart/types").MasterMethodBindings;
 }>;
 export type MethodResult = Readonly<{
   methodId: string;

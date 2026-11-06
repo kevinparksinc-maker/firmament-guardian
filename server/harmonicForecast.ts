@@ -1,4 +1,5 @@
-import { calculateChart, type ChartInput } from "./astronomy";
+import { calculateMasterChart as calculateChart } from "./masterChart/entry";
+import { type ChartInput } from "./astronomy";
 import { calculateEnergyRead } from "../shared/energyScoring";
 import { localDateTime } from "../shared/transitTime";
 
@@ -15,7 +16,7 @@ export async function calculateHarmonicForecast(input: ChartInput, start: string
     try {
       const chart = await calculateChart({ ...input, readingScope: "combined",
         transitDate: local.date, transitTime: local.time,
-        transitXYZPositions: undefined, transitSunriseAnchor: undefined });
+        transitXYZPositions: undefined, transitSunriseAnchor: undefined, transitInstantUtc: undefined });
       const score = calculateEnergyRead(chart)!;
       points.push({ moment: chart.transitDate, score, error: null });
     } catch (error) {

@@ -1,3 +1,5 @@
+import { synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
+import { calculateMasterChart as calculateChart } from "./masterChart/entry";
 import { buildEnergyReading } from "./energyReading";
 import { buildChartPageReading } from "./chartPageReading";
 import { buildChartBriefing } from "./chartBriefing";
@@ -15,7 +17,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { calculateChart, geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
+import { geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
 import {
   calculatePersonAge,
   calculateAnnualProfection,
@@ -61,6 +63,8 @@ const chartInput = z.object({
   transitTimezone: z.string().optional(),
   transitDate: z.string().optional(),
   transitTime: z.string().optional(),
+  transitInstantUtc: z.string().datetime({ offset: true }).optional(),
+  instantUtc: z.string().datetime({ offset: true }).optional(),
   worldview: z.enum(["god", "agent", "agent-vs-god"]).default("agent"),
   readingScope: z.enum(["natal", "transit", "combined"]).default("combined"),
   birthTimeKnown: z.boolean().optional(),
@@ -195,30 +199,12 @@ export const appRouter = router({
           mode: z.enum(["natal", "transit", "combined"]).default("natal"),
         })
       )
-      .mutation(({ input }) =>
-        (input.mode === "natal" && input.worldview === "agent-vs-god"
-          ? getMasterNatalChart
-          : buildUnifiedMasterChart)({
-          location: input.location,
-          latitude: input.latitude,
-          longitude: input.longitude,
-          timezone: input.timezone,
-          date: input.date,
-          time: input.time,
-          transitLocation: input.transitLocation,
-          transitLatitude: input.transitLatitude,
-          transitLongitude: input.transitLongitude,
-          transitTimezone: input.transitTimezone,
-          transitDate: input.transitDate,
-          transitTime: input.transitTime,
-          mode: input.mode,
-          worldview: input.worldview,
-          xyzPositions: input.xyzPositions,
-          transitXYZPositions: input.transitXYZPositions,
-          sunriseAnchor: input.sunriseAnchor,
-          transitSunriseAnchor: input.transitSunriseAnchor,
-        })
-      ),
+      .mutation(async ({ input }) => {
+        const snapshot = await (input.mode === "natal" && input.worldview === "agent-vs-god"
+          ? getMasterNatalChart : buildUnifiedMasterChart)({ ...input, mode: input.mode });
+        await synthesizeMasterSnapshot(snapshot, input.mode, "Evaluate the chart's complete method formation before output.");
+        return snapshot;
+      }),
   }),
   techniqueAudit: router({
     natal: publicProcedure
@@ -361,10 +347,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const context = input.chart
-          ? (await synthesizeChartForReading(input.chart as ChartResult, input.mode ?? "combined", input.question)).context
-          : "";
-        return askHost(input.history, input.question, input.chart, input.mode, context);
+        return askHost(input.history, input.question, input.chart, input.mode);
       }),
     generate: publicProcedure
       .input(
@@ -379,9 +362,8 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const { synthesis, context } = await synthesizeChartForReading(input.chart, input.mode, input.question);
-        const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context);
-        return { ...interpretation, synthesis };
+        const interpretation = await generateInterpretation(input.chart, input.mode, input.question);
+        return { ...interpretation, synthesis: interpretation.masterSynthesis };
       }),
     masterSynthesize: publicProcedure
       .input(
@@ -395,39 +377,8 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const snapshot = await buildUnifiedMasterChart({
-          location: input.location,
-          latitude: input.latitude,
-          longitude: input.longitude,
-          timezone: input.timezone,
-          date: input.date,
-          time: input.time,
-          transitLocation: input.transitLocation,
-          transitLatitude: input.transitLatitude,
-          transitLongitude: input.transitLongitude,
-          transitTimezone: input.transitTimezone,
-          transitDate: input.transitDate,
-          transitTime: input.transitTime,
-          mode: input.mode,
-          worldview: input.worldview,
-          sunriseAnchor: input.sunriseAnchor,
-          transitSunriseAnchor: input.transitSunriseAnchor,
-          xyzPositions: input.xyzPositions,
-          transitXYZPositions: input.transitXYZPositions,
-        });
-        const failedMethods = snapshot.methodExecutionLedger.filter(layer => layer.status === "failed");
-        if (failedMethods.length) {
-          throw new Error(`MASTER_METHOD_FAILED: ${failedMethods.map(layer => layer.id).join(", ")}`);
-        }
-        const synthesis = await synthesizeMasterReading({
-          snapshot,
-          readingMode: input.mode,
-          userQuestion: input.question,
-        });
-        if (!synthesis.qualityAudit.passed) {
-          throw new Error("SYNTHESIS_COVERAGE_FAILED: Computed method evidence was not fully incorporated.");
-        }
-        return synthesis;
+        const snapshot = await buildUnifiedMasterChart({ ...input, mode: input.mode });
+        return (await synthesizeMasterSnapshot(snapshot, input.mode, input.question)).synthesis;
       }),
     chapter: publicProcedure
       .input(
@@ -444,7 +395,6 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const { context } = await synthesizeChartForReading(input.chart as ChartResult, input.mode, input.question || input.chapterId);
         return generateChapter(
           input.chart as ChartResult,
           input.mode,
@@ -452,8 +402,7 @@ export const appRouter = router({
           input.chapterId as any,
           input.completedChapters,
           input.analysis,
-          input.question,
-          context
+          input.question
         );
       }),
     followUp: publicProcedure
@@ -475,10 +424,9 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const { context } = await synthesizeChartForReading(input.chart as ChartResult, input.mode, input.question);
         return followUp(
           input.chart as ChartResult,
-          { ...input.interpretation, intelligence: `${input.interpretation.intelligence}\\n\\n${context}` },
+          input.interpretation,
           input.history,
           input.question,
           input.mode
@@ -652,6 +600,8 @@ CRITICAL RULES:
           transitPlacements: z.string(),
           transitDate: z.string().optional(),
           transitTime: z.string().optional(),
+  transitInstantUtc: z.string().datetime({ offset: true }).optional(),
+  instantUtc: z.string().datetime({ offset: true }).optional(),
           transitLocation: z.string().optional(),
           conversationHistory: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(12000) })).max(40).optional(),
         })

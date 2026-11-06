@@ -34,8 +34,12 @@ const bridge = {
     themes: [],
     canonApplications: [{ ruleId: "test-canon" }],
     methodFindings: [
-      { id: "transit-activation-layer" },
-      { id: "elemental-decans" },
+      {
+        id: "transit-activation-layer",
+        findings: [],
+        evidenceIds: ["transit-test"],
+      },
+      { id: "elemental-decans", findings: [], evidenceIds: ["natal-test"] },
     ],
   },
 };
@@ -45,6 +49,7 @@ const output = () => ({
     text: "This connected interpretation explains the supplied personal contact through its actual method findings and consequences.",
     contactIds: ["Moon-trine-Saturn", "Moon-square-Ascendant"],
     methodIds: ["transit-activation-layer"],
+    evidenceIds: ["natal-test", "transit-test"],
   })),
   methodsReviewed: ["transit-activation-layer", "elemental-decans"],
 });
@@ -109,6 +114,30 @@ describe("Energy synthesis output pipeline", () => {
     respond(output(), "length");
     await expect(buildEnergyReading(chart)).rejects.toThrow("truncated");
   });
+  it("rejects a reviewed-method inventory when the actual reading omits the depth layers", async () => {
+    vi.mocked(synthesizeChartForReading).mockResolvedValue({
+      ...bridge,
+      synthesis: {
+        ...bridge.synthesis,
+        methodFindings: [
+          ...bridge.synthesis.methodFindings,
+          {
+            id: "vedic-nakshatras-and-padas",
+            status: "computed-with-result",
+            findings: [],
+            evidenceIds: ["nakshatra-test"],
+          },
+        ],
+      },
+    } as never);
+    const shallow = output();
+    shallow.methodsReviewed.push("vedic-nakshatras-and-padas");
+    respond(shallow);
+    await expect(buildEnergyReading(chart)).rejects.toThrow(
+      "ENERGY_SYNTHESIS_SHALLOW"
+    );
+  });
+
   it("does not narrate nonexistent pressure or support for an empty scored sky", async () => {
     vi.mocked(synthesizeChartForReading).mockResolvedValue({
       ...bridge,

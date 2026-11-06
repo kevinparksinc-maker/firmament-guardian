@@ -105,6 +105,7 @@ export function retrieveChartCanonDossier(
   const rows: ChartRow[] = [
     ...chart.movingBodies,
     chart.ascendant,
+    chart.descendant,
     chart.midheaven,
     chart.northNode,
     chart.southNode,
@@ -344,6 +345,45 @@ export function canonDossierToEvidenceItems(
         "high"
       ),
     });
+  }
+
+  // Carry the actual method meanings, not just mansion/decan/star names.
+  for (const p of dossier.placements) {
+    const body = p.body.toLowerCase().replace(/\s+/g, "-");
+    const add = (technique: string, tradition: EvidenceItem["tradition"], statement: string, sourceTitle: string, evidenceIds: string[]) => {
+      items.push({
+        id: `canon-${technique}-${body}-${items.length}`, tradition,
+        category: "source-correspondence", technique, subject: p.body,
+        statement, concepts: [p.body, ...evidenceIds], polarity: "mixed", strength: 0.8,
+        ruleId: `firmament-${technique}`, sourceId: "firmament-canon-knowledge",
+        sourceTrace: makeTrace(tradition, technique, sourceTitle, `firmament-${technique}`),
+      });
+    };
+    if (p.nakshatraRecord && p.activePada) {
+      const n = p.nakshatraRecord, pada = p.activePada;
+      add("nakshatra-pada", "vedic",
+        `${p.body}: ${n.name} pada ${pada.pada}. Ruler: ${n.vimshottariRuler}; deity: ${n.deity}; shakti: ${n.shakti}. ${n.coreMeaning} ${n.psychologicalPattern} Pada: ${pada.emphasis}; Navamsha ${pada.navamshaSign}, ruler ${pada.navamshaRuler}.`,
+        n.provenance.sourceTitle, [`nakshatra-${body}-${n.index}`]);
+    }
+    if (p.manzilRecord) {
+      const m = p.manzilRecord;
+      add("arabic-manzil", "arabic",
+        `${p.body}: ${m.name} (${m.englishTranslation}); ${m.traditionalQuality}. ${m.natalAndPsychologicalMeaning} Electional usage: ${m.traditionalElections}.`,
+        m.provenance.sourceTitle, [`manzil-${body}-${m.index}`]);
+    }
+    if (p.decanRecord) {
+      const d = p.decanRecord;
+      add("elemental-decan", "firmament",
+        `${p.body}: ${d.label}, elemental-family ruler ${d.triplicitySubRuler}. ${d.behavioralNuance} Themes: ${d.coreThemes.join(", ")}.`,
+        d.provenance.sourceTitle, [`decan-${body}-${d.index}`]);
+    }
+    for (const contact of p.fixedStarContacts) {
+      const star = contact.star;
+      if (star.ptolemaicPlanetaryNature === "Not yet source-verified") continue;
+      add(`fixed-star-${star.name.toLowerCase()}`, "firmament",
+        `${p.body} activates ${star.name} at ${contact.orbDeg}° orb. Nature: ${star.ptolemaicPlanetaryNature}. ${star.traditionalMeaning} Gift: ${star.giftWhenIntegrated} Test: ${star.nemesisOrTest}`,
+        star.provenance.sourceTitle, [`star-${star.name.toLowerCase()}`]);
+    }
   }
 
   for (const p of dossier.placements) {

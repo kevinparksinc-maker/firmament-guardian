@@ -17,7 +17,7 @@ function chartEvidenceIdsForItem(
 
   const bodyNames = new Set<string>();
   for (const body of [item.subject, ...item.concepts]) {
-    const match = body.match(/(?:^|[-\s])(sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto|rahu|ketu|north[- ]node|south[- ]node)(?:$|[-\s])/i);
+    const match = body.match(/(?:^|[-\s])(sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto|rahu|ketu|north[- ]node|south[- ]node|ascendant|descendant|midheaven)(?:$|[-\s])/i);
     if (match) bodyNames.add(slug(match[1]));
   }
   for (const body of Array.from(bodyNames)) {

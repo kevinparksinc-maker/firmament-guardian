@@ -1002,7 +1002,7 @@ export async function generateInterpretation(
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
   const intelligence = `${masterContext}\n\n${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
   const analysis = await analyzeChart(chart, mode, evidencePacket, `${masterContext}\n\n${synthesisContext}`);
-  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, `${masterContext}\n\n${analysis}`, synthesisContext);
+  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis, masterContext);
   return {
     masterSnapshot: master.snapshot,
     masterSynthesis: master.synthesis,

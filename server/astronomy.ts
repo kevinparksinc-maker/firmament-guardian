@@ -19,6 +19,8 @@ export type ChartInput = {
   transitTimezone?: string;
   transitDate?: string;
   transitTime?: string;
+  transitInstantUtc?: string;
+  instantUtc?: string;
   worldview?: Worldview;
   readingScope?: ReadingScope;
   birthTimeKnown?: boolean;
@@ -58,6 +60,7 @@ export type TransitContact = { natalName: string; aspect: "conjunction" | "squar
 export type MinorTransitContact = { natalName: string; aspect: "sextile" | "semisextile" | "semisquare" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "flow" | "friction" };
 export type TransitRow = ChartRow & { natalContacts: TransitContact[]; minorNatalContacts: MinorTransitContact[] };
 export type ChartResult = {
+  methodBindings?: import("./masterChart/types").MasterMethodBindings;
   input: ChartInput;
   worldview: Worldview;
   readingScope: ReadingScope;
@@ -164,6 +167,12 @@ export function minorAspectBetween(a: number, b: number): Omit<MinorTransitConta
   return best ? { ...best, weightMultiplier: 0.5 } : null;
 }
 function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope, transit = false) {
+  const exactInstant = transit ? input.transitInstantUtc : input.instantUtc;
+  if (exactInstant) {
+    const instant = new Date(exactInstant);
+    if (!Number.isFinite(instant.getTime())) throw new Error("Invalid calculated UTC instant.");
+    return { date: instant, precision: "exact" as const };
+  }
   const date = transit ? input.transitDate : input.date;
   const time = transit ? input.transitTime : input.time;
   const timezone = transit ? input.transitTimezone : input.timezone;
@@ -277,14 +286,16 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitLocationResolved = worldview !== "god" && Boolean(input.transitLocation?.trim() && input.transitTimezone?.trim() && Number.isFinite(input.transitLatitude) && Number.isFinite(input.transitLongitude));
   if (worldview !== "god" && transitInputsPresent && !transitLocationResolved) throw new Error("Transit location must be resolved before calculating transit houses.");
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
-  const transitHasLocation = worldview !== "god" && transitLocationResolved;
-  const transitSunrise = transitHasLocation ? input.transitSunriseAnchor ?? automaticSunriseAnchor(localDateTime(transitDate, input.transitTimezone || input.timezone).date, input.transitLatitude as number, input.transitLongitude as number, transitDate) : null;
+  const transitHasLocation = worldview !== "god" && (transitLocationResolved || hasAgentLocation);
+  const transitLatitude = transitLocationResolved ? input.transitLatitude! : input.latitude;
+  const transitLongitude = transitLocationResolved ? input.transitLongitude! : input.longitude;
+  const transitSunrise = transitHasLocation ? input.transitSunriseAnchor ?? automaticSunriseAnchor(localDateTime(transitDate, input.transitTimezone || input.timezone).date, transitLatitude, transitLongitude, transitDate) : null;
   const transitAsc = transitHasLocation
-    ? ascendantFromSunrise({ ...transitSunrise!, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant
+    ? ascendantFromSunrise({ ...transitSunrise!, eventUtc: transitDate.toISOString(), latitude: transitLatitude }).ascendant
     : null;
-  const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
+  const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitLocationResolved ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
-  const transits: TransitRow[] = planetNames.map((name, i) => { const xyz = input.transitXYZPositions?.[name]; const automatic = xyz ? undefined : calculatedXYZ(transitJd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: safeCalc(transitJd, i).speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
+  const transits: TransitRow[] = planetNames.map((name, i) => { const xyz = input.transitXYZPositions?.[name]; const automatic = xyz ? undefined : calculatedXYZ(transitJd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: safeCalc(transitJd, i).speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, transitLongitude, transitLatitude, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
   const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
   const minorContactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = minorAspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });

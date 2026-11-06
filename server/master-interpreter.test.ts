@@ -1,28 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
 vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
 
 import { askHost } from "./host";
 import { followUp, generateChapter } from "./interpretation";
-import type { ChartResult } from "./astronomy";
+import { calculateChart, type ChartResult } from "./astronomy";
 import { MASTER_INTERPRETER_PROMPT, buildAstrologyInterpreterSystem } from "./master-interpreter";
 
-const chart = {
-  input: { location: "Synthetic Test City", date: "1990-01-01", time: "12:00", timezone: "UTC" },
-  utc: "1990-01-01T12:00:00.000Z",
-  julianDay: 2447893,
-  ascendant: { display: "Libra 12°00′" },
-  descendant: { display: "Aries 12°00′" },
-  northNode: { display: "Aquarius 4°00′", house: 5 },
-  southNode: { display: "Leo 4°00′", house: 11 },
-  houses: [],
-  movingBodies: [],
-  frozenStars: [],
-  transitDate: "2025-01-01T12:00:00.000Z",
-  transits: [],
-  validation: [],
-} as unknown as ChartResult;
+let chart: ChartResult;
+beforeAll(async () => {
+  chart = await calculateChart({
+    location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797,
+    timezone: "America/Chicago", date: "1986-11-20", time: "10:06",
+    worldview: "agent", readingScope: "combined",
+    transitLocation: "Las Vegas, Nevada, USA", transitLatitude: 36.1699,
+    transitLongitude: -115.1398, transitTimezone: "America/Los_Angeles",
+    transitDate: "2026-11-06", transitTime: "11:06",
+  });
+});
 
 function systemPromptFromLastCall() {
   const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };

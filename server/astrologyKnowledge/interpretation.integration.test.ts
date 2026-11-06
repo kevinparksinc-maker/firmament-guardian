@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
 vi.mock("../_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
@@ -8,79 +8,19 @@ import {
   generateChapter,
   generateInterpretation,
 } from "../interpretation";
-import type { ChartResult } from "../astronomy";
+import { calculateChart, type ChartResult } from "../astronomy";
 
-const chart = {
-  input: {
-    location: "Synthetic City",
-    latitude: 0,
-    longitude: 0,
-    timezone: "UTC",
-    date: "1990-01-01",
-    time: "12:00",
-  },
-  utc: "1990-01-01T12:00:00.000Z",
-  julianDay: 2447893,
-  worldview: "agent",
-  readingScope: "natal",
-  agentViewAvailable: true,
-  ascendant: {
-    name: "Ascendant",
-    longitude: 100,
-    display: "Cancer 10°00′",
-    house: 1,
-    godHouse: 4,
-    agentHouse: 1,
-  },
-  descendant: null,
-  midheaven: null,
-  northNode: {
-    name: "North Node",
-    longitude: 20,
-    display: "Aries 20°00′",
-    house: 10,
-  },
-  southNode: {
-    name: "South Node",
-    longitude: 200,
-    display: "Libra 20°00′",
-    house: 4,
-  },
-  houses: [],
-  movingBodies: [
-    {
-      name: "Sun",
-      longitude: 10,
-      display: "Aries 10°00′",
-      house: 10,
-      godHouse: 1,
-      agentHouse: 10,
-    },
-    {
-      name: "Moon",
-      longitude: 12,
-      display: "Aries 12°00′",
-      house: 10,
-      godHouse: 1,
-      agentHouse: 10,
-    },
-    {
-      name: "Venus",
-      longitude: 190,
-      display: "Libra 10°00′",
-      house: 4,
-      godHouse: 7,
-      agentHouse: 4,
-    },
-  ],
-  frozenStars: [],
-  godPlacements: [],
-  transitDate: "1990-01-01T12:00:00.000Z",
-  momentPrecision: "exact",
-  transitHouseFrame: "natal-location",
-  transits: [],
-  validation: { passed: true, notes: [] },
-} as unknown as ChartResult;
+let chart: ChartResult;
+beforeAll(async () => {
+  chart = await calculateChart({
+    location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797,
+    timezone: "America/Chicago", date: "1986-11-20", time: "10:06",
+    worldview: "agent", readingScope: "combined",
+    transitLocation: "Las Vegas, Nevada, USA", transitLatitude: 36.1699,
+    transitLongitude: -115.1398, transitTimezone: "America/Los_Angeles",
+    transitDate: "2026-11-06", transitTime: "11:06",
+  });
+});
 
 describe("interpretation.generate knowledge gateway integration", () => {
   beforeEach(() => {

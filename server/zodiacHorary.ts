@@ -1,3 +1,4 @@
+import { calculateMasterChart as calculateChart } from "./masterChart/entry";
 /**
  * Twelve-Sign Celestial Horary — independent from traditional question-time Horary.
  *
@@ -7,7 +8,7 @@
  * ruler-centered lens, NOT a local Ascendant, birth chart or traditional
  * horary perfection verdict.
  */
-import { calculateChart, type ChartResult } from "./astronomy";
+import { type ChartResult } from "./astronomy";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { agentHouseFor, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship } from "./astrologyCore";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";

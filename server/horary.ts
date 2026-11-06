@@ -1,5 +1,6 @@
+import { calculateMasterChart as calculateChart } from "./masterChart/entry";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
-import { calculateChart, type ChartInput } from "./astronomy";
+import { type ChartInput } from "./astronomy";
 import { withCurrentQuestion } from "./_core/conversation";
 import { invokeLLM, type Message } from "./_core/llm";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
@@ -179,15 +180,18 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   // Do not compare the question chart against itself: that invents natal contacts.
   const transitChart = natalChart ?? { ...calculated, transits: calculated.transits.map(row => ({ ...row, natalContacts: [], minorNatalContacts: [] })) };
   const godChart = await calculateChart({
-    location: "",
-    latitude: 0,
-    longitude: 0,
+    location: input.location,
+    latitude: input.latitude,
+    longitude: input.longitude,
     timezone: input.timezone,
     date: input.date,
     time: input.time,
     transitDate: input.date,
     transitTime: input.time,
     transitTimezone: input.timezone,
+    transitLocation: input.location,
+    transitLatitude: input.latitude,
+    transitLongitude: input.longitude,
     worldview: "god",
     readingScope: "transit",
     birthTimeKnown: true,

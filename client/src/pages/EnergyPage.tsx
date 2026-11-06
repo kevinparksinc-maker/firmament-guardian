@@ -192,7 +192,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
           <summary className="cursor-pointer text-cyan-200">Synthesis evidence</summary>
           <p className="mt-3 break-all">Snapshot: {reading.snapshotId}</p>
           <p className="mt-2">Methods reviewed: {reading.methodsReviewed.join(", ")}</p>
-          {reading.paragraphs.map((paragraph, index) => <p key={index} className="mt-2">Paragraph {index + 1}: {paragraph.contactIds.join(", ")} · {paragraph.methodIds.join(", ")}</p>)}
+          {reading.paragraphs.map((paragraph, index) => <p key={index} className="mt-2">Paragraph {index + 1}: {paragraph.contactIds.join(", ")} · {paragraph.methodIds.join(", ")} · {paragraph.evidenceIds.join(", ")}</p>)}
         </details>
       </section>}
       {reading && <EnergyScoringKey />}

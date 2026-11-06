@@ -9,7 +9,7 @@ export interface MasterChartDataBus {
   readonly chart: ChartResult;
   readonly planets: readonly ChartRow[];
   readonly houses: readonly number[];
-  readonly ascendant: ChartRow;
+  readonly ascendant: ChartRow | null;
   readonly sun: ChartRow;
   readonly moon: ChartRow;
   readonly transits: readonly ChartRow[];
@@ -18,7 +18,7 @@ export interface MasterChartDataBus {
 /** Fail explicitly instead of substituting a fabricated angle or body position. */
 export function createMasterChartDataBus(chart: ChartResult): MasterChartDataBus {
   const ascendant = chart.ascendant;
-  if (!ascendant || !Number.isFinite(ascendant.longitude)) {
+  if (chart.worldview !== "god" && (!ascendant || !Number.isFinite(ascendant.longitude))) {
     throw new Error("MASTER_CHART_MISSING_ASCENDANT");
   }
   if (chart.houses.length !== 12 || chart.houses.some(h => !Number.isFinite(h))) {

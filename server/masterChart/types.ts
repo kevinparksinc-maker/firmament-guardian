@@ -53,6 +53,10 @@ export interface MasterChartInput {
   transitTimezone?: string;
   transitDate?: string;
   transitTime?: string;
+  transitInstantUtc?: string;
+  instantUtc?: string;
+  birthTimeKnown?: boolean;
+  elevation?: number;
   mode?: "natal" | "transit" | "combined";
   worldview?: "god" | "agent" | "agent-vs-god";
   sunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: { x: number; y: number; z: number } };
@@ -88,7 +92,7 @@ export interface UnifiedMasterChartSnapshot {
   baseCelestialState: {
     julianDay: number;
     utc: string;
-    ascendant: ChartRow;
+    ascendant: ChartRow | null;
     midheaven?: ChartRow | null;
     descendant?: ChartRow | null;
     northNode: ChartRow;
@@ -132,6 +136,8 @@ export interface UnifiedMasterChartSnapshot {
   transit?: {
     transitInstantUtc: string;
     planets: ChartRow[];
+    /** Same registered methods evaluated independently for the event sky. */
+    framework?: UnifiedMasterChartSnapshot;
     aspectsToNatal: Array<{
       transitBody: string;
       natalBody: string;
@@ -174,4 +180,12 @@ export function getModeView(
   if (mode === "god") return snapshot.godView;
   if (mode === "agent") return snapshot.agentView;
   return { godView: snapshot.godView, agentView: snapshot.agentView };
+}
+
+/** Calculated results travel with every published chart; no recursive ChartResult copies. */
+export interface MasterMethodBindings {
+  snapshotId: string;
+  base: LayerRecord[];
+  transit: LayerRecord[];
+  synthesisAudit: { passed: boolean; groundedRatio: number; canonApplicationCount: number };
 }
