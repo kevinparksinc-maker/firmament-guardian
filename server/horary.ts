@@ -352,6 +352,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Ascendant: ${ascendant.display}; Moon: ${moon.display}, ${moon.sign}, House ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
     `Core placements:\n${corePlacementLines}`,
     `Relevant major aspects supplied by the calculator (maximum 5° orb):\n${aspectLines}`,
+    `GOD VIEW / AGENT VIEW RELATIONSHIP SYNTHESIS (use the exact per-planet entries shown in the evidence box; this contextual layer must refine, never replace, the traditional horary judgment):\n${frameLines}`,
     `LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED FOR THE RELEVANT SIGNIFICATORS:\n${canonEvidenceText}`,
     `SEFER YETZIRAH SYMBOLIC CORRESPONDENCES FOR THE QUESTION MOMENT (never override the core horary verdict):\n${kabbalahEvidenceText}`,
     natalQuestionEvidence,
@@ -446,6 +447,10 @@ function deterministicHoraryReading(chart: HoraryChart) {
       .flatMap(row => row.natalContacts.map(contact => `${row.name} ${contact.aspect} natal ${contact.natalName} (${contact.orb}°)`))
       .slice(0, 4)
     : [];
+  const frameSynthesis = chart.placements
+    .filter(row => row.frameRelationship)
+    .map(row => `${row.name}: ${row.frameRelationship!.synthesis}`)
+    .join(" ") || "No God View / Agent View synthesis was calculated for this chart.";
   return [
     "## What I hear beneath your question",
     `You are asking: “${chart.question}” The chart is being used to examine that specific matter at the place and moment you supplied.`,
@@ -460,6 +465,7 @@ function deterministicHoraryReading(chart: HoraryChart) {
     aspectSentence,
     `Traditional testimony: ${traditionalSummary}`,
     `The Moon is ${chart.moon.display}, ${chart.moon.sign}, in House ${chart.moon.house}. ${chart.canonEvidenceText.split("\n").slice(0, 6).join(" ")}`,
+    `God View / Agent View synthesis from the displayed evidence box: ${frameSynthesis}`,
     natalSummary,
     transitSummary.length
       ? `Question-moment transit contacts to the natal chart: ${transitSummary.join("; ")}.`
