@@ -54,6 +54,13 @@ describe("Hybrid Zodiac constants and overlays", () => {
     expect(tokyoMoon.topocentricLongitude).toBeDefined();
     expect(Math.abs(nyMoon.topocentricLongitude! - tokyoMoon.topocentricLongitude!)).toBeGreaterThan(0.1);
   });
+  it("selects the latest sunrise across UTC civil-day boundaries", async () => {
+    // 08:00 Tokyo on Nov 7, expressed explicitly in UTC on Nov 6.
+    const tokyo = await calculateChart({ location: "Tokyo", latitude: 35.6762, longitude: 139.6503, timezone: "UTC", date: "2026-11-06", time: "23:00", worldview: "agent", readingScope: "natal" });
+    const local = await calculateChart({ ...tokyo.input, timezone: "Asia/Tokyo", date: "2026-11-07", time: "08:00" });
+    expect(tokyo.utc).toBe(local.utc);
+    expect(tokyo.ascendant!.longitude).toBeCloseTo(local.ascendant!.longitude, 8);
+  });
   it("supports date-only God Natal calculations without inventing personal angles", async () => {
     const result = await calculateChart({ location: "", latitude: 0, longitude: 0, timezone: "", date: "1986-11-20", time: "", worldview: "god", readingScope: "natal", birthTimeKnown: false });
     expect(result.ascendant).toBeNull();

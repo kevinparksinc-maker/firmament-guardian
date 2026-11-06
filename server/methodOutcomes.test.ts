@@ -36,7 +36,7 @@ describe("structured method-specific outcomes", () => {
     expect(outcomes.find(outcome => outcome.methodId === "chinese-lunar-mansions-xiu")?.status).toBe("reference-only");
   });
 
-  it("changes the method judgment when the calculated finding changes", async () => {
+  it("rejects an invalid decan finding instead of promoting its raw text", async () => {
     const snapshot = await buildUnifiedMasterChart(input);
     const canon = buildCanonRuleApplications(
       snapshot,
@@ -65,7 +65,9 @@ describe("structured method-specific outcomes", () => {
       outcome => outcome.methodId === "elemental-decans",
     )!;
 
-    expect(changed.interpretation).toContain("Altered calculated testimony");
+    expect(changed.status).toBe("failed");
+    expect(changed.interpretation).toContain("METHOD_RULE_INPUT_INVALID");
+    expect(changed.judgment).not.toContain("Altered calculated testimony");
     expect(changed.interpretation).not.toBe(original.interpretation);
     expect(changed.evidenceIds).toEqual(["decan-sun-99"]);
   });

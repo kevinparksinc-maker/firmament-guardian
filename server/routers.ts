@@ -68,6 +68,7 @@ const chartInput = z.object({
   worldview: z.enum(["god", "agent", "agent-vs-god"]).default("agent"),
   readingScope: z.enum(["natal", "transit", "combined"]).default("combined"),
   birthTimeKnown: z.boolean().optional(),
+  chartRole: z.enum(["natal", "event"]).optional(),
   elevation: z.number().optional(),
   sunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),
   transitSunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),

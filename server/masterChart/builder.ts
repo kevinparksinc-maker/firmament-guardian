@@ -1,4 +1,6 @@
-import { calculateEnergyRead } from "../../shared/energyScoring";
+import { PLANET_CANON_RECORDS } from "../astrologyKnowledge/canon/planetsAndSigns";
+import { detectAllYogas } from "../genesisBackup/vedicYogaDetector";
+import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "../../shared/energyScoring";
 import { registeredMethodLedger } from "./registry";
 import { localDateTime } from "../../shared/transitTime";
 import { createMasterChartDataBus } from "./chartDataBus";
@@ -26,9 +28,10 @@ import {
   CHINESE_MANSIONS,
   CHINESE_MANSION_HISTORICAL_SOURCE,
 } from "../astrologyKnowledge/canon/chineseMansions28";
-import { getDecanCanonByLongitude } from "../astrologyKnowledge/canon/decans36";
+import { getDecanCanonByLongitude, elementalDecanTeaching } from "../astrologyKnowledge/canon/decans36";
 import {
   resolveVedicTimingAndAshtakavarga,
+  timingMethodCalculations,
 } from "../astrologyKnowledge/vedic/timingAndAshtakavarga";
 import { seferYetzirahEvidence } from "../astrologyKnowledge/canon/seferYetzirah";
 import { runGenesisPatternPipeline } from "../genesisBackup/adapter";
@@ -61,13 +64,14 @@ function computeSnapshotId(input: MasterChartInput, version: string): string {
     tt: input.transitTime ?? "",
     instant: input.transitInstantUtc ?? "",
     baseInstant: input.instantUtc ?? "",
-    birthTimeKnown: input.birthTimeKnown, elevation: input.elevation,
+    birthTimeKnown: input.birthTimeKnown, chartRole: input.chartRole, elevation: input.elevation,
     m: input.mode ?? "natal",
     w: input.worldview ?? "agent-vs-god",
     sunriseAnchor: input.sunriseAnchor ?? null,
     transitSunriseAnchor: input.transitSunriseAnchor ?? null,
     xyz: input.xyzPositions ? Object.entries(input.xyzPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
     transitXYZ: input.transitXYZPositions ? Object.entries(input.transitXYZPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
+    role: input.chartRole ?? "natal",
     v: version,
   });
   return "umc-" + crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
@@ -141,7 +145,7 @@ export async function buildUnifiedMasterChart(
     transitTime: input.transitTime,
     transitInstantUtc: input.transitInstantUtc,
     instantUtc: input.instantUtc,
-    birthTimeKnown: input.birthTimeKnown, elevation: input.elevation,
+    birthTimeKnown: input.birthTimeKnown, chartRole: input.chartRole, elevation: input.elevation,
     transitLocation: input.transitLocation,
     transitLatitude: input.transitLatitude,
     transitLongitude: input.transitLongitude,
@@ -268,7 +272,7 @@ export async function buildUnifiedMasterChart(
         aspect: contact.aspect[0].toUpperCase() + contact.aspect.slice(1),
         angle: Math.round((diff > 180 ? 360 - diff : diff) * 100) / 100,
         orb: Math.round(contact.orb * 100) / 100,
-        nature: contact.aspect === "square" || contact.aspect === "opposition" ? "friction" : "harmony",
+        nature: ENERGY_ASPECT_FLOW[contact.aspect] === -1 ? "friction" : "harmony",
       };
     }).filter((a): a is NonNullable<typeof a> => a !== null)
   );
@@ -304,6 +308,8 @@ export async function buildUnifiedMasterChart(
     let status = "Peregrine";
     if (isDomicile) status = "Domicile (Ruler)";
     else if (isExalted) status = "Exaltation";
+    else if (PLANET_CANON_RECORDS[p.name]?.rulerships.detriments.includes(sign)) status = "Detriment";
+    else if (PLANET_CANON_RECORDS[p.name]?.rulerships.fallSign === sign) status = "Fall";
     return {
       body: p.name,
       sign,
@@ -465,7 +471,7 @@ export async function buildUnifiedMasterChart(
     name: "Vedic Divisional Charts (D1, D2, D3, D9 Navamsha, D10)",
     status: ascendant ? "computed-with-result" : "not-applicable",
     notes: ascendant ? undefined : "Divisional house charts require a known Ascendant; no substitute anchor is used.",
-    frame: "shared",
+    frame: "agent",
     prerequisites: ["western-planets-and-signs"],
     calculationVersion: engineVersion,
     evidenceIds: vargaResults.map(v => `varga-${v.division.toLowerCase()}`),
@@ -487,20 +493,23 @@ export async function buildUnifiedMasterChart(
     item.id.includes("checksum-failed")
   );
 
+  const timingData = timingResult.length && !timingError && !timingHasFailure ? timingMethodCalculations(chart) : undefined;
   layers["vedic-dasha-and-ashtakavarga"] = {
     id: "vedic-dasha-and-ashtakavarga",
     tradition: "vedic",
     technique: "vimshottari-dasha-and-ashtakavarga",
     name: "Vimshottari Dasha Lords & Ashtakavarga Bindus",
     status: !ascendant || input.birthTimeKnown === false ? "not-applicable" : timingError || timingHasFailure ? "failed" : timingResult.length > 0 ? "computed-with-result" : "computed-no-result",
-    frame: "shared",
+    frame: "agent",
     prerequisites: ["vedic-nakshatras-and-padas"],
     calculationVersion: engineVersion,
     evidenceIds: timingResult.map(t => t.id),
     sourceIds: ["brihat-parashara-dasha-system"],
     errorCode: timingError ? "VEDIC_TIMING_EXCEPTION" : timingHasFailure ? "VEDIC_TIMING_UNAVAILABLE_OR_INVALID" : undefined,
     notes: timingError ?? (!ascendant || input.birthTimeKnown === false ? "The combined Dasha/Ashtakavarga adapter requires a known birth time and local Lagna; these results are not asserted for an unlocated or date-only sky." : undefined),
-    results: timingResult,
+    results: timingResult.map(item => ({ ...item,
+      calculation: timingData?.[item.technique as "dasha" | "ashtakavarga"],
+    })),
   };
 
   // Layer 11: Vedic Graha Drishti (Special Aspects)
@@ -555,7 +564,7 @@ export async function buildUnifiedMasterChart(
     },
   };
 
-  // Layer 13: Elemental Decans (36 Faces)
+  // Layer 13: Elemental-family decans (separate from Chaldean faces)
   const decanResults = frameworkPlacements.map(p => {
     const canon = getDecanCanonByLongitude(p.longitude);
     return {
@@ -563,11 +572,12 @@ export async function buildUnifiedMasterChart(
       longitude: p.longitude,
       decanIndex: canon.index,
       sign: canon.sign,
-      elementalFamilySign: canon.sign,
+      elementalFamilySign: elementalDecanTeaching(canon).subSign,
       elementalFamilyRuler: canon.triplicitySubRuler,
-      traditionalTitle: canon.traditionalTitle,
-      behavioralNuance: canon.behavioralNuance,
-      reading: `${p.name} in ${canon.sign}, decan ${canon.index}: ${canon.behavioralNuance}. Elemental-family ruler: ${canon.triplicitySubRuler}. This is the decan-layer interpretation to be reconciled with the planet\'s house, aspects, dignities, and other natal testimony.`,
+      traditionalTitle: elementalDecanTeaching(canon).label,
+      behavioralNuance: elementalDecanTeaching(canon).statement,
+      chaldeanReference: { label: canon.label, title: canon.traditionalTitle },
+      reading: `${p.name} in ${canon.sign}, decan ${canon.index}: ${elementalDecanTeaching(canon).statement} Elemental-family ruler: ${canon.triplicitySubRuler}. This is the decan-layer interpretation to be reconciled with the planet\'s house, aspects, dignities, and other natal testimony.`,
     };
   });
 
@@ -581,12 +591,12 @@ export async function buildUnifiedMasterChart(
     prerequisites: ["western-planets-and-signs"],
     calculationVersion: engineVersion,
     evidenceIds: decanResults.map(d => `decan-${d.body.toLowerCase().replace(/\s+/g, "-")}-${d.decanIndex}`),
-    sourceIds: ["picatrix-36-decans", "ibn-ezra-faces"],
+    sourceIds: ["firmament-elemental-family-decans", "planetary-sign-canon"],
     results: decanResults,
   };
 
   // Layer 14: Kabbalah & Sefer Yetzirah
-  const syEvidence = seferYetzirahEvidence(chart, mode === "transit" ? "transit" : "natal");
+  const syEvidence = seferYetzirahEvidence(chart, "natal");
   layers["kabbalah-sefer-yetzirah"] = {
     id: "kabbalah-sefer-yetzirah",
     tradition: "kabbalah",
@@ -605,7 +615,7 @@ export async function buildUnifiedMasterChart(
   let genesisResult: any = null;
   let genesisError: string | null = null;
   try {
-    genesisResult = runGenesisPatternPipeline(chart);
+    genesisResult = runGenesisPatternPipeline({ ...chart, readingScope: "natal", transits: [] });
   } catch (err) {
     genesisError = err instanceof Error ? err.message : String(err);
   }
@@ -616,12 +626,15 @@ export async function buildUnifiedMasterChart(
     technique: "genesis-pattern-engine-and-yogas",
     name: "Genesis Behavioral Patterns & Vedic Yogas",
     status: genesisError ? "failed" : genesisResult?.analysis ? "computed-with-result" : "computed-no-result",
-    frame: "agent",
+    frame: chart.agentViewAvailable ? "agent" : "god",
     prerequisites: ["western-aspects-and-orbs", "western-houses-and-angles"],
     calculationVersion: engineVersion,
     evidenceIds: ["genesis-patterns-core", "genesis-yogas"],
     sourceIds: ["genesis-symbolic-engine"],
-    results: genesisResult?.analysis ?? null,
+    results: genesisResult?.analysis ? { ...genesisResult.analysis,
+      yogas: chart.ascendant ? detectAllYogas(basePlanets.map(p=>({name:p.name,sign:getSign(p.longitude),house:p.agentHouse??p.house,degree:p.longitude%30}))) : [],
+      yogaScope: chart.ascendant ? "Hamsa Yoga conditions in the configured local sub-engine" : "No local Yoga judgment without an Ascendant",
+    } : null,
     ...(genesisError ? { errorCode: "GENESIS_PIPELINE_FAILED", notes: genesisError } : {}),
   };
 
@@ -716,6 +729,7 @@ export async function buildUnifiedMasterChart(
         longitude: input.longitude,
       },
       mode,
+      chartRole: input.chartRole ?? "natal",
     },
     frameConfig: {
       zodiacMode: "fixed-cartesian-xyz",
@@ -796,7 +810,7 @@ export async function buildUnifiedMasterChart(
       latitude: input.transitLatitude ?? input.latitude,
       longitude: input.transitLongitude ?? input.longitude,
       timezone, date: local.date, time: local.time, instantUtc: chart.transitDate,
-      mode: "natal", birthTimeKnown: true,
+      mode: "natal", birthTimeKnown: true, chartRole: "event",
       xyzPositions: input.transitXYZPositions,
       sunriseAnchor: input.transitSunriseAnchor,
       transitDate: undefined, transitTime: undefined, transitInstantUtc: undefined,

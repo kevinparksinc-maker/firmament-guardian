@@ -56,6 +56,7 @@ export interface MasterChartInput {
   transitInstantUtc?: string;
   instantUtc?: string;
   birthTimeKnown?: boolean;
+  chartRole?: "natal" | "event";
   elevation?: number;
   mode?: "natal" | "transit" | "combined";
   worldview?: "god" | "agent" | "agent-vs-god";
@@ -79,6 +80,7 @@ export interface UnifiedMasterChartSnapshot {
       longitude: number;
     };
     mode: "natal" | "transit" | "combined";
+    chartRole?: "natal" | "event";
   };
   frameConfig: {
     zodiacMode: "fixed-cartesian-xyz";

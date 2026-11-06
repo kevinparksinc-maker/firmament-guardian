@@ -57,6 +57,7 @@ export async function buildMasterGameChart(request: GameChartRequest): Promise<C
     worldview: "agent",
     readingScope: "natal",
     birthTimeKnown: true,
+    chartRole: "event",
   });
   if (!chart.validation.passed || !chart.ascendant) {
     throw new Error("Master Game Chart failed validation or has no Ascendant.");

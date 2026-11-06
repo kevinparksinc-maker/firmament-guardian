@@ -31,6 +31,8 @@ const bridge = {
   context: "All method findings and Canon rule applications",
   synthesis: {
     snapshotId: "verified-snapshot",
+    methodOutcomes: [],
+    contradictionsAndTensions: [],
     themes: [],
     canonApplications: [{ ruleId: "test-canon" }],
     methodFindings: [
@@ -77,12 +79,8 @@ describe("Energy synthesis output pipeline", () => {
     const payload = JSON.parse(
       vi.mocked(invokeLLM).mock.calls[0][0].messages[1].content as string
     );
-    expect(payload.synthesis.methodFindings).toEqual(
-      bridge.synthesis.methodFindings
-    );
-    expect(payload.synthesis.canonApplications).toEqual(
-      bridge.synthesis.canonApplications
-    );
+    expect(payload.synthesis.methodFindings.map((m: {id:string})=>m.id)).toEqual(bridge.synthesis.methodFindings.map(m=>m.id));
+    expect(payload.synthesis.canonApplications[0].ruleId).toBe("test-canon");
     expect(payload.score.contacts).toHaveLength(2);
     expect(result.score.contactsCount).toBe(2);
     expect(result.snapshotId).toBe("verified-snapshot");

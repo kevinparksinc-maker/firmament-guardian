@@ -154,7 +154,7 @@ export async function synthesizeMasterSnapshot(
       ...layer,
       id: `transit:${layer.id}`,
       name: `Current sky · ${layer.name}`,
-      frame: "transit" as const,
+      frame: layer.frame,
       evidenceIds: layer.evidenceIds.map(id => `transit:${id}`),
       prerequisites: layer.prerequisites.map(id => `transit:${id}`),
     })) ?? [];

@@ -126,8 +126,10 @@ describe("Master Synthesizer Pipeline", () => {
     const changedOutcome = changed.methodOutcomes.find(outcome => outcome.methodId === aspectLayer.id)!;
 
     expect(changedOutcome.judgment).not.toBe(originalOutcome.judgment);
-    expect(changed.dominantConclusion).not.toBe(original.dominantConclusion);
-    expect(changed.integratedNarrative.some(line => line.includes("Trine"))).toBe(true);
+    expect(changed.themes).not.toEqual(original.themes);
+    expect(changedOutcome.findingJudgments[0].valence).toBe("supportive");
+    expect(changedOutcome.findingJudgments[0].rules.some(rule=>rule.ruleId==="aspect-trine")).toBe(true);
+    expect(changed.integratedNarrative.some(line => line.includes(changedOutcome.findingJudgments[0].judgment))).toBe(true);
   });
 
   it("keeps the transit layer rule-linked in a combined natal/transit worked example", async () => {

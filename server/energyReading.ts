@@ -121,6 +121,7 @@ export async function generateEnergyReading(chart: ChartResult) {
           // Preserve every method and Canon application once. The bridge's prose
           // repeats raw findings inside themes and can exceed provider context limits.
           synthesis: packSynthesis(synthesis),
+          packetFormat: "judgmentColumns names row cells. judgmentParts numeric entries index textTable; concatenate resolved parts in order. sourceRefs index canonApplications. Evidence IDs remain literal strings and must be cited exactly.",
           moment: canonicalChart.transitDate,
           natal: {
             location: canonicalChart.input.location,

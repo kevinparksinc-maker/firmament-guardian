@@ -2,7 +2,7 @@ import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type { ChartResult, ChartRow } from "../../astronomy";
 import type { EvidenceItem, SourceTrace } from "../types";
 import { evaluateArabicPersianTradition } from "./arabicPersianCanon";
-import { getDecanCanonByLongitude } from "./decans36";
+import { getDecanCanonByLongitude, elementalDecanTeaching } from "./decans36";
 import {
   detectHoraryAndTraditionalMechanisms,
   evaluatePlacementDignityAndCondition,
@@ -319,7 +319,7 @@ export function canonDossierToEvidenceItems(
       category: "deterministic-rule",
       technique: "canon-placement-dossier",
       subject: p.body,
-      statement: `[FIRMAMENT CANON + TRADITION] ${p.planetInSignSynthesis} ${p.planetInHouseSynthesis} (${p.dignityAndCondition.conditionSummary}). Decan: ${p.decanRecord?.label} ("${p.decanRecord?.traditionalTitle}"). Manzil: ${p.manzilRecord?.name} (${p.manzilRecord?.englishTranslation}). Nakshatra: ${p.nakshatraRecord?.name} Pada ${p.activePada?.pada} (${p.nakshatraRecord?.deity}).`,
+      statement: `[FIRMAMENT CANON + TRADITION] ${p.planetInSignSynthesis} ${p.planetInHouseSynthesis} (${p.dignityAndCondition.conditionSummary}). Elemental decan: ${p.decanRecord ? elementalDecanTeaching(p.decanRecord).label : "unavailable"}. Manzil: ${p.manzilRecord?.name} (${p.manzilRecord?.englishTranslation}). Nakshatra: ${p.nakshatraRecord?.name} Pada ${p.activePada?.pada} (${p.nakshatraRecord?.deity}).`,
       concepts: [
         p.body.toLowerCase(),
         p.sign.toLowerCase(),
@@ -374,8 +374,8 @@ export function canonDossierToEvidenceItems(
     if (p.decanRecord) {
       const d = p.decanRecord;
       add("elemental-decan", "firmament",
-        `${p.body}: ${d.label}, elemental-family ruler ${d.triplicitySubRuler}. ${d.behavioralNuance} Themes: ${d.coreThemes.join(", ")}.`,
-        d.provenance.sourceTitle, [`decan-${body}-${d.index}`]);
+        `${p.body}: ${elementalDecanTeaching(d).label}. ${elementalDecanTeaching(d).statement}`,
+        elementalDecanTeaching(d).sourceTitle, [`decan-${body}-${d.index}`]);
     }
     for (const contact of p.fixedStarContacts) {
       const star = contact.star;

@@ -35,12 +35,27 @@ export type MethodOutcomeStatus =
   | "interpreted"
   | "reference-only"
   | "not-applicable"
-  | "failed";
+  | "failed"
+  | "no-result";
 
 export interface MethodOutcomeFinding {
   evidenceId: string;
   label: string;
   calculatedValue: string;
+}
+
+export interface FindingJudgment {
+  frame?: "god" | "agent" | "shared" | "transit";
+  id: string;
+  subject: string;
+  domain: HumanDomain;
+  judgment: string;
+  mechanism: string;
+  valence: InterpretedProposition["valence"];
+  strength: InterpretedProposition["strength"];
+  evidenceIds: string[];
+  rules: CanonRuleApplication[];
+  limitation?: string;
 }
 
 export interface MethodOutcome {
@@ -51,6 +66,7 @@ export interface MethodOutcome {
   frame: "god" | "agent" | "shared" | "transit";
   status: MethodOutcomeStatus;
   calculatedFindings: MethodOutcomeFinding[];
+  findingJudgments: FindingJudgment[];
   canonApplications: CanonRuleApplication[];
   interpretation: string;
   judgment: string;

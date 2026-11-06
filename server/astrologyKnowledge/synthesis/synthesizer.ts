@@ -3,7 +3,7 @@ import type {
   SynthesisInput,
   SynthesisResult,
 } from "./types";
-import { extractPropositionsFromSnapshot } from "./normalizer";
+import { extractPropositionsFromMethodOutcomes } from "./normalizer";
 import { clusterPropositionsIntoThemes } from "./clustering";
 import { buildMethodOutcomes } from "./methodOutcomes";
 
@@ -17,9 +17,10 @@ export async function synthesizeMasterReading(
   const { snapshot, readingMode } = input;
 
   // 1. Extract normalized propositions across all available traditions and methods
-  const canonApplications = input.canonApplications ?? [];
-  const methodOutcomes = buildMethodOutcomes(snapshot, canonApplications);
-  const propositions = extractPropositionsFromSnapshot(snapshot, canonApplications);
+  const suppliedCanon = input.canonApplications ?? [];
+  const methodOutcomes = buildMethodOutcomes(snapshot, suppliedCanon);
+  const canonApplications = Array.from(new Map([...suppliedCanon, ...methodOutcomes.flatMap(outcome=>outcome.canonApplications)].map(rule=>[rule.canonEvidenceId,rule])).values());
+  const propositions = extractPropositionsFromMethodOutcomes(methodOutcomes);
 
   // 2. Cluster into human domain themes and reconcile tensions
   const { themes, tensions } = clusterPropositionsIntoThemes(propositions);
@@ -39,8 +40,10 @@ export async function synthesizeMasterReading(
   const prioritized = Object.entries(relevantDomains)
     .filter(([, terms]) => terms.some(term => query.includes(term)))
     .map(([domain]) => domain);
+  const strengthWeight={dominant:4,strong:3,moderate:2,subtle:1};
+  const signal=(theme:typeof themes[number])=>Math.max(0,...propositions.filter(p=>theme.linkedPropositionIds.includes(p.id)).map(p=>strengthWeight[p.strength]));
   const orderedThemes = [...themes].sort((a, b) =>
-    (prioritized.includes(b.domain) ? 1 : 0) - (prioritized.includes(a.domain) ? 1 : 0)
+    (prioritized.includes(b.domain) ? 1 : 0) - (prioritized.includes(a.domain) ? 1 : 0) || signal(b)-signal(a)
   );
   const methodFindings = snapshot.methodExecutionLedger.map(layer => {
     const raw = layer.results;
@@ -68,14 +71,9 @@ export async function synthesizeMasterReading(
   });
   const methodCounts = snapshot.methodExecutionLedger
     .map(layer => `${layer.name}: ${layer.status}${Array.isArray(layer.results) ? ` (${layer.results.length} results)` : ""}`);
-  const leadingJudgments = methodOutcomes
-    .filter(outcome => outcome.status === "interpreted")
-    .slice(0, 4)
-    .map(outcome => `${outcome.methodName}: ${outcome.judgment}`)
-    .join(" ");
   const dominantConclusion = orderedThemes.length
-    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. Primary evidence domain: ${orderedThemes[0].humanTheme}. ${orderedThemes[0].primaryConclusion} Method judgments: ${leadingJudgments}`
-    : `Question: ${question}. No calculated propositions were available for synthesis. Method judgments: ${leadingJudgments || "none"}`;
+    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. ${orderedThemes.slice(0,3).map(theme=>theme.primaryConclusion).join(" ")}`
+    : `Question: ${question}. No successfully interpreted method outcomes are available.`;
 
   // The complete recorded results remain in the propositions and snapshot.
   // Emit each computed finding so no doctrine disappears behind a generic summary.
@@ -121,11 +119,7 @@ export async function synthesizeMasterReading(
   const tracedEvidenceIds = new Set(themes.flatMap(theme => theme.evidenceIds));
   const missingEvidenceIds = Array.from(expectedEvidenceIds).filter(id => !tracedEvidenceIds.has(id));
   const computedLayers = ledger.filter(l => l.status === "computed-with-result");
-  const interpretedMethodIds = new Set(
-    themes.flatMap(theme => theme.linkedPropositionIds)
-      .filter(id => id.startsWith("prop-method-"))
-      .map(id => id.slice("prop-method-".length).replace(/-([0-9]+|remaining)$/, ""))
-  );
+  const interpretedMethodIds = new Set(methodOutcomes.filter(outcome=>outcome.status==="interpreted" && outcome.findingJudgments.every(finding=>themes.some(theme=>theme.linkedPropositionIds.includes(finding.id)))).map(outcome=>outcome.methodId));
   const uninterpretedMethods = computedLayers.filter(layer => !interpretedMethodIds.has(layer.id));
   const linkedPropositionIds = new Set(themes.flatMap(theme => theme.linkedPropositionIds));
   const interpretedCanonEvidenceIds = new Set(
@@ -143,11 +137,12 @@ export async function synthesizeMasterReading(
   const qualityAudit = {
     groundedRatio,
     unsupportedClaims: [
+      ...incompleteMethodOutcomes.map(outcome=>`Method judgment failed: ${outcome.methodId}: ${outcome.interpretation}`),
       ...missingEvidenceIds.map(id => `Not incorporated into interpreted themes: ${id}`),
       ...uninterpretedMethods.map(layer => `Computed method missing from interpreted themes: ${layer.id}`),
       ...missingCanonApplications.map(application => `Canon rule not applied to an interpreted proposition: ${application.ruleId} (${application.canonEvidenceId})`),
     ],
-    passed: missingEvidenceIds.length === 0 && uninterpretedMethods.length === 0 && missingCanonApplications.length === 0,
+    passed: missingEvidenceIds.length === 0 && uninterpretedMethods.length === 0 && missingCanonApplications.length === 0 && incompleteMethodOutcomes.length === 0,
   };
   // Report method coverage explicitly; reference-only or unavailable layers are never
   // described as calculated. The raw evidence remains available in the snapshot.

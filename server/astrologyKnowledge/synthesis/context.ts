@@ -1,41 +1,93 @@
 import type { SynthesisResult } from "./types";
 
-/** Each result and Canon application is sent once, without expanding it into every theme. */
+/** Lossless text/source interning keeps ALL judged findings within the interpreter packet. */
 export function packSynthesis(synthesis: SynthesisResult) {
+  const split = (text: string) => text.split(/(?<=[.!?])(?=\s)/);
+  const counts = new Map<string, number>();
+  for (const outcome of synthesis.methodOutcomes)
+    for (const finding of outcome.findingJudgments)
+      for (const part of split(finding.judgment))
+        counts.set(part, (counts.get(part) ?? 0) + 1);
+  const textTable = Array.from(counts.entries())
+    .filter(([part, count]) => part.length >= 80 && count > 1)
+    .map(([part]) => part);
+  const textIndex = new Map(textTable.map((part, index) => [part, index]));
+  const sources = Array.from(
+    new Map(
+      synthesis.canonApplications.map(rule => [
+        `${rule.ruleId}:${rule.sourceTitle}`,
+        {
+          ruleId: rule.ruleId,
+          sourceId: rule.sourceId,
+          sourceTitle: rule.sourceTitle,
+          confidence: rule.confidence,
+        },
+      ])
+    ).values()
+  );
+  const sourceIndex = new Map(
+    sources.map((rule, index) => [`${rule.ruleId}:${rule.sourceTitle}`, index])
+  );
   return {
     snapshotId: synthesis.snapshotId,
     qualityAudit: synthesis.qualityAudit,
     methodLedgerSummary: synthesis.methodLedgerSummary,
-    methodFindings: synthesis.methodFindings.map(method => ({
-      ...method,
-      findings: method.findings.map(finding => {
-        try {
-          return { label: finding.label, value: JSON.parse(finding.details) };
-        } catch {
-          return { label: finding.label, value: finding.details };
-        }
-      }),
-    })),
-    methodOutcomes: synthesis.methodOutcomes,
     methodOutcomeAudit: synthesis.methodOutcomeAudit,
-    canonApplications: synthesis.canonApplications,
+    methodFindings: synthesis.methodFindings.map(
+      ({ findings: _raw, ...metadata }) => metadata
+    ),
+    judgmentColumns: [
+      "subject",
+      "judgmentParts",
+      "evidenceIds",
+      "sourceRefs",
+      "valence",
+      "strength",
+      "frame",
+      "limitation",
+    ],
+    textTable,
+    methodOutcomes: synthesis.methodOutcomes.map(outcome => ({
+      methodId: outcome.methodId,
+      methodName: outcome.methodName,
+      chartScope: outcome.chartScope,
+      frame: outcome.frame,
+      status: outcome.status,
+      findingJudgments:
+        outcome.status === "interpreted"
+          ? outcome.findingJudgments.map(f => [
+              f.subject,
+              split(f.judgment).map(part => textIndex.get(part) ?? part),
+              f.evidenceIds,
+              Array.from(
+                new Set(
+                  f.rules.map(rule =>
+                    sourceIndex.get(`${rule.ruleId}:${rule.sourceTitle}`)
+                  )
+                )
+              ),
+              f.valence,
+              f.strength,
+              f.frame ?? outcome.frame,
+              f.limitation ?? null,
+            ])
+          : [],
+      limitations: outcome.strengthAndLimitations,
+    })),
+    canonApplications: sources,
     themes: synthesis.themes.map(theme => ({
       id: theme.id,
       humanTheme: theme.humanTheme,
-      consequences: theme.consequences,
-      deeperMeaning: theme.deeperMeaning,
-      evidenceIds: theme.evidenceIds,
     })),
-    contradictionsAndTensions: synthesis.contradictionsAndTensions,
   };
 }
-
 export function formatSynthesisContext(synthesis: SynthesisResult) {
   return [
     "UNIFIED MASTER SYNTHESIS — CALCULATED METHOD FINDINGS AND CANON RULE APPLICATIONS",
-    "Every method must produce or explicitly withhold a method-specific outcome before the final synthesis. Read the full formation before answering; explain how applicable methods modify one another, not just a planet/sign/house dictionary. Follow WHAT → WHY → HOW → CONSEQUENCE → MEANING.",
-    "Unprefixed method/evidence IDs belong to the base chart. transit: IDs belong to the separately calculated event sky. Event houses describe the event's local horizon; natal houses describe the birth horizon. Event-origin Dasha/varga results are event-model calculations, never a person's natal lifecycle. God and Agent use the same positions with distinct house frames.",
-    "Use actual nakshatra/pada, Arabic manzil, elemental-family decan, dignity, fixed-star activations, rulers, aspects, Lots, Kabbalah, vargas and other available findings in the conclusions they affect. The Chinese overlays carry their explicit custom Firmament boundary model. The separate historical Chinese catalog remains reference-only; do not claim those custom sectors reconstruct ancient equatorial boundaries. Do not invent missing Shadbala/Bhava Bala or unavailable methods. Keep source and evidence IDs inspectable. Inventory is not interpretation.",
+    "The authoritative input is findingJudgments from interpreted methodOutcomes. Rows use judgmentColumns. In judgmentParts, a number means the exact textTable entry; strings are literal text. Concatenate the parts IN ORDER to read the full judgment. sourceRefs index canonApplications. ALL judgments are retained; these references only avoid repeated text. Cite the original evidence ID strings, never the numeric text/source references.",
+    "Each judgment already applies its specific Canon to its actual findings. Reconcile their support, pressure and conditions using WHAT → WHY → HOW → CONSEQUENCE → MEANING. Do not replace them with planet dictionaries or infer an interpretation from failed, no-result, inapplicable or reference-only methods.",
+    "Unprefixed evidence belongs to the base chart. transit: identifies the separate event sky. chartScope identifies natal/event independently of God/Agent/shared frame. God House sectors are fixed background fields; Agent houses follow the real local horizon. Divisional and timing results seeded from an event are event-model results, never a person's natal biography.",
+    "Every applicable method's judgment must be considered. Preserve disagreements and source limitations. Chinese historical sectors remain reference-only. Unverified star-specific meanings remain withheld even when a conjunction is measured. Do not invent Shadbala, Bhava Bala, or absent methods.",
     JSON.stringify(packSynthesis(synthesis)),
   ].join("\n");
 }
