@@ -119,6 +119,12 @@ export default function StandaloneTransitPage() {
         );
     }
   };
+  const autoRequested = useRef(false);
+  useEffect(() => {
+    if (autoRequested.current || !valid) return;
+    autoRequested.current = true;
+    void run();
+  }, [valid]);
   return (
     <main className="mx-auto max-w-5xl space-y-5 p-4 text-slate-100 sm:p-6">
       <header className="space-y-2">
@@ -134,6 +140,8 @@ export default function StandaloneTransitPage() {
           engine. This is not a natal-to-transit overlay.
         </p>
       </header>
+      <details className="rounded-2xl border border-white/15 bg-slate-950/70 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-cyan-200">Edit transit date, time and location</summary>
       <section className="grid gap-3 rounded-2xl border border-white/15 bg-slate-950/70 p-4 sm:grid-cols-2">
         <label className="text-xs">
           Date
@@ -235,6 +243,7 @@ export default function StandaloneTransitPage() {
           </p>
         )}
       </section>
+      </details>
       {!result && (
         <p
           role="status"
@@ -242,7 +251,7 @@ export default function StandaloneTransitPage() {
         >
           {calculate.isPending
             ? "Calculating the event sky and its contact ledger…"
-            : "Choose a city and local time, then calculate the sky. Contact counts appear after a successful calculation."}
+            : "The chart will calculate automatically when the event location is valid. Open Edit transit date, time and location if you need to change it."}
         </p>
       )}
       <p className="text-sm leading-6 text-slate-400">
