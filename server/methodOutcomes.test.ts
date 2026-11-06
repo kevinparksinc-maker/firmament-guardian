@@ -23,7 +23,7 @@ describe("structured method-specific outcomes", () => {
     expect(new Set(outcomes.map(outcome => outcome.methodId)).size).toBe(16);
     for (const outcome of outcomes) {
       expect(["interpreted", "reference-only", "not-applicable", "failed"]).toContain(outcome.status);
-      expect(outcome.chartScope).toBe("natal");
+      expect(outcome.chartScope).toBe(outcome.methodId === "transit-activation-layer" ? "event" : "natal");
       expect(outcome.interpretation.length).toBeGreaterThan(0);
       expect(outcome.judgment.length).toBeGreaterThan(0);
       expect(outcome.contribution.length).toBeGreaterThan(0);

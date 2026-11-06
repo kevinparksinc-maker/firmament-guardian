@@ -105,13 +105,49 @@ function canonForLayer(
   );
 }
 
+function calculatedJudgment(
+  layer: LayerRecord,
+  findings: MethodOutcomeFinding[],
+  applications: CanonRuleApplication[],
+): string {
+  const values = findings.map(f => f.calculatedValue).join(" | ");
+  const ruleIds = applications.map(application => application.ruleId).join(", ");
+  switch (layer.id) {
+    case "western-aspects-and-orbs": {
+      const friction = findings.filter(f => /friction|square|opposition/i.test(f.calculatedValue)).length;
+      const harmony = findings.length - friction;
+      return `Rule judgment [${ruleIds}]: ${findings.length} measured aspect contact(s), ${harmony} harmonious and ${friction} frictional by the calculated aspect nature; the strongest conclusion remains conditional on the recorded orb. Findings: ${values}`;
+    }
+    case "western-essential-dignities": {
+      const dignified = findings.filter(f => /Domicile|Exaltation/i.test(f.calculatedValue)).length;
+      return `Rule judgment [${ruleIds}]: ${dignified} of ${findings.length} calculated planetary placements have domicile or exaltation status; the remaining placements are treated as peregrine for essential dignity. Findings: ${values}`;
+    }
+    case "arabic-hermetic-lots":
+      return `Rule judgment [${ruleIds}]: ${findings.length} sect-derived Lot placement(s) are available in the local Agent frame; their topic contribution is read through the recorded Lot house and formula. Findings: ${values}`;
+    case "vedic-vargas-divisional":
+      return `Rule judgment [${ruleIds}]: ${findings.length} calculated divisional placement record(s) qualify the natal promise; the explicit coordinate variant and division are retained as limitations. Findings: ${values}`;
+    case "vedic-dasha-and-ashtakavarga":
+      return `Rule judgment [${ruleIds}]: the Vedic timing layer contributes only the validated Dasha and Ashtakavarga records present in the findings; no missing period or checksum is inferred. Findings: ${values}`;
+    case "vedic-graha-drishti":
+      return `Rule judgment [${ruleIds}]: ${findings.length} calculated Graha Drishti relationship(s) are judged by their recorded seventh or special offset, not by Western aspect geometry. Findings: ${values}`;
+    case "kabbalah-sefer-yetzirah":
+      return `Rule judgment [${ruleIds}]: ${findings.length} recorded Sefer Yetzirah correspondence(s) qualify the chart's constructive/contrary polarity; this symbolic layer does not override calculated placement testimony. Findings: ${values}`;
+    case "genesis-behavioral-patterns":
+      return `Rule judgment [${ruleIds}]: the Genesis engine returned ${findings.length} validated pattern record(s); only those calculated patterns contribute, with no substitute personality narrative. Findings: ${values}`;
+    case "transit-activation-layer":
+      return `Rule judgment [${ruleIds}]: ${findings.length} calculated transit-to-natal activation(s) are active; each is limited to its recorded orb, intensity, and polarity. Findings: ${values}`;
+    default:
+      return `${applications.length ? `Rule judgment [${ruleIds}]` : "Calculated judgment"}: ${findings.length} finding(s) were evaluated against the applicable Canon record. Findings: ${values}`;
+  }
+}
+
 function outcomeForLayer(
   layer: LayerRecord,
   snapshot: UnifiedMasterChartSnapshot,
   canonApplications: CanonRuleApplication[],
   prefix = "",
 ): MethodOutcome {
-  const event = prefix === "transit:" || layer.id.startsWith("transit:");
+  const event = prefix === "transit:" || layer.id === "transit-activation-layer" || layer.id.startsWith("transit:");
   const calculatedFindings = findingsForLayer(layer, prefix);
   const applications = canonForLayer(layer, canonApplications, prefix);
   const template = METHOD_INTERPRETATIONS[layer.id.replace(/^transit:/, "")] ?? {
@@ -183,6 +219,7 @@ function outcomeForLayer(
   const findingText = calculatedFindings.map(f => `${f.label}: ${f.calculatedValue}`).join(" | ");
   const canonText = applications.map(application => `[${application.ruleId}] ${application.statement}`).join(" ");
   const missingCanon = applications.length === 0;
+  const judgment = calculatedJudgment(layer, calculatedFindings, applications);
   return {
     methodId: layer.id,
     methodName: layer.name,
@@ -193,7 +230,7 @@ function outcomeForLayer(
     calculatedFindings,
     canonApplications: applications,
     interpretation: `${template.meaning} Actual calculation: ${findingText || "no finding records"} Canon applied: ${canonText || "NONE — required traditional rule coverage is missing"}`,
-    judgment: missingCanon ? "No traditional judgment issued because the applicable Canon rule is missing." : template.judgment,
+    judgment: missingCanon ? "No traditional judgment issued because the applicable Canon rule is missing." : judgment,
     contribution: missingCanon ? "The method is withheld from the authoritative synthesis until its Canon coverage is supplied." : `This ${layer.tradition} method contributes its calculated testimony to the cross-method synthesis without replacing other methods.`,
     evidenceIds: calculatedFindings.map(f => f.evidenceId),
     strengthAndLimitations: limitations,

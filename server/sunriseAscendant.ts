@@ -42,9 +42,10 @@ export function ascendantFromSunrise(input: {
     throw new Error("Sunrise and event must be valid UTC instants.");
   }
   const elapsedHours = (eventMillis - sunriseMillis) / 3_600_000;
-  // Consecutive solar sunrises can be slightly more than 24 UTC hours apart.
-  if (elapsedHours < 0 || elapsedHours > 25) {
-    throw new Error("Sunrise anchor must precede the event by no more than 25 hours.");
+  // Consecutive solar sunrises can be more than 24 UTC hours apart near
+  // seasonal extremes; 26 hours still rejects a stale or wrong-date anchor.
+  if (elapsedHours < 0 || elapsedHours > 26) {
+    throw new Error(`Sunrise anchor must precede the event by no more than 26 hours (received ${elapsedHours.toFixed(3)}).`);
   }
   // The Absolute's sole custom ASC rule: Sun equatorial XY angle at sunrise
   // plus elapsed rotation at exactly 15 degrees per hour. Do NOT substitute the geometric horizon intersection.

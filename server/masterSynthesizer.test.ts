@@ -5,6 +5,8 @@ import {
   clusterPropositionsIntoThemes,
   synthesizeMasterReading,
 } from "./astrologyKnowledge/synthesis";
+import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/canon/retriever";
+import { buildCanonRuleApplications } from "./astrologyKnowledge/synthesis/canonApplications";
 
 const SAMPLE_INPUT = {
   location: "Athens, Greece",
@@ -86,5 +88,72 @@ describe("Master Synthesizer Pipeline", () => {
     expect(result.qualityAudit.passed).toBe(true);
     expect(result.qualityAudit.groundedRatio).toBe(1.0);
     expect(result.qualityAudit.unsupportedClaims).toHaveLength(0);
+  });
+
+  it("propagates a changed calculated finding into the method judgment and final synthesis", async () => {
+    const snapshot = await buildUnifiedMasterChart(SAMPLE_INPUT);
+    const canonApplications = buildCanonRuleApplications(
+      snapshot,
+      canonDossierToEvidenceItems(retrieveChartCanonDossier(snapshot.natal!)),
+    );
+    const original = await synthesizeMasterReading({
+      snapshot,
+      readingMode: "natal",
+      userQuestion: "What is my core life trajectory?",
+      canonApplications,
+    });
+    const aspectLayer = snapshot.methodExecutionLedger.find(layer => layer.id === "western-aspects-and-orbs")!;
+    const alteredAspects = aspectLayer.results.map((result, index) =>
+      index === 0 ? { ...result, aspect: "Trine", nature: "harmony", orb: 0.25 } : result,
+    );
+    const altered = {
+      ...snapshot,
+      methodExecutionLedger: snapshot.methodExecutionLedger.map(layer =>
+        layer.id === aspectLayer.id ? { ...layer, results: alteredAspects } : layer,
+      ),
+      layers: {
+        ...snapshot.layers,
+        [aspectLayer.id]: { ...snapshot.layers[aspectLayer.id], results: alteredAspects },
+      },
+    };
+    const changed = await synthesizeMasterReading({
+      snapshot: altered,
+      readingMode: "natal",
+      userQuestion: "What is my core life trajectory?",
+      canonApplications,
+    });
+    const originalOutcome = original.methodOutcomes.find(outcome => outcome.methodId === aspectLayer.id)!;
+    const changedOutcome = changed.methodOutcomes.find(outcome => outcome.methodId === aspectLayer.id)!;
+
+    expect(changedOutcome.judgment).not.toBe(originalOutcome.judgment);
+    expect(changed.dominantConclusion).not.toBe(original.dominantConclusion);
+    expect(changed.integratedNarrative.some(line => line.includes("Trine"))).toBe(true);
+  });
+
+  it("keeps the transit layer rule-linked in a combined natal/transit worked example", async () => {
+    const snapshot = await buildUnifiedMasterChart({
+      ...SAMPLE_INPUT,
+      mode: "combined",
+      transitLocation: "New York, New York, USA",
+      transitLatitude: 40.7128,
+      transitLongitude: -74.006,
+      transitTimezone: "America/New_York",
+      transitDate: "2026-10-31",
+      transitTime: "12:00",
+    });
+    const result = await synthesizeMasterReading({
+      snapshot,
+      readingMode: "combined",
+      userQuestion: "What is active now in relation to my natal promise?",
+    });
+    const transit = result.methodOutcomes.find(outcome => outcome.methodId === "transit-activation-layer")!;
+
+    expect(transit.chartScope).toBe("event");
+    expect(["interpreted", "failed", "not-applicable"]).toContain(transit.status);
+    if (transit.status === "interpreted") {
+      expect(transit.canonApplications.length).toBeGreaterThan(0);
+      expect(transit.judgment).toContain("transit");
+    }
+    expect(result.integratedNarrative.some(line => line.includes("METHOD OUTCOME [transit-activation-layer]"))).toBe(true);
   });
 });

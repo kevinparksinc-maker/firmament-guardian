@@ -68,9 +68,14 @@ export async function synthesizeMasterReading(
   });
   const methodCounts = snapshot.methodExecutionLedger
     .map(layer => `${layer.name}: ${layer.status}${Array.isArray(layer.results) ? ` (${layer.results.length} results)` : ""}`);
+  const leadingJudgments = methodOutcomes
+    .filter(outcome => outcome.status === "interpreted")
+    .slice(0, 4)
+    .map(outcome => `${outcome.methodName}: ${outcome.judgment}`)
+    .join(" ");
   const dominantConclusion = orderedThemes.length
-    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. Primary evidence domain: ${orderedThemes[0].humanTheme}. ${orderedThemes[0].primaryConclusion}`
-    : `Question: ${question}. No calculated propositions were available for synthesis.`;
+    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. Primary evidence domain: ${orderedThemes[0].humanTheme}. ${orderedThemes[0].primaryConclusion} Method judgments: ${leadingJudgments}`
+    : `Question: ${question}. No calculated propositions were available for synthesis. Method judgments: ${leadingJudgments || "none"}`;
 
   // The complete recorded results remain in the propositions and snapshot.
   // Emit each computed finding so no doctrine disappears behind a generic summary.
