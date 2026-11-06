@@ -338,7 +338,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Question: ${input.question}`,
     `Question asked at: ${askedAt} UTC (${input.date} ${input.time} local; ${input.timezone})`,
     `Location: ${input.location} (${input.latitude.toFixed(4)}, ${input.longitude.toFixed(4)})`,
-    `Coordinate model: equatorial ephemeris XYZ projected into the fixed firmament frame, without tropical/sidereal conversion. House system: Equal House, with 30-degree cusps from the sunrise-anchored Ascendant and elapsed sidereal rotation. Planetary longitudes are geocentric; a separate topocentric (parallax-corrected) Moon longitude is available but is not used for houses or aspects.`,
+    `Coordinate model: equatorial ephemeris XYZ projected into the fixed firmament frame, without tropical/sidereal conversion. House system: Equal House, with 30-degree cusps from the sunrise-anchored Ascendant and elapsed rotation at exactly 15 degrees per hour. Planetary longitudes are geocentric; a separate topocentric (parallax-corrected) Moon longitude is available but is not used for houses or aspects.`,
     `Question topic: ${topic.label} (${ordinal(input.topicHouse)} house from the ${input.subject === "querent" ? "querent" : "other person"}).`,
     `Ascendant: ${ascendant.display} (${ascendantSign}); querent's primary ruler: ${querentRuler}.`,
     `Person asked about: ${input.subject === "querent" ? "the querent (House 1)" : `another person (House ${subjectHouse})`}; that person's ruler: ${subjectRuler}.`,

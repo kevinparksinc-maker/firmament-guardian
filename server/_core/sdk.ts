@@ -6,7 +6,7 @@ import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
-import { ENV } from "./env";
+import { ENV, sessionConfiguration } from "./env";
 import type {
   ExchangeTokenRequest,
   ExchangeTokenResponse,
@@ -154,11 +154,7 @@ class SDKServer {
   }
 
   private getSessionSecret() {
-    const secret = ENV.cookieSecret;
-    if (ENV.isProduction && (!process.env.MANUS_JWT_SECRET && !process.env.JWT_SECRET)) {
-      throw new Error("Production session signing requires MANUS_JWT_SECRET or JWT_SECRET");
-    }
-    return new TextEncoder().encode(secret);
+    return new TextEncoder().encode(sessionConfiguration().secret);
   }
 
   /**
@@ -173,7 +169,7 @@ class SDKServer {
     return this.signSession(
       {
         openId,
-        appId: ENV.appId,
+        appId: sessionConfiguration().appId,
         name: options.name || "",
       },
       options
@@ -207,8 +203,8 @@ class SDKServer {
       return null;
     }
 
+    const secretKey = this.getSessionSecret();
     try {
-      const secretKey = this.getSessionSecret();
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
@@ -223,7 +219,7 @@ class SDKServer {
         return null;
       }
 
-      if (appId !== ENV.appId) {
+      if (appId !== sessionConfiguration().appId) {
         console.warn("[Auth] Session project ID did not match this application");
         return null;
       }
@@ -307,6 +303,7 @@ class SDKServer {
     if (!user) {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionToken ?? "");
+        if (userInfo.openId !== sessionUserId) throw ForbiddenError("Session identity did not match the account provider");
         await db.upsertUser({
           openId: userInfo.openId,
           name: userInfo.name || null,

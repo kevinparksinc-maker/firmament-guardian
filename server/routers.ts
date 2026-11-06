@@ -7,6 +7,7 @@ import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalChar
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { z } from "zod";
 import { checkAccountRateLimit, getAccountAvailability, loginAccount, registerAccount } from "./accountAuth";
+import { sessionConfiguration } from "./_core/env";
 import { sdk } from "./_core/sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -112,10 +113,14 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     availability: publicProcedure.query(() => getAccountAvailability()),
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(({ ctx }) => {
+      if (ctx.authError) throw ctx.authError;
+      return ctx.user;
+    }),
     register: publicProcedure.input(z.object({ name: z.string().trim().min(1).max(100), email: z.string().trim().email().max(320), password: z.string().min(12).max(128) }))
       .mutation(async ({ ctx, input }) => {
         checkAccountRateLimit(`register:${ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown"}`);
+        sessionConfiguration();
         const user = await registerAccount(input);
         const duration = 30 * 24 * 60 * 60 * 1000;
         const token = await sdk.createSessionToken(user.openId, { name: user.name, expiresInMs: duration });

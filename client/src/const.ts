@@ -29,6 +29,7 @@ function loadRuntimeConfig() {
 // configuration keeps the public project ID and OAuth portal out of the static
 // build, so the same artifact works in Preview and production.
 export const startLogin = async (): Promise<void> => {
+  if (window.location.pathname === "/account") return;
   window.location.assign(`/account?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
 };
 

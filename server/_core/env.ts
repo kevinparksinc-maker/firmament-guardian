@@ -1,8 +1,20 @@
+const configuredValue = (...values: (string | undefined)[]) => values.find(value => Boolean(value?.trim()))?.trim();
+
+export function sessionConfiguration(env: NodeJS.ProcessEnv = process.env) {
+  const appId = configuredValue(env.MANUS_PROJECT_ID, env.VITE_APP_ID) ?? "firmament-guardian";
+  const suppliedSecret = configuredValue(env.MANUS_JWT_SECRET, env.JWT_SECRET);
+  const secret = suppliedSecret ?? "firmament-guardian-default-jwt-secret-key";
+  if (env.NODE_ENV === "production" && (!suppliedSecret || secret === "firmament-guardian-default-jwt-secret-key" || secret.length < 32)) {
+    throw new Error("Production requires a unique MANUS_JWT_SECRET or JWT_SECRET of at least 32 characters.");
+  }
+  return { appId, secret };
+}
+
 export const ENV = {
-  appId: process.env.MANUS_PROJECT_ID ?? process.env.VITE_APP_ID ?? "firmament-guardian",
-  cookieSecret: process.env.MANUS_JWT_SECRET ?? process.env.JWT_SECRET ?? "firmament-guardian-default-jwt-secret-key",
+  appId: configuredValue(process.env.MANUS_PROJECT_ID, process.env.VITE_APP_ID) ?? "firmament-guardian",
+  cookieSecret: configuredValue(process.env.MANUS_JWT_SECRET, process.env.JWT_SECRET) ?? "firmament-guardian-default-jwt-secret-key",
   databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.MANUS_OAUTH_API_URL ?? process.env.OAUTH_SERVER_URL ?? "",
+  oAuthServerUrl: configuredValue(process.env.MANUS_OAUTH_API_URL, process.env.OAUTH_SERVER_URL) ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   manusApiUrl: process.env.MANUS_API_URL ?? "",

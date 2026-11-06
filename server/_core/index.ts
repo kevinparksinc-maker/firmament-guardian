@@ -11,6 +11,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { chartQueryServerTransport } from "../../shared/trpcTransport";
+import { sessionConfiguration } from "./env";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -32,12 +33,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  if (process.env.NODE_ENV === "production") {
-    const jwtSecret = process.env.MANUS_JWT_SECRET ?? process.env.JWT_SECRET;
-    if (!jwtSecret || jwtSecret === "firmament-guardian-default-jwt-secret-key" || jwtSecret.length < 32) {
-      throw new Error("Production requires a unique MANUS_JWT_SECRET or JWT_SECRET of at least 32 characters.");
-    }
-  }
+  sessionConfiguration();
   const app = express();
   app.set("trust proxy", 1);
   const server = createServer(app);
@@ -57,7 +53,7 @@ async function startServer() {
     res.json({
       apiUrl: process.env.MANUS_API_URL ?? "",
       browserKey: process.env.MANUS_API_BROWSER_KEY ?? "",
-      appId: process.env.MANUS_PROJECT_ID ?? process.env.VITE_APP_ID ?? "",
+      appId: sessionConfiguration().appId,
       oauthPortalUrl: process.env.MANUS_OAUTH_PORTAL_URL ?? process.env.VITE_OAUTH_PORTAL_URL ?? "",
     });
   });

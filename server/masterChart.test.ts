@@ -26,8 +26,8 @@ describe("Unified Master Chart Architecture", () => {
     expect(snapshot.validation.errors).toHaveLength(0);
     expect(snapshot.validation.totalMethods).toBe(16);
     expect(snapshot.validation.computedWithResultCount).toBeGreaterThanOrEqual(10);
-    expect(snapshot.frameConfig.zodiacMode).toBe("aldebaran-anchored-babylonian-stellar");
-    expect(snapshot.frameConfig.firmamentAnchorVersion).toBe("aldebaran-15-taurus-swiss-mode-14");
+    expect(snapshot.frameConfig.zodiacMode).toBe("fixed-cartesian-xyz");
+    expect(snapshot.frameConfig.firmamentAnchorVersion).toBe("sunrise-xyz-15deg-hour-v1");
   });
 
   it("produces identical snapshot IDs for identical inputs (deterministic stability)", async () => {
@@ -161,6 +161,13 @@ describe("Unified Master Chart Architecture", () => {
 
     expect(snapshot.natal?.worldview).toBe("god");
     expect(snapshot.natal?.transitHouseFrame).toBe("god-fixed");
+    expect(snapshot.natal?.ascendant).toBeNull();
+    expect(snapshot.natal?.houses).toEqual(Array.from({ length: 12 }, (_, i) => i * 30));
+    expect(Number.isFinite(snapshot.baseCelestialState.ascendant.longitude)).toBe(true);
+    for (const body of snapshot.natal!.movingBodies) {
+      expect(body.house).toBe(Math.floor(body.longitude / 30) + 1);
+      expect(body.longitude).toBe(snapshot.baseCelestialState.planets.find(row => row.name === body.name)!.longitude);
+    }
     expect(snapshot.snapshotId).not.toBe((await buildUnifiedMasterChart({
       ...SAMPLE_INPUT,
       mode: "combined",

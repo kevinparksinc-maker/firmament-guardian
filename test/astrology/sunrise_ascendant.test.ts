@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateSunriseAscendant, SIDEREAL_ROTATION_DEGREES_PER_DAY } from "../../server/sunrise-ascendant";
+import { calculateSunriseAscendant, ROTATION_DEGREES_PER_DAY } from "../../server/sunrise-ascendant";
 describe("Sunrise Ascendant: synthetic inputs", () => {
  const sunrise = new Date("1986-11-20T12:00:00Z");
  it("uses sunrise Sun longitude as zero elapsed anchor", () => {
@@ -7,7 +7,7 @@ describe("Sunrise Ascendant: synthetic inputs", () => {
  });
  it("advances by sidereal rotation in an hour", () => {
   const result=calculateSunriseAscendant({sunriseUtc:sunrise,chartUtc:new Date(sunrise.getTime()+3600000),sunriseSunLongitude:240});
-  expect(result.ascendant).toBeCloseTo(240+SIDEREAL_ROTATION_DEGREES_PER_DAY/24,8);
+  expect(result.ascendant).toBeCloseTo(240+ROTATION_DEGREES_PER_DAY/24,8);
  });
  it("constructs twelve equal cusps and opposite descendant", () => {
   const result=calculateSunriseAscendant({sunriseUtc:sunrise,chartUtc:sunrise,sunriseSunLongitude:350});

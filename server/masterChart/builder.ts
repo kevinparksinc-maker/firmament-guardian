@@ -81,7 +81,7 @@ export async function getMasterNatalChart(
     transitSunriseAnchor: undefined,
     transitXYZPositions: undefined,
   };
-  const key = computeSnapshotId(natalInput, "firmament-master-2026.1");
+  const key = computeSnapshotId(natalInput, "firmament-master-2026.2");
   const cached = natalSnapshotCache.get(key);
   if (cached) {
     natalSnapshotCache.delete(key);
@@ -111,7 +111,7 @@ export async function buildUnifiedMasterChart(
   input: MasterChartInput
 ): Promise<UnifiedMasterChartSnapshot> {
   const mode = input.mode ?? "natal";
-  const engineVersion = "firmament-master-2026.1";
+  const engineVersion = "firmament-master-2026.2";
   const snapshotId = computeSnapshotId(input, engineVersion);
   const createdAtUtc = new Date().toISOString();
 
@@ -130,7 +130,9 @@ export async function buildUnifiedMasterChart(
     transitLongitude: input.transitLongitude,
     transitTimezone: input.transitTimezone,
     readingScope: mode,
-    worldview: input.worldview ?? "agent-vs-god",
+    // The snapshot contains BOTH frames; calculate the available local anchor
+    // even when the requested display is God View. Project the display below.
+    worldview: input.worldview === "god" ? "agent-vs-god" : input.worldview ?? "agent-vs-god",
     xyzPositions: input.xyzPositions,
     transitXYZPositions: input.transitXYZPositions,
     sunriseAnchor: input.sunriseAnchor,
@@ -695,10 +697,10 @@ export async function buildUnifiedMasterChart(
       mode,
     },
     frameConfig: {
-      zodiacMode: "aldebaran-anchored-babylonian-stellar",
-      firmamentAnchorVersion: "aldebaran-15-taurus-swiss-mode-14",
+      zodiacMode: "fixed-cartesian-xyz",
+      firmamentAnchorVersion: "sunrise-xyz-15deg-hour-v1",
       firmamentCenter: "polaris-centered-firmament-dome",
-      obliquityMode: "swiss-ephemeris-sidereal-longitudes",
+      obliquityMode: "zero-tilt-xy-projection",
       precessionMode: "none-user-frame-fixed-anchor",
       houseSystem: "topocentric-equal-house-ascendant",
       engineVersion,
@@ -715,7 +717,7 @@ export async function buildUnifiedMasterChart(
       houses: baseHouses,
     },
     godView: {
-      description: "Polaris-centered firmament dome with a fixed Aries 1 to Pisces 12 universal frame anchored to the Aldebaran 15° Taurus stellar zodiac",
+      description: "Polaris-centered firmament dome with a fixed Aries 1 to Pisces 12 background and Cartesian XYZ planetary projection",
       cosmicFrame: "fixed-aries-1-to-pisces-12",
       polarisCenter: true,
       placements: godPlacements,
@@ -727,7 +729,22 @@ export async function buildUnifiedMasterChart(
       placements: agentPlacements,
       frameRelationships,
     },
-    natal: chart,
+    natal: input.worldview === "god" ? {
+      ...chart,
+      input: { ...chart.input, worldview: "god" },
+      worldview: "god",
+      agentViewAvailable: false,
+      ascendant: null,
+      descendant: null,
+      midheaven: null,
+      houses: Array.from({ length: 12 }, (_, i) => i * 30),
+      movingBodies: chart.movingBodies.map(body => ({ ...body, house: body.godHouse ?? Math.floor(normalizeLongitude(body.longitude) / 30) + 1 })),
+      frozenStars: chart.frozenStars.map(body => ({ ...body, house: body.godHouse ?? Math.floor(normalizeLongitude(body.longitude) / 30) + 1 })),
+      northNode: { ...chart.northNode, house: chart.northNode.godHouse ?? Math.floor(normalizeLongitude(chart.northNode.longitude) / 30) + 1 },
+      southNode: { ...chart.southNode, house: chart.southNode.godHouse ?? Math.floor(normalizeLongitude(chart.southNode.longitude) / 30) + 1 },
+      transitHouseFrame: "god-fixed",
+      transits: chart.transits.map(body => ({ ...body, house: body.godHouse ?? Math.floor(normalizeLongitude(body.longitude) / 30) + 1, natalContacts: [], minorNatalContacts: [] })),
+    } : chart,
     transit: mode === "transit" || mode === "combined"
       ? {
           transitInstantUtc: chart.transitDate ?? chart.utc,

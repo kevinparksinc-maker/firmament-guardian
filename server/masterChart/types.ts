@@ -77,13 +77,13 @@ export interface UnifiedMasterChartSnapshot {
     mode: "natal" | "transit" | "combined";
   };
   frameConfig: {
-    zodiacMode: "aldebaran-anchored-babylonian-stellar";
-    firmamentAnchorVersion: "aldebaran-15-taurus-swiss-mode-14";
+    zodiacMode: "fixed-cartesian-xyz";
+    firmamentAnchorVersion: "sunrise-xyz-15deg-hour-v1";
     firmamentCenter: "polaris-centered-firmament-dome";
-    obliquityMode: "swiss-ephemeris-sidereal-longitudes";
+    obliquityMode: "zero-tilt-xy-projection";
     precessionMode: "none-user-frame-fixed-anchor";
     houseSystem: "topocentric-equal-house-ascendant";
-    engineVersion: "firmament-master-2026.1";
+    engineVersion: "firmament-master-2026.2";
   };
   baseCelestialState: {
     julianDay: number;

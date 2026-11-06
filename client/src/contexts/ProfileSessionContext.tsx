@@ -1,5 +1,5 @@
 import { repairProfileLocations } from "@shared/profileLocations";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { ChartResult } from "../../../server/astronomy";
 import type { UserProfileData } from "@/components/NatalProfileBuilder";
 
@@ -49,6 +49,19 @@ function readProfile(profileKey = PROFILE_KEY, savedKey = SAVED_PROFILES_KEY): U
   }
 }
 
+export function profileStorageKeys(accountId: string) {
+  return { active: `fg:account:${accountId}:active-profile`, saved: `fg:account:${accountId}:saved-profiles` };
+}
+
+/** Explicit import only: include the previous device-only namespace, never another account. */
+export function readDeviceProfilesForImport(accountId: string): UserProfileData[] {
+  const guest = profileStorageKeys("guest");
+  const candidates = [...readSavedProfiles(), readProfile(), ...(accountId === "guest" ? [] : [...readSavedProfiles(guest.saved), readProfile(guest.active, guest.saved)])];
+  const unique = new Map<string, UserProfileData>();
+  for (const profile of candidates) if (profile) unique.set(legacyKey(profile), profile);
+  return Array.from(unique.values());
+}
+
 type ProfileSession = {
   profile: UserProfileData | null;
   deviceProfilesCount: number;
@@ -73,9 +86,8 @@ type ProfileSession = {
 const ProfileSessionContext = createContext<ProfileSession | null>(null);
 
 export function ProfileSessionProvider({ children, accountId = "guest" }: { children: ReactNode; accountId?: string }) {
-  const PROFILE_KEY = `fg:account:${accountId}:active-profile`;
-  const SAVED_PROFILES_KEY = `fg:account:${accountId}:saved-profiles`;
-  const [deviceProfilesCount, setDeviceProfilesCount] = useState(() => { try { return window.localStorage.getItem(`fg:account:${accountId}:device-imported`) ? 0 : Math.max(readSavedProfiles().length, readProfile() ? 1 : 0); } catch { return 0; } });
+  const { active: PROFILE_KEY, saved: SAVED_PROFILES_KEY } = profileStorageKeys(accountId);
+  const [deviceProfilesCount, setDeviceProfilesCount] = useState(() => { try { return window.localStorage.getItem(`fg:account:${accountId}:device-imported`) ? 0 : readDeviceProfilesForImport(accountId).length; } catch { return 0; } });
   const [profile, updateProfile] = useState<UserProfileData | null>(() => readProfile(PROFILE_KEY, SAVED_PROFILES_KEY));
   const [chart, setChart] = useState<ChartResult | null>(null);
   const [energyChart, setEnergyChart] = useState<ChartResult | null>(null);
@@ -214,10 +226,9 @@ export function ProfileSessionProvider({ children, accountId = "guest" }: { chil
   }, []);
 
   const importDeviceProfiles = useCallback(() => {
-    const legacy = readSavedProfiles();
-    const active = readProfile();
-    importProfiles(legacy.length ? legacy : active ? [active] : []);
-    if (active || legacy[0]) setProfile(active || legacy[0]);
+    const deviceProfiles = readDeviceProfilesForImport(accountId);
+    importProfiles(deviceProfiles);
+    if (deviceProfiles[0]) setProfile(deviceProfiles[0]);
     try { window.localStorage.setItem(`fg:account:${accountId}:device-imported`, "true"); } catch {}
     setDeviceProfilesCount(0);
   }, [accountId, importProfiles, setProfile]);

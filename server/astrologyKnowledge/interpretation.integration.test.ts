@@ -85,13 +85,18 @@ const chart = {
 describe("interpretation.generate knowledge gateway integration", () => {
   beforeEach(() => {
     mocked.invokeLLM.mockReset();
-    mocked.invokeLLM.mockResolvedValue({
-      choices: [
-        {
-          message: { role: "assistant", content: "not a valid plan" },
-          finish_reason: "stop",
-        },
-      ],
+    mocked.invokeLLM.mockImplementation(async request => {
+      const system = request.messages.find((message: { role: string }) => message.role === "system")?.content || "";
+      const plan = {
+        threads: [
+          { title: "Solar pattern", insight: "Fixture solar evidence.", evidence: ["Sun"], chapters: ["identity", "work-purpose"] },
+          { title: "Lunar pattern", insight: "Fixture lunar evidence.", evidence: ["Moon"], chapters: ["mind-heart", "relationships"] },
+        ],
+        tensions: [],
+        chapters: Object.fromEntries(["identity", "mind-heart", "relationships", "work-purpose"].map(id => [id, { angle: "Fixture evidence", evidence: [id === "identity" ? "Sun" : "Moon"] }])),
+      };
+      const content = system.includes("silent first reader") ? JSON.stringify(plan) : "A synthetic interpretation grounded in the supplied chart evidence. ".repeat(8);
+      return { choices: [{ message: { role: "assistant", content }, finish_reason: "stop" }] };
     });
   });
 
@@ -195,12 +200,11 @@ describe("interpretation.generate knowledge gateway integration", () => {
         { message: { role: "assistant", content: JSON.stringify(plan) } },
       ],
     });
-    const result = await generateInterpretation(
+    await expect(generateInterpretation(
       chart,
       "natal",
       "What is the major pattern affecting my career?"
-    );
-    expect(result.analysis).not.toContain("Stellium in Scorpio");
-    expect(result.analysis).not.toContain("Genesis Astro Engine activation");
+    )).rejects.toThrow("READING_PLAN_FAILED");
+    expect(mocked.invokeLLM).toHaveBeenCalledTimes(1);
   });
 });

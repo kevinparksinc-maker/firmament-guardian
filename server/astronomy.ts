@@ -246,7 +246,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview !== "god" && (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || Math.abs(input.latitude) > 90 || Math.abs(input.longitude) > 180))
     throw new Error("Master Celestial: valid birth coordinates are required. No default Ascendant.");
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
-  const natalSunrise = hasAgentLocation ? automaticSunriseAnchor(input.date, input.latitude, input.longitude, utcDate) : null;
+  const natalSunrise = hasAgentLocation ? input.sunriseAnchor ?? automaticSunriseAnchor(input.date, input.latitude, input.longitude, utcDate) : null;
   const asc = hasAgentLocation
     ? ascendantFromSunrise({ ...natalSunrise!, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
     : null;
@@ -267,7 +267,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
     "Planetary positions are computed from geocentric equatorial Cartesian XYZ (Moshier, equatorial, XYZ, speed); the zero direction is the ephemeris equatorial X axis at the observation date. No sidereal flag or Aldebaran subtraction is applied.",
-    "Natal Ascendant: NOAA apparent sunrise calculated from birth date/location, Sun equatorial XYZ sampled at sunrise, plus elapsed sidereal rotation. No fallback.",
+    ...(input.sunriseAnchor ? ["Natal sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded."] : []),
+    "Natal Ascendant: NOAA apparent sunrise calculated from birth date/location, Sun equatorial XYZ sampled at sunrise, plus elapsed rotation at exactly 15 degrees per hour. No fallback.",
     "Transit Ascendant: NOAA apparent sunrise and equatorial Sun XYZ calculated automatically for the transit location. No fallback.",
     input.xyzPositions ? "Supplied XYZ vectors override matching natal planetary longitudes in the fixed 360° plane; missing bodies retain Swiss Ephemeris positions." : "Planetary angles are geocentric equatorial XY angles; Moon also has a separate topocentric equatorial correction.",
   ] };
@@ -277,7 +278,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview !== "god" && transitInputsPresent && !transitLocationResolved) throw new Error("Transit location must be resolved before calculating transit houses.");
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
   const transitHasLocation = worldview !== "god" && transitLocationResolved;
-  const transitSunrise = transitHasLocation ? automaticSunriseAnchor(localDateTime(transitDate, input.transitTimezone || input.timezone).date, input.transitLatitude as number, input.transitLongitude as number, transitDate) : null;
+  const transitSunrise = transitHasLocation ? input.transitSunriseAnchor ?? automaticSunriseAnchor(localDateTime(transitDate, input.transitTimezone || input.timezone).date, input.transitLatitude as number, input.transitLongitude as number, transitDate) : null;
   const transitAsc = transitHasLocation
     ? ascendantFromSunrise({ ...transitSunrise!, eventUtc: transitDate.toISOString(), latitude: input.transitLatitude as number }).ascendant
     : null;

@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
+import { useAuth } from "./_core/hooks/useAuth";
 import { ProfileSessionProvider, useProfileSession } from "./contexts/ProfileSessionContext";
 import { PROFILE_TABS } from "./config/profileNavigation";
 import { CelestialCommandShell } from "./components/CelestialCommandShell";
@@ -24,9 +25,13 @@ const StandaloneTransitPage = lazy(() => import("./pages/StandaloneTransitPage")
 const ExplorePage = lazy(() => import("./pages/ExplorePage"));
 
 function AccountEntryGate({ children }: { children: React.ReactNode }) {
-  // Development mode: no account service is required to use the local app.
-  // Keep all profile data in this browser/device until account deployment is ready.
-  return <ProfileSessionProvider accountId="guest"><CelestialCommandShell>{children}</CelestialCommandShell></ProfileSessionProvider>;
+  const { user, loading, error, refresh } = useAuth();
+  const [useDeviceProfiles, setUseDeviceProfiles] = useState(false);
+  if (loading) return <main role="status" className="p-8 text-center text-cyan-100">Checking your account session…</main>;
+  if (error && !useDeviceProfiles) return <main className="mx-auto max-w-lg space-y-4 p-8 text-slate-100"><h1 className="text-xl">Your account connection needs another try</h1><p role="alert">Your saved profiles have not been changed. We could not check your session.</p><button type="button" onClick={() => void refresh()} className="rounded-xl border border-white/20 p-3">Retry connection</button><button type="button" onClick={() => setUseDeviceProfiles(true)} className="ml-3 rounded-xl border border-white/20 p-3">Use device profiles</button></main>;
+  const accountId = error && useDeviceProfiles ? "guest" : user?.openId ?? "guest";
+  // Remounting clears the previous account's in-memory charts and callbacks.
+  return <ProfileSessionProvider key={accountId} accountId={accountId}><CelestialCommandShell>{error && <p role="status" className="p-3 text-amber-200">Account connection unavailable. You are viewing device profiles.</p>}{children}</CelestialCommandShell></ProfileSessionProvider>;
 }
 
 function Router() {

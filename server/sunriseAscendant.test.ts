@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ascendantFromSunrise, solarAnglesFromFixedXYZ, SIDEREAL_DEGREES_PER_UTC_HOUR } from "./sunriseAscendant";
+import { ascendantFromSunrise, solarAnglesFromFixedXYZ, ROTATION_DEGREES_PER_HOUR } from "./sunriseAscendant";
 
-describe("The Absolute: Sun equatorial XYZ sunrise + elapsed sidereal rotation", () => {
+describe("The Absolute: Sun equatorial XYZ sunrise + elapsed rotation at exactly 15 degrees per hour", () => {
   it("converts geocentric equatorial XYZ to a 360 degree wheel angle", () => {
     expect(solarAnglesFromFixedXYZ({ x: 0, y: 1, z: 1 }).longitude).toBe(90);
     expect(solarAnglesFromFixedXYZ({ x: 0, y: 1, z: 1 }).declination).toBeCloseTo(45, 8);
@@ -16,8 +16,8 @@ describe("The Absolute: Sun equatorial XYZ sunrise + elapsed sidereal rotation",
     });
     expect(result.sunriseHorizon).toBeCloseTo(235, 8);
     expect(result.elapsedHours).toBe(3);
-    expect(result.ascendant).toBeCloseTo(235 + 3 * SIDEREAL_DEGREES_PER_UTC_HOUR, 8);
-    expect(result.model).toBe("sun-equatorial-xyz-at-sunrise-plus-sidereal-rotation-v1");
+    expect(result.ascendant).toBeCloseTo(235 + 3 * ROTATION_DEGREES_PER_HOUR, 8);
+    expect(result.model).toBe("sun-equatorial-xyz-at-sunrise-plus-15-degrees-per-hour-v1");
   });
   it("does not change the rule based on latitude after sunrise is established", () => {
     const input = {

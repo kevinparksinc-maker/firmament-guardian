@@ -10,13 +10,12 @@
  * this module does not silently substitute an approximate sunrise.
  */
 export type FixedVector = { x: number; y: number; z: number };
-export const SIDEREAL_DEGREES_PER_UTC_HOUR = 360.98564736629 / 24;
+export const ROTATION_DEGREES_PER_HOUR = 15;
 
 export function normalizeDegrees(value: number): number {
   if (!Number.isFinite(value)) throw new Error("Angle must be finite.");
   return ((value % 360) + 360) % 360;
 }
-function radians(deg: number): number { return deg * Math.PI / 180; }
 function degrees(rad: number): number { return rad * 180 / Math.PI; }
 
 export function solarAnglesFromFixedXYZ(vector: FixedVector) {
@@ -30,25 +29,13 @@ export function solarAnglesFromFixedXYZ(vector: FixedVector) {
   };
 }
 
-export function sunriseEasternHorizonLongitude(sunXYZ: FixedVector, latitude: number): number {
-  if (!Number.isFinite(latitude) || Math.abs(latitude) > 90) throw new Error("Invalid observer latitude.");
-  const { longitude: sunRightAscension, declination } = solarAnglesFromFixedXYZ(sunXYZ);
-  const cosineHourAngle = -Math.tan(radians(latitude)) * Math.tan(radians(declination));
-  if (!Number.isFinite(cosineHourAngle) || cosineHourAngle < -1 || cosineHourAngle > 1) {
-    throw new Error("No unique geometric sunrise at this latitude and solar declination.");
-  }
-  const sunriseHourAngle = degrees(Math.acos(cosineHourAngle));
-  // At sunrise: local sidereal angle = Sun RA - sunrise hour angle.
-  // On a zero-tilt wheel the east-horizon intersection is LST + 90 degrees.
-  return normalizeDegrees(sunRightAscension - sunriseHourAngle + 90);
-}
-
 export function ascendantFromSunrise(input: {
   sunriseUtc: string;
   eventUtc: string;
   sunriseSunXYZ: FixedVector;
   latitude: number;
 }) {
+  if (!Number.isFinite(input.latitude) || Math.abs(input.latitude) > 90) throw new Error("Invalid observer latitude.");
   const sunriseMillis = Date.parse(input.sunriseUtc);
   const eventMillis = Date.parse(input.eventUtc);
   if (!Number.isFinite(sunriseMillis) || !Number.isFinite(eventMillis)) {
@@ -60,15 +47,15 @@ export function ascendantFromSunrise(input: {
     throw new Error("Sunrise anchor must precede the event by no more than 25 hours.");
   }
   // The Absolute's sole custom ASC rule: Sun equatorial XY angle at sunrise
-  // plus elapsed sidereal rotation. Do NOT substitute the geometric horizon intersection.
+  // plus elapsed rotation at exactly 15 degrees per hour. Do NOT substitute the geometric horizon intersection.
   const sunriseHorizon = solarAnglesFromFixedXYZ(input.sunriseSunXYZ).longitude;
   return {
-    ascendant: normalizeDegrees(sunriseHorizon + elapsedHours * SIDEREAL_DEGREES_PER_UTC_HOUR),
+    ascendant: normalizeDegrees(sunriseHorizon + elapsedHours * ROTATION_DEGREES_PER_HOUR),
     sunriseHorizon,
-    elapsedSiderealDegrees: elapsedHours * SIDEREAL_DEGREES_PER_UTC_HOUR,
+    elapsedRotationDegrees: elapsedHours * ROTATION_DEGREES_PER_HOUR,
     elapsedHours,
     sunriseUtc: new Date(sunriseMillis).toISOString(),
     eventUtc: new Date(eventMillis).toISOString(),
-    model: "sun-equatorial-xyz-at-sunrise-plus-sidereal-rotation-v1" as const,
+    model: "sun-equatorial-xyz-at-sunrise-plus-15-degrees-per-hour-v1" as const,
   };
 }

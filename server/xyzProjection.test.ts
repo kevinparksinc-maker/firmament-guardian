@@ -66,7 +66,7 @@ describe("chart XYZ integration", () => {
         sunriseSunXYZ: { x: 1, y: 0, z: 0 },
       },
     });
-    const expected = 6 * (360.98564736629 / 24);
+    const expected = 90;
     expect(chart.ascendant?.longitude).toBeCloseTo(expected, 6);
     expect(chart.houses[0]).toBeCloseTo(expected, 6);
     expect(chart.houses[1]).toBeCloseTo((expected + 30) % 360, 6);
