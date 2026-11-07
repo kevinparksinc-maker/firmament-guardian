@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { invokeLLM } from "../../_core/llm";
 
-import { buildNarrativePacket, restoreNarrativeIds } from "./narrativePacket";
+import { buildNarrativePacket, buildNarrativeContract } from "./narrativePacket";
 import type { SynthesisResult } from "./types";
 
 const narrativeSchema = z.object({
@@ -69,14 +69,15 @@ async function generate(synthesis: SynthesisResult, question: string) {
   if (!synthesis.qualityAudit.passed || !synthesis.methodOutcomeAudit.complete)
     throw new Error("MASTER_NARRATIVE_BLOCKED: Complete calculated judgments are required before narration.");
   const bindings = buildNarrativePacket(synthesis, question);
+  const contract = buildNarrativeContract(bindings);
   const response = await invokeLLM({
     max_tokens: 3000,
     timeoutMs: 180_000,
-    response_format: { type: "json_object" },
+    response_format: { type: "json_schema", json_schema: {name:"absolute_master_reading",strict:true,schema:contract.schema} },
     messages: [
       { role: "system", content: `THE ABSOLUTE — MASTER SYNTHESIS. Interpret ALL supplied method outcomes together. Answer the actual question first, then write 3–6 connected sections, roughly 450–650 words total across the sections. Explain WHAT the chart indicates, WHY the supplied formula/Canon gives that meaning, HOW distinct methods modify each other, concrete consequences/examples, and MEANING. Be direct and specific about both strengths and difficulties. Preserve natal/event scope and God/Agent frame. Do not invent biography, missing scores, predictions without timing evidence, or meanings for reference-only methods. Planetary strength is capacity, not automatic benefit. Reconcile conditions and strength rather than listing dictionaries. Full records are on My Chart; these excerpts are the question-focused outcomes for this overview.
-Return JSON {"answer":"direct answer, at least 60 characters","sections":[{"id":"s1","title":"...","text":"connected prose, at least 160 characters","findingIds":["f0","f1"]}],"methodContributions":[{"methodId":"m0","sectionIds":["s1"],"findingIds":["f0"],"contribution":"One specific sentence, at least 60 characters, explaining how this method changes the section's conclusion."}]}. Use the supplied short m/f IDs exactly. Every interpreted method needs exactly one contribution; do not contribute personal judgments from other statuses. Every section needs findings from at least TWO distinct original method families. Each contribution must cite findings belonging to that method and at least one section that cites those SAME findings. Across sections cover both supportive and challenging testimony when supplied. No numeric IDs as prose citations. Keep contributions concise enough to complete the JSON.` },
-      { role: "user", content: JSON.stringify(bindings.packet) },
+Return the required JSON object. FIRST write contributions: one specific 20–35-word sentence for EVERY required method key, explaining how its supplied outcome shapes the assigned section. Each sentence must be at least 60 characters and must use that method's actual findings. Then answer in at least 60 characters. Then write the three sections s1/s2/s3: each has a title and 100–150 words of connected text, explaining the interaction of ALL method contributions assigned to it by sectionPlan. Each section must explain WHAT, WHY, HOW, concrete CONSEQUENCES and MEANING. Reconcile both support and pressure. Do not copy reference IDs into prose. The server binds every method contribution to its exact calculated findings and assigned section; do not return your own ID lists. No method may be omitted or merged out of the contributions object.` },
+      { role: "user", content: JSON.stringify({...bindings.packet,sectionPlan:contract.plan}) },
     ],
   });
   const choice = response.choices?.[0];
@@ -87,7 +88,7 @@ Return JSON {"answer":"direct answer, at least 60 characters","sections":[{"id":
   let raw: unknown;
   try { raw = JSON.parse(text.replace(/^\s*```(?:json)?\s*/, "").replace(/\s*```\s*$/, "")); }
   catch { throw new Error("MASTER_NARRATIVE_INVALID: The provider returned unreadable synthesis data."); }
-  const restored = restoreNarrativeIds(raw, bindings) as Record<string, unknown>;
+  const restored = contract.decode(raw) as Record<string, unknown>;
   // Status inventory is calculated metadata, not something a language model
   // must copy correctly. Actual interpreted coverage is still enforced through
   // every method's contribution and its citations in the visible sections.

@@ -69,3 +69,31 @@ export function restoreNarrativeIds(raw:unknown,bindings:ReturnType<typeof build
     methodContributions:Array.isArray(data.methodContributions)?data.methodContributions.map((c:any)=>({...c,methodId:method(c.methodId),findingIds:Array.isArray(c.findingIds)?c.findingIds.map(finding):c.findingIds})):data.methodContributions,
     methodsReviewed:Array.isArray(data.methodsReviewed)?data.methodsReviewed.map(method):data.methodsReviewed};
 }
+
+/** Fixed required keys let the provider enforce coverage during generation.
+ * Citation bindings come from the calculation, never from model-copied IDs.
+ */
+export function buildNarrativeContract(bindings:ReturnType<typeof buildNarrativePacket>){
+  const active=bindings.packet.methodOutcomes.filter(o=>o.status==="interpreted");
+  const groups:Record<string,typeof active>={s1:[],s2:[],s3:[]};
+  // Keep each section cross-method; repeated natal/event families remain scoped.
+  active.forEach((method,index)=>groups[`s${index%3+1}`].push(method));
+  const ids=["s1","s2","s3"];
+  const object=(properties:Record<string,unknown>)=>({type:"object",properties,required:Object.keys(properties),additionalProperties:false});
+  const schema={...object({
+    contributions:object(Object.fromEntries(active.map(m=>[m.methodId,{type:"string"}]))),
+    answer:{type:"string"},
+    sections:object(Object.fromEntries(ids.map(id=>[id,{$ref:"#/$defs/section"}]))),
+  }),$defs:{section:object({title:{type:"string"},text:{type:"string"}})}};
+  return {schema,plan:ids.map(id=>({id,methodIds:groups[id].map(m=>m.methodId)})),
+    decode(raw:unknown){
+      if(!raw||typeof raw!=="object")return raw;
+      const data=raw as Record<string,any>;
+      // Existing structured callers can still be validated with original IDs.
+      if(Array.isArray(data.sections))return restoreNarrativeIds(raw,bindings);
+      const sections=ids.map(id=>({id,title:data.sections?.[id]?.title,text:data.sections?.[id]?.text,
+        findingIds:groups[id].flatMap(m=>m.findingJudgments.map(row=>bindings.findingIds.get(row[8] as string)!))}));
+      const contributions=active.map(m=>({methodId:bindings.methodIds.get(m.methodId)!,sectionIds:[ids.find(id=>groups[id].some(v=>v.methodId===m.methodId))!],findingIds:m.findingJudgments.map(row=>bindings.findingIds.get(row[8] as string)!),contribution:data.contributions?.[m.methodId]}));
+      return {answer:data.answer,sections,methodContributions:contributions};
+    }};
+}
