@@ -51,6 +51,9 @@ import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
 import { buildUnifiedMasterChart, getMasterNatalChart } from "./masterChart/builder";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
 import { buildMasterPipeline } from "./master-pipeline";
+import { buildMasterGameChart } from "./simulationLab/masterGameChart";
+import { evaluatePlanetaryTeamHouses, predictSportsGame } from "./simulationLab/sportsPredictor";
+import { evaluateGameMethods } from "../shared/simulationLab/registry";
 
 
 const chartInput = z.object({
@@ -183,6 +186,36 @@ export const appRouter = router({
       .mutation(({ ctx, input }) =>
         db.createSavedReading({ openId: ctx.user.openId, ...input })
       ),
+  }),
+  simulationLab: router({
+    predict: publicProcedure
+      .input(z.object({
+        id: z.string().trim().min(1).max(120),
+        league: z.enum(["NFL", "NBA", "NHL"]),
+        scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        scheduledTime: z.string().regex(/^\d{2}:\d{2}$/),
+        venue: z.object({
+          name: z.string().trim().min(1).max(240),
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+          timezone: z.string().min(2).max(100),
+        }),
+        ascTeam: z.string().trim().min(1).max(120),
+        descTeam: z.string().trim().min(1).max(120),
+      }))
+      .mutation(async ({ input }) => {
+        const { snapshot, chart } = await buildMasterGameChart({
+          ...input,
+          chartVersion: "sports-master-2026.1",
+        });
+        const methods = evaluateGameMethods(snapshot, [{
+          id: "sports-team-house-occupancy",
+          name: "God/Agent event-chart team-house occupancy baseline",
+          evaluate: () => evaluatePlanetaryTeamHouses(chart),
+        }]);
+        const prediction = await predictSportsGame(snapshot, methods);
+        return { snapshot, methods, prediction };
+      }),
   }),
   hybrid: router({
     geocode: publicProcedure
