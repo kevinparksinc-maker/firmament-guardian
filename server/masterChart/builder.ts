@@ -1,4 +1,5 @@
 import { PLANET_CANON_RECORDS } from "../astrologyKnowledge/canon/planetsAndSigns";
+import { SUMERIAN_CELESTIAL_ASSOCIATIONS, SUMERIAN_CELESTIAL_SOURCE_ID, ENLIL_HISTORICAL_NOTE } from "../astrologyKnowledge/canon/sumerianCelestial";
 import { detectAllYogas } from "../genesisBackup/vedicYogaDetector";
 import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "../../shared/energyScoring";
 import { registeredMethodLedger } from "./registry";
@@ -236,6 +237,33 @@ export async function buildUnifiedMasterChart(
       speed: p.speed,
       overlay: p.overlay,
     })),
+  };
+
+  // Sumerian historical celestial associations, not an invented natal algorithm.
+  const sumerianResults = basePlanets
+    .filter(p => Object.prototype.hasOwnProperty.call(SUMERIAN_CELESTIAL_ASSOCIATIONS, p.name))
+    .map(p => ({
+      body: p.name,
+      display: p.display,
+      longitude: p.longitude,
+      sign: getSign(p.longitude),
+      house: p.agentHouse ?? p.house,
+      association: SUMERIAN_CELESTIAL_ASSOCIATIONS[p.name as keyof typeof SUMERIAN_CELESTIAL_ASSOCIATIONS],
+    }));
+  layers["sumerian-celestial-foundations"] = {
+    id: "sumerian-celestial-foundations",
+    tradition: "sumerian",
+    technique: "attested-sun-moon-venus-symbolic-associations",
+    name: "Sumerian Celestial Foundations",
+    status: sumerianResults.length === 3 ? "computed-with-result" : "failed",
+    frame: "shared",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: sumerianResults.map(p => `sumerian-${p.body.toLowerCase()}`),
+    sourceIds: [SUMERIAN_CELESTIAL_SOURCE_ID],
+    results: sumerianResults,
+    notes: `Historical correspondences with an explicitly modern interpretive lens; not a recovered horoscope algorithm. ${ENLIL_HISTORICAL_NOTE}`,
+    ...(sumerianResults.length !== 3 ? { errorCode: "SUMERIAN_MISSING_CALCULATED_BODY" } : {}),
   };
 
   // Layer 2: Western Houses & Angles
