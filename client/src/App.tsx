@@ -23,6 +23,7 @@ const LifeStoryPage = lazy(() => import("./pages/LifeStoryPage"));
 const SynastryPage = lazy(() => import("./pages/SynastryPage"));
 const StandaloneTransitPage = lazy(() => import("./pages/StandaloneTransitPage"));
 const ExplorePage = lazy(() => import("./pages/ExplorePage"));
+const SportsLabPage = lazy(() => import("./pages/SportsLabPage"));
 
 function AccountEntryGate({ children }: { children: React.ReactNode }) {
   const { user, loading, error, refresh } = useAuth();
