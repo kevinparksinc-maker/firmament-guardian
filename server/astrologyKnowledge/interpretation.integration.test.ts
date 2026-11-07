@@ -36,7 +36,7 @@ describe("interpretation.generate knowledge gateway integration", () => {
         chapters: Object.fromEntries(["identity", "mind-heart", "relationships", "work-purpose"].map(id => [id, { angle: "Fixture evidence", evidence: [id === "identity" ? "Sun" : "Moon"] }])),
       };
       let content = system.includes("silent first reader") ? JSON.stringify(plan) : "A synthetic interpretation grounded in the supplied chart evidence. ".repeat(8);
-      if (system.includes("Write the actual Master Synthesis")) {
+      if (system.includes("Interpret ALL supplied method outcomes")) {
         const user = request.messages.find((m: {role:string}) => m.role === "user").content as string;
         const packet = JSON.parse(user.slice(user.lastIndexOf("\n") + 1));
         const active = packet.methodOutcomes.filter((o: {status:string}) => o.status === "interpreted");

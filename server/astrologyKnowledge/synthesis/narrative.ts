@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { invokeLLM } from "../../_core/llm";
-import { buildAstrologyInterpreterSystem } from "../../master-interpreter";
-import { formatSynthesisContext } from "./context";
+
+import { buildNarrativePacket, restoreNarrativeIds } from "./narrativePacket";
 import type { SynthesisResult } from "./types";
 
 const narrativeSchema = z.object({
@@ -68,14 +68,15 @@ export function validateMasterNarrative(raw: unknown, synthesis: SynthesisResult
 async function generate(synthesis: SynthesisResult, question: string) {
   if (!synthesis.qualityAudit.passed || !synthesis.methodOutcomeAudit.complete)
     throw new Error("MASTER_NARRATIVE_BLOCKED: Complete calculated judgments are required before narration.");
+  const bindings = buildNarrativePacket(synthesis, question);
   const response = await invokeLLM({
-    max_tokens: 8000,
+    max_tokens: 3000,
     timeoutMs: 180_000,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: buildAstrologyInterpreterSystem(`Write the actual Master Synthesis for the selected mode and question. Read EVERY supplied finding judgment before composing a connected reading. This is the primary reading, not a method inventory or a predetermined life story. Answer first. Then write 3–9 sections, about 700–1200 words across the sections, organized around the question's real themes. Each section must explain WHAT the pattern indicates, WHY the actual Canon assigns that meaning, HOW at least two distinct methods modify each other, a concrete CONSEQUENCE/example, and the MEANING. Preserve support, friction, relative strength, source limitations, natal/event scope and God/Agent frame. Do not call related derivatives independent confirmations or turn geometric star contacts without doctrine into predictions. Respect elemental-family decans. Do not fabricate absent methods or easing windows.
-Return JSON {"answer":"direct synthesized answer", "sections":[{"id":"section-1","title":"...","text":"connected prose","findingIds":["exact findingId from the supplied judgment rows"]}],"methodContributions":[{"methodId":"exact method ID","sectionIds":["section-1"],"findingIds":["finding from THIS method, also cited by that section"],"contribution":"Explain the specific finding and exactly how it strengthens, qualifies or conflicts with the section's conclusion. A method name or count is insufficient."}],"methodsReviewed":["every supplied method ID, including unavailable statuses"]}. Every interpreted method, including separate transit: methods, needs exactly one contribution, tied to the sections that actually use it. Every section must cite findings from at least two distinct method families. Reference-only, no-result, failed and inapplicable methods receive no personal contribution. Use original findingId strings, never evidence IDs or numeric table references. Integrate all applicable methods across the sections; do not append disconnected doctrine summaries. The reader's observed history is not supplied by chart symbolism.`) },
-      { role: "user", content: `Reading mode: ${synthesis.mode}\nQuestion: ${question}\n${formatSynthesisContext(synthesis)}` },
+      { role: "system", content: `THE ABSOLUTE — MASTER SYNTHESIS. Interpret ALL supplied method outcomes together. Answer the actual question first, then write 3–6 connected sections, roughly 450–650 words total across the sections. Explain WHAT the chart indicates, WHY the supplied formula/Canon gives that meaning, HOW distinct methods modify each other, concrete consequences/examples, and MEANING. Be direct and specific about both strengths and difficulties. Preserve natal/event scope and God/Agent frame. Do not invent biography, missing scores, predictions without timing evidence, or meanings for reference-only methods. Planetary strength is capacity, not automatic benefit. Reconcile conditions and strength rather than listing dictionaries. Full records are on My Chart; these excerpts are the question-focused outcomes for this overview.
+Return JSON {"answer":"direct answer, at least 60 characters","sections":[{"id":"s1","title":"...","text":"connected prose, at least 160 characters","findingIds":["f0","f1"]}],"methodContributions":[{"methodId":"m0","sectionIds":["s1"],"findingIds":["f0"],"contribution":"One specific sentence, at least 60 characters, explaining how this method changes the section's conclusion."}],"methodsReviewed":["m0","m1"]}. Use the supplied short m/f IDs exactly. Include every method ID in methodsReviewed. Every interpreted method needs exactly one contribution; do not contribute personal judgments from other statuses. Every section needs findings from at least TWO distinct original method families. Each contribution must cite findings belonging to that method and at least one section that cites those SAME findings. Across sections cover both supportive and challenging testimony when supplied. No numeric IDs as prose citations. Keep contributions concise enough to complete the JSON.` },
+      { role: "user", content: JSON.stringify(bindings.packet) },
     ],
   });
   const choice = response.choices?.[0];
@@ -86,7 +87,7 @@ Return JSON {"answer":"direct synthesized answer", "sections":[{"id":"section-1"
   let raw: unknown;
   try { raw = JSON.parse(text.replace(/^\s*```(?:json)?\s*/, "").replace(/\s*```\s*$/, "")); }
   catch { throw new Error("MASTER_NARRATIVE_INVALID: The provider returned unreadable synthesis data."); }
-  const narrative = validateMasterNarrative(raw, synthesis);
+  const narrative = validateMasterNarrative(restoreNarrativeIds(raw, bindings), synthesis);
   return {
     ...synthesis,
     calculatedNarrative: synthesis.integratedNarrative,
@@ -99,6 +100,7 @@ Return JSON {"answer":"direct synthesized answer", "sections":[{"id":"section-1"
       citedFindingIds: Array.from(new Set(narrative.sections.flatMap(s => s.findingIds))),
       // Citation validation certifies lineage, not the factual truth of model prose.
       validation: "method-and-finding-lineage" as const,
+      inputCoverage: "all-methods-focused-findings" as const,
     },
   };
 }
