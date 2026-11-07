@@ -22,6 +22,7 @@ export interface LayerRecord<T = unknown> {
     | "hellenistic"
     | "vedic"
     | "babylonian"
+    | "sumerian"
     | "arabic-persian"
     | "chinese"
     | "kabbalah"
