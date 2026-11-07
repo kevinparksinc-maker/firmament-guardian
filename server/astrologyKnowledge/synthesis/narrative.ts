@@ -75,7 +75,7 @@ async function generate(synthesis: SynthesisResult, question: string) {
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: `THE ABSOLUTE — MASTER SYNTHESIS. Interpret ALL supplied method outcomes together. Answer the actual question first, then write 3–6 connected sections, roughly 450–650 words total across the sections. Explain WHAT the chart indicates, WHY the supplied formula/Canon gives that meaning, HOW distinct methods modify each other, concrete consequences/examples, and MEANING. Be direct and specific about both strengths and difficulties. Preserve natal/event scope and God/Agent frame. Do not invent biography, missing scores, predictions without timing evidence, or meanings for reference-only methods. Planetary strength is capacity, not automatic benefit. Reconcile conditions and strength rather than listing dictionaries. Full records are on My Chart; these excerpts are the question-focused outcomes for this overview.
-Return JSON {"answer":"direct answer, at least 60 characters","sections":[{"id":"s1","title":"...","text":"connected prose, at least 160 characters","findingIds":["f0","f1"]}],"methodContributions":[{"methodId":"m0","sectionIds":["s1"],"findingIds":["f0"],"contribution":"One specific sentence, at least 60 characters, explaining how this method changes the section's conclusion."}],"methodsReviewed":["m0","m1"]}. Use the supplied short m/f IDs exactly. Include every method ID in methodsReviewed. Every interpreted method needs exactly one contribution; do not contribute personal judgments from other statuses. Every section needs findings from at least TWO distinct original method families. Each contribution must cite findings belonging to that method and at least one section that cites those SAME findings. Across sections cover both supportive and challenging testimony when supplied. No numeric IDs as prose citations. Keep contributions concise enough to complete the JSON.` },
+Return JSON {"answer":"direct answer, at least 60 characters","sections":[{"id":"s1","title":"...","text":"connected prose, at least 160 characters","findingIds":["f0","f1"]}],"methodContributions":[{"methodId":"m0","sectionIds":["s1"],"findingIds":["f0"],"contribution":"One specific sentence, at least 60 characters, explaining how this method changes the section's conclusion."}]}. Use the supplied short m/f IDs exactly. Every interpreted method needs exactly one contribution; do not contribute personal judgments from other statuses. Every section needs findings from at least TWO distinct original method families. Each contribution must cite findings belonging to that method and at least one section that cites those SAME findings. Across sections cover both supportive and challenging testimony when supplied. No numeric IDs as prose citations. Keep contributions concise enough to complete the JSON.` },
       { role: "user", content: JSON.stringify(bindings.packet) },
     ],
   });
@@ -87,7 +87,11 @@ Return JSON {"answer":"direct answer, at least 60 characters","sections":[{"id":
   let raw: unknown;
   try { raw = JSON.parse(text.replace(/^\s*```(?:json)?\s*/, "").replace(/\s*```\s*$/, "")); }
   catch { throw new Error("MASTER_NARRATIVE_INVALID: The provider returned unreadable synthesis data."); }
-  const narrative = validateMasterNarrative(restoreNarrativeIds(raw, bindings), synthesis);
+  const restored = restoreNarrativeIds(raw, bindings) as Record<string, unknown>;
+  // Status inventory is calculated metadata, not something a language model
+  // must copy correctly. Actual interpreted coverage is still enforced through
+  // every method's contribution and its citations in the visible sections.
+  const narrative = validateMasterNarrative({ ...restored, methodsReviewed: synthesis.methodOutcomes.map(o => o.methodId) }, synthesis);
   return {
     ...synthesis,
     calculatedNarrative: synthesis.integratedNarrative,
