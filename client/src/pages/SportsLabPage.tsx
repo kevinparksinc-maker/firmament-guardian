@@ -12,9 +12,9 @@ export default function SportsLabPage() {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [cityError, setCityError] = useState("");
-  const [result, setResult] = useState<Awaited<ReturnType<ReturnType<typeof trpc.useUtils>["simulationLab"]["predict"]["fetch"]>> | null>(null);
   const geocode = trpc.useUtils().hybrid.geocode;
   const predict = trpc.simulationLab.predict.useMutation();
+  const [result, setResult] = useState<Awaited<ReturnType<typeof predict.mutateAsync>> | null>(null);
   const [resolving, setResolving] = useState(false);
   async function findVenue() {
     setResolving(true); setCityError(""); setVenue(null); setResult(null);
