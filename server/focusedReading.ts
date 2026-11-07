@@ -8,6 +8,32 @@ import { synthesizeChartForReading, synthesizeMasterSnapshot } from "./astrology
 import { retrievePlacementDossier } from "./astrologyKnowledge/canon/retriever";
 import { FIXED_STAR_CANON_RECORDS } from "./astrologyKnowledge/canon/fixedStarsAndLots";
 import { describeAspectPair } from "../shared/energyInterpretation";
+import { invokeLLM } from "./_core/llm";
+import { MINI_SYNTHESIS_STYLE } from "./master-interpreter";
+
+/** A short AI interpretation for a clicked contact; detailed calculated evidence stays intact. */
+async function narrateFocusedContactMini(reading: FocusedReading): Promise<string> {
+  const result = await invokeLLM({
+    maxTokens: 450,
+    messages: [
+      { role: "system", content: MINI_SYNTHESIS_STYLE + "\nReturn only one 90–130-word second-person paragraph about this exact contact. Explain the interaction between both bodies, one human consequence and one specific challenge or opportunity. No headings, lists, invented history or method inventory." },
+      { role: "user", content: JSON.stringify({
+        title: reading.title,
+        moment: reading.moment,
+        evidence: reading.evidence,
+        sections: reading.sections,
+        gaps: reading.gaps,
+      }) },
+    ],
+  });
+  const content = result.choices[0]?.message?.content;
+  const text = typeof content === "string" ? content.trim() :
+    Array.isArray(content) ? content.filter(p => p.type === "text").map(p => (p as { text: string }).text).join("").trim() : "";
+  if (text.length < 100 || text.length > 1500)
+    throw new Error("FOCUSED_MINI_INVALID: The AI did not return a concise contact interpretation.");
+  return text;
+}
+
 
 export type FocusTarget = {
   kind: "placement" | "star" | "contact";
@@ -17,6 +43,7 @@ export type FocusTarget = {
 };
 export type FocusedReading = {
   title: string;
+  miniNarrative?: string;
   snapshotId: string;
   moment: string;
   sections: Array<{
@@ -294,6 +321,7 @@ export async function buildFocusedReading(
         rootedDossier.planetInHouseKnowledge.sourceCaveat,
         rootedDossier.planetInHouseKnowledge.interpretiveGuardrail
       );
+    reading.miniNarrative = await narrateFocusedContactMini(reading);
     return reading;
   }
   const sun = canonicalChart.movingBodies.find(body => body.name === "Sun");
