@@ -1,3 +1,4 @@
+import { readingProse } from "../shared/readingProse";
 import { createHash } from "node:crypto";
 import {
   placementRows,
@@ -18,7 +19,10 @@ const summarySchema = z.object({
   placements: z.array(
     z.object({
       name: z.string(),
-      paragraph: z.string().min(120).max(1600),
+      paragraph: z
+        .string()
+        .transform(readingProse)
+        .pipe(z.string().min(120).max(1600)),
       evidenceIds: z.array(z.string()).min(2),
       layerIds: z.array(z.string()).min(2),
     })
@@ -168,6 +172,38 @@ export function packPlacementMiniPrompt(
   };
 }
 
+export const MINI_REQUEST_CHAR_LIMIT = 14000;
+/** One compact outcome per relevant method; full judgments remain in the evidence drawer. */
+export function boundedPlacementPacket(
+  packets: ReturnType<typeof buildPlacementPackets>,
+  limit = 260
+) {
+  return packets.map(p => {
+    const methods = Array.from(new Set(p.judgments.map(j => j.methodId)));
+    return {
+      name: p.name,
+      position: p.facts[0].value,
+      placementEvidenceId: p.placementEvidenceId,
+      methods: methods.map(methodId => {
+        const matching = p.judgments.filter(j => j.methodId === methodId);
+        const selected =
+          matching.find(j => j.mechanism.includes(p.name)) ?? matching[0];
+        // Exact excerpts from executed rules; never a generic invented replacement.
+        const statement =
+          selected.judgment.length <= limit
+            ? selected.judgment
+            : selected.judgment.slice(0, limit) + "…";
+        return {
+          methodId,
+          judgment: statement,
+          evidenceIds: selected.evidenceIds.slice(0, 2),
+          limitation: selected.limitation,
+        };
+      }),
+    };
+  });
+}
+
 export function validatePlacementSummaries(
   value: unknown,
   packets: ReturnType<typeof buildPlacementPackets>
@@ -241,7 +277,8 @@ const placementCache = new Map<
 
 export async function buildChartPageReading(
   chart: ChartResult,
-  mode: "natal" | "transit" | "combined"
+  mode: "natal" | "transit" | "combined",
+  names: string[] = ["Sun", "Moon"]
 ) {
   const verified = await synthesizeChartForReading(
     chart,
@@ -259,10 +296,19 @@ export async function buildChartPageReading(
           "Compact event placement card summaries"
         )
       : verified;
-  const packets = buildPlacementPackets(canonicalChart, synthesis);
+  if (!names.length || names.length > 2 || new Set(names).size !== names.length)
+    throw new Error("PLACEMENT_MINI_SCOPE: Request one or two placements.");
+  const allPackets = buildPlacementPackets(canonicalChart, synthesis);
+  const packets = names.map(name => {
+    const packet = allPackets.find(p => p.name === name);
+    if (!packet)
+      throw new Error(`PLACEMENT_MINI_SCOPE: Unknown placement ${name}`);
+    return packet;
+  });
   const key = createHash("sha256")
     .update(
-      placementMiniIdentity(chart, mode === "transit" ? "transit" : "natal")
+      placementMiniIdentity(chart, mode === "transit" ? "transit" : "natal") +
+        JSON.stringify(names)
     )
     .digest("hex");
   const cached = placementCache.get(key);
@@ -283,37 +329,49 @@ export async function buildChartPageReading(
 async function generatePlacementParagraphs(
   packets: ReturnType<typeof buildPlacementPackets>,
   synthesis: SynthesisResult
-) {
-  const result = await invokeLLM({
-    max_tokens: 6500,
+): Promise<{
+  snapshotId: string;
+  placements: Array<
+    z.infer<typeof summarySchema>["placements"][number] & { evidence: Fact[] }
+  >;
+}> {
+  const instruction = buildAstrologyInterpreterSystem(
+    `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. These are exact excerpts from executed method judgments, not raw calculations. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`
+  );
+  const requestFor = (limit: number) => ({
+    max_tokens: 1400,
     timeoutMs: 180_000,
-    response_format: { type: "json_object" },
+    response_format: { type: "json_object" as const },
     messages: [
+      { role: "system" as const, content: instruction },
       {
-        role: "system",
-        content: buildAstrologyInterpreterSystem(
-          `Write SHORT Chart page placement cards. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}, one entry for EVERY supplied placement, including planets, Nodes and available angles. Each paragraph is 70–110 words, 4–6 connected sentences, maximum 140 words. This is a compact placement interpretation, never a life story, full-chart report, chapter sequence or method inventory. Keep depth by explaining the central drive, a precise modification from its nakshatra/pada AND Arabic manzil AND elemental-family decan, and how the strongest relevant aspect, ruler condition, varga, Ashtakavarga or star finding changes its expression. End with a concrete strength/tension or recognizable consequence. Prioritize Sun equally with Moon; include every supplied placement. Angles describe approach/partnership rather than planetary agency; Nodes describe the nodal axis, never invented essential dignity. The authoritative interpretation input is each packet’s executed method judgments. Synthesize their reinforcement and disagreement into one connected meaning; do not merely concatenate method summaries. Use only supplied facts and retrieved Canon. Do not equate pada and D9 with independent corroboration, invent manzil rulers, conflate essential dignity with Shadbala, or fabricate Chinese-mansion/strength results. Decans use the supplied elemental-family ruler. Event-origin results describe the event sky, never the user’s birth biography. No generic sign/house-only descriptions, repeated boilerplate, predetermined biography or flattering filler. Cite the planet's own evidence ID and the mansion IDs; list all actually used layer IDs. Rely on the same Master Interpreter depth within ONE paragraph per planet.`
-        ),
-      },
-      {
-        role: "user",
+        role: "user" as const,
         content: JSON.stringify({
-          scope:
-            "Individual placement boxes only; this short format does not apply to full readings",
           chartScope: synthesis.methodOutcomes[0]?.chartScope,
-          packets: packPlacementMiniPrompt(packets),
-          packetFormat:
-            "findingRefs index findings; findingColumns names their cells. In judgmentParts, numbers index textTable and strings are literal text; concatenate in order. sourceRefs index sources. All relevant method judgments are retained. Cite literal evidence IDs in facts, not numeric references.",
-          unavailableMethods: synthesis.methodFindings
-            .filter(m => m.status !== "computed-with-result")
-            .map(m => ({ id: m.id, status: m.status })),
-          strengthAvailability: synthesis.methodFindings
-            .filter(m => ["vedic-shadbala", "vedic-bhava-bala"].includes(m.id))
-            .map(m => ({ id: m.id, status: m.status })),
+          placements: boundedPlacementPacket(packets, limit),
         }),
       },
     ],
   });
+  let request = requestFor(260);
+  if (JSON.stringify(request.messages).length > MINI_REQUEST_CHAR_LIMIT)
+    request = requestFor(150);
+  if (
+    JSON.stringify(request.messages).length > MINI_REQUEST_CHAR_LIMIT &&
+    packets.length > 1
+  ) {
+    const first = await generatePlacementParagraphs([packets[0]], synthesis);
+    const second = await generatePlacementParagraphs([packets[1]], synthesis);
+    return {
+      snapshotId: synthesis.snapshotId,
+      placements: [...first.placements, ...second.placements],
+    };
+  }
+  if (JSON.stringify(request.messages).length > MINI_REQUEST_CHAR_LIMIT)
+    throw new Error(
+      "PLACEMENT_MINI_BUDGET: This placement exceeds the compact request budget."
+    );
+  const result = await invokeLLM(request);
   const choice = result.choices[0];
   if (!choice || ["length", "max_tokens"].includes(choice.finish_reason ?? ""))
     throw new Error("PLACEMENT_SUMMARY_INCOMPLETE: AI response was truncated.");

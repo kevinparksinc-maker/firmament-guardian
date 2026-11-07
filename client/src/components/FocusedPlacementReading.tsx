@@ -1,3 +1,4 @@
+import { readingProse } from "@shared/readingProse";
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
@@ -107,7 +108,7 @@ export function FocusedPlacementReading({
               <h5 className="font-semibold text-cyan-100">{section.title}</h5>
               {section.paragraphs.map((paragraph, index) => (
                 <p key={index} className="text-sm leading-7 text-slate-200">
-                  {paragraph}
+                  {readingProse(paragraph)}
                 </p>
               ))}
               {section.sources.length > 0 && (

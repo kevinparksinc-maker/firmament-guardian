@@ -1,3 +1,4 @@
+import { readingProse } from "@shared/readingProse";
 import { useLocation } from "wouter";
 import React, { useState } from "react";
 import {
@@ -170,7 +171,7 @@ export function MasterSynthesizerPanel({
               {result.narrative.sections.map(section => (
                 <div key={section.id} className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/50 space-y-2">
                   <h4 className="font-semibold text-cyan-100">{section.title}</h4>
-                  <p className="whitespace-pre-line">{section.text}</p>
+                  <p className="whitespace-pre-line">{readingProse(section.text)}</p>
                 </div>
               ))}
             </div>

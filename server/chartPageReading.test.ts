@@ -2,6 +2,8 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   buildPlacementPackets,
   packPlacementMiniPrompt,
+  MINI_REQUEST_CHAR_LIMIT,
+  boundedPlacementPacket,
   validatePlacementSummaries,
   buildChartPageReading,
 } from "./chartPageReading";
@@ -29,8 +31,8 @@ beforeAll(async () => {
   );
   packets = buildPlacementPackets(canonicalChart, synthesis);
 });
-const response = () => ({
-  placements: packets.map(p => ({
+const response = (selected = packets) => ({
+  placements: selected.map(p => ({
     name: p.name,
     paragraph:
       "A compact interpretation that connects this planet’s own calculated mansion, pada, manzil and supporting conditions to a specific drive, strength and challenge in everyday life.",
@@ -95,6 +97,23 @@ describe("Compact Chart page placement summaries", () => {
       })
     );
   });
+  it("keeps each applicable method represented within the small transport packet", () => {
+    for (const packet of packets) {
+      const compact = boundedPlacementPacket([packet])[0];
+      expect(compact.methods.map(m => m.methodId)).toEqual(
+        Array.from(new Set(packet.judgments.map(j => j.methodId)))
+      );
+      for (const method of compact.methods)
+        expect(
+          packet.judgments.some(
+            j =>
+              j.methodId === method.methodId &&
+              (j.judgment === method.judgment ||
+                j.judgment.startsWith(method.judgment.slice(0, -1)))
+          )
+        ).toBe(true);
+    }
+  });
   it("requires every displayed planet, including the Sun, and rejects duplicates", () => {
     expect(
       validatePlacementSummaries(response(), packets).placements.length
@@ -129,7 +148,12 @@ describe("Compact Chart page placement summaries", () => {
     vi.mocked(invokeLLM).mockResolvedValue({
       choices: [
         {
-          message: { role: "assistant", content: JSON.stringify(response()) },
+          message: {
+            role: "assistant",
+            content: JSON.stringify(
+              response(packets.filter(p => ["Sun", "Moon"].includes(p.name)))
+            ),
+          },
           index: 0,
           finish_reason: "stop",
         },
@@ -141,13 +165,19 @@ describe("Compact Chart page placement summaries", () => {
     const result = await buildChartPageReading(chart, "natal");
     expect(result.placements[0].name).toBe("Sun");
     const call = vi.mocked(invokeLLM).mock.calls[0][0];
-    expect(call.max_tokens).toBe(6500);
+    expect(call.max_tokens).toBe(1400);
     expect(call.timeoutMs).toBe(180000);
     expect(call.messages[0].content).toContain(
       "THE ABSOLUTE — INTERPRETATION ENGINE"
     );
     expect(call.messages[0].content).toContain("70–110 words");
-    expect(String(call.messages[1].content).length).toBeLessThan(175000);
+    expect(JSON.stringify(call.messages).length).toBeLessThanOrEqual(
+      MINI_REQUEST_CHAR_LIMIT
+    );
+    expect(
+      JSON.parse(String(call.messages[1].content)).placements
+    ).toHaveLength(2);
+    expect(call.messages[0].content).toContain("story-like");
     expect(call.messages[1].content).not.toContain("UNIFIED MASTER SYNTHESIS");
     await buildChartPageReading(chart, "natal");
     expect(invokeLLM).toHaveBeenCalledTimes(1);
@@ -167,10 +197,13 @@ describe("Compact Chart page placement summaries", () => {
     vi.mocked(invokeLLM).mockImplementation(async request => {
       const input = JSON.parse(String(request.messages[1].content));
       expect(input.chartScope).toBe("event");
-      expect(
-        input.packets.placements.find((p: any) => p.name === "Sun").position
-          .display
-      ).not.toBe(chart.movingBodies.find(p => p.name === "Sun")!.display);
+      if (input.placements.some((p: any) => p.name === "Sun"))
+        expect(
+          input.placements.find((p: any) => p.name === "Sun").position.display
+        ).not.toBe(chart.movingBodies.find(p => p.name === "Sun")!.display);
+      expect(JSON.stringify(request.messages).length).toBeLessThanOrEqual(
+        MINI_REQUEST_CHAR_LIMIT
+      );
       return {
         id: "event",
         created: 0,
@@ -182,12 +215,18 @@ describe("Compact Chart page placement summaries", () => {
             message: {
               role: "assistant",
               content: JSON.stringify({
-                placements: input.packets.placements.map((p: any) => ({
+                placements: input.placements.map((p: any) => ({
                   name: p.name,
                   paragraph: `${p.name} describes the selected event sky, with its calculated mansion, elemental-family ruler and supporting conditions shaping a specific expression in this event rather than a birth biography.`,
-                  evidenceIds: p.facts.map((f: any) => f.id),
+                  evidenceIds: [
+                    p.placementEvidenceId,
+                    ...p.methods.flatMap((m: any) => m.evidenceIds),
+                  ],
                   layerIds: Array.from(
-                    new Set(p.facts.map((f: any) => f.layerId))
+                    new Set([
+                      "western-planets-and-signs",
+                      ...p.methods.map((m: any) => m.methodId),
+                    ])
                   ),
                 })),
               }),
@@ -197,7 +236,7 @@ describe("Compact Chart page placement summaries", () => {
       };
     });
     const result = await buildChartPageReading(eventChart, "transit");
-    expect(result.placements.length).toBe(14);
-    expect(invokeLLM).toHaveBeenCalledTimes(1);
+    expect(result.placements.length).toBe(2);
+    expect(vi.mocked(invokeLLM).mock.calls.length).toBeLessThanOrEqual(2);
   });
 });

@@ -13,3 +13,11 @@ Step-one validation previously called the final save handler when the typed city
 Next now validates the birth identity, automatically resolves the typed city, and advances only when its coordinates/timezone are verified. Dallas aliases use the existing local city record. Errors render outside the step condition, so they are visible in both steps. Pending resolution disables Next and labels its work. Changed input during resolution does not advance with stale data. Editing a city clears its previous coordinate lock. Valid zero latitude is accepted. Step one never saves a profile.
 
 Regression checks cover the exact Dallas screenshot input, unknown/invalid birth details, remote geocoding, geocoder errors, changed cities and zero latitude. Mini-reading checks cover all 14 located-chart placements, exact lossless judgment transport, separate event scope, evidence validation, cache isolation, and rendered paragraphs/retry states.
+
+## Request-limit correction and enhanced chart map
+
+The live Groq account rejected the original all-placement packet with HTTP 413. The chart now requests Sun/Moon first and other placement paragraphs on opening their boxes. Each server request accepts at most two names. Requests are capped at 14,000 message characters and 1,400 output tokens; a two-placement request is split if needed. Each applicable method remains represented by an exact, bounded excerpt of an executed judgment. Full relevant judgments and sources remain in the returned evidence. The full lossless audit packet is not sent to the mini-reading model. Browser results persist per placement and account; the v4 identity invalidates the oversized-request generation.
+
+Visible paragraphs are plain, connected, second-person narratives. Category/provenance markers and wrapping quotes are omitted; old known markers are also cleaned from placement/full-narrative display without changing the Canon records or evidence sources.
+
+The enhanced uploaded chart map is implemented as a comparative God/Agent diamond map with clickable, keyboard-accessible house regions, house navigation, shared planet selection, active house residents and exact cross-frame telemetry. All values come from the authoritative chart. Its visual reference's sample identity, ayanamsha and ephemeris-brand claims are not substituted for this app's actual calculation provenance.

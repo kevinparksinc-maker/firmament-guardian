@@ -1,4 +1,5 @@
-import React from "react";
+import { readingProse } from "@shared/readingProse";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
 import {
@@ -16,7 +17,9 @@ const storagePrefix = "absolute:placement-minis:";
 
 export function usePlacementMiniReadings(
   chart: ChartResult,
-  layer: "natal" | "transit" = "natal"
+  layer: "natal" | "transit" = "natal",
+  names: string[] = ["Sun", "Moon"],
+  enabled = true
 ) {
   const generate = trpc.interpretation.chartPage.useMutation();
   const me = trpc.auth.me.useQuery();
@@ -26,46 +29,50 @@ export function usePlacementMiniReadings(
     me.data?.openId || "guest"
   );
   return useQuery({
-    queryKey: ["placement-mini-readings", identity],
-    enabled: !me.isPending,
+    queryKey: ["placement-mini-readings", identity, ...names],
+    enabled: enabled && !me.isPending,
     queryFn: async () => {
       // One persisted batch per exact natal chart/framework/account. Live sky
       // refreshes do not spend another natal interpretation request.
-      const key = storagePrefix + identity;
-      try {
-        const saved = JSON.parse(
-          localStorage.getItem(key) || "null"
-        ) as MiniBatch | null;
-        if (
-          saved?.snapshotId &&
-          Array.isArray(saved.placements) &&
-          saved.placements.length === placementRows(chart).length &&
-          new Set(saved.placements.map(p => p.name)).size ===
-            placementRows(chart).length &&
-          placementRows(chart).every(row =>
-            saved.placements.some(p => p.name === row.name)
-          ) &&
-          saved.placements.every(
-            p =>
-              typeof p.paragraph === "string" &&
-              p.paragraph.length >= 120 &&
-              Array.isArray(p.evidence)
-          )
-        )
-          return saved;
-      } catch {
-        /* Storage is optional; the server remains authoritative. */
-      }
-      const result = await generate.mutateAsync({ chart, mode: layer });
+      const keyFor = (name: string) => storagePrefix + identity + ":" + name;
+      const saved = names.map(name => {
+        try {
+          const value = JSON.parse(
+            localStorage.getItem(keyFor(name)) || "null"
+          ) as MiniBatch | null;
+          return value?.snapshotId &&
+            value.placements?.length === 1 &&
+            value.placements[0].name === name &&
+            value.placements[0].paragraph?.length >= 120 &&
+            Array.isArray(value.placements[0].evidence)
+            ? value
+            : null;
+        } catch {
+          return null;
+        }
+      });
+      if (saved.every(Boolean))
+        return {
+          snapshotId: saved[0]!.snapshotId,
+          placements: saved.flatMap(value => value!.placements),
+        };
+      const result = await generate.mutateAsync({ chart, mode: layer, names });
       try {
         const keys = Object.keys(localStorage).filter(k =>
           k.startsWith(storagePrefix)
         );
-        for (const old of keys.slice(0, Math.max(0, keys.length - 7)))
+        for (const old of keys.slice(0, Math.max(0, keys.length - 55)))
           localStorage.removeItem(old);
-        localStorage.setItem(key, JSON.stringify(result));
+        for (const placement of result.placements)
+          localStorage.setItem(
+            keyFor(placement.name),
+            JSON.stringify({
+              snapshotId: result.snapshotId,
+              placements: [placement],
+            })
+          );
       } catch {
-        /* Private browsing or a full cache must not hide the reading. */
+        /* Storage is optional. */
       }
       return result;
     },
@@ -83,7 +90,9 @@ export function MiniReadingContent({
 }) {
   return (
     <div className="space-y-3">
-      <p className="text-sm leading-7 text-slate-200">{summary.paragraph}</p>
+      <p className="text-sm leading-7 text-slate-200">
+        {readingProse(summary.paragraph)}
+      </p>
       <details className="rounded-xl border border-cyan-200/10 bg-black/15 px-3 py-2 text-xs text-slate-400">
         <summary className="cursor-pointer text-cyan-200">
           Why this reading · calculated evidence
@@ -132,13 +141,26 @@ export function PlacementMiniReading({
   chart,
   name,
   layer = "natal",
+  autoGenerate = true,
 }: {
   chart: ChartResult;
   name: string;
   layer?: "natal" | "transit";
+  autoGenerate?: boolean;
 }) {
-  const result = usePlacementMiniReadings(chart, layer);
+  const [opened, setOpened] = useState(autoGenerate);
+  const result = usePlacementMiniReadings(chart, layer, [name], opened);
   const summary = result.data?.placements.find(p => p.name === name);
+  if (!opened)
+    return (
+      <button
+        type="button"
+        onClick={() => setOpened(true)}
+        className="mt-3 rounded-lg border border-cyan-200/25 px-3 py-2 text-sm text-cyan-200"
+      >
+        Read {name}’s mini reading
+      </button>
+    );
   if (result.error)
     return (
       <div role="alert" className="mt-3 space-y-2 text-sm text-rose-200">

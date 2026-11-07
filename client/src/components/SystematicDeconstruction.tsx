@@ -4,6 +4,7 @@ import { placementRows } from "@shared/placementMiniReadings";
 import {
   usePlacementMiniReadings,
   MiniReadingContent,
+  PlacementMiniReading,
 } from "./PlacementMiniReading";
 import type { ChartResult } from "../../../server/astronomy";
 
@@ -100,12 +101,18 @@ export function SystematicDeconstruction({
               </header>
               {summary ? (
                 <MiniReadingContent summary={summary} />
-              ) : (
+              ) : ["Sun", "Moon"].includes(body.name) ? (
                 !result.error && (
                   <p role="status" className="text-sm text-cyan-200">
                     Preparing {body.name}’s mini reading…
                   </p>
                 )
+              ) : (
+                <PlacementMiniReading
+                  chart={chart}
+                  name={body.name}
+                  autoGenerate={false}
+                />
               )}
               {onInterpretBody && (
                 <button
