@@ -1,4 +1,5 @@
 import { ZODIAC_SIGNS, normalizeLongitude } from "../../../shared/hybrid";
+import { SUMERIAN_CELESTIAL_ASSOCIATIONS, SUMERIAN_CELESTIAL_SOURCE_TITLE } from "../canon/sumerianCelestial";
 import { ENERGY_ASPECT_FLOW } from "../../../shared/energyScoring";
 import { CLASSICAL, REQUIRED, type Graha } from "../vedic/strength";
 import {
@@ -863,6 +864,32 @@ export function applyMethodRules(
               ? "challenging"
               : c.valence,
           "strong"
+        );
+      });
+      break;
+    case "sumerian-celestial-foundations":
+      values.forEach((value, i) => {
+        const v = record(value);
+        const body = String(v.body);
+        requireValue(
+          Object.prototype.hasOwnProperty.call(SUMERIAN_CELESTIAL_ASSOCIATIONS, body) &&
+          typeof v.longitude === "number" && Number.isFinite(v.longitude) &&
+          typeof v.display === "string",
+          "Sumerian celestial reading requires a calculated position and attested correspondence"
+        );
+        const a = SUMERIAN_CELESTIAL_ASSOCIATIONS[body as keyof typeof SUMERIAN_CELESTIAL_ASSOCIATIONS];
+        emit(
+          i,
+          body,
+          `${body} is calculated at ${v.display}. The documented Sumerian association with ${a.name} connects it to ${a.historicalMeaning} This present-day symbolic interpretation asks you to ${a.modernInterpretiveLens.charAt(0).toLowerCase() + a.modernInterpretiveLens.slice(1)} The association qualifies the chart's other methods but does not replace them.`,
+          `Historically attested ${body} / ${a.name}; interpretive extension explicitly modern`,
+          `sumerian-celestial-${body.toLowerCase()}`,
+          SUMERIAN_CELESTIAL_SOURCE_TITLE,
+          body === "Venus" ? "relationships" : body === "Moon" ? "family_home" : "identity",
+          "neutral",
+          "subtle",
+          [],
+          a.limit
         );
       });
       break;
