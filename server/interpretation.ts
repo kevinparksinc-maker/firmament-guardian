@@ -4,7 +4,7 @@ import { invokeLLM, type Message } from "./_core/llm";
 import { withCurrentQuestion } from "./_core/conversation";
 import type { ChartResult, ChartRow } from "./astronomy";
 import { formatInZone } from "../shared/time";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { buildAstrologyInterpreterSystem, FULL_SYNTHESIS_STYLE } from "./master-interpreter";
 import {
   buildAstrologyEvidencePacket,
   formatEvidencePacket,
@@ -714,6 +714,7 @@ function chapterSystem(
   chapter: { title: string; subtitle: string; focus: string }
 ) {
   return buildAstrologyInterpreterSystem(
+    FULL_SYNTHESIS_STYLE,
     [
       `You write one chapter of a private self-knowledge reading from a calculated astrology chart. Chapter: ${chapter.title}, ${chapter.subtitle}. Focus: ${chapter.focus}.`,
       `FACTS
