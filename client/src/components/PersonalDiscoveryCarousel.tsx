@@ -2,13 +2,6 @@ import { useMemo, useState } from "react";
 import { ChevronDown, MoonStar, Orbit, Sparkles, Star } from "lucide-react";
 import type { ChartResult } from "../../../server/astronomy";
 
-const planetThemes: Record<string, string> = {
- Sun: "identity and purpose", Moon: "emotions and emotional security",
- Mercury: "communication and learning", Venus: "relationships and personal values",
- Mars: "motivation and courage", Jupiter: "growth and beliefs",
- Saturn: "responsibility and discipline", Uranus: "independence and change",
- Neptune: "imagination and ideals", Pluto: "transformation and hidden motivations",
-};
 type Insight = { id: string; category: string; title: string; teaser: string; facts: string[]; tone: "gold" | "cyan" | "violet" | "pink" };
 const tones = {
   gold: "border-amber-300/70 shadow-[0_0_22px_rgba(255,211,134,.13)]",
@@ -18,7 +11,7 @@ const tones = {
 };
 
 /** No generated readings or example scores: each entry reads existing calculated chart data. */
-export function PersonalDiscoveryCarousel({ chart, compact = false }: { chart: ChartResult; compact?: boolean }) {
+export function PersonalDiscoveryCarousel({ chart, compact = false, onPlacementSelect }: { chart: ChartResult; compact?: boolean; onPlacementSelect?: (body: string) => void }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const insights = useMemo<Insight[]>(() => {
     const entries: Insight[] = [];
@@ -33,7 +26,7 @@ export function PersonalDiscoveryCarousel({ chart, compact = false }: { chart: C
       entries.push({
         id: `planet-${planet.name}`, category: "YOUR NATAL PLACEMENT",
         title: `${planet.name} · House ${planet.house}`,
-        teaser: `Fun fact: Your ${planet.name} sits in House ${planet.house}! In traditional astrology, ${planet.name} relates to ${planetThemes[planet.name] ?? "an important dimension of life"}.`,
+        teaser: `Calculated placement: ${planet.name} at ${planet.display} in House ${planet.house}. Tap this card to open the integrated, method-by-method synthesis for the placement.`,
         facts: evidence, tone: "gold",
       });
       entries.push({
@@ -79,7 +72,7 @@ export function PersonalDiscoveryCarousel({ chart, compact = false }: { chart: C
       </div>
       <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4" aria-label="Swipeable personal discovery cards">
         {cards.map((item, index) => (
-          <button type="button" key={item.id} onClick={() => setOpenId(openId === item.id ? null : item.id)}
+          <button type="button" key={item.id} onClick={() => { setOpenId(openId === item.id ? null : item.id); const body = item.id.replace(/^planet-/, ""); if (item.id.startsWith("planet-")) onPlacementSelect?.(body); }}
             aria-expanded={openId === item.id}
             className={`w-[min(80vw,320px)] shrink-0 snap-start rounded-2xl border-2 bg-slate-950/65 p-4 text-left backdrop-blur-lg transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white ${tones[item.tone]}`}>
             <div className="mb-3 flex items-center justify-between text-amber-100">{item.tone === "cyan" ? <MoonStar size={22}/> : item.tone === "violet" ? <Orbit size={22}/> : item.tone === "pink" ? <Star size={22}/> : <Sparkles size={22}/>}<span className="text-xs text-slate-400">{index+1} / {cards.length}</span></div>

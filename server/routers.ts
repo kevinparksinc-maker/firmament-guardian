@@ -22,6 +22,7 @@ import {
   formatEvidencePacket,
   evaluateBehavioralIntelligence,
 } from "./astrologyKnowledge";
+import { synthesizePlacement } from "./placement-synthesis";
 import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
 import { invokeLLM } from "./_core/llm";
 import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
@@ -145,6 +146,14 @@ export const appRouter = router({
       .mutation(({ input }) => calculateChart(input)),
   }),
   astrologyKnowledge: router({
+    placementSynthesis: publicProcedure
+      .input(
+        chartResultInput.extend({
+          body: z.string().trim().min(1).max(40),
+          question: z.string().trim().max(2000).default(""),
+        })
+      )
+      .mutation(({ input }) => synthesizePlacement(input.chart, input.body, input.question)),
     behavioralReport: publicProcedure
       .input(
         chartResultInput.extend({

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { ArrowRight, BookOpen, Compass, Diamond, Pencil, Sparkles, Sun, Moon, UserRound } from "lucide-react";
 import { AccountControl } from "@/components/AccountControl";
@@ -6,6 +6,7 @@ import { PersonalDiscoveryCarousel } from "@/components/PersonalDiscoveryCarouse
 import { PersonalCosmicForecast } from "@/components/PersonalCosmicForecast";
 import type { UserProfileData } from "@/components/NatalProfileBuilder";
 import type { ChartResult } from "../../../server/astronomy";
+import { trpc } from "@/lib/trpc";
 
 type ProfileHomeScreenProps = {
   profile: UserProfileData;
@@ -27,7 +28,9 @@ function signAt(longitude: number | undefined): string {
 
 /** Single-purpose dashboard. Long readings, carousel and advanced instruments live on their dedicated routes. */
 export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, savedProfiles = [], onLoadProfile, onRefreshTransits }: ProfileHomeScreenProps) {
-  const [activeSignal, setActiveSignal] = useState<"Sun" | "Moon" | "Ascendant" | null>(null);
+  const [activeSignal, setActiveSignal] = useState<"Sun" | "Moon" | "Ascendant" | null>("Sun");
+  const [placementReading, setPlacementReading] = useState<{ synthesis: string; packet: { includedMethods: string[]; excludedMethods: string[]; unresolvedMethods: string[]; contributions: Array<{ method: string; label: string; status: string; reason?: string }> } } | null>(null);
+  const placementSynthesis = trpc.astrologyKnowledge.placementSynthesis.useMutation();
   const sun = chart?.movingBodies.find(body => body.name === "Sun");
   const moon = chart?.movingBodies.find(body => body.name === "Moon");
   const asc = chart?.ascendant;
@@ -36,6 +39,23 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
     { title: "Moon", value: signAt(moon?.longitude), caption: "Emotional nature", Icon: Moon, tint: "text-fuchsia-300", source: moon },
     { title: "Ascendant", value: chart?.agentViewAvailable ? signAt(asc?.longitude) : "Unavailable", caption: "Outer expression", Icon: Compass, tint: "text-indigo-200", source: chart?.agentViewAvailable ? asc : undefined },
   ];
+  useEffect(() => {
+    const selected = signals.find(signal => signal.title === activeSignal);
+    if (!chart || !selected?.source) {
+      setPlacementReading(null);
+      return;
+    }
+    let cancelled = false;
+    setPlacementReading(null);
+    placementSynthesis.mutateAsync({ chart, body: selected.title }).then(result => {
+      if (!cancelled) setPlacementReading(result);
+    }).catch(() => {
+      if (!cancelled) setPlacementReading(null);
+    });
+    return () => { cancelled = true; };
+    // The chart identity and selected body define the request. The mutation object is stable for this hook.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chart?.utc, activeSignal]);
   return <div className="mx-auto max-w-[660px] space-y-4 pb-5 text-slate-100">
     <header className="flex items-center justify-between gap-3 px-1 py-2">
       <div className="flex min-w-0 items-center gap-3">
@@ -91,7 +111,19 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
         return <div role="region" aria-live="polite" className="mt-4 rounded-xl border border-[#D4AF37]/30 bg-black/25 p-3 text-sm text-slate-200">
           <strong className="text-[#F3D38C]">{activeSignal} · {selected.value}</strong>
           <p className="mt-2">Calculated longitude: {source.longitude.toFixed(2)}°{typeof source.house === "number" ? ` · House ${source.house}` : ""}</p>
-          <p className="mt-1 text-xs text-slate-400">{selected.caption} in the traditional chart interpretation. Explore the full chart for its aspects and supporting testimony.</p>
+          <p className="mt-1 text-xs text-slate-400">{selected.caption} in the traditional chart interpretation. This card now requests the complete placement synthesis rather than using a generic caption.</p>
+          {placementSynthesis.isPending && <p className="mt-3 text-xs text-amber-200" role="status">Reading every applicable method for this placement…</p>}
+          {placementReading && <div className="mt-3 rounded-lg border border-cyan-300/25 bg-cyan-950/20 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-200">Integrated placement synthesis</p>
+            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-100">{placementReading.synthesis}</p>
+            <p className="mt-3 text-[10px] leading-4 text-slate-400">Methods included: {placementReading.packet.includedMethods.length}. Unresolved or incomplete: {placementReading.packet.unresolvedMethods.length}. Not applicable: {placementReading.packet.excludedMethods.length}.</p>
+            <details className="mt-3 rounded-md border border-white/10 bg-black/20 p-2">
+              <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-[.14em] text-slate-300">View method execution audit</summary>
+              <ul className="mt-2 space-y-1.5 text-[11px] text-slate-300">
+                {placementReading.packet.contributions.map(item => <li key={item.method} className="flex gap-2"><span className={item.status === "included" ? "text-emerald-300" : "text-amber-200"}>{item.status}</span><span>{item.label}{item.reason ? ` — ${item.reason}` : ""}</span></li>)}
+              </ul>
+            </details>
+          </div>}
           <Link href="/chart" className="mt-2 inline-block text-xs font-semibold text-amber-200 underline underline-offset-2">View on diamond chart →</Link>
         </div>;
       })()}
@@ -112,7 +144,9 @@ export function ProfileHomeScreen({ profile, chart, calculating, onEditProfile, 
       </Link>
     </div>
 
-    {chart && <PersonalDiscoveryCarousel chart={chart} compact />}
+    {chart && <PersonalDiscoveryCarousel chart={chart} compact onPlacementSelect={body => {
+      if (body === "Sun" || body === "Moon" || body === "Ascendant") setActiveSignal(body);
+    }} />}
 
     <section aria-label="Saved birth profiles" className="rounded-2xl border border-white/5 bg-[#111622]/85 p-4">
       <div className="mb-3 flex items-center justify-between">
