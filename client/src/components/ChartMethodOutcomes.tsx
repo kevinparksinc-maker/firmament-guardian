@@ -1,3 +1,4 @@
+import { readingProse } from "@shared/readingProse";
 import { PlanetStrengthChart, HouseStrengthChart } from "./VedicStrengthCharts";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
@@ -67,7 +68,7 @@ export function ChartMethodOutcomes({
                     {finding.subject}
                   </h4>
                   <p className="whitespace-pre-line text-sm leading-7 text-slate-200">
-                    {finding.judgment}
+                    {readingProse(finding.judgment)}
                   </p>
                   <p className="text-xs text-slate-400">
                     {finding.strength} testimony · {finding.valence} ·{" "}
@@ -97,7 +98,7 @@ export function ChartMethodOutcomes({
             </div>
           ) : (
             <p className="whitespace-pre-line text-sm leading-7 text-slate-300">
-              {method.interpretation} {method.judgment}
+              {readingProse(method.interpretation)} {readingProse(method.judgment)}
             </p>
           )}
           {!event && method.methodId === "vedic-vargas-divisional" && (

@@ -27,6 +27,18 @@ describe("Groq interpreter", () => {
     await invokeLLM({ messages: [], outputSchema: schema, tools, toolChoice: "required" });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ response_format: { type: "json_schema", json_schema: schema }, tools, tool_choice: { type: "function", function: { name: "chart" } } });
   });
+  it("retries a provider JSON-generation failure once while keeping the same provider and evidence", async()=>{
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({error:{code:"json_validate_failed",message:"private chart"}}),{status:400})).mockResolvedValueOnce(new Response(JSON.stringify(answer)));
+    await expect(invokeLLM({messages:[{role:"user",content:"Return JSON for exact evidence"}],response_format:{type:"json_object"}})).resolves.toEqual(answer);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).response_format).toBeUndefined();
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).messages).toEqual(JSON.parse(fetchMock.mock.calls[0][1].body).messages);
+  });
+  it("reports only allowlisted provider codes and never the private error body",async()=>{
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({error:{code:"invalid_request_error",message:"private chart"}}),{status:400}));
+    const error=await invokeLLM({messages:[]}).catch(e=>e as Error);
+    expect(error.message).toContain("invalid_request_error");expect(error.message).not.toContain("private chart");expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it("uses Groq for the model list", async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ data: [] })));
     await listLLMModels();

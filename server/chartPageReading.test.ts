@@ -165,8 +165,12 @@ describe("Compact Chart page placement summaries", () => {
     const result = await buildChartPageReading(chart, "natal");
     expect(result.placements[0].name).toBe("Sun");
     const call = vi.mocked(invokeLLM).mock.calls[0][0];
-    expect(call.max_tokens).toBe(1400);
+    expect(call.max_tokens).toBe(2000);
     expect(call.timeoutMs).toBe(180000);
+    expect(call.response_format).toMatchObject({
+      type: "json_schema",
+      json_schema: { strict: true },
+    });
     expect(call.messages[0].content).toContain(
       "THE ABSOLUTE — INTERPRETATION ENGINE"
     );

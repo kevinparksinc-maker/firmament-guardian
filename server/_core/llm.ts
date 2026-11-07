@@ -275,17 +275,32 @@ async function invokeGroq(params: InvokeParams): Promise<InvokeResult> {
   if (toolChoice) payload.tool_choice = toolChoice;
   const format = normalizeResponseFormat(params);
   if (format) payload.response_format = format;
-  const response = await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions", {
+  let response = await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${ENV.groqApiKey}` },
     body: JSON.stringify(payload),
     signal: params.signal,
     timeoutMs: params.timeoutMs,
   });
+  let safeCode="";
+  if(response.status===400){
+    try { const body=await response.clone().json() as {error?:{code?:unknown}};
+      const code=body.error?.code;
+      if(typeof code==="string" && ["json_validate_failed","invalid_request_error","model_not_found","model_decommissioned","unsupported_parameter"].includes(code)) safeCode=code;
+    } catch { /* Never expose a provider body that might echo the chart. */ }
+    if(safeCode==="json_validate_failed" && format && !params.tools?.length){
+      // Retry only a provider JSON-generation failure, once. The caller's JSON
+      // parser and evidence validation still apply to the returned text.
+      delete payload.response_format;
+      response=await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions",{
+        method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${ENV.groqApiKey}`},body:JSON.stringify(payload),signal:params.signal,timeoutMs:params.timeoutMs,
+      });
+    }
+  }
   if (!response.ok) {
     // Provider response bodies can echo private chart prompts; expose only status.
     const retryAfter = response.headers.get("retry-after");
-    throw new Error(`GROQ_REQUEST_FAILED: HTTP ${response.status}. ${response.status === 429
+    throw new Error(`GROQ_REQUEST_FAILED: HTTP ${response.status}${safeCode ? ` (${safeCode})` : ""}. ${response.status === 429
       ? `Groq usage limit reached.${retryAfter ? ` Retry after ${retryAfter} seconds.` : " Try again later."}`
       : response.status === 401 ? "Check GROQ_API_KEY in the server environment."
       : response.status === 413 ? "This reading exceeds the Groq account request limit."
