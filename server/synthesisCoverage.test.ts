@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildUnifiedMasterChart } from "./masterChart";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis/synthesizer";
-import { extractPropositionsFromSnapshot } from "./astrologyKnowledge/synthesis/normalizer";
+import { extractPropositionsFromMethodOutcomes, extractPropositionsFromSnapshot } from "./astrologyKnowledge/synthesis/normalizer";
 import type { CanonRuleApplication } from "./astrologyKnowledge/synthesis/types";
 
 const input = {
@@ -13,7 +13,10 @@ describe("Unified synthesis method-coverage contract", () => {
   it("incorporates each computed layer's actual findings into interpreted themes", async () => {
     const snapshot = await buildUnifiedMasterChart(input);
     const synthesis = await synthesizeMasterReading({ snapshot, readingMode: "natal" });
-    const propositions = extractPropositionsFromSnapshot(snapshot);
+    const propositions = [
+      ...extractPropositionsFromSnapshot(snapshot),
+      ...extractPropositionsFromMethodOutcomes(synthesis.methodOutcomes),
+    ];
     const linked = new Set(synthesis.themes.flatMap(theme => theme.linkedPropositionIds));
     for (const layer of snapshot.methodExecutionLedger) {
       const entry = synthesis.methodFindings.find(method => method.id === layer.id);
@@ -51,6 +54,20 @@ describe("Unified synthesis method-coverage contract", () => {
     expect(xiu?.status).toBe("reference-only");
     expect(synthesis.themes.flatMap(theme => theme.linkedPropositionIds)
       .some(id => id.startsWith("prop-method-chinese-lunar-mansions-xiu-"))).toBe(false);
+  });
+
+  it("uses every interpreted specialist outcome as a synthesis input", async () => {
+    const snapshot = await buildUnifiedMasterChart(input);
+    const synthesis = await synthesizeMasterReading({ snapshot, readingMode: "natal" });
+    const linked = new Set(synthesis.themes.flatMap(theme => theme.linkedPropositionIds));
+    const interpreted = synthesis.methodOutcomes.filter(outcome => ["interpreted", "failed"].includes(outcome.status) && outcome.calculatedFindings.length > 0);
+
+    expect(interpreted.length).toBeGreaterThan(0);
+    for (const outcome of interpreted) {
+      expect(linked.has(`prop-method-outcome-${outcome.methodId}`)).toBe(true);
+      expect(synthesis.integratedNarrative.some(line => line.includes(`METHOD OUTCOME [${outcome.methodId}]`))).toBe(true);
+      expect(outcome.judgment).not.toMatch(/finding\(s\) were evaluated|records? are available/i);
+    }
   });
 
   it("changes the interpretation when a matched Canon rule changes and fails when the rule is detached", async () => {

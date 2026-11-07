@@ -60,6 +60,33 @@ export function SystematicDeconstruction({
           </button>
         </div>
       )}
+      {result.data?.methodOutcomes && (
+        <section aria-label="Complete method synthesis" className="space-y-3 rounded-2xl border border-cyan-300/25 bg-cyan-950/20 p-4 sm:p-5">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200">Complete method synthesis</p>
+            <h3 className="mt-1 font-serif text-xl font-bold text-white">Every applicable method is shown below</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-300">The planetary cards are concise placement summaries. This ledger is the authoritative cross-method reading: each calculated method contributes its own finding judgments, evidence, and limitation before the themes are combined.</p>
+          </div>
+          <p className="rounded-xl border border-amber-200/20 bg-amber-100/[0.04] p-3 text-sm leading-6 text-amber-50">{result.data.dominantConclusion}</p>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {result.data.methodOutcomes.map(outcome => (
+              <article key={outcome.methodId} className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-medium text-white">{outcome.methodName}</h4>
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-cyan-200/75">{outcome.tradition} · {outcome.chartScope} · {outcome.frame}</p>
+                  </div>
+                  <span className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${outcome.status === "interpreted" ? "border-emerald-300/30 text-emerald-200" : "border-amber-300/30 text-amber-200"}`}>{outcome.status}</span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-200">{outcome.judgment}</p>
+                <p className="mt-2 text-xs leading-5 text-slate-400"><span className="font-semibold text-slate-300">Contribution:</span> {outcome.contribution}</p>
+                {outcome.strengthAndLimitations.length > 0 && <p className="mt-2 text-xs leading-5 text-slate-500"><span className="font-semibold text-slate-400">Limits:</span> {outcome.strengthAndLimitations.join(" · ")}</p>}
+                <p className="mt-3 text-[10px] leading-4 text-slate-600">Evidence: {outcome.evidenceIds.join(", ") || "none"}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
       <div
         className="flex flex-wrap gap-2"
         role="group"

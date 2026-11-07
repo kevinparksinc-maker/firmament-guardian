@@ -423,6 +423,11 @@ async function generatePlacementParagraphs(
   const reading = validatePlacementSummaries(raw, packets);
   return {
     snapshotId: synthesis.snapshotId,
+    dominantConclusion: synthesis.dominantConclusion,
+    methodOutcomes: synthesis.methodOutcomes,
+    themes: synthesis.themes,
+    methodLedgerSummary: synthesis.methodLedgerSummary,
+    qualityAudit: synthesis.qualityAudit,
     placements: reading.placements.map(p => ({
       ...p,
       evidence: packets
