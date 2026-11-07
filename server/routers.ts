@@ -46,7 +46,7 @@ import {
 import { synthesizePlacement } from "./placement-synthesis";
 import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
 import { invokeLLM } from "./_core/llm";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { buildAstrologyInterpreterSystem, FULL_SYNTHESIS_STYLE } from "./master-interpreter";
 import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
 import { buildUnifiedMasterChart, getMasterNatalChart } from "./masterChart/builder";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
@@ -657,7 +657,7 @@ Speak in a generous, flowing narrative connecting this present celestial moment 
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `You are the Master Interpreter evaluating synastry and soulmate connection.
+        const prompt = `${FULL_SYNTHESIS_STYLE}\n\nThis is a natal relationship-potential reading, not actual two-person synastry. Never claim to know an unprovided future partner or meeting event. You are the Master Interpreter evaluating relationship symbolism.
 Placements: ${input.natalPlacements}
 Gender: ${input.gender || "other"}
 Analyze their 7th house, Venus, Moon, and descendant aspects to describe their cosmic soulmate connection in deep, evocative 2026 relational terms. Return a JSON with:
@@ -689,23 +689,23 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `Analyze synastry between:
+        const prompt = `${FULL_SYNTHESIS_STYLE}\n\nAnalyze synastry between:
 Person 1: ${input.natalPlacements}
 Person 2: ${input.soulmatePlacements}
-Generate a rich, deeply insightful relationship compatibility breakdown in JSON format with:
+Do not invent cross-chart aspects, orbs or compatibility scores. If the inputs contain placements but no verified cross-aspect calculations, return an empty aspects array and explain only the relationship themes that those natal placements can actually support. Generate a grounded relationship interpretation in JSON format with:
 {
   "interpretation": "A flowing, comprehensive synthesis of this relationship's potential and spiritual purpose",
   "aspectGroups": [
     {
       "type": "harmonious",
       "aspects": [
-        { "planet1": "Sun", "planet2": "Moon", "aspect": "Trine", "orb": 1.5, "interpretation": "Deep natural understanding and intuitive emotional harmony." }
+        
       ]
     },
     {
       "type": "challenging",
       "aspects": [
-        { "planet1": "Mars", "planet2": "Saturn", "aspect": "Square", "orb": 2.1, "interpretation": "Patience and timing require conscious communication." }
+        
       ]
     }
   ]
