@@ -343,7 +343,7 @@ export const appRouter = router({
     chartBriefing: publicProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
     focusedPlacement: publicProcedure
       .input(z.object({ chart: chartPayload, target: z.object({ kind: z.enum(["placement", "star", "contact"]), name: z.string().min(1).max(80), otherName: z.string().min(1).max(80).optional(), layer: z.enum(["natal", "transit"]) }) }))
-      .mutation(({ input }) => buildFocusedReading(input.chart, input.target)),
+      .mutation(({ input }) => buildFocusedReading(input.chart, input.target, true)),
     host: publicProcedure
       .input(
         z.object({
