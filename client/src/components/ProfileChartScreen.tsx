@@ -1,3 +1,4 @@
+import { SystematicDeconstruction } from "./SystematicDeconstruction";
 import { ChartMethodOutcomes } from "./ChartMethodOutcomes";
 import { MasterSynthesizerPanel } from "./MasterSynthesizerPanel";
 import React, { useState, useMemo } from "react";
@@ -253,7 +254,9 @@ export function ProfileChartScreen({
         )}
       </section>
 
-      {/* Esoteric Placement Interpretation Modal/Section */}
+      <SystematicDeconstruction chart={chart} mode="natal" onInterpretBody={setInterpretBody} />
+
+      {/* Expanded placement evidence */}
       {interpretBody && (
         <section className="rounded-2xl border border-violet-400/40 bg-slate-950/90 p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">

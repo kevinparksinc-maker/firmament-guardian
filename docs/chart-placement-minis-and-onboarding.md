@@ -1,0 +1,15 @@
+# Chart placement mini readings and onboarding correction
+
+The chart page mounts the existing `SystematicDeconstruction` cards again, with the uploaded dark/cyan page design as their visual reference. Each displayed planet, Node and available Ascendant/Descendant has one short synthesized paragraph. Selecting a placement in the circular/interactive diamond chart uses the same compact batch. Whole-chart readings, homepage formats and other full reading surfaces keep their existing format. This is not an implementation of every page in the uploaded design ZIP; sample tropical/Placidus/ayanamsha labels and sample people are not adopted into The Absolute's calculations.
+
+`interpretation.chartPage` reuses the authoritative reading bridge and the completed per-method judgments. Relevant planetary, house, mansion, decan, star, condition, strength and other finding judgments are retained with their exact evidence and sources. It does not substitute raw findings for method interpretations. The full relevant judgments are losslessly interned in the provider packet rather than repeated as JSON dumps. A shared batch produces all placement paragraphs in one provider call. Validation rejects missing/duplicate placements, unknown citations, omitted available mansion/decan evidence, cited methods without evidence and overlong/truncated output. Provider failures remain visible with Retry.
+
+Natal batch identity includes the account, birth input, actual positions, houses, worldview and framework/cache versions, and excludes live transit refreshes. Browser persistence and React Query share results between cards; the server deduplicates concurrent requests. Changing the birth data or frame invalidates the batch. Transit focus boxes use the separately calculated event framework and have a distinct instant/location identity. Active Dasha periods are not embedded into the indefinitely cached natal mini paragraphs; their changing timing belongs to timed readings. Ashtakavarga support remains available.
+
+## Onboarding: Next appeared to do nothing
+
+Step-one validation previously called the final save handler when the typed city had not been resolved, but the resulting form error was rendered only in step two. The Next handler also treated zero latitude as missing.
+
+Next now validates the birth identity, automatically resolves the typed city, and advances only when its coordinates/timezone are verified. Dallas aliases use the existing local city record. Errors render outside the step condition, so they are visible in both steps. Pending resolution disables Next and labels its work. Changed input during resolution does not advance with stale data. Editing a city clears its previous coordinate lock. Valid zero latitude is accepted. Step one never saves a profile.
+
+Regression checks cover the exact Dallas screenshot input, unknown/invalid birth details, remote geocoding, geocoder errors, changed cities and zero latitude. Mini-reading checks cover all 14 located-chart placements, exact lossless judgment transport, separate event scope, evidence validation, cache isolation, and rendered paragraphs/retry states.

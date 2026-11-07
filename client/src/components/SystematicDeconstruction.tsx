@@ -1,6 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { Streamdown } from "streamdown";
-import { trpc } from "@/lib/trpc";
+import React from "react";
+import { useState } from "react";
+import { placementRows } from "@shared/placementMiniReadings";
+import {
+  usePlacementMiniReadings,
+  MiniReadingContent,
+} from "./PlacementMiniReading";
 import type { ChartResult } from "../../../server/astronomy";
 
 export function SystematicDeconstruction({
@@ -12,23 +16,26 @@ export function SystematicDeconstruction({
   mode?: "natal" | "transit" | "combined";
   onInterpretBody?: (name: string) => void;
 }) {
-  const generate = trpc.interpretation.chartPage.useMutation();
-  const result = useQuery({
-    queryKey: ["chart-placement-paragraphs-v2", chart, mode],
-    queryFn: () => generate.mutateAsync({ chart, mode }),
-    staleTime: Infinity,
-    gcTime: 30 * 60 * 1000,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
+  const result = usePlacementMiniReadings(chart);
+  const [filter, setFilter] = useState("All");
+  const rows = placementRows(chart).filter(
+    row =>
+      filter === "All" ||
+      (filter === "Luminaries"
+        ? ["Sun", "Moon"].includes(row.name)
+        : filter === "Nodes"
+          ? row.name.endsWith("Node")
+          : ["Ascendant", "Descendant"].includes(row.name))
+  );
   return (
     <section aria-label="Planetary placement meanings" className="space-y-4">
       <header>
         <h2 className="font-serif text-2xl font-bold text-white">
-          Your planetary placements
+          Your placement mini readings
         </h2>
         <p className="mt-2 text-sm text-slate-300">
-          Each paragraph brings together the planet’s calculated layers.
+          One connected reading for each placement, combining its calculated
+          methods.
         </p>
       </header>
       {result.isPending && (
@@ -52,15 +59,32 @@ export function SystematicDeconstruction({
           </button>
         </div>
       )}
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label="Filter placements"
+      >
+        {["All", "Luminaries", "Angles", "Nodes"].map(value => (
+          <button
+            type="button"
+            key={value}
+            onClick={() => setFilter(value)}
+            aria-pressed={filter === value}
+            className={`rounded-full border px-3 py-1.5 text-xs ${filter === value ? "border-cyan-300/40 bg-cyan-300 text-slate-950" : "border-white/10 bg-slate-900 text-slate-300"}`}
+          >
+            {value}
+          </button>
+        ))}
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
-        {chart.movingBodies.map(body => {
+        {rows.map(body => {
           const summary = result.data?.placements.find(
             p => p.name === body.name
           );
           return (
             <article
               key={body.name}
-              className="space-y-3 rounded-2xl border border-amber-300/20 bg-slate-950/90 p-5"
+              className="space-y-3 rounded-2xl border border-cyan-200/15 bg-[linear-gradient(135deg,#0b1725,#080d17)] p-5"
             >
               <header>
                 <h3 className="font-serif text-xl font-bold text-white">
@@ -74,29 +98,14 @@ export function SystematicDeconstruction({
                   {body.retrograde ? " · Retrograde" : ""}
                 </p>
               </header>
-              {summary && (
-                <>
-                  <div className="text-sm leading-7 text-slate-200">
-                    <Streamdown>{summary.paragraph}</Streamdown>
-                  </div>
-                  <details className="text-xs text-slate-400">
-                    <summary className="cursor-pointer text-cyan-200">
-                      Layers behind this paragraph
-                    </summary>
-                    <div className="mt-3 space-y-3">
-                      {summary.evidence.map(fact => (
-                        <div key={`${fact.layerId}-${fact.id}`}>
-                          <p className="font-semibold text-slate-200">
-                            {fact.layerId}
-                          </p>
-                          <pre className="mt-1 whitespace-pre-wrap break-words">
-                            {JSON.stringify(fact.value, null, 2)}
-                          </pre>
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                </>
+              {summary ? (
+                <MiniReadingContent summary={summary} />
+              ) : (
+                !result.error && (
+                  <p role="status" className="text-sm text-cyan-200">
+                    Preparing {body.name}’s mini reading…
+                  </p>
+                )
               )}
               {onInterpretBody && (
                 <button

@@ -17,7 +17,7 @@ function numerology(name: string, date: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   const vowels = (s: string) => "AEIOU".includes(s);
   return [
-    { label: "Life Path", value: match ? reduceNumber([...match[1], ...match[2], ...match[3]].reduce((sum, d) => sum + Number(d), 0)) : null },
+    { label: "Life Path", value: match ? reduceNumber((match[1] + match[2] + match[3]).split("").reduce((sum, d) => sum + Number(d), 0)) : null },
     { label: "Destiny", value: nameNumber(name, () => true) },
     { label: "Soul Urge", value: nameNumber(name, vowels) },
     { label: "Personality", value: nameNumber(name, s => !vowels(s)) },

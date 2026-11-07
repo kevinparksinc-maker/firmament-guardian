@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   buildPlacementPackets,
+  packPlacementMiniPrompt,
   validatePlacementSummaries,
   buildChartPageReading,
 } from "./chartPageReading";
@@ -51,15 +52,53 @@ describe("Compact Chart page placement summaries", () => {
       moon.facts.some(
         f =>
           f.layerId === "vedic-dasha-and-ashtakavarga" &&
-          JSON.stringify(f.value).includes("Moon BAV total")
+          JSON.stringify(f.value).includes("Moon\'s own BAV")
       )
     ).toBe(true);
-    expect(JSON.stringify(packets).length).toBeLessThan(100_000);
+    expect(
+      JSON.stringify(packPlacementMiniPrompt(packets)).length
+    ).toBeLessThan(170_000);
+  });
+  it("keeps actual judgments for Nodes and angles, excluding failed or unrelated methods", () => {
+    for (const name of [
+      "Ascendant",
+      "Descendant",
+      "North Node",
+      "South Node",
+    ]) {
+      const p = packets.find(p => p.name === name)!;
+      expect(p.judgments.length).toBeGreaterThan(0);
+      expect(
+        p.judgments.some(j => j.methodId === "vedic-nakshatras-and-padas")
+      ).toBe(true);
+      expect(p.judgments.every(j => j.sources.length > 0)).toBe(true);
+    }
+    expect(
+      packets
+        .flatMap(p => p.judgments)
+        .some(j => j.methodId.startsWith("transit:"))
+    ).toBe(false);
+  });
+  it("losslessly retains all method judgments in the compact AI packet", () => {
+    const packed = packPlacementMiniPrompt(packets);
+    packets.forEach((p, index) =>
+      p.judgments.forEach((j, jIndex) => {
+        const row =
+          packed.findings[packed.placements[index].findingRefs[jIndex]!];
+        const restored = (row[0] as Array<string | number>)
+          .map(part =>
+            typeof part === "number" ? packed.textTable[part] : part
+          )
+          .join("");
+        expect(restored).toBe(j.judgment);
+        expect(row[2]).toEqual(j.evidenceIds);
+      })
+    );
   });
   it("requires every displayed planet, including the Sun, and rejects duplicates", () => {
     expect(
       validatePlacementSummaries(response(), packets).placements.length
-    ).toBe(chart.movingBodies.length);
+    ).toBe(chart.movingBodies.length + 4);
     const missingSun = response();
     missingSun.placements = missingSun.placements.filter(p => p.name !== "Sun");
     expect(() => validatePlacementSummaries(missingSun, packets)).toThrow(
@@ -102,15 +141,63 @@ describe("Compact Chart page placement summaries", () => {
     const result = await buildChartPageReading(chart, "natal");
     expect(result.placements[0].name).toBe("Sun");
     const call = vi.mocked(invokeLLM).mock.calls[0][0];
-    expect(call.max_tokens).toBe(4500);
+    expect(call.max_tokens).toBe(6500);
     expect(call.timeoutMs).toBe(180000);
     expect(call.messages[0].content).toContain(
       "THE ABSOLUTE — INTERPRETATION ENGINE"
     );
     expect(call.messages[0].content).toContain("70–110 words");
-    expect(String(call.messages[1].content).length).toBeLessThan(101000);
+    expect(String(call.messages[1].content).length).toBeLessThan(175000);
     expect(call.messages[1].content).not.toContain("UNIFIED MASTER SYNTHESIS");
     await buildChartPageReading(chart, "natal");
+    expect(invokeLLM).toHaveBeenCalledTimes(1);
+  });
+  it("generates transit minis from the independent event sky, not the natal packets", async () => {
+    vi.mocked(invokeLLM).mockClear();
+    const eventChart = await calculateChart({
+      ...chart.input,
+      readingScope: "combined",
+      transitLocation: "Las Vegas",
+      transitLatitude: 36.1699,
+      transitLongitude: -115.1398,
+      transitTimezone: "America/Los_Angeles",
+      transitDate: "2026-11-07",
+      transitTime: "09:00",
+    });
+    vi.mocked(invokeLLM).mockImplementation(async request => {
+      const input = JSON.parse(String(request.messages[1].content));
+      expect(input.chartScope).toBe("event");
+      expect(
+        input.packets.placements.find((p: any) => p.name === "Sun").position
+          .display
+      ).not.toBe(chart.movingBodies.find(p => p.name === "Sun")!.display);
+      return {
+        id: "event",
+        created: 0,
+        model: "test",
+        choices: [
+          {
+            index: 0,
+            finish_reason: "stop",
+            message: {
+              role: "assistant",
+              content: JSON.stringify({
+                placements: input.packets.placements.map((p: any) => ({
+                  name: p.name,
+                  paragraph: `${p.name} describes the selected event sky, with its calculated mansion, elemental-family ruler and supporting conditions shaping a specific expression in this event rather than a birth biography.`,
+                  evidenceIds: p.facts.map((f: any) => f.id),
+                  layerIds: Array.from(
+                    new Set(p.facts.map((f: any) => f.layerId))
+                  ),
+                })),
+              }),
+            },
+          },
+        ],
+      };
+    });
+    const result = await buildChartPageReading(eventChart, "transit");
+    expect(result.placements.length).toBe(14);
     expect(invokeLLM).toHaveBeenCalledTimes(1);
   });
 });
