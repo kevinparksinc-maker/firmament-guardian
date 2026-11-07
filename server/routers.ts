@@ -43,6 +43,7 @@ import {
   diagnoseAstrologyEvidence,
   evaluateBehavioralIntelligence,
 } from "./astrologyKnowledge";
+import { synthesizePlacement } from "./placement-synthesis";
 import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
 import { invokeLLM } from "./_core/llm";
 import { buildAstrologyInterpreterSystem } from "./master-interpreter";
@@ -290,6 +291,14 @@ export const appRouter = router({
       }),
   }),
   astrologyKnowledge: router({
+    placementSynthesis: publicProcedure
+      .input(
+        chartResultInput.extend({
+          body: z.string().trim().min(1).max(40),
+          question: z.string().trim().max(2000).default(""),
+        })
+      )
+      .mutation(({ input }) => synthesizePlacement(input.chart, input.body, input.question)),
     behavioralReport: publicProcedure
       .input(
         chartResultInput.extend({

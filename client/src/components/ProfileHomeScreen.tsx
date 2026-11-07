@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { MasterSynthesizerPanel } from "./MasterSynthesizerPanel";
 import { calculateEnergyRead } from "@/lib/energyScoring";
 import type { UserProfileData } from "./NatalProfileBuilder";
 import type { ChartResult } from "../../../server/astronomy";
+import { trpc } from "@/lib/trpc";
 
 function reduceNumber(n: number): number {
   while (n > 9 && ![11, 22, 33].includes(n)) n = String(n).split("").reduce((a, d) => a + Number(d), 0);
@@ -43,6 +44,27 @@ type Props = {
   savedProfiles?: UserProfileData[];
   onLoadProfile?: (profile: UserProfileData) => void;
 };
+function HomepagePlacementSynthesis({ chart }: { chart: ChartResult }) {
+  const [body, setBody] = useState("Sun");
+  const [result, setResult] = useState<Awaited<ReturnType<typeof import("../../../server/placement-synthesis").synthesizePlacement>> | null>(null);
+  const synthesis = trpc.astrologyKnowledge.placementSynthesis.useMutation();
+  useEffect(() => {
+    let cancelled = false;
+    setResult(null);
+    synthesis.mutateAsync({ chart, body }).then(value => { if (!cancelled) setResult(value); }).catch(() => { if (!cancelled) setResult(null); });
+    return () => { cancelled = true; };
+    // chart UTC and selected body define this request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chart.utc, body]);
+  const choices = ["Sun", "Moon", "Ascendant", "Descendant", "North Node", "South Node"];
+  return <section aria-label="Precision placement synthesis" className="space-y-4 rounded-2xl border border-amber-200/20 bg-slate-950/60 p-5">
+    <div><h2 className="font-serif text-2xl text-amber-100">Precision placement synthesis</h2><p className="mt-2 text-sm leading-6 text-slate-300">Each placement is sent through every configured method adapter. The result records included, unavailable, and unresolved methods instead of silently dropping them.</p></div>
+    <div className="flex flex-wrap gap-2">{choices.map(choice => <button key={choice} type="button" onClick={() => setBody(choice)} className={`rounded-full border px-3 py-1.5 text-xs ${body === choice ? "border-amber-200 bg-amber-200/15 text-amber-100" : "border-white/15 text-slate-300"}`}>{choice}</button>)}</div>
+    {synthesis.isPending && <p role="status" className="text-sm text-amber-200">Running all placement methods…</p>}
+    {result && <div className="space-y-3"><p className="whitespace-pre-line text-sm leading-7 text-slate-100">{result.synthesis}</p><details className="rounded-lg border border-white/10 bg-black/20 p-3"><summary className="cursor-pointer text-xs uppercase tracking-wider text-slate-300">Method execution audit</summary><ul className="mt-3 space-y-1 text-xs text-slate-300">{result.packet.contributions.map(item => <li key={item.method}><span className={item.status === "included" ? "text-emerald-300" : "text-amber-200"}>{item.status}</span> · {item.label}{item.reason ? ` — ${item.reason}` : ""}</li>)}</ul></details></div>}
+  </section>;
+}
+
 export function ProfileHomeScreen({
   profile,
   chart,
@@ -123,6 +145,7 @@ export function ProfileHomeScreen({
           ))}
         </div>
       </section>
+      {chart && <HomepagePlacementSynthesis chart={chart} />}
       {chart && (
         <section aria-label="Your integrated personal synthesis" className="space-y-4">
           <div className="space-y-2">
