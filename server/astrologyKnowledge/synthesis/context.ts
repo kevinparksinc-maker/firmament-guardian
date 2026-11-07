@@ -45,6 +45,7 @@ export function packSynthesis(synthesis: SynthesisResult) {
       "strength",
       "frame",
       "limitation",
+      "findingId",
     ],
     textTable,
     methodOutcomes: synthesis.methodOutcomes.map(outcome => ({
@@ -70,6 +71,7 @@ export function packSynthesis(synthesis: SynthesisResult) {
               f.strength,
               f.frame ?? outcome.frame,
               f.limitation ?? null,
+              f.id,
             ])
           : [],
       limitations: outcome.strengthAndLimitations,
@@ -87,7 +89,7 @@ export function formatSynthesisContext(synthesis: SynthesisResult) {
     "The authoritative input is findingJudgments from interpreted methodOutcomes. Rows use judgmentColumns. In judgmentParts, a number means the exact textTable entry; strings are literal text. Concatenate the parts IN ORDER to read the full judgment. sourceRefs index canonApplications. ALL judgments are retained; these references only avoid repeated text. Cite the original evidence ID strings, never the numeric text/source references.",
     "Each judgment already applies its specific Canon to its actual findings. Reconcile their support, pressure and conditions using WHAT → WHY → HOW → CONSEQUENCE → MEANING. Do not replace them with planet dictionaries or infer an interpretation from failed, no-result, inapplicable or reference-only methods.",
     "Unprefixed evidence belongs to the base chart. transit: identifies the separate event sky. chartScope identifies natal/event independently of God/Agent/shared frame. God House sectors are fixed background fields; Agent houses follow the real local horizon. Divisional and timing results seeded from an event are event-model results, never a person's natal biography.",
-    "Every applicable method's judgment must be considered. Preserve disagreements and source limitations. Chinese historical sectors remain reference-only. Unverified star-specific meanings remain withheld even when a conjunction is measured. Do not invent Shadbala, Bhava Bala, or absent methods.",
+    "Every applicable method's judgment must be considered. Preserve disagreements and source limitations. Chinese historical sectors remain reference-only. Unverified star-specific meanings remain withheld even when a conjunction is measured. Use the recorded Shadbala and Bhava Bala component totals, adequacy, house lord delivery and relative rankings to qualify the interpretation. Capacity is distinct from favorable outcome; preserve the supplied fixed-XYZ/Equal-House and motion/calendar variants. Never invent scores when their method status is unavailable.",
     JSON.stringify(packSynthesis(synthesis)),
   ].join("\n");
 }

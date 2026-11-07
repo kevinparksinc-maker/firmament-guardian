@@ -1,5 +1,6 @@
 import { ZODIAC_SIGNS, normalizeLongitude } from "../../../shared/hybrid";
 import { ENERGY_ASPECT_FLOW } from "../../../shared/energyScoring";
+import { CLASSICAL, REQUIRED, type Graha } from "../vedic/strength";
 import {
   PLANET_CANON_RECORDS,
   SIGN_CANON_RECORDS,
@@ -154,7 +155,7 @@ function condition(body: string, sign: string) {
   return {
     label: "no domicile/exaltation/detriment/fall",
     valence: "neutral" as Polarity,
-    text: `${body} is hosted by ${SIGN_CANON_RECORDS[sign].domicileLord} in ${sign}. This four-condition subset gives it no special essential status; house placement and the host's condition determine delivery. This is not a full Shadbala or complete essential-dignity score.`,
+    text: `${body} is hosted by ${SIGN_CANON_RECORDS[sign].domicileLord} in ${sign}. This four-condition subset gives it no special essential status; house placement and the host's condition determine delivery. This four-condition dignity subset is distinct from the separately calculated Shadbala capacity.`,
   };
 }
 
@@ -270,6 +271,116 @@ export function applyMethodRules(
     );
   };
   switch (baseId) {
+    case "vedic-shadbala":
+      requireValue(
+        values.length === 7,
+        "Shadbala requires all seven classical planets"
+      );
+      requireValue(
+        new Set(values.map(v => record(v).body)).size === 7,
+        "Duplicate Shadbala planet"
+      );
+      values.forEach((raw, index) => {
+        const p = record(raw),
+          body = p.body as Graha;
+        requireValue(CLASSICAL.includes(body), "Unknown Shadbala planet");
+        const components = record(p.components),
+          keys = ["sthana", "dig", "kala", "cheshta", "naisargika", "drik"];
+        const total = keys.reduce(
+          (sum, key) => sum + finite(components[key], key),
+          0
+        );
+        requireValue(
+          Math.abs(total - finite(p.totalVirupas, "Shadbala total")) < 0.0001,
+          "Shadbala component sum mismatch"
+        );
+        requireValue(
+          p.requiredVirupas === REQUIRED[body] &&
+            Math.abs(p.adequacyRatio - total / REQUIRED[body]) < 0.0001,
+          "Shadbala threshold mismatch"
+        );
+        const sufficient = p.adequacyRatio >= 1,
+          houses = (p.ownedHouses as number[])
+            .map(h => houseText(h))
+            .join("; ");
+        emit(
+          index,
+          `${body} · Shadbala`,
+          `${body}'s ${role(body)} has ${total.toFixed(2)} virupas (${(total / 60).toFixed(2)} rupas), against its ${REQUIRED[body]}-virupa traditional requirement: ${(p.adequacyRatio * 100).toFixed(1)}% of the requirement, ${sufficient ? "adequate operational capacity" : "below the requirement"}. Its six components are Sthana ${components.sthana.toFixed(2)}, Dig ${components.dig.toFixed(2)}, Kala ${components.kala.toFixed(2)}, Cheshta ${components.cheshta.toFixed(2)}, Naisargika ${components.naisargika.toFixed(2)}, and signed Drik ${components.drik.toFixed(2)} virupas. It governs ${houses || "no local house cusps"} and delivers these matters through ${houseText(p.house)}. ${sufficient ? "This planet can carry its responsibilities with greater force; its house rulership, condition, and contacts determine what that force serves." : "Its responsibilities may require more sustained effort, support, or cultivation; low capacity does not erase its topics or prove personal failure."} This is capacity, not a probability of success or a verdict that every strong planet is favorable.`,
+          `Sixfold sum; ${total.toFixed(6)} / ${REQUIRED[body]} = ${p.adequacyRatio.toFixed(6)}; ${body} rules houses ${p.ownedHouses.join(", ")} and occupies H${p.house}`,
+          "bphs-shadbala-six-components",
+          "BPHS 26–27; The Absolute fixed-XYZ and Equal-House variant",
+          p.ownedHouses.includes(5) || p.ownedHouses.includes(10)
+            ? "purpose_work"
+            : (domains[p.house] ?? "identity"),
+          sufficient ? "supportive" : "challenging",
+          p.adequacyRatio >= 1.25 ? "strong" : "moderate"
+        );
+      });
+      break;
+    case "vedic-bhava-bala": {
+      requireValue(
+        values.length === 12 &&
+          new Set(values.map(v => record(v).house)).size === 12,
+        "Bhava Bala requires twelve unique houses"
+      );
+      const average =
+        values.reduce<number>(
+          (sum, raw) => sum + finite(record(raw).totalVirupas, "house total"),
+          0
+        ) / 12;
+      values.forEach((raw, index) => {
+        const h = record(raw),
+          components = record(h.components),
+          total = Object.values(components).reduce<number>(
+            (sum, value) => sum + finite(value, "house component"),
+            0
+          );
+        requireValue(
+          h.house >= 1 &&
+            h.house <= 12 &&
+            Math.abs(total - h.totalVirupas) < 0.0001,
+          "Bhava component sum mismatch"
+        );
+        const above = total >= average;
+        const example: Record<number, string> = {
+          5: "This concerns the ability to bring your own ideas, craft, teaching, or creative projects into form; strength is not a guarantee of speculative winnings.",
+          11: "This concerns help through friends, communities, patrons, networks and shared goals. Lower support can describe needing to build reliable alliances deliberately or relying on a smaller circle; it does not establish what other people think or why they act.",
+        };
+        emit(
+          index,
+          `House ${h.house} · Bhava Bala`,
+          `${houseText(h.house)} scores ${total.toFixed(2)} virupas (${(total / 60).toFixed(2)} rupas), rank ${h.rank} of 12, ${above ? "at or above" : "below"} this chart's ${average.toFixed(2)}-virupa house average. Its lord ${h.lord} supplies ${components.lord.toFixed(2)} virupas and has ${(h.lordAdequacy * 100).toFixed(1)}% of its own Shadbala requirement, delivering the house through ${houseText(h.lordDeliveryHouse)}. Direction contributes ${components.direction.toFixed(2)}, aspects ${components.aspect.toFixed(2)}, occupancy ${components.occupancy.toFixed(2)}, and rising-type timing ${components.risingType.toFixed(2)} virupas. ${example[h.house] ?? (above ? "The house has comparatively greater capacity to carry its matters; its specific lord, occupants, aspects and timing determine the expression." : "This house has less capacity relative to the other houses in this chart; its matters can require more cultivation, resources or cooperation.")} A relative house ranking is not an absolute success/failure threshold.`,
+          `Bhava = lord + direction + aspects + occupancy + rising-type timing; H${h.house} ${total.toFixed(6)}; chart average ${average.toFixed(6)}`,
+          "bphs-bhava-bala-components",
+          "BPHS 27.26–31; The Absolute Equal-House cusp-reference variant",
+          h.house === 5 ? "purpose_work" : domains[h.house],
+          above ? "supportive" : "challenging",
+          "strong"
+        );
+      });
+      const fifth = record(values.find(v => record(v).house === 5)),
+        eleventh = record(values.find(v => record(v).house === 11));
+      const higher =
+        fifth.totalVirupas > eleventh.totalVirupas
+          ? 5
+          : eleventh.totalVirupas > fifth.totalVirupas
+            ? 11
+            : 0;
+      emit(
+        values.findIndex(v => record(v).house === 5),
+        "Creative output and network support",
+        `House 5 (your creative expression and creations) has ${fifth.totalVirupas.toFixed(2)} virupas; House 11 (friends, networks, patrons and shared gains) has ${eleventh.totalVirupas.toFixed(2)}. ${higher === 5 ? "The calculated comparison gives your own creative output more capacity than support through networks. That can look like having something substantial to create while needing to build its audience and alliances deliberately." : higher === 11 ? "The calculated comparison gives network support more capacity than creative output. Alliances and shared goals can provide resources, while turning ideas into your own finished work needs separate attention." : "These two houses have equal calculated capacity; their lords and timing distinguish how their matters are expressed."} This compares two calculated channels; it does not infer a biography or other people's motives.`,
+        `H5 ${fifth.totalVirupas.toFixed(6)} versus H11 ${eleventh.totalVirupas.toFixed(6)}; difference ${(fifth.totalVirupas - eleventh.totalVirupas).toFixed(6)} virupas`,
+        "bphs-house5-house11-capacity-comparison",
+        "Local comparison of BPHS Bhava Bala results",
+        "purpose_work",
+        "neutral",
+        "strong",
+        [evidence(values.findIndex(v => record(v).house === 11))!]
+      );
+      break;
+    }
     case "western-planets-and-signs":
       values.forEach((v, i) => emitPlacement(i, record(v)));
       break;

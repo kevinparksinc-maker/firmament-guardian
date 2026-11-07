@@ -3,7 +3,7 @@
 Every public chart producer uses `server/masterChart/entry.ts`:
 
 1. `buildUnifiedMasterChart` calculates the authoritative astronomical state, sunrise Ascendant and Equal Houses.
-2. `registry.ts` requires the same 16 method IDs for every sky. A missing or unregistered adapter is an error. Each method retains its actual results, sources, evidence IDs and execution status.
+2. `registry.ts` requires the same 18 method IDs for every sky. A missing or unregistered adapter is an error. Each method retains its actual results, sources, evidence IDs and execution status.
 3. A combined/transit snapshot includes an independent event framework calculated at the exact event instant and resolved horizon. It evaluates the same registry. Natal and event mansions, decans, star contacts, conditions, divisional data and other methods are separate.
 4. `synthesizeMasterSnapshot` retrieves both skies' Canon dossiers, binds the actual teachings to calculated evidence, and applies executable finding-specific rules in `synthesis/methodRules.ts`. Structured `findingJudgments` are produced before synthesis. The normalizer consumes those judgments; raw JSON is audit data and cannot become a fallback interpretation. Event method/evidence IDs use the `transit:` prefix.
 5. Coverage failure blocks chart publication. Successful charts carry `methodBindings`: base results, event results and the synthesis audit. This contract is also attached to sports game snapshots for their adapters.
@@ -28,7 +28,7 @@ The low-level `astronomy.calculateChart` remains the builder's calculation primi
 - Nodes and available chart angles receive mansion, decan and stellar-contact findings too.
 - The transit activation layer consumes the same deduplicated ledger as Energy, including minor aspects, angles and the configured weight formula.
 - The existing Chinese overlay identifies its custom Firmament boundary model. The separate ancient Chinese catalog remains reference-only; its unavailable ancient boundaries are not fabricated.
-- Unimplemented Shadbala/Bhava Bala or other absent techniques are not claimed as computed by this registry. This change does not invent additional method implementations.
+- Shadbala and Bhava Bala are separate registered calculations. The strength engine records all six planetary components, all 12 house totals, component traces, minima/rankings and the explicit fixed-XYZ/Equal-House/calendar/motion variants. Unavailable prerequisites produce an explicit status or error.
 - Event-origin cycle/divisional results describe the event model; they must not be presented as someone's birth history or natal lifecycle.
 
 ## Avoiding duplicate work
@@ -48,3 +48,7 @@ Ordinary reading routes call their gate once, rather than running another gate i
 - A rule failure blocks publication. Reference-only catalogs, successful empty results and inapplicable methods remain explicit and excluded from personal interpretation.
 - The current fixed-star catalog includes entries without verified star-specific doctrine. Their contacts remain measured geometry with explicit limitations, not fabricated traditional predictions.
 - Automatic sunrise selection chooses the latest calculated sunrise preceding the exact event across UTC date boundaries. Caller-supplied anchors retain the existing validity checks.
+
+## Numerical Vedic strength
+
+`server/astrologyKnowledge/vedic/strength.ts` calculates both strength layers. `methodRules.ts` applies each measured capacity to its actual planetary functions, owned houses and delivery house. Bhava judgments include a numerical H5/H11 comparison. The model packet carries these judgments alongside the other methods; My Chart displays the raw component arithmetic and the same judgments before the whole-chart reading. See `vedic-strength-formulas-2026-11-06.md` for formulas, variants, sources and the worked Dallas example.

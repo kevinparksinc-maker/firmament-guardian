@@ -35,7 +35,24 @@ describe("interpretation.generate knowledge gateway integration", () => {
         tensions: [],
         chapters: Object.fromEntries(["identity", "mind-heart", "relationships", "work-purpose"].map(id => [id, { angle: "Fixture evidence", evidence: [id === "identity" ? "Sun" : "Moon"] }])),
       };
-      const content = system.includes("silent first reader") ? JSON.stringify(plan) : "A synthetic interpretation grounded in the supplied chart evidence. ".repeat(8);
+      let content = system.includes("silent first reader") ? JSON.stringify(plan) : "A synthetic interpretation grounded in the supplied chart evidence. ".repeat(8);
+      if (system.includes("Write the actual Master Synthesis")) {
+        const user = request.messages.find((m: {role:string}) => m.role === "user").content as string;
+        const packet = JSON.parse(user.slice(user.lastIndexOf("\n") + 1));
+        const active = packet.methodOutcomes.filter((o: {status:string}) => o.status === "interpreted");
+        const sections = Array.from({length:3}, (_,i) => ({id:`section-${i}`,title:`Integrated theme ${i}`,text:"A connected interpretation grounded in actual method judgments, explaining the chart-specific relationship between placement, mansion, condition, and their practical consequences. ".repeat(2),findingIds:[] as string[]}));
+        const methodContributions = active.map((o: any,i: number) => {
+          const row = o.findingJudgments[0];
+          sections[i%3].findingIds.push(row[8]);
+          const judgment = row[1].map((part: string | number) => typeof part === "number" ? packet.textTable[part] : part).join("");
+          return {methodId:o.methodId,sectionIds:[sections[i%3].id],findingIds:[row[8]],contribution:judgment.slice(0,1000)};
+        });
+        for (const valence of ["supportive","challenging"]) {
+          const row = active.flatMap((o:any)=>o.findingJudgments).find((row:any)=>row[4]===valence);
+          if(row) sections[0].findingIds.push(row[8]);
+        }
+        content = JSON.stringify({answer:"The supplied relationship findings connect natal disposition to concrete conditions, preserving both strengths and pressure in this reading.", sections, methodContributions, methodsReviewed:packet.methodOutcomes.map((o:any)=>o.methodId)});
+      }
       return { choices: [{ message: { role: "assistant", content }, finish_reason: "stop" }] };
     });
   });
@@ -50,6 +67,9 @@ describe("interpretation.generate knowledge gateway integration", () => {
       expect.arrayContaining(["7th-house", "7th-lord", "D9"])
     );
     expect(result.intelligence).toContain("ASTROLOGY EVIDENCE PACKET");
+    expect(result.masterSynthesis.narrativeAudit.passed).toBe(true);
+    expect(result.reading).toContain(result.masterSynthesis.narrative.sections[0].text);
+    expect(result.masterSynthesis.narrative.methodContributions.length).toBeGreaterThan(10);
     expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "dasha")).toBe(true);
     expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "ashtakavarga")).toBe(true);
     const userPrompts = mocked.invokeLLM.mock.calls.map(call =>

@@ -1,3 +1,4 @@
+import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { describe, expect, it } from "vitest";
 import { calculateChart } from "./astronomy";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
@@ -12,8 +13,8 @@ describe("Canonical synthesis reading bridge", () => {
   it("accepts matching calculated planets, ascendant, houses and includes method findings", async () => {
     const chart = await calculateChart(input);
     const result = await synthesizeChartForReading(chart, "natal", "What does this chart say?");
-    expect(result.synthesis.methodFindings.length).toBe(16);
-    expect(result.synthesis.methodOutcomes.length).toBe(16);
+    expect(result.synthesis.methodFindings.length).toBe(MASTER_METHOD_IDS.length);
+    expect(result.synthesis.methodOutcomes.length).toBe(MASTER_METHOD_IDS.length);
     expect(result.synthesis.methodOutcomes.every(outcome => outcome.interpretation.length > 0)).toBe(true);
     expect(result.context).toContain("methodOutcomes");
     expect(result.context).toContain("methodOutcomeAudit");

@@ -115,7 +115,7 @@ export function ephemerisXYZ(jd: number, planet: number, extraFlags = 0) {
   const speed = velocity.every(Number.isFinite)
     ? ((xyz.x * velocity[1] - xyz.y * velocity[0]) / (xyz.x * xyz.x + xyz.y * xyz.y)) * 180 / Math.PI
     : 0;
-  return { xyz, longitude, speed };
+  return { xyz, longitude, speed, velocity };
 }
 function calculatedXYZ(jd: number, planet: number) {
   return ephemerisXYZ(jd, planet);
@@ -189,7 +189,7 @@ function julianDay(date: Date) {
 // NOAA solar-calculator equations: apparent sunrise at solar zenith 90.833 degrees.
 // Inputs are the LOCAL civil date and signed geographic coordinates (east positive).
 // A missing sunrise (polar day/night) is an error, never a substituted angle.
-function noaaSunriseUtc(localDate: string, latitude: number, longitude: number): Date {
+export function noaaSunriseUtc(localDate: string, latitude: number, longitude: number, setting = false): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate) || !Number.isFinite(latitude) || Math.abs(latitude) > 90 || !Number.isFinite(longitude) || Math.abs(longitude) > 180)
     throw new Error("Valid local date and coordinates required for NOAA sunrise.");
   const midnight = Date.parse(localDate + "T00:00:00.000Z");
@@ -213,7 +213,7 @@ function noaaSunriseUtc(localDate: string, latitude: number, longitude: number):
     const eqtime = 4 * (180 / Math.PI) * (y * Math.sin(2 * l) - 2 * ecc * Math.sin(m) + 4 * ecc * y * Math.sin(m) * Math.cos(2 * l) - 0.5 * y * y * Math.sin(4 * l) - 1.25 * ecc * ecc * Math.sin(2 * m));
     const cosH = (Math.cos(90.833 * rad) - Math.sin(latitude * rad) * Math.sin(decl)) / (Math.cos(latitude * rad) * Math.cos(decl));
     if (!Number.isFinite(cosH) || cosH < -1 || cosH > 1) throw new Error("NOAA sunrise undefined for this location/date; no fallback.");
-    return 720 - 4 * (longitude + Math.acos(cosH) / rad) - eqtime;
+    return 720 - 4 * (longitude + (setting ? -1 : 1) * Math.acos(cosH) / rad) - eqtime;
   };
   let minutes = solar(jd0 + 0.5);
   minutes = solar(jd0 + minutes / 1440);

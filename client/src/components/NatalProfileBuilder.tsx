@@ -626,7 +626,7 @@ export function NatalProfileBuilder({
               {currentProfile?.name ? `Update Profile: ${currentProfile.name}` : "Build Your Celestial Natal Profile"}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-400">
-              Anchor the 16-system astronomical engine to your exact moment of birth.
+              Anchor the complete astronomical method engine to your exact moment of birth.
             </DialogDescription>
           </DialogHeader>
 
@@ -654,7 +654,7 @@ export function NatalProfileBuilder({
               Create Your Celestial Natal Profile First
             </h2>
             <p className="mt-1 max-w-xl text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Before the algorithms reveal your 16-system Celestial Blueprint, Synastry chemistry, or AI Master Interpreter readings, the engine must anchor to your unique birth coordinates.
+              Before the algorithms reveal your layered Celestial Blueprint, Synastry chemistry, or AI Master Interpreter readings, the engine must anchor to your unique birth coordinates.
             </p>
           </div>
 

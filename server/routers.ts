@@ -1,4 +1,6 @@
+import { buildChartMethodOutcomes } from "./chartMethodOutcomes";
 import { synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
+import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
 import { calculateMasterChart as calculateChart } from "./masterChart/entry";
 import { buildEnergyReading } from "./energyReading";
 import { buildChartPageReading } from "./chartPageReading";
@@ -324,6 +326,9 @@ export const appRouter = router({
       }),
   }),
   interpretation: router({
+    methodOutcomes: publicProcedure
+      .input(chartResultInput.extend({ mode: z.enum(["natal", "transit", "combined"]).default("natal") }))
+      .query(({ input }) => buildChartMethodOutcomes(input.chart, input.mode)),
     energyReading: publicProcedure.input(chartResultInput).mutation(({ input }) => buildEnergyReading(input.chart)),
     chartPage: publicProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode)),
     chartBriefing: publicProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
@@ -369,6 +374,7 @@ export const appRouter = router({
     masterSynthesize: publicProcedure
       .input(
         chartInput.extend({
+          chart: chartPayload.optional(),
           mode: z.enum(["natal", "transit", "combined"]).default("natal"),
           question: z
             .string()
@@ -378,8 +384,13 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
+        if (input.chart) {
+          const { synthesis } = await synthesizeChartForReading(input.chart, input.mode, input.question);
+          return narrateMasterSynthesis(synthesis, input.question);
+        }
         const snapshot = await buildUnifiedMasterChart({ ...input, mode: input.mode });
-        return (await synthesizeMasterSnapshot(snapshot, input.mode, input.question)).synthesis;
+        const { synthesis } = await synthesizeMasterSnapshot(snapshot, input.mode, input.question);
+        return narrateMasterSynthesis(synthesis, input.question);
       }),
     chapter: publicProcedure
       .input(

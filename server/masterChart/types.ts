@@ -89,7 +89,7 @@ export interface UnifiedMasterChartSnapshot {
     obliquityMode: "zero-tilt-xy-projection";
     precessionMode: "none-user-frame-fixed-anchor";
     houseSystem: "topocentric-equal-house-ascendant";
-    engineVersion: "firmament-master-2026.2";
+    engineVersion: "firmament-master-2026.3";
   };
   baseCelestialState: {
     julianDay: number;

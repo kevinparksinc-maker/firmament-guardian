@@ -1,8 +1,7 @@
+import { ChartMethodOutcomes } from "./ChartMethodOutcomes";
+import { MasterSynthesizerPanel } from "./MasterSynthesizerPanel";
 import React, { useState, useMemo } from "react";
-import { VedicDivisionalCharts } from "./VedicDivisionalCharts";
-import { VedicDashaTimeline } from "./VedicDashaTimeline";
 import { TechniqueAuditDashboard } from "./TechniqueAuditDashboard";
-import { VedicAshtakavarga } from "./VedicAshtakavarga";
 import { Link } from "wouter";
 import {
   BookOpen,
@@ -28,7 +27,6 @@ import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
 import { ChartWheel } from "@/components/ChartWheel";
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
 import { FixedStarIntensityVisualizer } from "@/components/FixedStarIntensityVisualizer";
-import { SystematicDeconstruction } from "@/components/SystematicDeconstruction";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
 
@@ -162,7 +160,7 @@ export function ProfileChartScreen({
               </span>
             </div>
             <h1 className="font-serif text-3xl font-semibold text-white sm:text-4xl">
-              Natal Chart Workspace
+              My Chart · Natal Blueprint
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               Precise 360° celestial geometry anchored to your birth moment
@@ -275,13 +273,13 @@ export function ProfileChartScreen({
         </section>
       )}
 
-      {/* 25 EXPANDABLE SYSTEMATIC DECONSTRUCTION DRAWERS */}
-      <SystematicDeconstruction chart={chart} mode={readingMode} onInterpretBody={setInterpretBody} />
-
-      <VedicDivisionalCharts chart={chart} />
-        <VedicDashaTimeline chart={chart} />
-        <VedicAshtakavarga chart={chart} />
-        <TechniqueAuditDashboard chart={chart} />
+      <ChartMethodOutcomes chart={chart} mode={readingMode} />
+      <section aria-label="Whole-chart synthesis" className="space-y-4">
+        <h2 className="font-serif text-2xl font-semibold text-white">Your whole-chart synthesis</h2>
+        <p className="text-sm text-slate-300">The individual outcomes above now come together in one connected reading.</p>
+        <MasterSynthesizerPanel chart={chart} mode={readingMode} />
+      </section>
+      <TechniqueAuditDashboard chart={chart} />
       {/* Fixed Star Intensity Visualizer */}
       <section aria-label="Fixed Star Visualizer">
         <FixedStarIntensityVisualizer chart={chart} />

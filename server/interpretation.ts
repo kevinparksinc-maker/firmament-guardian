@@ -1,3 +1,4 @@
+import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
 import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
 import { invokeLLM, type Message } from "./_core/llm";
 import { withCurrentQuestion } from "./_core/conversation";
@@ -937,60 +938,6 @@ export function buildLifeStoryExecutiveOverview(
   ].filter(line => line !== "").join("\n\n");
 }
 
-async function generateLifeStoryReading(
-  chart: ChartResult,
-  mode: ReadingMode,
-  evidencePacket: AstrologyEvidencePacket,
-  question: string,
-  analysisPlan: string,
-  synthesisContext = ""
-): Promise<string> {
-  try {
-    const messages: Message[] = [
-      {
-        role: "system",
-        content: buildAstrologyInterpreterSystem(
-          `${buildGenesisInquiryPrompt("Complete natal life story")}\nYou are the Master Interpreter writing the user's primary Natal Life Story Narrative for Bible Believers Astrology.
-CHART-FIRST INTERPRETATION MANDATE:
-1. The application's documented doctrine and the calculated chart evidence govern the interpretation. Do not substitute an external cosmology, generic psychological narrative, or a predetermined character arc. Never invent biographical events.
-2. Explain the specific placement, house, aspect, dignity, mansion, decan, and frame relationships that actually appear in the evidence. Make the human meaning concrete, with clear source-to-conclusion reasoning rather than generalized prose.
-3. WEAVE ALL HARD-CODED CANON LAYERS FROM THE EVIDENCE PACKET INTO THE NARRATIVE:
-   - The Solar Core & 36 Egyptian Decanic Face (title, ruler, nuance)
-   - The Lunar Sanctuary: Vedic Nakshatra & active Pada, and the 28 Arabic Lunar Mansions (Manzil al-Qamar)
-   - The Hermetic Lots (Part of Fortune, Spirit, Eros, Necessity)
-   - The Fixed Stars and Royal Stars (Aldebaran, Regulus, Antares, Fomalhaut, etc.)
-   - Traditional Essential Dignities, Bounds/Terms, and Sect condition (Day vs Night)
-   - 7-Channel Behavioral Intelligence: The specific triggers, protective defenses, shadow costs, and relational/workplace dynamics
-4. Interpret the actual calculated placements and their cross-method relationships in the context of the user question. Do not force predetermined modern-life themes, personal history, or psychological characterizations onto the chart.
-5. Structure the narrative into progressive, flowing chapters:
-   - # Your Life Story: The Living Narrative of Your Core Blueprint
-   - ### Prologue: Who You Came Here to Be (The Sovereign Core & Solar Face)
-   - ### Chapter I: The Interior Sanctuary — Mind, Heart, and Sacred Lunar Mansions
-   - ### Chapter II: The Formative Roots — From Childhood Rooms to Adult Character
-   - ### Chapter III: The Modern Crucible — Defense Habits, Behavioral Triggers & Relational Longing
-   - ### Chapter IV: The Sacred Geometry of Destiny — Hermetic Lots
-   - ### Chapter V: The Ancient Star Watchers & Royal Alliances
-   - ### Chapter VI: Inborn Gifts & Superpowers
-   - ### Chapter VII: Active Celestial Tensions & Resolution Paths
-   - ### Chapter VIII: Navigating 2026 Reality — Guardian Counsel & Sovereign Power`
-        ),
-      },
-      {
-        role: "user",
-        content: `Here is the user's chart evidence:\n${buildEvidenceSheet(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\nUNIFIED METHOD-BY-METHOD SYNTHESIS (all computed layers; do not omit relevant evidence):\n${synthesisContext}\n\nVALIDATED READING PLAN (follow its priorities and chapter logic):\n${analysisPlan}\n\nUser Question/Intent: ${question}\n\nWrite the complete, flowing Life Story Narrative now. Use the plan and evidence together; do not invent personal history.`,
-      },
-    ];
-    const generated = await ask(messages, 3500, 0);
-    if (generated.trim().length <= 300) {
-      throw new Error("The interpretation was too short to qualify as a full synthesized reading.");
-    }
-    return generated;
-  } catch (err) {
-    console.error("[generateInterpretation] Full synthesis unavailable:", err);
-    throw new Error("A full synthesized interpretation could not be completed. Your calculated chart remains available; please retry the reading.");
-  }
-}
-
 export async function generateInterpretation(
   chart: ChartResult,
   mode: ReadingMode = "combined",
@@ -1002,10 +949,11 @@ export async function generateInterpretation(
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
   const intelligence = `${masterContext}\n\n${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
   const analysis = await analyzeChart(chart, mode, evidencePacket, `${masterContext}\n\n${synthesisContext}`);
-  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis, masterContext);
+  const narrated = await narrateMasterSynthesis(master.synthesis, question);
+  const reading = [narrated.dominantConclusion, ...narrated.integratedNarrative].join("\n\n");
   return {
     masterSnapshot: master.snapshot,
-    masterSynthesis: master.synthesis,
+    masterSynthesis: narrated,
     intelligence,
     evidencePacket,
     behavioralReport: evidencePacket.behavioralReport,

@@ -13,6 +13,8 @@ export const MASTER_METHOD_IDS = [
   "vedic-vargas-divisional",
   "vedic-dasha-and-ashtakavarga",
   "vedic-graha-drishti",
+  "vedic-shadbala",
+  "vedic-bhava-bala",
   "chinese-lunar-mansions-xiu",
   "elemental-decans",
   "kabbalah-sefer-yetzirah",

@@ -2,6 +2,7 @@ import { PLANET_CANON_RECORDS } from "../astrologyKnowledge/canon/planetsAndSign
 import { detectAllYogas } from "../genesisBackup/vedicYogaDetector";
 import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "../../shared/energyScoring";
 import { registeredMethodLedger } from "./registry";
+import { calculateVedicStrength, STRENGTH_VERSION } from "../astrologyKnowledge/vedic/strength";
 import { localDateTime } from "../../shared/transitTime";
 import { createMasterChartDataBus } from "./chartDataBus";
 import { buildDivisionalCharts } from "../astrologyKnowledge/vedic/divisionalCharts";
@@ -100,7 +101,7 @@ export async function getMasterNatalChart(
     transitSunriseAnchor: undefined,
     transitXYZPositions: undefined,
   };
-  const key = computeSnapshotId(natalInput, "firmament-master-2026.2");
+  const key = computeSnapshotId(natalInput, "firmament-master-2026.3");
   const cached = natalSnapshotCache.get(key);
   if (cached) {
     natalSnapshotCache.delete(key);
@@ -130,7 +131,7 @@ export async function buildUnifiedMasterChart(
   input: MasterChartInput
 ): Promise<UnifiedMasterChartSnapshot> {
   const mode = input.mode ?? "natal";
-  const engineVersion = "firmament-master-2026.2";
+  const engineVersion = "firmament-master-2026.3";
   const createdAtUtc = new Date().toISOString();
 
   // 1. Calculate authoritative base celestial state using established astronomy engine
@@ -211,7 +212,7 @@ export async function buildUnifiedMasterChart(
       relationship: `${p.frameRelationship!.type}: ${p.frameRelationship!.translation}`,
     }));
 
-  // 3. Assemble all 16 Method Layers
+  // 3. Assemble the complete registered method formation.
   const layers: Record<string, LayerRecord> = {};
 
   // Layer 1: Western Planets & Signs
@@ -510,6 +511,27 @@ export async function buildUnifiedMasterChart(
     results: timingResult.map(item => ({ ...item,
       calculation: timingData?.[item.technique as "dasha" | "ashtakavarga"],
     })),
+  };
+
+  // The same numerical strength calculation feeds both independent methods.
+  const strengthApplicable = Boolean(ascendant && input.birthTimeKnown !== false);
+  let strength: ReturnType<typeof calculateVedicStrength> | undefined;
+  let strengthError: string | undefined;
+  if (strengthApplicable) {
+    try { strength = calculateVedicStrength(chart); }
+    catch (error) { strengthError = error instanceof Error ? error.message : String(error); }
+  }
+  for (const [id, name, results, evidenceIds] of [
+    ["vedic-shadbala", "Shadbala · Sixfold Planetary Strength", strength?.planets, strength?.planets.map(p => `shadbala-${p.body.toLowerCase()}`)],
+    ["vedic-bhava-bala", "Bhava Bala · Twelve House Strengths", strength?.houses, strength?.houses.map(h => `bhava-bala-house-${h.house}`)],
+  ] as const) layers[id] = {
+    id, name, tradition:"vedic", technique:id === "vedic-shadbala" ? "bphs-sixfold-shadbala" : "bphs-bhava-adhipati-dig-drishti",
+    status: !strengthApplicable ? "not-applicable" : strengthError ? "failed" : "computed-with-result",
+    frame:"agent", prerequisites:["western-planets-and-signs","western-houses-and-angles"],
+    calculationVersion:STRENGTH_VERSION, results:results ?? [], evidenceIds:evidenceIds ?? [],
+    sourceIds:["brihat-parashara-hora-shastra-26-27"],
+    ...(strengthError ? {errorCode:"VEDIC_STRENGTH_FAILED"} : {}),
+    notes: !strengthApplicable ? "A known local Ascendant and birth time are required for numerical strength." : strengthError ?? `BPHS formulas applied to The Absolute's supplied XYZ and Equal Houses. Selected variants: ${JSON.stringify(strength!.coordinateVariant)}. Sources: ${JSON.stringify(strength!.sources)}. Temporal inputs: ${JSON.stringify(strength!.temporal)}`,
   };
 
   // Layer 11: Vedic Graha Drishti (Special Aspects)

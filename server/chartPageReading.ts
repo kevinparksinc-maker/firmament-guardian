@@ -103,6 +103,10 @@ export function buildPlacementPackets(
                 sav: statement.slice(0, statement.indexOf("Sun BAV total")),
               });
           }
+        } else if (method.id === "vedic-shadbala" && value.body === row.name) {
+          add(method.id, id, {body:value.body,components:value.components,totalVirupas:value.totalVirupas,requiredVirupas:value.requiredVirupas,adequacyRatio:value.adequacyRatio,ownedHouses:value.ownedHouses,house:value.house});
+        } else if (method.id === "vedic-bhava-bala" && value.lord === row.name) {
+          add(method.id, id, {house:value.house,lord:value.lord,lordDeliveryHouse:value.lordDeliveryHouse,components:value.components,totalVirupas:value.totalVirupas,rank:value.rank,relativeSupport:value.relativeSupport});
         } else if (
           method.id === "elemental-decans" &&
           value.body === row.name
@@ -291,7 +295,7 @@ async function generatePlacementParagraphs(
             .filter(m => m.status !== "computed-with-result")
             .map(m => ({ id: m.id, status: m.status })),
           strengthAvailability:
-            "Shadbala and Bhava Bala are not present in this method ledger; dignity and BAV are distinct measures.",
+            synthesis.methodFindings.filter(m => ["vedic-shadbala", "vedic-bhava-bala"].includes(m.id)).map(m => ({id:m.id,status:m.status})),
         }),
       },
     ],

@@ -57,7 +57,7 @@ describe("Mandatory shared Master Chart formation", () => {
       "combined",
       "Read Saturn's present and natal framework"
     );
-    expect(synthesis.methodFindings).toHaveLength(32);
+    expect(synthesis.methodFindings).toHaveLength(MASTER_METHOD_IDS.length * 2);
     expect(snapshot.snapshotId).toBe(bound.snapshotId);
     const contacts = snapshot.layers["transit-activation-layer"]
       .results as any[];

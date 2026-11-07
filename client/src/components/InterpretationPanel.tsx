@@ -292,6 +292,7 @@ function InterpretationPanelInner({
     // The full calculated synthesis is the primary chart reading, not an opt-in extra.
     masterSynthesis.mutate({
       ...chart.input,
+      chart,
       worldview: chart.worldview,
       mode,
       question: activeQuestion || "Synthesize every calculated doctrine and show the evidence.",
@@ -529,13 +530,17 @@ function InterpretationPanelInner({
         <h3 className="text-xl font-semibold text-cyan-100">Unified Master Chart Synthesis</h3>
         <p className="mt-2 text-sm text-slate-300">Your calculated doctrines and their evidence-backed synthesis load automatically with the chart. Unavailable methods are identified rather than invented.</p>
         {masterSynthesis.isPending && <p role="status" className="mt-3 text-sm text-cyan-200">Calculating your full synthesis and tracing each available doctrine…</p>}
-        {masterSynthesis.error && <p role="alert" className="mt-3 text-sm text-rose-300">{masterSynthesis.error.message}</p>}
+        {masterSynthesis.error && <div role="alert" className="mt-3 text-sm text-rose-300"><p>{masterSynthesis.error.message}</p><button type="button" className="mt-2 underline" onClick={() => {
+          const request = ++masterSynthesisRequest.current;
+          masterSynthesis.mutate({ ...chart.input, chart, worldview: chart.worldview, mode, question: activeQuestion || "Synthesize every calculated doctrine and show the evidence." }, { onSuccess: data => { if (request === masterSynthesisRequest.current) setVisibleMasterSynthesis(data); } });
+        }}>Retry synthesis</button></div>}
         {visibleMasterSynthesis && <div className="mt-4 space-y-3 text-sm text-slate-200">
           <p className="font-medium">{visibleMasterSynthesis.dominantConclusion}</p>
           <p className="text-xs text-slate-300">Evidence traced: {Math.round(visibleMasterSynthesis.qualityAudit.groundedRatio * 100)}% · {visibleMasterSynthesis.qualityAudit.passed ? "Coverage audit passed" : "Coverage review required"}</p>
           {!visibleMasterSynthesis.qualityAudit.passed && <p role="alert" className="text-xs text-amber-200">{visibleMasterSynthesis.qualityAudit.unsupportedClaims.length} evidence coverage issues. Review method findings before relying on this summary.</p>}
           <p className="text-xs text-cyan-200">Methods evaluated: {visibleMasterSynthesis.methodLedgerSummary.totalEvaluated} · Computed: {visibleMasterSynthesis.methodLedgerSummary.computedWithResult} · Reference only: {visibleMasterSynthesis.methodLedgerSummary.referenceOnly} · Failed: {visibleMasterSynthesis.methodLedgerSummary.failed}</p>
-          {visibleMasterSynthesis.integratedNarrative.map((line, index) => <p key={index}>{line}</p>)}
+          {visibleMasterSynthesis.narrative.sections.map(section => <div key={section.id} className="space-y-2"><h4 className="font-semibold text-cyan-100">{section.title}</h4><p className="whitespace-pre-line">{section.text}</p></div>)}
+          <details className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer">How each method shaped this reading</summary><div className="mt-3 space-y-3">{visibleMasterSynthesis.narrative.methodContributions.map(contribution => <div key={contribution.methodId}><p className="font-medium">{visibleMasterSynthesis.methodOutcomes.find(m => m.methodId === contribution.methodId)?.methodName} · {contribution.methodId.startsWith("transit:") ? "Event" : "Base chart"}</p><p>{contribution.contribution}</p><p className="mt-1 text-xs text-slate-400">{contribution.findingIds.join(", ")}</p></div>)}</div></details>
           <div className="space-y-2">
             <h4 className="font-semibold text-cyan-100">Every recorded method and its calculated findings</h4>
             {visibleMasterSynthesis.methodFindings.map(method => <details key={method.id} className="rounded-lg border border-white/10 p-3">

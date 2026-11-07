@@ -1,3 +1,4 @@
+import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { describe, it, expect } from "vitest";
 import { buildUnifiedMasterChart } from "./masterChart";
 import {
@@ -80,7 +81,7 @@ describe("Master Synthesizer Pipeline", () => {
     }
 
     // Verify method ledger summary reports real counts
-    expect(result.methodLedgerSummary.totalEvaluated).toBe(16);
+    expect(result.methodLedgerSummary.totalEvaluated).toBe(MASTER_METHOD_IDS.length);
     expect(result.methodLedgerSummary.computedWithResult).toBeGreaterThanOrEqual(10);
     expect(result.methodLedgerSummary.referenceOnly).toBe(1); // Chinese 28 Xiu
 

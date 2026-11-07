@@ -1,3 +1,4 @@
+import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { describe, expect, it } from "vitest";
 import { buildUnifiedMasterChart } from "./masterChart";
 import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/canon/retriever";
@@ -19,8 +20,8 @@ describe("structured method-specific outcomes", () => {
     );
     const outcomes = buildMethodOutcomes(snapshot, canon);
 
-    expect(outcomes).toHaveLength(16);
-    expect(new Set(outcomes.map(outcome => outcome.methodId)).size).toBe(16);
+    expect(outcomes).toHaveLength(MASTER_METHOD_IDS.length);
+    expect(new Set(outcomes.map(outcome => outcome.methodId)).size).toBe(MASTER_METHOD_IDS.length);
     for (const outcome of outcomes) {
       expect(["interpreted", "reference-only", "not-applicable", "failed"]).toContain(outcome.status);
       expect(outcome.chartScope).toBe(outcome.methodId === "transit-activation-layer" ? "event" : "natal");
