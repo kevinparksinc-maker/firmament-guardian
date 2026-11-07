@@ -387,9 +387,14 @@ async function generatePlacementParagraphs(
       },
     ],
   });
+  // Retain all method IDs/evidence while tightening individual excerpts when
+  // new Canon layers increase the packet. Split only if even minimum excerpts
+  // cannot fit; never silently remove a method or invent substitute judgments.
   let request = requestFor(260);
-  if (JSON.stringify(request.messages).length > MINI_REQUEST_CHAR_LIMIT)
-    request = requestFor(150);
+  for (const excerptLimit of [150, 120, 95, 75, 50]) {
+    if (JSON.stringify(request.messages).length <= MINI_REQUEST_CHAR_LIMIT) break;
+    request = requestFor(excerptLimit);
+  }
   if (
     JSON.stringify(request.messages).length > MINI_REQUEST_CHAR_LIMIT &&
     packets.length > 1
