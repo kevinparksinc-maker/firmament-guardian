@@ -9,6 +9,7 @@ import { HORARY_TOPICS } from "../shared/horary";
 import { calculateLookahead, type Lookahead } from "./horaryLookahead";
 import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
 import { HORARY_SYSTEM as HORARY_SPECIALIZED_SYSTEM } from "./horary-instructions";
+import { FULL_SYNTHESIS_STYLE } from "./master-interpreter";
 import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
 import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
 import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever";
@@ -424,7 +425,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   };
 }
 
-const HORARY_SYSTEM = `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY READING PRESENTATION — FLEXIBLE\nThe three-wheel framework guides examination, not the conclusion or format. Select the order, emphasis, and level of detail that best answer the actual question. No exact headings or mandatory emotional preamble. Give clear evidence for conclusions, including challenging and contradictory testimony.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
+const HORARY_SYSTEM = `${FULL_SYNTHESIS_STYLE}\n\n---\n\n${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY READING PRESENTATION — FLEXIBLE\nThe three-wheel framework guides examination, not the conclusion or format. Select the order, emphasis, and level of detail that best answer the actual question. No exact headings or mandatory emotional preamble. Give clear evidence for conclusions, including challenging and contradictory testimony.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
 
 function responseText(content: string | Array<{ type: string; text?: string }> | undefined) {
   return typeof content === "string"
