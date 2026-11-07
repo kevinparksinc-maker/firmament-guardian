@@ -7,7 +7,7 @@ import {
 import { z } from "zod";
 import type { ChartResult, ChartRow } from "./astronomy";
 import { invokeLLM } from "./_core/llm";
-import { buildAstrologyInterpreterSystem, MINI_SYNTHESIS_STYLE } from "./master-interpreter";
+import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import {
   synthesizeChartForReading,
   synthesizeMasterSnapshot,
@@ -343,7 +343,6 @@ async function generatePlacementParagraphs(
   synthesis: SynthesisResult
 ): Promise<ChartPageReading> {
   const instruction = buildAstrologyInterpreterSystem(
-    MINI_SYNTHESIS_STYLE,
     `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. These are exact excerpts from executed method judgments, not raw calculations. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`
   );
   const requestFor = (limit: number) => ({
