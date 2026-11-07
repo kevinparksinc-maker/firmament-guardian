@@ -1,4 +1,5 @@
 import { invokeLLM } from "../_core/llm";
+import { MINI_SYNTHESIS_STYLE } from "../master-interpreter";
 import { buildAstrologyEvidencePacket } from "../astrologyKnowledge";
 import type { ChartResult } from "../astronomy";
 import { PLACEMENT_METHODS } from "./registry";
@@ -76,7 +77,7 @@ export async function synthesizePlacement(chart: ChartResult, body: string, ques
   const packet = buildPlacementPacket(chart, body, question);
   const response = await invokeLLM({
     messages: [
-      { role: "system", content: "You produce precise, grounded two-paragraph astrology placement interpretations from complete structured evidence packets." },
+      { role: "system", content: `${MINI_SYNTHESIS_STYLE}\nProduce precise, grounded two-paragraph astrology placement interpretations from the supplied evidence packet.` },
       { role: "user", content: packet.prompt },
     ],
     maxTokens: 900,
