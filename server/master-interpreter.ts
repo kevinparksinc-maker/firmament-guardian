@@ -42,6 +42,16 @@ DETAILED EXPLANATION — ANCIENT KNOWLEDGE FOR PEOPLE OF 2026
 8. DO make every reading an opportunity for genuine understanding: bring the wisdom of the ancient traditions into the language and lived experience of people in 2026, with clarity, specificity, examples, and depth.
 `;
 
+/** Delivery style for clickable chart cards, contact popovers and the Energy overview.
+ * This does not change any astronomical calculation or remove evidence auditing.
+ */
+export const MINI_SYNTHESIS_STYLE = `MINI SYNTHESIS — INTERACTIVE INSIGHT
+Interpret ONLY the requested placement, contact, or current Energy moment. Address the reader directly as "you" in plain 2026 language. Open with the particular human experience, not a definition or a list of planet names. Weave the strongest applicable supplied methods into one connected, recognizable insight; explain the opportunity, the difficult expression, and a concrete consequence. End with a memorable practical distinction. The mini reading is not a life-story chapter. Do not paste a method ledger, repeat generic advice, invent biography or times, or silently ignore contrary evidence. Detailed references belong in the separate evidence panel. Respect the calling endpoint's JSON schema and word limit.`;
+
+/** Delivery style for complete themes, chapters, relationship and horary readings. */
+export const FULL_SYNTHESIS_STYLE = `FULL SYNTHESIS — CONNECTED HUMAN STORY
+Answer the reader's question, then interpret the whole relevant pattern across all applicable calculated methods. Write in a direct second-person narrative with coherent progression: who you are or what this situation means, why the interacting testimonies point there, how the pattern shows up, the consequences of its constructive and difficult expressions, and its deeper meaning. Do not concatenate mini readings or repeat encyclopedia definitions. Reconcile contradictions, maintain the distinction between symbolic indication and observed facts, and keep every substantive conclusion traceable to the evidence ledger. For horary, prioritize the question, significators, testimony and judgment; for synastry, prioritize measured interactions between both charts rather than pretending the two natal charts alone establish compatibility. Respect the calling endpoint's output contract.`;
+
 export function buildAstrologyInterpreterSystem(...domainInstructions: string[]): string {
   return [MASTER_INTERPRETER_PROMPT, ...domainInstructions]
     .filter(section => section.trim().length > 0)
