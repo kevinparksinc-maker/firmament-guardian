@@ -18,6 +18,8 @@ export function SystematicDeconstruction({
   onInterpretBody?: (name: string) => void;
 }) {
   const result = usePlacementMiniReadings(chart);
+  const completeReading =
+    result.data && "methodOutcomes" in result.data ? result.data : undefined;
   const [filter, setFilter] = useState("All");
   const rows = placementRows(chart).filter(
     row =>
@@ -60,16 +62,16 @@ export function SystematicDeconstruction({
           </button>
         </div>
       )}
-      {result.data?.methodOutcomes && (
+      {completeReading && (
         <section aria-label="Complete method synthesis" className="space-y-3 rounded-2xl border border-cyan-300/25 bg-cyan-950/20 p-4 sm:p-5">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200">Complete method synthesis</p>
             <h3 className="mt-1 font-serif text-xl font-bold text-white">Every applicable method is shown below</h3>
             <p className="mt-2 text-sm leading-6 text-slate-300">The planetary cards are concise placement summaries. This ledger is the authoritative cross-method reading: each calculated method contributes its own finding judgments, evidence, and limitation before the themes are combined.</p>
           </div>
-          <p className="rounded-xl border border-amber-200/20 bg-amber-100/[0.04] p-3 text-sm leading-6 text-amber-50">{result.data.dominantConclusion}</p>
+          <p className="rounded-xl border border-amber-200/20 bg-amber-100/[0.04] p-3 text-sm leading-6 text-amber-50">{completeReading.dominantConclusion}</p>
           <div className="grid gap-3 lg:grid-cols-2">
-            {result.data.methodOutcomes.map(outcome => (
+            {completeReading.methodOutcomes.map(outcome => (
               <article key={outcome.methodId} className="rounded-xl border border-white/10 bg-black/20 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>

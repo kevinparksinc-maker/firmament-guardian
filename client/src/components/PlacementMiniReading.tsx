@@ -34,6 +34,20 @@ export function usePlacementMiniReadings(
     queryFn: async () => {
       // One persisted batch per exact natal chart/framework/account. Live sky
       // refreshes do not spend another natal interpretation request.
+      const batchKey = storagePrefix + identity + ":batch:" + names.join(",");
+      try {
+        const cachedBatch = JSON.parse(
+          localStorage.getItem(batchKey) || "null"
+        ) as MiniBatch | null;
+        if (
+          cachedBatch?.snapshotId &&
+          cachedBatch.placements?.length === names.length &&
+          names.every(name => cachedBatch.placements.some(p => p.name === name))
+        )
+          return cachedBatch;
+      } catch {
+        /* Storage is optional. */
+      }
       const keyFor = (name: string) => storagePrefix + identity + ":" + name;
       const saved = names.map(name => {
         try {
@@ -71,6 +85,7 @@ export function usePlacementMiniReadings(
               placements: [placement],
             })
           );
+        localStorage.setItem(batchKey, JSON.stringify(result));
       } catch {
         /* Storage is optional. */
       }

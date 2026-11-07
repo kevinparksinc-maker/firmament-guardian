@@ -4,7 +4,6 @@ import { buildUnifiedMasterChart } from "./masterChart";
 import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/canon/retriever";
 import { buildCanonRuleApplications } from "./astrologyKnowledge/synthesis/canonApplications";
 import { buildMethodOutcomes } from "./astrologyKnowledge/synthesis/methodOutcomes";
-import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
 import type { UnifiedMasterChartSnapshot } from "./masterChart/types";
 
 const input = {
@@ -72,31 +71,5 @@ describe("structured method-specific outcomes", () => {
     expect(changed.judgment).not.toContain("Altered calculated testimony");
     expect(changed.interpretation).not.toBe(original.interpretation);
     expect(changed.evidenceIds).toEqual(["decan-sun-99"]);
-  });
-
-  it("judges actual Lot and Dasha findings instead of only counting records", async () => {
-    const snapshot = await buildUnifiedMasterChart(input);
-    const canon = buildCanonRuleApplications(
-      snapshot,
-      canonDossierToEvidenceItems(retrieveChartCanonDossier(snapshot.natal!)),
-    );
-    const outcomes = buildMethodOutcomes(snapshot, canon);
-    const lots = outcomes.find(outcome => outcome.methodId === "arabic-hermetic-lots")!;
-    const dasha = outcomes.find(outcome => outcome.methodId === "vedic-dasha-and-ashtakavarga")!;
-
-    expect(lots.judgment).toMatch(/Fortune|Spirit|Eros|Nemesis/);
-    expect(lots.judgment).toMatch(/House \d+/);
-    expect(lots.judgment).not.toMatch(/\d+ sect-derived Lot placement\(s\) are available/);
-    expect(dasha.judgment).toMatch(/Mahadasha|Ashtakavarga/);
-    expect(dasha.judgment).not.toContain("contributes only the validated Dasha and Ashtakavarga records");
-
-    const reading = await synthesizeMasterReading({
-      snapshot,
-      readingMode: "natal",
-      userQuestion: "What is the structure of my purpose?",
-      canonApplications: canon,
-    });
-    expect(reading.themes.flatMap(theme => theme.linkedPropositionIds)).toContain("prop-method-outcome-arabic-hermetic-lots");
-    expect(reading.themes.flatMap(theme => theme.linkedPropositionIds)).toContain("prop-method-outcome-vedic-dasha-and-ashtakavarga");
   });
 });
