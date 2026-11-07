@@ -881,7 +881,7 @@ export function applyMethodRules(
         emit(
           i,
           body,
-          `${body} is calculated at ${v.display}. The documented Sumerian association with ${a.name} connects it to ${a.historicalMeaning} This present-day symbolic interpretation asks you to ${a.modernInterpretiveLens.charAt(0).toLowerCase() + a.modernInterpretiveLens.slice(1)} The association qualifies the chart's other methods but does not replace them.`,
+          `${body} at ${v.display} echoes Sumerian ${a.name}: ${a.historicalMeaning} Modern lens: ${a.modernInterpretiveLens}`,
           `Historically attested ${body} / ${a.name}; interpretive extension explicitly modern`,
           `sumerian-celestial-${body.toLowerCase()}`,
           SUMERIAN_CELESTIAL_SOURCE_TITLE,
