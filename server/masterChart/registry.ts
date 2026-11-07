@@ -3,6 +3,7 @@ import type { LayerRecord } from "./types";
 /** Every chart evaluates this same formation; scope changes results, not membership. */
 export const MASTER_METHOD_IDS = [
   "western-planets-and-signs",
+  "sumerian-celestial-foundations",
   "western-houses-and-angles",
   "western-aspects-and-orbs",
   "western-essential-dignities",
