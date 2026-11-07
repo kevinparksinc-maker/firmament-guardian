@@ -59,7 +59,8 @@ export type FocusedReading = {
 
 export async function buildFocusedReading(
   chart: ChartResult,
-  target: FocusTarget
+  target: FocusTarget,
+  includeMiniNarrative = false
 ): Promise<FocusedReading> {
   const question = `Explain ${target.name} through its actual placement, conditions and contacts; no generic substitution.`;
   const verification = await synthesizeChartForReading(
@@ -321,7 +322,8 @@ export async function buildFocusedReading(
         rootedDossier.planetInHouseKnowledge.sourceCaveat,
         rootedDossier.planetInHouseKnowledge.interpretiveGuardrail
       );
-    reading.miniNarrative = await narrateFocusedContactMini(reading);
+    if (includeMiniNarrative)
+      reading.miniNarrative = await narrateFocusedContactMini(reading);
     return reading;
   }
   const sun = canonicalChart.movingBodies.find(body => body.name === "Sun");
