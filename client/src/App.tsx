@@ -56,6 +56,7 @@ function Router() {
       <Route path={"/synastry"} component={SynastryPage} />
       <Route path={"/transit-sky"} component={StandaloneTransitPage} />
       <Route path={"/explore"} component={ExplorePage} />
+      <Route path={"/sports-lab"} component={SportsLabPage} />
       <Route path={"/sky"} component={SkyHomePrototype} />
       <Route path={"/life-story"} component={LifeStoryPage} />
       <Route path={"/horary"} component={HoraryPage} />
