@@ -133,13 +133,13 @@ export function MasterSynthesizerPanel({
             <div className="flex items-center gap-2 mb-3">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                Dominant Core Synthesis
+                Full Master Reading
               </span>
 
             </div>
 
             <p className="text-sm md:text-base leading-relaxed text-slate-100 font-medium">
-              {result.narrative?.answer ?? result.dominantConclusion}
+              {result.narrative?.sections?.[0]?.text ? "Your complete interpretation is presented below." : (result.narrative?.answer ?? result.dominantConclusion)}
             </p>
 
             <div className="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
