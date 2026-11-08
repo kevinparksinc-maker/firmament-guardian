@@ -1,3 +1,4 @@
+import { invokeLLM } from "../../_core/llm";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type {
   SynthesisInput,
@@ -130,11 +131,55 @@ export async function synthesizeMasterReading(
     `Calculation coverage: ${ledger.filter(l => l.status === "computed-with-result").length} methods returned results, ${methodLedgerSummary.referenceOnly} are reference-only, ${methodLedgerSummary.notApplicable} are not applicable, and ${methodLedgerSummary.failed} failed. ${missingEvidenceIds.length === 0 ? "All recorded computed evidence IDs are incorporated into interpreted themes." : `${missingEvidenceIds.length} computed evidence IDs are not incorporated into interpreted themes.`}`
   );
 
+  // The ledger is the source of truth; AI must interpret it, not replace it
+  // with a static template. Every computed layer is included in the request.
+  const ai = await invokeLLM({
+    messages: [
+      {
+        role: "system",
+        content: [
+          "You are The Absolute Master Synthesizer. Write an original, direct,",
+          "second-person natal/transit reading in clear contemporary language.",
+          "Explain WHAT the person experiences, WHY the actual chart evidence",
+          "supports it, HOW the interacting methods modify one another, and",
+          "the CONSEQUENCES and MEANING. Tell a coherent human story.",
+          "Read EVERY computed method in the provided ledger. Reconcile",
+          "supporting and conflicting findings, God and Agent views.",
+          "Do not invent placements, results, timing, or missing methods.",
+          "Do not print JSON, raw method inventories, or generic templates.",
+          "If a method is unavailable, do not claim it was calculated.",
+          "Ground the interpretation in named placements and methods.",
+        ].join(" "),
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          question,
+          readingMode,
+          snapshotId: snapshot.snapshotId,
+          godView: snapshot.godView,
+          agentView: snapshot.agentView,
+          methodExecutionLedger: snapshot.methodExecutionLedger,
+          tensions,
+          prioritizedThemes: orderedThemes,
+        }),
+      },
+    ],
+    maxTokens: 3500,
+  });
+  const aiText = ai.choices[0]?.message?.content;
+  const narrative = typeof aiText === "string"
+    ? aiText.trim()
+    : Array.isArray(aiText)
+      ? aiText.filter(part => part.type === "text").map(part => part.text).join("\\n").trim()
+      : "";
+  if (!narrative) throw new Error("Master Synthesizer returned an empty interpretation");
+
   return {
     snapshotId: snapshot.snapshotId,
     mode: readingMode,
-    dominantConclusion,
-    integratedNarrative,
+    dominantConclusion: narrative.split(/\\n\\n/)[0] || narrative,
+    integratedNarrative: [narrative],
     methodFindings,
     themes,
     contradictionsAndTensions: tensions,
