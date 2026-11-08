@@ -17,7 +17,7 @@ async function generate(synthesis: SynthesisResult, question: string) {
   // Keep audit status in the supplied evidence instead.
   const bindings = buildNarrativePacket(synthesis, question);
   const response = await invokeLLM({
-    max_tokens: 3000,
+    max_tokens: 8192,
     timeoutMs: 180_000,
     messages: [
       { role: "system", content: FULL_SYNTHESIS_STYLE + "\n\nTHE ABSOLUTE — MASTER SYNTHESIS. Read every supplied raw calculated outcome, complete method layer, and chart placement. Synthesize them directly into a complete, natural second-person reading. Explain WHAT, WHY, HOW, CONSEQUENCES and MEANING. Do not omit calculated results based on audit status, method ranking, or prewritten interpretations. Respond in natural prose without JSON, IDs, required sections, or a prescribed word count. Do not invent missing calculations." },
