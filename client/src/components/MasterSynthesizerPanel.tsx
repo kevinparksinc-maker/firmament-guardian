@@ -135,14 +135,11 @@ export function MasterSynthesizerPanel({
                 <Sparkles className="w-3 h-3" />
                 Dominant Core Synthesis
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3" />
-                {result.qualityAudit.passed ? `${evidencePercent}% Evidence Traced` : `Evidence Review Required · ${evidencePercent}% Traced`}
-              </span>
+
             </div>
 
             <p className="text-sm md:text-base leading-relaxed text-slate-100 font-medium">
-              {result.dominantConclusion}
+              {result.narrative?.answer ?? result.dominantConclusion}
             </p>
 
             <div className="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
@@ -175,7 +172,7 @@ export function MasterSynthesizerPanel({
               ))}
             </div>
           </details>
-          <details className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6"><summary className="cursor-pointer text-sm text-cyan-200">How every method shaped the reading</summary><div className="mt-4 space-y-4">{(result.narrative?.methodContributions ?? []).map(contribution => <div key={contribution.methodId}><h4 className="text-sm font-semibold text-cyan-100">{result.methodOutcomes.find(m => m.methodId === contribution.methodId)?.methodName} · {contribution.methodId.startsWith("transit:") ? "Event" : "Base chart"}</h4><p className="text-sm text-slate-200">{contribution.contribution}</p><p className="mt-1 text-xs text-slate-400">Findings: {contribution.findingIds.join(", ")}</p></div>)}</div></details>
+          {Boolean(result.narrative?.methodContributions?.length) && <details className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6"><summary className="cursor-pointer text-sm text-cyan-200">How every method shaped the reading</summary><div className="mt-4 space-y-4">{(result.narrative?.methodContributions ?? []).map(contribution => <div key={contribution.methodId}><h4 className="text-sm font-semibold text-cyan-100">{result.methodOutcomes.find(m => m.methodId === contribution.methodId)?.methodName} · {contribution.methodId.startsWith("transit:") ? "Event" : "Base chart"}</h4><p className="text-sm text-slate-200">{contribution.contribution}</p><p className="mt-1 text-xs text-slate-400">Findings: {contribution.findingIds.join(", ")}</p></div>)}</div></details>}
 
           {/* Human Domain Themes Grid */}
           <div className="space-y-4">
