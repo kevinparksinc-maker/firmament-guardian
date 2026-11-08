@@ -8,8 +8,8 @@ export function buildNarrativePacket(synthesis: SynthesisResult, question: strin
       mode: synthesis.mode,
       snapshot: synthesis.sourceSnapshot,
       calculatedMethodOutcomes: synthesis.sourceSnapshot.methodExecutionLedger,
-      interpretedMethodOutcomes: synthesis.methodOutcomes,
-      canonApplications: synthesis.canonApplications,
+      // Send calculated evidence and Canon references, not prewritten method judgments.
+      canonApplications: synthesis.canonApplications.map(({ judgments, interpretation, ...application }: any) => application),
     },
   };
 }
