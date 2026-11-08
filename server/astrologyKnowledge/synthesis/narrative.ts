@@ -25,6 +25,9 @@ async function generate(synthesis: SynthesisResult, question: string) {
   });
   const choice = response.choices?.[0];
   if (!choice) throw new Error("MASTER_NARRATIVE_EMPTY: AI provider returned no response.");
+  if (choice.finish_reason === "length" || choice.finish_reason === "max_tokens") {
+    throw new Error("MASTER_NARRATIVE_TRUNCATED: AI reading reached its output limit; do not display as complete.");
+  }
   const content = choice.message.content;
   const text = (typeof content === "string" ? content : (content ?? []).filter(p => p.type === "text").map(p => (p as {text:string}).text).join("")).trim();
   if (!text) throw new Error("MASTER_NARRATIVE_EMPTY: AI provider returned no reading text.");
