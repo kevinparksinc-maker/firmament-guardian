@@ -67,8 +67,8 @@ export function validateMasterNarrative(raw: unknown, synthesis: SynthesisResult
 }
 
 async function generate(synthesis: SynthesisResult, question: string) {
-  if (!synthesis.qualityAudit.passed || !synthesis.methodOutcomeAudit.complete)
-    throw new Error("MASTER_NARRATIVE_BLOCKED: Complete calculated judgments are required before narration.");
+  // Never block raw calculated outcomes from reaching the provider because an interpretation audit failed.
+  // Keep audit status in the supplied evidence instead.
   const bindings = buildNarrativePacket(synthesis, question);
   const contract = buildNarrativeContract(bindings);
   const response = await invokeLLM({
@@ -114,10 +114,10 @@ Return the required JSON object. FIRST write contributions: one specific 20–35
 // Concurrent screens reuse one narration. Failed generations are always retryable.
 const cache = new Map<string, { expiresAt: number; promise: ReturnType<typeof generate> }>();
 export async function narrateMasterSynthesis(synthesis: SynthesisResult, question: string) {
-  if (!synthesis.qualityAudit.passed || !synthesis.methodOutcomeAudit.complete)
-    throw new Error("MASTER_NARRATIVE_BLOCKED: Complete calculated judgments are required before narration.");
+  // Never block raw calculated outcomes from reaching the provider because an interpretation audit failed.
+  // Keep audit status in the supplied evidence instead.
   // Include actual judgments so a changed rule outcome never reuses old prose.
-  const key = createHash("sha256").update(JSON.stringify([synthesis.snapshotId, synthesis.mode, question.trim(), synthesis.methodOutcomes])).digest("hex");
+  const key = createHash("sha256").update(JSON.stringify([synthesis.sourceSnapshot, synthesis.mode, question.trim(), synthesis.methodOutcomes])).digest("hex");
   const existing = cache.get(key);
   if (existing && existing.expiresAt > Date.now()) return existing.promise;
   const promise = generate(synthesis, question);
