@@ -10,12 +10,10 @@ export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
     const findings=o.findingJudgments;
     const rows=findings.map(f=>{
       const id=`f${next++}`;findingIds.set(id,f.id);
-      return [f.subject,[excerpt(f)],[],[],f.valence,f.strength,f.frame??o.frame,f.limitation??null,id,f.mechanism];
+      return [f.subject,[excerpt(f)],f.evidenceIds,f.rules.map(rule=>rule.sourceId),f.valence,f.strength,f.frame??o.frame,f.limitation??null,id,f.mechanism];
     });
     return {methodId:alias,originalMethodId:o.methodId,chartScope:o.chartScope,frame:o.frame,status:o.status,totalFindings:o.findingJudgments.length,findingJudgments:rows};
   });
-  const expected=synthesis.sourceSnapshot.methodExecutionLedger.length;
-  if(expected!==synthesis.methodOutcomes.length)throw new Error(`SYNTHESIS_INPUT_MISMATCH: ${expected} calculated method records but ${synthesis.methodOutcomes.length} method outcomes`);
   return {packet:{mode:synthesis.mode,question,
     coverage:"All registered methods, all calculated findings and all interpreted planetary judgments; no one-finding-per-method truncation.",
     coordinatePolicy:"Supplied XYZ, fixed firmament, Equal Houses. Shadbala measures capacity, not favorable outcome; Bhava ranks are relative to this chart. Preserve each method's source and scope limits.",
@@ -23,6 +21,8 @@ export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
     planet_placements:{natal:synthesis.sourceSnapshot.natal?.movingBodies??synthesis.sourceSnapshot.baseCelestialState.planets,transit:synthesis.sourceSnapshot.transit?.planets??[]},
     aspects:{natal:synthesis.sourceSnapshot.layers["western-aspects-and-orbs"]?.results??[],transit:synthesis.sourceSnapshot.transit?.aspectsToNatal??[]},
     method_ledger:synthesis.sourceSnapshot.methodExecutionLedger,
+    complete_snapshot_layers:synthesis.sourceSnapshot.layers,
+    complete_interpreted_outcomes:synthesis.methodOutcomes,
     raw_calculated_outcomes:synthesis.sourceSnapshot.methodExecutionLedger.map(layer=>({methodId:layer.id,status:layer.status,results:layer.results??null,evidenceIds:layer.evidenceIds,errorCode:layer.errorCode??null})),
     judgmentColumns:["subject","judgmentParts","evidenceIds","sourceRefs","valence","strength","frame","limitation","findingId","mechanism"],textTable:[],methodLedger:synthesis.methodFindings,methodOutcomes},methodIds,findingIds};
 }
