@@ -5,26 +5,15 @@ export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
   const methodIds=new Map<string,string>(),findingIds=new Map<string,string>();
   const excerpt=(f:FindingJudgment)=>f.judgment;
   let next=0;
-  const selected=new Set<string>();
   const methodOutcomes=synthesis.methodOutcomes.map((o,i)=>{
     const alias=`m${i}`;methodIds.set(alias,o.methodId);
     const findings=o.findingJudgments;
     const rows=findings.map(f=>{
-      const id=`f${next++}`;findingIds.set(id,f.id);selected.add(f.id);
+      const id=`f${next++}`;findingIds.set(id,f.id);
       return [f.subject,[excerpt(f)],[],[],f.valence,f.strength,f.frame??o.frame,f.limitation??null,id,f.mechanism];
     });
     return {methodId:alias,originalMethodId:o.methodId,chartScope:o.chartScope,frame:o.frame,status:o.status,totalFindings:o.findingJudgments.length,findingJudgments:rows};
   });
-  // Preserve both kinds of testimony even if the principal selection favors one.
-  for(const valence of ["supportive","challenging"]){
-    if(methodOutcomes.some(o=>o.findingJudgments.some(row=>row[4]===valence)))continue;
-    for(let i=0;i<synthesis.methodOutcomes.length;i++){
-      const o=synthesis.methodOutcomes[i];if(o.status!=="interpreted")continue;
-      const f=o.findingJudgments.find(f=>f.valence===valence&&!selected.has(f.id));if(!f)continue;
-      const id=`f${next++}`;findingIds.set(id,f.id);selected.add(f.id);
-      methodOutcomes[i].findingJudgments.push([f.subject,[excerpt(f)],[],[],f.valence,f.strength,f.frame??o.frame,f.limitation??null,id,f.mechanism]);break;
-    }
-  }
   const expected=synthesis.sourceSnapshot.methodExecutionLedger.length;
   if(expected!==synthesis.methodOutcomes.length)throw new Error(`SYNTHESIS_INPUT_MISMATCH: ${expected} calculated method records but ${synthesis.methodOutcomes.length} method outcomes`);
   return {packet:{mode:synthesis.mode,question,
