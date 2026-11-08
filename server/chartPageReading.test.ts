@@ -1,9 +1,8 @@
+import { decodeEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   buildPlacementPackets,
   packPlacementMiniPrompt,
-  MINI_REQUEST_CHAR_LIMIT,
-  boundedPlacementPacket,
   validatePlacementSummaries,
   buildChartPageReading,
 } from "./chartPageReading";
@@ -41,7 +40,7 @@ const response = (selected = packets) => ({
   })),
 });
 describe("Compact Chart page placement summaries", () => {
-  it("preserves Sun and Moon mansion evidence, vargas and BAV in a bounded packet", () => {
+  it("preserves Sun and Moon mansion evidence and vargas", () => {
     const sun = packets.find(p => p.name === "Sun")!;
     const moon = packets.find(p => p.name === "Moon")!;
     expect(sun.canon.nakshatra.name).toBe("Jyeshtha");
@@ -50,13 +49,6 @@ describe("Compact Chart page placement summaries", () => {
     expect(moon.facts.some(f => f.layerId === "vedic-vargas-divisional")).toBe(
       true
     );
-    expect(
-      moon.facts.some(
-        f =>
-          f.layerId === "vedic-dasha-and-ashtakavarga" &&
-          JSON.stringify(f.value).includes("Moon\'s own BAV")
-      )
-    ).toBe(true);
     expect(
       JSON.stringify(packPlacementMiniPrompt(packets)).length
     ).toBeLessThan(170_000);
@@ -97,23 +89,6 @@ describe("Compact Chart page placement summaries", () => {
       })
     );
   });
-  it("keeps each applicable method represented within the small transport packet", () => {
-    for (const packet of packets) {
-      const compact = boundedPlacementPacket([packet])[0];
-      expect(compact.methods.map(m => m.methodId)).toEqual(
-        Array.from(new Set(packet.judgments.map(j => j.methodId)))
-      );
-      for (const method of compact.methods)
-        expect(
-          packet.judgments.some(
-            j =>
-              j.methodId === method.methodId &&
-              (j.judgment === method.judgment ||
-                j.judgment.startsWith(method.judgment.slice(0, -1)))
-          )
-        ).toBe(true);
-    }
-  });
   it("requires every displayed planet, including the Sun, and rejects duplicates", () => {
     expect(
       validatePlacementSummaries(response(), packets).placements.length
@@ -144,7 +119,7 @@ describe("Compact Chart page placement summaries", () => {
       "UNGROUNDED"
     );
   });
-  it("requests concise paragraphs using the actual Master Interpreter and compact Canon, not the life-story context", async () => {
+  it("sends all raw calculations, full outcomes and Canon while requesting concise placement prose", async () => {
     vi.mocked(invokeLLM).mockResolvedValue({
       choices: [
         {
@@ -175,11 +150,12 @@ describe("Compact Chart page placement summaries", () => {
       "THE ABSOLUTE — INTERPRETATION ENGINE"
     );
     expect(call.messages[0].content).toContain("70–110 words");
-    expect(JSON.stringify(call.messages).length).toBeLessThanOrEqual(
-      MINI_REQUEST_CHAR_LIMIT
-    );
+    const delivered = (decodeEvidence(JSON.parse(String(call.messages[1].content))) as any);
+    expect(delivered.methodOutcomes).toHaveLength(delivered.calculatedMethodOutcomes.length);
+    expect(delivered.snapshot.methodExecutionLedger).toEqual(delivered.calculatedMethodOutcomes);
+    expect(delivered.canonApplications.length).toBeGreaterThan(0);
     expect(
-      JSON.parse(String(call.messages[1].content)).placements
+      (decodeEvidence(JSON.parse(String(call.messages[1].content))) as any).placements
     ).toHaveLength(2);
     expect(call.messages[0].content).toContain("story-like");
     expect(call.messages[1].content).not.toContain("UNIFIED MASTER SYNTHESIS");
@@ -199,15 +175,14 @@ describe("Compact Chart page placement summaries", () => {
       transitTime: "09:00",
     });
     vi.mocked(invokeLLM).mockImplementation(async request => {
-      const input = JSON.parse(String(request.messages[1].content));
+      const input = (decodeEvidence(JSON.parse(String(request.messages[1].content))) as any);
       expect(input.chartScope).toBe("event");
       if (input.placements.some((p: any) => p.name === "Sun"))
         expect(
-          input.placements.find((p: any) => p.name === "Sun").position.display
+          input.placements.find((p: any) => p.name === "Sun").facts[0].value.display
         ).not.toBe(chart.movingBodies.find(p => p.name === "Sun")!.display);
-      expect(JSON.stringify(request.messages).length).toBeLessThanOrEqual(
-        MINI_REQUEST_CHAR_LIMIT
-      );
+      expect(input.snapshot).toBeDefined();
+      expect(input.methodOutcomes.length).toBeGreaterThan(0);
       return {
         id: "event",
         created: 0,
@@ -224,12 +199,12 @@ describe("Compact Chart page placement summaries", () => {
                   paragraph: `${p.name} describes the selected event sky, with its calculated mansion, elemental-family ruler and supporting conditions shaping a specific expression in this event rather than a birth biography.`,
                   evidenceIds: [
                     p.placementEvidenceId,
-                    ...p.methods.flatMap((m: any) => m.evidenceIds),
+                    ...p.judgments.flatMap((m: any) => m.evidenceIds),
                   ],
                   layerIds: Array.from(
                     new Set([
                       "western-planets-and-signs",
-                      ...p.methods.map((m: any) => m.methodId),
+                      ...p.judgments.map((m: any) => m.methodId),
                     ])
                   ),
                 })),

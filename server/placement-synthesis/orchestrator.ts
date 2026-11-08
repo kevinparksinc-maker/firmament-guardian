@@ -1,3 +1,6 @@
+import { stringifyEvidence } from "../astrologyKnowledge/synthesis/evidenceTransport";
+import { synthesizeChartForReading } from "../astrologyKnowledge/synthesis/readingBridge";
+import { buildNarrativePacket } from "../astrologyKnowledge/synthesis/narrativePacket";
 import { invokeLLM } from "../_core/llm";
 import { MINI_SYNTHESIS_STYLE } from "../master-interpreter";
 import { buildAstrologyEvidencePacket } from "../astrologyKnowledge";
@@ -75,14 +78,18 @@ export function buildPlacementPacket(chart: ChartResult, body: string, question 
 
 export async function synthesizePlacement(chart: ChartResult, body: string, question = "") {
   const packet = buildPlacementPacket(chart, body, question);
+  const { synthesis: fullSynthesis } = await synthesizeChartForReading(chart, chart.readingScope, question || `Interpret ${body}`);
   const response = await invokeLLM({
     messages: [
       { role: "system", content: `${MINI_SYNTHESIS_STYLE}\nProduce precise, grounded two-paragraph astrology placement interpretations from the supplied evidence packet.` },
-      { role: "user", content: packet.prompt },
+      { role: "user", content: packet.prompt + "\n\nFULL CALCULATED CHART AND METHOD OUTCOMES:\n" + stringifyEvidence(buildNarrativePacket(fullSynthesis, question).packet) },
     ],
     maxTokens: 900,
   });
   const content = response.choices[0]?.message?.content;
   const synthesis = typeof content === "string" ? content.trim() : "";
-  return { packet: { ...packet, prompt: undefined }, synthesis: synthesis || "No synthesis was returned by the interpreter." };
+  if (["length", "max_tokens"].includes(response.choices[0]?.finish_reason ?? ""))
+    throw new Error("PLACEMENT_SYNTHESIS_INCOMPLETE: AI response was truncated.");
+  if (!synthesis) throw new Error("PLACEMENT_SYNTHESIS_EMPTY: AI returned no reading.");
+  return { packet: { ...packet, prompt: undefined }, synthesis };
 }

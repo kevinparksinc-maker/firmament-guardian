@@ -218,7 +218,10 @@ describe("Mandatory shared Master Chart formation", () => {
         m => m.id === "vedic-nakshatras-and-padas"
       )!.status
     ).toBe("computed-with-result");
-    expect(chart.methodBindings!.synthesisAudit.passed).toBe(true);
+    // Canon without a local horizon remains in the AI input. Its unmatched
+    // rule-theme coverage is reported honestly rather than filtering it out.
+    expect(chart.methodBindings!.synthesisAudit.passed).toBe(false);
+    expect(chart.methodBindings!.synthesisAudit.canonApplicationCount).toBeGreaterThan(0);
   });
 
   it("sports charts inherit the same formation and expose the calculated results to adapters", async () => {

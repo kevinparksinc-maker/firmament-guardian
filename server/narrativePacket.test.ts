@@ -1,32 +1,38 @@
-import {describe,it,expect} from "vitest";
-import {buildUnifiedMasterChart} from "./masterChart/builder";
-import {synthesizeMasterSnapshot} from "./astrologyKnowledge/synthesis/readingBridge";
-import {buildNarrativePacket,restoreNarrativeIds} from "./astrologyKnowledge/synthesis/narrativePacket";
-it("keeps every method in the provider overview while preserving the full chart ledger",async()=>{
- const snap=await buildUnifiedMasterChart({location:"Dallas",latitude:32.7767,longitude:-96.797,timezone:"America/Chicago",date:"1986-11-20",time:"10:06",mode:"natal"});
- const s=(await synthesizeMasterSnapshot(snap,"natal","purpose")).synthesis;
- const before=JSON.stringify(s.methodOutcomes),brief=buildNarrativePacket(s,"purpose and creativity");
- expect(brief.packet.methodOutcomes).toHaveLength(s.methodOutcomes.length);
- expect(brief.packet.methodOutcomes.filter(o=>o.status==="interpreted").every(o=>o.findingJudgments.length>0)).toBe(true);
- expect(JSON.stringify(brief.packet).length).toBeLessThan(15000);
- expect(JSON.stringify(s.methodOutcomes)).toBe(before);
- const first=brief.packet.methodOutcomes.find(o=>o.findingJudgments.length)!;
- const id=first.findingJudgments[0][8] as string;
- const restored=restoreNarrativeIds({sections:[{findingIds:[id]}],methodContributions:[{methodId:first.methodId,findingIds:[id]}],methodsReviewed:[first.methodId]},brief) as any;
- expect(restored.sections[0].findingIds[0]).toBe(brief.findingIds.get(id));
- expect(restored.methodContributions[0].methodId).toBe(first.originalMethodId);
-});
+import { describe, it, expect } from "vitest";
+import { buildUnifiedMasterChart } from "./masterChart/builder";
+import { synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
+import { buildNarrativePacket } from "./astrologyKnowledge/synthesis/narrativePacket";
+import { encodeEvidence, decodeEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
 
-it("requires every interpreted method in the provider schema and binds every contribution to its visible section",async()=>{
- const {buildNarrativeContract}=await import("./astrologyKnowledge/synthesis/narrativePacket");
- const snap=await buildUnifiedMasterChart({location:"Dallas",latitude:32.7767,longitude:-96.797,timezone:"America/Chicago",date:"1986-11-20",time:"10:06",mode:"natal"});
- const s=(await synthesizeMasterSnapshot(snap,"natal","purpose")).synthesis,bindings=buildNarrativePacket(s,"purpose"),contract=buildNarrativeContract(bindings);
- const active=bindings.packet.methodOutcomes.filter(o=>o.status==="interpreted");
- const schema=contract.schema as any;
- expect(schema.properties.contributions.required).toEqual(active.map(o=>o.methodId));
- expect(contract.plan.every(p=>p.methodIds.length>=2)).toBe(true);
- const raw={answer:"A complete answer based on these calculated findings.",contributions:Object.fromEntries(active.map(o=>[o.methodId,"This method contributes its measured finding and condition to the connected interpretation of the assigned section."])),sections:Object.fromEntries(contract.plan.map(p=>[p.id,{title:p.id,text:"A connected section."}]))};
- const decoded=contract.decode(raw) as any;
- expect(decoded.methodContributions).toHaveLength(active.length);
- for(const c of decoded.methodContributions)expect(decoded.sections.find((s:any)=>s.id===c.sectionIds[0]).findingIds).toEqual(expect.arrayContaining(c.findingIds));
+const input = {location:"Dallas",latitude:32.7767,longitude:-96.797,timezone:"America/Chicago",date:"1986-11-20",time:"10:06",mode:"natal" as const};
+describe("Complete AI evidence delivery", () => {
+  it("retains the raw chart, every method outcome, every judgment and full Canon without clipping", async () => {
+    const snapshot = await buildUnifiedMasterChart(input);
+    const { synthesis } = await synthesizeMasterSnapshot(snapshot, "natal", "purpose");
+    const before = JSON.stringify(synthesis);
+    const { packet } = buildNarrativePacket(synthesis, "purpose");
+    expect(packet.snapshot).toBe(synthesis.sourceSnapshot);
+    expect(packet.calculatedMethodOutcomes).toEqual(snapshot.methodExecutionLedger);
+    expect(packet.methodOutcomes).toBe(synthesis.methodOutcomes);
+    expect(packet.canonApplications).toBe(synthesis.canonApplications);
+    const encoded = encodeEvidence(packet);
+    expect(JSON.stringify(decodeEvidence(JSON.parse(JSON.stringify(encoded))))).toBe(JSON.stringify(packet));
+    expect(JSON.stringify(encoded).length).toBeLessThan(JSON.stringify(packet).length);
+    expect(JSON.stringify(synthesis)).toBe(before);
+  });
+  it("does not block all results when one method execution or rule interpretation failed", async () => {
+    const snapshot = await buildUnifiedMasterChart(input);
+    snapshot.methodExecutionLedger[0] = {...snapshot.methodExecutionLedger[0], status:"failed", errorCode:"TEST_PARTIAL_FAILURE"};
+    const { synthesis } = await synthesizeMasterSnapshot(snapshot, "natal", "purpose");
+    const { packet } = buildNarrativePacket(synthesis, "purpose");
+    expect(packet.calculatedMethodOutcomes[0].status).toBe("failed");
+    expect(packet.calculatedMethodOutcomes).toHaveLength(snapshot.methodExecutionLedger.length);
+    expect(packet.methodOutcomes).toHaveLength(snapshot.methodExecutionLedger.length);
+  });
+  it("round-trips repeated text, nested JSON strings, arrays and statuses exactly", () => {
+    const rule = "This is a complete rule with a mechanism, consequence and condition that is deliberately long enough to intern. ";
+    const node = {text:rule+rule, status:"failed", values:[1,2,3]};
+    const source = {one:node, two:node, string:JSON.stringify(node), sentences:[rule+"First ending.",rule+"Second ending."]};
+    expect(decodeEvidence(encodeEvidence(source))).toEqual(source);
+  });
 });

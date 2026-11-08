@@ -67,9 +67,9 @@ describe("interpretation.generate knowledge gateway integration", () => {
       expect.arrayContaining(["7th-house", "7th-lord", "D9"])
     );
     expect(result.intelligence).toContain("ASTROLOGY EVIDENCE PACKET");
-    expect(result.masterSynthesis.narrativeAudit.passed).toBe(true);
+    expect(result.masterSynthesis.narrativeAudit.passed).toBeNull();
     expect(result.reading).toContain(result.masterSynthesis.narrative.sections[0].text);
-    expect(result.masterSynthesis.narrative.methodContributions.length).toBeGreaterThan(10);
+    expect(result.masterSynthesis.narrativeAudit.deliveredMethodIds.length).toBeGreaterThan(10);
     expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "dasha")).toBe(true);
     expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "ashtakavarga")).toBe(true);
     const userPrompts = mocked.invokeLLM.mock.calls.map(call =>

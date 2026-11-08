@@ -8,8 +8,12 @@ export function buildNarrativePacket(synthesis: SynthesisResult, question: strin
       mode: synthesis.mode,
       snapshot: synthesis.sourceSnapshot,
       calculatedMethodOutcomes: synthesis.sourceSnapshot.methodExecutionLedger,
-      // Send calculated evidence and Canon references, not prewritten method judgments.
-      canonApplications: synthesis.canonApplications.map(({ judgments, interpretation, ...application }: any) => application),
+      // Preserve the method's outcomes as well as its raw calculation. The AI
+      // reconciles these findings; the theme builder must never select for it.
+      methodOutcomes: synthesis.methodOutcomes,
+      canonApplications: synthesis.canonApplications,
+      calculationCoverage: synthesis.methodLedgerSummary,
+      themeCoverage: synthesis.qualityAudit,
     },
   };
 }

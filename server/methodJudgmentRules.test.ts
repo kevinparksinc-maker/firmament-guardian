@@ -350,7 +350,7 @@ describe("Finding-to-rule-to-judgment behavior", () => {
       spy.mockRestore();
     }
   });
-  it("failed outcomes cannot leak their available raw findings into themes or model input", async () => {
+  it("failed rule interpretations stay out of deterministic themes but retain every finding for the AI", async () => {
     const built = outcomesModule.buildMethodOutcomes(base, []);
     const failed = structuredClone(built);
     const method = failed.find(
@@ -379,8 +379,9 @@ describe("Finding-to-rule-to-judgment behavior", () => {
       expect(
         packSynthesis(result).methodOutcomes.find(
           o => o.methodId === method.methodId
-        )!.findingJudgments
-      ).toEqual([]);
+        )!.findingJudgments.length
+      ).toBe(method.findingJudgments.length);
+      expect(packSynthesis(result).fullMethodOutcomes).toEqual(result.methodOutcomes);
     } finally {
       spy.mockRestore();
     }

@@ -47,7 +47,6 @@ export async function askHost(
       const transitHighlights = Array.isArray(chart.transits)
         ? chart.transits
             .filter((t: any) => t.natalContacts && t.natalContacts.length > 0)
-            .slice(0, 8)
             .map(
               (t: any) =>
                 `- Transit ${t.name} (${t.display}) in Natal House ${t.house} contacting: ${t.natalContacts

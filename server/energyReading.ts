@@ -1,3 +1,4 @@
+import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
 import { packSynthesis } from "./astrologyKnowledge/synthesis/context";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -118,7 +119,7 @@ export async function generateEnergyReading(chart: ChartResult) {
       },
       {
         role: "user",
-        content: JSON.stringify({
+        content: stringifyEvidence({
           // Preserve every method and Canon application once. The bridge's prose
           // repeats raw findings inside themes and can exceed provider context limits.
           synthesis: packSynthesis(synthesis),

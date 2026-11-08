@@ -1,3 +1,6 @@
+import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
+import { buildNarrativePacket } from "./astrologyKnowledge/synthesis/narrativePacket";
+import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
 import {
   aspectBetween,
   minorAspectBetween,
@@ -12,12 +15,13 @@ import { invokeLLM } from "./_core/llm";
 import { MINI_SYNTHESIS_STYLE } from "./master-interpreter";
 
 /** A short AI interpretation for a clicked contact; detailed calculated evidence stays intact. */
-async function narrateFocusedContactMini(reading: FocusedReading): Promise<string> {
+async function narrateFocusedContactMini(reading: FocusedReading, synthesis: SynthesisResult): Promise<string> {
   const result = await invokeLLM({
     maxTokens: 450,
     messages: [
-      { role: "system", content: MINI_SYNTHESIS_STYLE + "\nReturn only one 90–130-word second-person paragraph about this exact contact. Explain the interaction between both bodies, one human consequence and one specific challenge or opportunity. No headings, lists, invented history or method inventory." },
-      { role: "user", content: JSON.stringify({
+      { role: "system", content: MINI_SYNTHESIS_STYLE + "\nReturn only one 90–130-word second-person paragraph about this exact selected placement, star or contact, using the full calculated chart as context. Explain the interaction between both bodies, one human consequence and one specific challenge or opportunity. No headings, lists, invented history or method inventory." },
+      { role: "user", content: stringifyEvidence({
+        ...buildNarrativePacket(synthesis, reading.title).packet,
         title: reading.title,
         moment: reading.moment,
         evidence: reading.evidence,
@@ -26,6 +30,8 @@ async function narrateFocusedContactMini(reading: FocusedReading): Promise<strin
       }) },
     ],
   });
+  if (["length", "max_tokens"].includes(result.choices[0]?.finish_reason ?? ""))
+    throw new Error("FOCUSED_MINI_INCOMPLETE: AI response was truncated.");
   const content = result.choices[0]?.message?.content;
   const text = typeof content === "string" ? content.trim() :
     Array.isArray(content) ? content.filter(p => p.type === "text").map(p => (p as { text: string }).text).join("").trim() : "";
@@ -163,6 +169,8 @@ export async function buildFocusedReading(
         "No selected-chart body is within the displayed 5° contact window. Catalog meaning alone is not a personal activation."
       );
     reading.sourceNotes.push(star.firmamentOrbRule.statement);
+    if (includeMiniNarrative && !reading.miniNarrative)
+      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis);
     return reading;
   }
   const row = bodies.find(row => row.name === target.name);
@@ -323,7 +331,7 @@ export async function buildFocusedReading(
         rootedDossier.planetInHouseKnowledge.interpretiveGuardrail
       );
     if (includeMiniNarrative)
-      reading.miniNarrative = await narrateFocusedContactMini(reading);
+      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis);
     return reading;
   }
   const sun = canonicalChart.movingBodies.find(body => body.name === "Sun");
@@ -544,5 +552,7 @@ export async function buildFocusedReading(
       "This is the selected transit moment. Event-house meanings describe current context; natal personality and life-history claims are not inferred from a temporary transit placement."
     );
   }
+  if (includeMiniNarrative)
+    reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis);
   return reading;
 }

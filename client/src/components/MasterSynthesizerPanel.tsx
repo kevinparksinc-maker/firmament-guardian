@@ -174,8 +174,9 @@ export function MasterSynthesizerPanel({
           </details>
           {Boolean(result.narrative?.methodContributions?.length) && <details className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6"><summary className="cursor-pointer text-sm text-cyan-200">How every method shaped the reading</summary><div className="mt-4 space-y-4">{(result.narrative?.methodContributions ?? []).map(contribution => <div key={contribution.methodId}><h4 className="text-sm font-semibold text-cyan-100">{result.methodOutcomes.find(m => m.methodId === contribution.methodId)?.methodName} · {contribution.methodId.startsWith("transit:") ? "Event" : "Base chart"}</h4><p className="text-sm text-slate-200">{contribution.contribution}</p><p className="mt-1 text-xs text-slate-400">Findings: {contribution.findingIds.join(", ")}</p></div>)}</div></details>}
 
-          {/* Human Domain Themes Grid */}
-          <div className="space-y-4">
+          <details className="rounded-2xl border border-slate-800 p-4">
+          <summary className="cursor-pointer text-sm text-cyan-200">Calculation analysis and rule-based themes</summary>
+          <div className="mt-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
                 <Layers className="w-4 h-4" />
@@ -302,6 +303,7 @@ export function MasterSynthesizerPanel({
             </div>
           )}
 
+          </details>
           </>}
           {/* Expandable "How was this calculated?" Evidence Drawer */}
           {(presentation === "evidence" || presentation === "full" && showEvidenceDrawer) && (
@@ -339,8 +341,8 @@ export function MasterSynthesizerPanel({
                   <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Reference-Only</p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                  <span className="text-lg font-bold text-cyan-400 font-mono">{evidencePercent}%</span>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Evidence Traced</p>
+                  <span className="text-lg font-bold text-cyan-400 font-mono">{result.narrativeAudit.deliveredMethodIds.length}</span>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Layers Sent to AI</p>
                 </div>
               </div>
 

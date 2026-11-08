@@ -1,3 +1,4 @@
+import { decodeEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChartResult } from "./astronomy";
 import {
@@ -76,9 +77,9 @@ describe("Energy synthesis output pipeline", () => {
     expect(
       vi.mocked(synthesizeChartForReading).mock.invocationCallOrder[0]
     ).toBeLessThan(vi.mocked(invokeLLM).mock.invocationCallOrder[0]);
-    const payload = JSON.parse(
+    const payload = decodeEvidence(JSON.parse(
       vi.mocked(invokeLLM).mock.calls[0][0].messages[1].content as string
-    );
+    )) as any;
     expect(payload.synthesis.methodFindings.map((m: {id:string})=>m.id)).toEqual(bridge.synthesis.methodFindings.map(m=>m.id));
     expect(payload.synthesis.canonApplications[0].ruleId).toBe("test-canon");
     expect(payload.score.contacts).toHaveLength(2);
