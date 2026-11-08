@@ -72,7 +72,7 @@ export async function synthesizeMasterReading(
   const methodCounts = snapshot.methodExecutionLedger
     .map(layer => `${layer.name}: ${layer.status}${Array.isArray(layer.results) ? ` (${layer.results.length} results)` : ""}`);
   const dominantConclusion = orderedThemes.length
-    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. ${orderedThemes.slice(0,3).map(theme=>theme.primaryConclusion).join(" ")}`
+    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. ${orderedThemes.map(theme=>theme.primaryConclusion).join(" ")}`
     : `Question: ${question}. No successfully interpreted method outcomes are available.`;
 
   // The complete recorded results remain in the propositions and snapshot.
@@ -174,7 +174,7 @@ export async function synthesizeMasterReading(
         ? {
             activeWindow: snapshot.transit?.transitInstantUtc ?? "Transit moment not supplied",
             turningPoints: snapshot.transit?.aspectsToNatal?.length
-              ? snapshot.transit.aspectsToNatal.map(contact => `${contact.transitBody} ${contact.aspect} natal ${contact.natalBody} (orb ${contact.orb}°)`).slice(0, 12)
+              ? snapshot.transit.aspectsToNatal.map(contact => `${contact.transitBody} ${contact.aspect} natal ${contact.natalBody} (orb ${contact.orb}°)`)
               : ["No calculated natal transit contacts available; peak and easing times are not established."],
           }
         : undefined,
