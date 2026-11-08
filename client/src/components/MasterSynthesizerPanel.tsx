@@ -46,7 +46,6 @@ export function MasterSynthesizerPanel({
   const requestVersion = React.useRef(0);
   const selectedMode = mode ?? chart.readingScope;
 
-  const evidencePercent = result ? Math.round(result.qualityAudit.groundedRatio * 100) : 0;
 
   const handleSynthesize = (qToUse?: string) => {
     const version = ++requestVersion.current;
@@ -168,7 +167,7 @@ export function MasterSynthesizerPanel({
               Integrated Narrative
             </h3>
             <div className="space-y-4 text-xs md:text-sm text-slate-200 leading-relaxed">
-              {result.narrative.sections.map(section => (
+              {(result.narrative?.sections?.length ? result.narrative.sections : (result.integratedNarrative ?? []).map((text, index) => ({ id: `reading-${index}`, title: index === 0 ? "Master Reading" : `Reading Part ${index + 1}`, text }))).map(section => (
                 <div key={section.id} className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/50 space-y-2">
                   <h4 className="font-semibold text-cyan-100">{section.title}</h4>
                   <p className="whitespace-pre-line">{readingProse(section.text)}</p>
@@ -176,7 +175,7 @@ export function MasterSynthesizerPanel({
               ))}
             </div>
           </details>
-          <details className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6"><summary className="cursor-pointer text-sm text-cyan-200">How every method shaped the reading</summary><div className="mt-4 space-y-4">{result.narrative.methodContributions.map(contribution => <div key={contribution.methodId}><h4 className="text-sm font-semibold text-cyan-100">{result.methodOutcomes.find(m => m.methodId === contribution.methodId)?.methodName} · {contribution.methodId.startsWith("transit:") ? "Event" : "Base chart"}</h4><p className="text-sm text-slate-200">{contribution.contribution}</p><p className="mt-1 text-xs text-slate-400">Findings: {contribution.findingIds.join(", ")}</p></div>)}</div></details>
+          <details className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6"><summary className="cursor-pointer text-sm text-cyan-200">How every method shaped the reading</summary><div className="mt-4 space-y-4">{(result.narrative?.methodContributions ?? []).map(contribution => <div key={contribution.methodId}><h4 className="text-sm font-semibold text-cyan-100">{result.methodOutcomes.find(m => m.methodId === contribution.methodId)?.methodName} · {contribution.methodId.startsWith("transit:") ? "Event" : "Base chart"}</h4><p className="text-sm text-slate-200">{contribution.contribution}</p><p className="mt-1 text-xs text-slate-400">Findings: {contribution.findingIds.join(", ")}</p></div>)}</div></details>
 
           {/* Human Domain Themes Grid */}
           <div className="space-y-4">
