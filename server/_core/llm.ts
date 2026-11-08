@@ -382,6 +382,9 @@ async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
       const choice = result.choices?.[0];
       const text = readableAssistantText(result);
       if (text.trim()) {
+        if (choice?.finish_reason === "length" || choice?.finish_reason === "max_tokens") {
+          throw new Error("OPENAI_INCOMPLETE_READING: AI output reached its token limit.");
+        }
         if (!choice?.message?.content) {
           result.choices = [{ index: 0, message: { role: "assistant", content: text }, finish_reason: choice?.finish_reason ?? "stop" }];
         }
