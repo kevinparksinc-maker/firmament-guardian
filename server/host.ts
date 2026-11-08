@@ -1,6 +1,6 @@
 import { invokeLLM, type Message } from "./_core/llm";
 import { withCurrentQuestion } from "./_core/conversation";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+
 import {
   buildAstrologyEvidencePacket,
   formatEvidencePacket,
@@ -90,13 +90,16 @@ ${formattedPacket}
   const systemInstructions = [HOST_SYSTEM, ragContext].filter(Boolean);
 
   const messages: Message[] = [
-    { role: "system", content: buildAstrologyInterpreterSystem(...systemInstructions) },
+    { role: "system", content: systemInstructions.join("\n\n") },
     ...withCurrentQuestion(history, question, 6),
   ];
 
   // Provider routing is resolved centrally by invokeLLM.
   const model = "claude-sonnet-4-6";
   const response = await invokeLLM({ model, messages, maxTokens: 1800 });
+  if (["length", "max_tokens"].includes(response.choices[0]?.finish_reason ?? "")) {
+    throw new Error("HOST_AI_TRUNCATED: Host response reached its token limit.");
+  }
   const content = response.choices[0]?.message?.content;
   const reading = typeof content === "string" ? content.trim() : "";
   if (!reading) {
