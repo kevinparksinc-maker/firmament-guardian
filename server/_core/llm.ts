@@ -444,18 +444,32 @@ const RETRY_BASE_DELAY_MS = 500;
 const RETRY_MAX_DELAY_MS = 30_000;
 const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
+function selectedProvider(): "groq" | "anthropic" | "openai-compatible" | "gemini" | "built-in-forge" | "unconfigured" {
+  const preference = (process.env.AI_PRIMARY_PROVIDER ?? "").trim().toLowerCase();
+  const available = {
+    anthropic: Boolean(ENV.anthropicApiKey),
+    groq: Boolean(ENV.groqApiKey),
+    "openai-compatible": Boolean(ENV.openaiApiKey && ENV.openaiApiBase),
+    gemini: Boolean(ENV.geminiApiKey),
+    "built-in-forge": Boolean(ENV.forgeApiKey),
+  };
+  if (preference) {
+    if (!(preference in available)) throw new Error(`AI_PROVIDER_INVALID: Unknown AI_PRIMARY_PROVIDER ${preference}`);
+    const provider = preference as keyof typeof available;
+    if (!available[provider]) throw new Error(`AI_PROVIDER_NOT_CONFIGURED: ${provider} selected but its key is missing`);
+    return provider;
+  }
+  // Anthropic takes precedence when both Anthropic and Groq keys exist.
+  if (available.anthropic) return "anthropic";
+  if (available.groq) return "groq";
+  if (available["openai-compatible"]) return "openai-compatible";
+  if (available.gemini) return "gemini";
+  if (available["built-in-forge"]) return "built-in-forge";
+  return "unconfigured";
+}
+
 export function getLLMProviderStatus() {
-  const provider = ENV.groqApiKey
-    ? "groq"
-    : ENV.anthropicApiKey
-    ? "anthropic"
-    : ENV.openaiApiKey && ENV.openaiApiBase
-      ? "openai-compatible"
-      : ENV.geminiApiKey
-        ? "gemini"
-        : ENV.forgeApiKey
-          ? "built-in-forge"
-          : "unconfigured";
+  const provider = selectedProvider();
   return {
     configured: provider !== "unconfigured",
     provider,
@@ -621,10 +635,13 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
-  if (ENV.groqApiKey) return invokeGroq(params);
-  if (ENV.anthropicApiKey) return invokeAnthropic(params);
-  if (ENV.openaiApiKey && ENV.openaiApiBase) return invokeOpenAI(params);
-  if (ENV.geminiApiKey && !ENV.forgeApiKey) return invokeGemini(params);
+  const provider = selectedProvider();
+  console.info(`LLM provider selected: ${provider}`);
+  if (provider === "groq") return invokeGroq(params);
+  if (provider === "anthropic") return invokeAnthropic(params);
+  if (provider === "openai-compatible") return invokeOpenAI(params);
+  if (provider === "gemini") return invokeGemini(params);
+  if (provider === "unconfigured") throw new Error("AI_PROVIDER_NOT_CONFIGURED");
 
   const {
     messages,
