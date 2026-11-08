@@ -951,7 +951,7 @@ export async function generateInterpretation(
   const intelligence = `${masterContext}\n\n${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
   const analysis = await analyzeChart(chart, mode, evidencePacket, `${masterContext}\n\n${synthesisContext}`);
   const narrated = await narrateMasterSynthesis(master.synthesis, question);
-  const reading = [narrated.dominantConclusion, ...narrated.integratedNarrative].join("\n\n");
+  const reading = narrated.narrative?.answer ?? narrated.integratedNarrative.join("\n\n");
   return {
     masterSnapshot: master.snapshot,
     masterSynthesis: narrated,
