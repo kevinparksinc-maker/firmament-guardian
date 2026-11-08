@@ -29,14 +29,14 @@ export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
     const parts=f.judgment.split(/(?<=[.!?])\s+(?=[A-Z])/);
     let text=parts[0];
     for(const part of parts.slice(1)){if((text+" "+part).length>480)break;text+=" "+part;}
-    return text;
+    return f.judgment;
   };
   let next=0;
   const selected=new Set<string>();
   const methodOutcomes=synthesis.methodOutcomes.map((o,i)=>{
     const alias=`m${i}`;methodIds.set(alias,o.methodId);
     const ordered=[...o.findingJudgments].sort((a,b)=>score(b)-score(a));
-    const findings=o.status==="interpreted"?ordered.slice(0,1):[];
+    const findings=o.status==="interpreted"?ordered:[];
     if(o.methodId.replace(/^transit:/,"")==="vedic-dasha-and-ashtakavarga" && o.status==="interpreted") {
       const sav=ordered.find(f=>f.subject.startsWith("SAV "));
       if(sav&&!findings.some(f=>f.id===sav.id))findings.push(sav);
@@ -58,9 +58,9 @@ export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
     }
   }
   return {packet:{mode:synthesis.mode,question,
-    coverage:"Every registered method; focused finding excerpts for the overview. Complete calculations and judgments remain on My Chart.",
+    coverage:"All registered methods, all calculated findings and all interpreted planetary judgments; no one-finding-per-method truncation.",
     coordinatePolicy:"Supplied XYZ, fixed firmament, Equal Houses. Shadbala measures capacity, not favorable outcome; Bhava ranks are relative to this chart. Preserve each method's source and scope limits.",
-    judgmentColumns:["subject","judgmentParts","evidenceIds","sourceRefs","valence","strength","frame","limitation","findingId","mechanism"],textTable:[],methodOutcomes},methodIds,findingIds};
+    judgmentColumns:["subject","judgmentParts","evidenceIds","sourceRefs","valence","strength","frame","limitation","findingId","mechanism"],textTable:[],methodLedger:synthesis.methodFindings,methodOutcomes},methodIds,findingIds};
 }
 export function restoreNarrativeIds(raw:unknown,bindings:ReturnType<typeof buildNarrativePacket>):unknown{
   if(!raw||typeof raw!=="object")return raw;
