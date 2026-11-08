@@ -156,6 +156,7 @@ export async function synthesizeMasterReading(
   );
 
   return {
+    sourceSnapshot: snapshot,
     snapshotId: snapshot.snapshotId,
     mode: readingMode,
     dominantConclusion,
