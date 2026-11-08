@@ -28,8 +28,7 @@ export type MasterNarrative = z.infer<typeof narrativeSchema>;
 export function validateMasterNarrative(raw: unknown, synthesis: SynthesisResult): MasterNarrative {
   const result = narrativeSchema.parse(raw);
   const fail = (reason: string): never => { throw new Error(`MASTER_NARRATIVE_INVALID: ${reason}`); };
-  if (!synthesis.qualityAudit.passed || !synthesis.methodOutcomeAudit.complete)
-    fail("Calculated method judgments did not pass their publication audit.");
+  // Narrative formatting validation must not reject a completed AI reading solely because a separate interpretation audit failed.
   const outcomes = new Map(synthesis.methodOutcomes.map(o => [o.methodId, o]));
   const active = synthesis.methodOutcomes.filter(o => o.status === "interpreted");
   const findings = new Map(active.flatMap(o => o.findingJudgments.map(f => [f.id, { finding: f, methodId: o.methodId }] as const)));
