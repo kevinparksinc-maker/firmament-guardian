@@ -171,14 +171,14 @@ export async function synthesizeMasterReading(
   const narrative = typeof aiText === "string"
     ? aiText.trim()
     : Array.isArray(aiText)
-      ? aiText.filter(part => part.type === "text").map(part => part.text).join("\\n").trim()
+      ? aiText.map(part => part.type === "text" ? part.text : "").join("\n").trim()
       : "";
   if (!narrative) throw new Error("Master Synthesizer returned an empty interpretation");
 
   return {
     snapshotId: snapshot.snapshotId,
     mode: readingMode,
-    dominantConclusion: narrative.split(/\\n\\n/)[0] || narrative,
+    dominantConclusion: narrative.split(/\n\n/)[0] || narrative,
     integratedNarrative: [narrative],
     methodFindings,
     themes,
