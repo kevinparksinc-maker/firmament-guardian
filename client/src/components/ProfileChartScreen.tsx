@@ -149,7 +149,7 @@ export function ProfileChartScreen({
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 pb-20 pt-2 text-slate-100">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-8 pb-20 pt-2 text-slate-100">
       {/* Header & Controls */}
       <section aria-label="Chart Controls" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">

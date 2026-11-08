@@ -309,7 +309,7 @@ export const PLANET_CANON_RECORDS: Record<string, PlanetCanonRecord> = {
       healthyExpression:
         "Courageous initiative, clean boundaries, protective strength, and direct honesty",
       defensiveStrategy:
-        "Preemptive aggression,picking fights to avoid vulnerability, or suppressing anger until it erupts",
+        "Preemptive aggression, picking fights to avoid vulnerability, or suppressing anger until it erupts",
       shadowExpression:
         "Hostility, impulsiveness, domination, or chronic resentment from swallowed boundaries",
     },

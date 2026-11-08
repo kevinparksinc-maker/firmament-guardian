@@ -1,7 +1,7 @@
 import { READING_FRAMEWORK_VERSION } from "./readingIdentity";
 import type { ChartResult, ChartRow } from "../server/astronomy";
 
-export const PLACEMENT_MINI_VERSION = "placement-minis-v4-bounded";
+export const PLACEMENT_MINI_VERSION = "placement-minis-v5-all-placements";
 export function placementRows(chart: ChartResult): ChartRow[] {
   return [
     ...chart.movingBodies,
