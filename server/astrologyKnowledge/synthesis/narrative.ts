@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { invokeLLM } from "../../_core/llm";
 import { FULL_SYNTHESIS_STYLE } from "../../master-interpreter";
 
@@ -51,18 +50,6 @@ async function generate(synthesis: SynthesisResult, question: string) {
   };
 }
 
-// Concurrent screens reuse one narration. Failed generations are always retryable.
-const cache = new Map<string, { expiresAt: number; promise: ReturnType<typeof generate> }>();
 export async function narrateMasterSynthesis(synthesis: SynthesisResult, question: string) {
-  // Never block raw calculated outcomes from reaching the provider because an interpretation audit failed.
-  // Keep audit status in the supplied evidence instead.
-  // Include actual judgments so a changed rule outcome never reuses old prose.
-  const key = createHash("sha256").update(JSON.stringify([synthesis.sourceSnapshot, synthesis.mode, question.trim(), synthesis.methodOutcomes])).digest("hex");
-  const existing = cache.get(key);
-  if (existing && existing.expiresAt > Date.now()) return existing.promise;
-  const promise = generate(synthesis, question);
-  cache.set(key, { expiresAt: Date.now() + 10 * 60_000, promise });
-  while (cache.size > 16) cache.delete(cache.keys().next().value!);
-  try { return await promise; }
-  catch (error) { if (cache.get(key)?.promise === promise) cache.delete(key); throw error; }
+  return generate(synthesis, question);
 }
