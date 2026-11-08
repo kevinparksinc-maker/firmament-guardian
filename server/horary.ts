@@ -536,12 +536,6 @@ export async function openHoraryQuestion(input: HoraryInput) {
     { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. Present the judgment and evidence in the order most useful to this question; headings are optional.\n\n${chart.judgmentEvidenceText}\n\nFULL TECHNICAL EVIDENCE (all configured layers):\n${chart.evidenceText}\n\nUNIFIED MASTER METHOD EVIDENCE (supplementary; Horary significators remain authoritative):\n${chart.unifiedSynthesisContext}\n\nGive the complete, human-centered horary judgment now.` },
   ], 3200).then(
     reading => ({ reading, synthesisStatus: "ai_completed" as const }),
-    error => {
-      const category = error instanceof Error && /time|abort|deadline/i.test(error.message) ? "timeout" : "provider_error";
-      // Deliberately exclude prompts, provider responses and credentials from logs.
-      console.warn("[Horary] AI synthesis unavailable; deterministic fallback used", { category });
-      return { reading: coreReading, synthesisStatus: "deterministic_fallback" as const };
-    },
   );
   return { chart, ...reading };
 }
@@ -555,7 +549,5 @@ export async function horaryFollowUp(
     { role: "system", content: `${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.` },
     { role: "user", content: `Original horary judgment evidence:\n\n${chart.judgmentEvidenceText}\n\nUnified Master method evidence:\n${chart.unifiedSynthesisContext || "Not recorded; do not claim uncalculated methods."}\n\nFull configured chart and canon evidence:\n\n${chart.evidenceText}` },
     ...withCurrentQuestion(history, question, 12),
-  ], 1800).catch(() =>
-    `The core chart remains fixed for this follow-up. The deterministic judgment is ${chart.traditional.judgment.verdict}. The relevant significators are ${chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler} and ${chart.topicRuler}; Moon status: ${chart.traditional.moonStatus.explanation} The optional language-synthesis service did not return within its time budget, so no new claim is being added beyond the calculated evidence.`,
-  );
+  ], 1800);
 }
