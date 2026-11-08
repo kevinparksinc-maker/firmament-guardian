@@ -123,6 +123,8 @@ export interface SynthesizedTheme {
 }
 
 export interface SynthesisResult {
+  /** Complete calculation snapshot for the AI evidence packet. */
+  sourceSnapshot: UnifiedMasterChartSnapshot;
   snapshotId: string;
   mode: "natal" | "transit" | "combined";
   dominantConclusion: string;
