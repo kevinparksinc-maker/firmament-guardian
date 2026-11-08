@@ -23,7 +23,7 @@ export function ChartMethodOutcomes({
 }) {
   const query = trpc.interpretation.methodOutcomes.useQuery(
     { chart, mode },
-    { retry: false, staleTime: Infinity, refetchOnWindowFocus: false }
+    { retry: false, staleTime: 0, refetchOnWindowFocus: true }
   );
   const renderMethods = (event: boolean) =>
     query.data?.methods
@@ -98,7 +98,7 @@ export function ChartMethodOutcomes({
             </div>
           ) : (
             <p className="whitespace-pre-line text-sm leading-7 text-slate-300">
-              {readingProse(method.interpretation)} {readingProse(method.judgment)}
+              {readingProse(method.interpretation)}
             </p>
           )}
           {!event && method.methodId === "vedic-vargas-divisional" && (
