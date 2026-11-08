@@ -1,9 +1,6 @@
 import type { FindingJudgment, SynthesisResult } from "./types";
 
-/** Every method is represented; full finding records remain on My Chart.
- * The overview selects a complete, question-relevant outcome from each method,
- * instead of resending hundreds of repeated doctrine paragraphs to a small API tier.
- */
+/** Transmit every available calculated finding and full chart context; never truncate evidence for cost. */
 export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
   const methodIds=new Map<string,string>(),findingIds=new Map<string,string>();
   const query=question.toLowerCase(),work=/purpose|work|career|creat|calling|trajectory/.test(query),social=/friend|network|creat/.test(query);
@@ -25,12 +22,7 @@ export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
     n+=terms.filter(t=>f.subject.toLowerCase().includes(t)||f.domain.includes(t)).length*8;
     return n;
   };
-  const excerpt=(f:FindingJudgment)=>{
-    const parts=f.judgment.split(/(?<=[.!?])\s+(?=[A-Z])/);
-    let text=parts[0];
-    for(const part of parts.slice(1)){if((text+" "+part).length>480)break;text+=" "+part;}
-    return f.judgment;
-  };
+  const excerpt=(f:FindingJudgment)=>f.judgment;
   let next=0;
   const selected=new Set<string>();
   const methodOutcomes=synthesis.methodOutcomes.map((o,i)=>{
@@ -60,6 +52,10 @@ export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
   return {packet:{mode:synthesis.mode,question,
     coverage:"All registered methods, all calculated findings and all interpreted planetary judgments; no one-finding-per-method truncation.",
     coordinatePolicy:"Supplied XYZ, fixed firmament, Equal Houses. Shadbala measures capacity, not favorable outcome; Bhava ranks are relative to this chart. Preserve each method's source and scope limits.",
+    chart_meta:{inputs:synthesis.sourceSnapshot.inputs,frameConfig:synthesis.sourceSnapshot.frameConfig,baseCelestialState:synthesis.sourceSnapshot.baseCelestialState,godView:synthesis.sourceSnapshot.godView,agentView:synthesis.sourceSnapshot.agentView},
+    planet_placements:{natal:synthesis.sourceSnapshot.natal?.movingBodies??synthesis.sourceSnapshot.baseCelestialState.planets,transit:synthesis.sourceSnapshot.transit?.planets??[]},
+    aspects:{natal:synthesis.sourceSnapshot.layers["western-aspects-and-orbs"]?.results??[],transit:synthesis.sourceSnapshot.transit?.aspectsToNatal??[]},
+    method_ledger:synthesis.sourceSnapshot.methodExecutionLedger,
     judgmentColumns:["subject","judgmentParts","evidenceIds","sourceRefs","valence","strength","frame","limitation","findingId","mechanism"],textTable:[],methodLedger:synthesis.methodFindings,methodOutcomes},methodIds,findingIds};
 }
 export function restoreNarrativeIds(raw:unknown,bindings:ReturnType<typeof buildNarrativePacket>):unknown{
