@@ -62,4 +62,15 @@ describe("overlay Back history", () => {
     history.back();
     expect(target.location.href).toBe("https://example.test/chart");
   });
+  it("does not issue Back if React cleans up the drawer before the router commits its URL", () => {
+    const { manager, history, target } = fixture();
+    const release = manager.register(vi.fn());
+    manager.prepareNavigation();
+    release();
+    expect(history.back).not.toHaveBeenCalled();
+    history.replaceState(null, "", "https://example.test/horary");
+    expect(target.location.href).toBe("https://example.test/horary");
+    history.back();
+    expect(target.location.href).toBe("https://example.test/chart");
+  });
 });

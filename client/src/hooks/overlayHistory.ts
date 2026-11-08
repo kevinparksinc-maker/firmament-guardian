@@ -13,6 +13,13 @@ export function createOverlayHistory(target: Pick<Window, "history" | "location"
     entry.dismiss();
   };
   return {
+    prepareNavigation() {
+      // React may flush an overlay's cleanup synchronously during a router
+      // update. Consume its entry before starting that update so cleanup
+      // cannot issue Back while the destination is being committed.
+      const entry = entries.at(-1);
+      if (entry) entry.popped = true;
+    },
     register(dismiss: () => void) {
       const entry: OverlayEntry = { id: ++sequence, url: target.location.href, dismiss, popped: false };
       if (!entries.length) target.addEventListener("popstate", onPop);

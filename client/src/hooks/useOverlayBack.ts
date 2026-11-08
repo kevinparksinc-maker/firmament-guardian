@@ -3,6 +3,10 @@ import { createOverlayHistory } from "./overlayHistory";
 
 let manager: ReturnType<typeof createOverlayHistory> | undefined;
 
+export function prepareOverlayNavigation() {
+  manager?.prepareNavigation();
+}
+
 export function useOverlayBack(open: boolean, dismiss: () => void) {
   const dismissRef = useRef(dismiss);
   dismissRef.current = dismiss;

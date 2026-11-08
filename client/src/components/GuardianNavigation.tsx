@@ -4,6 +4,7 @@ import { ChevronDown, Menu, Stars, UserRound } from "lucide-react";
 import { PRIMARY_NAV_ITEMS, primaryDestinationForPath } from "@/config/profileNavigation";
 import { searchDirectory } from "@/config/appDirectory";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
+import { prepareOverlayNavigation } from "@/hooks/useOverlayBack";
 import { AccountControl } from "./AccountControl";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import "./GuardianNavigation.css";
@@ -59,8 +60,10 @@ export function GuardianNavigation() {
                     <Link href={item.href} key={item.href} onClick={event => {
                       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
                       event.preventDefault();
+                      if (item.href === path) { setOpen(false); return; }
                       // Replace the drawer's same-URL history entry with the
                       // selected page, so Back returns to the original screen.
+                      prepareOverlayNavigation();
                       navigate(item.href, { replace: true });
                       setOpen(false);
                     }} className="block min-h-12 rounded-xl px-3 py-3 hover:bg-white/5">
