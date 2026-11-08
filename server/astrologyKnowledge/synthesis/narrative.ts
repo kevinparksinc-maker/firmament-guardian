@@ -20,8 +20,8 @@ async function generate(synthesis: SynthesisResult, question: string) {
     max_tokens: 3000,
     timeoutMs: 180_000,
     messages: [
-      { role: "system", content: FULL_SYNTHESIS_STYLE + "\\n\\nTHE ABSOLUTE — MASTER SYNTHESIS. Read every supplied raw calculated outcome, complete method layer, and chart placement. Synthesize them directly into a complete, natural second-person reading. Explain WHAT, WHY, HOW, CONSEQUENCES and MEANING. Do not omit calculated results based on audit status, method ranking, or prewritten interpretations. Respond in natural prose without JSON, IDs, required sections, or a prescribed word count. Do not invent missing calculations." },
-      { role: "user", content: "<chart_data>\\n" + JSON.stringify(bindings.packet) + "\\n</chart_data>" },
+      { role: "system", content: FULL_SYNTHESIS_STYLE + "\n\nTHE ABSOLUTE — MASTER SYNTHESIS. Read every supplied raw calculated outcome, complete method layer, and chart placement. Synthesize them directly into a complete, natural second-person reading. Explain WHAT, WHY, HOW, CONSEQUENCES and MEANING. Do not omit calculated results based on audit status, method ranking, or prewritten interpretations. Respond in natural prose without JSON, IDs, required sections, or a prescribed word count. Do not invent missing calculations." },
+      { role: "user", content: "<chart_data>\n" + JSON.stringify(bindings.packet) + "\n</chart_data>" },
     ],
   });
   const choice = response.choices?.[0];
