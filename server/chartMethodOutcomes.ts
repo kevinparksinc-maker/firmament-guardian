@@ -35,7 +35,7 @@ export async function buildChartMethodOutcomes(
     const content = response.choices?.[0]?.message.content;
     const raw = typeof content === "string" ? content : (content ?? []).filter(p => p.type === "text").map(p => (p as { text: string }).text).join("");
     let parsed: unknown;
-    try { parsed = JSON.parse(raw.trim().replace(/^\x60\x60\x60(?:json)?\s*|\s*\x60\x60\x60$/g, "")); }
+    try { parsed = JSON.parse(raw.trim()); }
     catch { throw new Error("METHOD_MINI_READING_INVALID: AI response was not valid JSON."); }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("METHOD_MINI_READING_INVALID: Expected per-method prose.");
     for (const method of interpreted) {
