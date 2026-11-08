@@ -3,36 +3,12 @@ import type { FindingJudgment, SynthesisResult } from "./types";
 /** Transmit every available calculated finding and full chart context; never truncate evidence for cost. */
 export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
   const methodIds=new Map<string,string>(),findingIds=new Map<string,string>();
-  const query=question.toLowerCase(),work=/purpose|work|career|creat|calling|trajectory/.test(query),social=/friend|network|creat/.test(query);
-  const score=(f:FindingJudgment)=>{
-    let n=({dominant:40,strong:30,moderate:20,subtle:10})[f.strength];
-    if(f.subject==="Sun")n+=12;
-    if(f.subject==="Moon")n+=8;
-    if(f.subject.includes("Creative output and network"))n+=100;
-    if(f.subject.startsWith("Mahadasha"))n+=50;
-    if(f.subject.startsWith("D9 "))n+=12;
-    if(work&&f.subject.startsWith("D10 "))n+=25;
-    if(work&&/Venus|Mercury/.test(f.subject))n+=15;
-    if(social&&/Mars|Venus/.test(f.subject))n+=15;
-    if(f.subject==="32 Paths"||f.subject==="Three Mothers")n-=30;
-    if(/no (?:measured|calculated|activated|qualifying)|doctrine.*withheld/i.test(f.judgment))n-=30;
-    const ratio=f.mechanism.match(/ = ([\d.]+);/);if(ratio)n+=Number(ratio[1])*10;
-    const orb=f.mechanism.match(/orb\s+([\d.]+)/i);if(orb)n+=Math.max(0,10-Number(orb[1])*2);
-    const terms=query.match(/[a-z]{4,}/g)??[];
-    n+=terms.filter(t=>f.subject.toLowerCase().includes(t)||f.domain.includes(t)).length*8;
-    return n;
-  };
   const excerpt=(f:FindingJudgment)=>f.judgment;
   let next=0;
   const selected=new Set<string>();
   const methodOutcomes=synthesis.methodOutcomes.map((o,i)=>{
     const alias=`m${i}`;methodIds.set(alias,o.methodId);
-    const ordered=[...o.findingJudgments].sort((a,b)=>score(b)-score(a));
-    const findings=o.status==="interpreted"?ordered:[];
-    if(o.methodId.replace(/^transit:/,"")==="vedic-dasha-and-ashtakavarga" && o.status==="interpreted") {
-      const sav=ordered.find(f=>f.subject.startsWith("SAV "));
-      if(sav&&!findings.some(f=>f.id===sav.id))findings.push(sav);
-    }
+    const findings=o.findingJudgments;
     const rows=findings.map(f=>{
       const id=`f${next++}`;findingIds.set(id,f.id);selected.add(f.id);
       return [f.subject,[excerpt(f)],[],[],f.valence,f.strength,f.frame??o.frame,f.limitation??null,id,f.mechanism];
@@ -49,6 +25,8 @@ export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
       methodOutcomes[i].findingJudgments.push([f.subject,[excerpt(f)],[],[],f.valence,f.strength,f.frame??o.frame,f.limitation??null,id,f.mechanism]);break;
     }
   }
+  const expected=synthesis.sourceSnapshot.methodExecutionLedger.length;
+  if(expected!==synthesis.methodOutcomes.length)throw new Error(`SYNTHESIS_INPUT_MISMATCH: ${expected} calculated method records but ${synthesis.methodOutcomes.length} method outcomes`);
   return {packet:{mode:synthesis.mode,question,
     coverage:"All registered methods, all calculated findings and all interpreted planetary judgments; no one-finding-per-method truncation.",
     coordinatePolicy:"Supplied XYZ, fixed firmament, Equal Houses. Shadbala measures capacity, not favorable outcome; Bhava ranks are relative to this chart. Preserve each method's source and scope limits.",
@@ -56,6 +34,7 @@ export function buildNarrativePacket(synthesis:SynthesisResult,question:string){
     planet_placements:{natal:synthesis.sourceSnapshot.natal?.movingBodies??synthesis.sourceSnapshot.baseCelestialState.planets,transit:synthesis.sourceSnapshot.transit?.planets??[]},
     aspects:{natal:synthesis.sourceSnapshot.layers["western-aspects-and-orbs"]?.results??[],transit:synthesis.sourceSnapshot.transit?.aspectsToNatal??[]},
     method_ledger:synthesis.sourceSnapshot.methodExecutionLedger,
+    raw_calculated_outcomes:synthesis.sourceSnapshot.methodExecutionLedger.map(layer=>({methodId:layer.id,status:layer.status,results:layer.results??null,evidenceIds:layer.evidenceIds,errorCode:layer.errorCode??null})),
     judgmentColumns:["subject","judgmentParts","evidenceIds","sourceRefs","valence","strength","frame","limitation","findingId","mechanism"],textTable:[],methodLedger:synthesis.methodFindings,methodOutcomes},methodIds,findingIds};
 }
 export function restoreNarrativeIds(raw:unknown,bindings:ReturnType<typeof buildNarrativePacket>):unknown{
