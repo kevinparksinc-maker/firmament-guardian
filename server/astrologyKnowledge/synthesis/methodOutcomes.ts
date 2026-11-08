@@ -85,7 +85,7 @@ function outcome(
       interpretation:
         layer.notes ?? layer.errorCode ?? "The calculation is unavailable.",
       judgment: "Judgment blocked by the calculation failure.",
-      contribution: "Excluded from synthesis.",
+      contribution: "Calculation status is retained in the complete raw snapshot for AI interpretation.",
     };
   try {
     const judgments = applyMethodRules(layer, snapshot);
@@ -199,7 +199,7 @@ function outcome(
       judgment:
         "No traditional judgment issued: this method failed rule application.",
       contribution:
-        "Excluded from synthesis; the method failure blocks publication.",
+        "Rule interpretation failed; calculated values remain available in the raw snapshot for AI interpretation.",
       strengthAndLimitations: [...base.strengthAndLimitations, reason],
     };
   }
