@@ -1,3 +1,4 @@
+import { useOverlayBack } from "@/hooks/useOverlayBack";
 import { cn } from "@/lib/utils";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
@@ -22,6 +23,13 @@ export const useDialogComposition = () =>
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  const [localOpen, setLocalOpen] = React.useState(props.defaultOpen ?? false);
+  const open = props.open ?? localOpen;
+  const changeOpen = (next: boolean) => {
+    if (props.open === undefined) setLocalOpen(next);
+    props.onOpenChange?.(next);
+  };
+  useOverlayBack(open, () => changeOpen(false));
   const composingRef = React.useRef(false);
   const justEndedRef = React.useRef(false);
   const endTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,7 +56,7 @@ function Dialog({
 
   return (
     <DialogCompositionContext.Provider value={contextValue}>
-      <DialogPrimitive.Root data-slot="dialog" {...props} />
+      <DialogPrimitive.Root data-slot="dialog" {...props} open={open} onOpenChange={changeOpen} />
     </DialogCompositionContext.Provider>
   );
 }
@@ -134,7 +142,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-2 right-2 flex min-h-12 min-w-12 items-center justify-center rounded-lg opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
             <span className="sr-only">Close</span>

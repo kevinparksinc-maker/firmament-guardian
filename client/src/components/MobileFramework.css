@@ -1,0 +1,128 @@
+/* Mobile application structure, layered over existing observatory modules. */
+.fg-command-shell {
+  --fg-dock-height: 72px;
+  --fg-header-height: 56px;
+  min-height: 100svh;
+  isolation: isolate;
+}
+.fg-command-shell .guardian-global-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: rgb(8 11 20 / 96%);
+  border-bottom: 1px solid rgb(217 182 111 / 18%);
+}
+.fg-command-shell .guardian-global-nav-inner {
+  min-height: var(--fg-header-height);
+  gap: 12px;
+  padding-inline: max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px));
+}
+.fg-command-shell .guardian-global-brand { min-height: 48px; min-width: 0; }
+.fg-command-shell .guardian-global-brand > svg { width: 32px; height: 32px; padding: 6px; box-shadow: none; }
+.fg-command-shell .guardian-global-brand strong { font-size: 12px; letter-spacing: .09em; }
+.fg-command-shell .guardian-global-brand small { font: 11px/1.4 Manrope, sans-serif; letter-spacing: .01em; }
+.fg-header-actions { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.fg-profile-switch, .fg-explore-trigger {
+  display: inline-flex;
+  min-width: 48px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding-inline: 10px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 14px;
+  color: #e3e8f1;
+  font-size: 12px;
+}
+.fg-profile-switch span { max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fg-profile-switch:hover, .fg-explore-trigger:hover { background: rgb(255 255 255 / 6%); }
+.fg-command-shell .guardian-global-desktop-links a { min-height: 48px; }
+.fg-content-canvas {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: calc(100svh - var(--fg-header-height) - env(safe-area-inset-top, 0px));
+  padding-bottom: calc(var(--fg-dock-height) + env(safe-area-inset-bottom, 0px) + 32px);
+  scroll-margin-top: calc(var(--fg-header-height) + env(safe-area-inset-top, 0px) + 12px);
+}
+.fg-command-shell .fg-command-main { overflow: visible; padding-top: 20px; }
+.fg-content-canvas :is(h1, h2, h3, [id]) { scroll-margin-top: calc(var(--fg-header-height) + env(safe-area-inset-top, 0px) + 16px); }
+.fg-thumb-dock {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 45;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-height: calc(var(--fg-dock-height) + env(safe-area-inset-bottom, 0px));
+  padding: 4px max(6px, env(safe-area-inset-right, 0px)) max(4px, env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));
+  border-top: 1px solid rgb(217 182 111 / 20%);
+  background: rgb(8 11 20 / 97%);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 -8px 28px rgb(0 0 0 / 25%);
+}
+.fg-thumb-destination {
+  display: flex;
+  min-width: 48px;
+  min-height: 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 14px;
+  color: #aebacf;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 150ms ease, background 150ms ease;
+}
+.fg-thumb-icon { display: flex; align-items: center; justify-content: center; width: 48px; height: 28px; border-radius: 20px; }
+.fg-thumb-destination[aria-current=page] { color: #f0d49a; }
+.fg-thumb-destination[aria-current=page] .fg-thumb-icon { background: rgb(217 182 111 / 17%); }
+.fg-thumb-destination:active { background: rgb(217 182 111 / 10%); }
+.fg-thumb-destination:focus-visible, .fg-header-actions a:focus-visible, .fg-explore-trigger:focus-visible { outline: 2px solid #8ddcea; outline-offset: -3px; }
+.fg-directory-sheet[data-slot=sheet-content] {
+  width: min(100%, 440px);
+  max-width: 100%;
+  height: 100dvh;
+  padding: calc(env(safe-area-inset-top, 0px) + 20px) max(20px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 20px) 20px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  background: #0a101e;
+  border-color: rgb(217 182 111 / 20%);
+  color: #e3e8f1;
+}
+.fg-directory-sheet > button:last-child { top: calc(env(safe-area-inset-top, 0px) + 8px); }
+[data-slot=dialog-content] { max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px); overflow-y: auto; overscroll-behavior-y: contain; }
+.fg-page-loading { width: 100%; max-width: 960px; margin-inline: auto; padding: 24px 12px; }
+.fg-loading-card { border: 1px solid rgb(217 182 111 / 16%); border-radius: 24px; padding: 24px; background: rgb(16 22 40 / 85%); }
+.fg-skeleton { border-radius: 8px; background: linear-gradient(100deg, #1a2336 20%, #29364b 45%, #1a2336 70%); background-size: 220% 100%; animation: fg-loading-shimmer 1.8s ease-in-out infinite; }
+@keyframes fg-loading-shimmer { to { background-position: -220% 0; } }
+@media (max-width: 1024px) {
+  .fg-command-shell .guardian-global-desktop-links { display: none; }
+}
+@media (max-width: 767px) {
+  .fg-command-shell .guardian-global-brand small { display: none; }
+  .fg-command-shell .guardian-global-brand strong { font-size: 11px; }
+  .fg-profile-switch span { max-width: 65px; }
+  .fg-content-canvas { padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px); }
+  .fg-command-main :is(input, textarea, select) { font-size: 16px; }
+  html[data-keyboard-open=true] :is(.fg-thumb-dock, .fg-guide-launcher) { display: none; }
+}
+@media (max-width: 359px) {
+  .fg-profile-switch span { display: none; }
+  .fg-profile-switch > svg:last-child { display: none; }
+  .fg-command-shell .guardian-global-nav-inner { gap: 4px; padding-inline: 8px; }
+  .fg-command-shell .guardian-global-brand { gap: 5px; }
+  .fg-command-shell .guardian-global-brand strong { font-size: 10px; }
+}
+@media (min-width: 1025px) {
+  .fg-command-shell { --fg-dock-height: 0px; }
+  .fg-thumb-dock { display: none; }
+  .fg-content-canvas { padding-bottom: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fg-skeleton { animation: none; }
+  .fg-command-shell *, [data-slot=sheet-content], [data-slot=dialog-content] { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
