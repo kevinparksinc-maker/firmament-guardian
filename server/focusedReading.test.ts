@@ -142,6 +142,18 @@ describe("focused source-backed interpretation", () => {
       "Master Chart mismatch"
     );
   });
+
+  it("returns a chart-grounded mini reading when optional AI synthesis fails", async () => {
+    const chart = await calculateChart(input);
+    vi.mocked(invokeLLM).mockRejectedValueOnce(new Error("upstream gateway timeout"));
+
+    const reading = await buildFocusedReading(chart, placement("Sun"), true);
+
+    expect(reading.miniNarrative).toContain("calculated chart");
+    expect(reading.miniNarrative).toContain("symbolic reflection");
+    expect(reading.miniNarrative).toContain("Sun");
+    expect(reading.evidence.some(item => item.id.startsWith("placement-"))).toBe(true);
+  });
 });
 
 describe("focused contact interpretation", () => {

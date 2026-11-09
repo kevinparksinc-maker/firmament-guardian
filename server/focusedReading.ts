@@ -40,6 +40,40 @@ async function narrateFocusedContactMini(reading: FocusedReading, synthesis: Syn
   return text;
 }
 
+/**
+ * The mini narrative is an enhancement, not a prerequisite for returning the
+ * calculated reading. Provider throttles and gateway timeouts must not turn a
+ * valid chart calculation into a failed tRPC request.
+ */
+function deterministicFocusedMini(reading: FocusedReading): string {
+  const paragraphs = reading.sections
+    .flatMap(section => section.paragraphs)
+    .filter(Boolean)
+    .slice(0, 3);
+  const evidence = reading.evidence
+    .slice(0, 2)
+    .map(item => `${item.label}: ${item.value}`)
+    .join(" ");
+  const body = paragraphs.join(" ");
+  return [
+    `${reading.title} is read from the calculated chart rather than from a generic profile.`,
+    body,
+    evidence ? `The supporting calculation is ${evidence}` : "The supporting calculation is recorded in the evidence panel below.",
+    "Treat this as a symbolic reflection: the chart describes themes and conditions to consider, not guaranteed events or verified biography.",
+  ].filter(Boolean).join(" ");
+}
+
+async function narrateFocusedContactWithFallback(
+  reading: FocusedReading,
+  synthesis: SynthesisResult
+): Promise<string> {
+  try {
+    return await narrateFocusedContactMini(reading, synthesis);
+  } catch {
+    return deterministicFocusedMini(reading);
+  }
+}
+
 
 export type FocusTarget = {
   kind: "placement" | "star" | "contact";
@@ -170,7 +204,7 @@ export async function buildFocusedReading(
       );
     reading.sourceNotes.push(star.firmamentOrbRule.statement);
     if (includeMiniNarrative && !reading.miniNarrative)
-      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis);
+      reading.miniNarrative = await narrateFocusedContactWithFallback(reading, verification.synthesis);
     return reading;
   }
   const row = bodies.find(row => row.name === target.name);
@@ -331,7 +365,7 @@ export async function buildFocusedReading(
         rootedDossier.planetInHouseKnowledge.interpretiveGuardrail
       );
     if (includeMiniNarrative)
-      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis);
+      reading.miniNarrative = await narrateFocusedContactWithFallback(reading, verification.synthesis);
     return reading;
   }
   const sun = canonicalChart.movingBodies.find(body => body.name === "Sun");
@@ -553,6 +587,6 @@ export async function buildFocusedReading(
     );
   }
   if (includeMiniNarrative)
-    reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis);
+    reading.miniNarrative = await narrateFocusedContactWithFallback(reading, verification.synthesis);
   return reading;
 }
