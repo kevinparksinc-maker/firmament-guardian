@@ -566,7 +566,3 @@ export const LOT_CANON_RECORDS: Record<string, LotCanonRecord> = {
     },
   },
 };
-
-// Compatibility exports only: mathematical implementations live outside Canon.
-export { findFixedStarContactsForLongitude } from "../calculations/fixedStarContacts";
-export { calculateChartHermeticLots } from "../calculations/hermeticLots";
