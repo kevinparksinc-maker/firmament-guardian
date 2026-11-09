@@ -205,7 +205,7 @@ export function packPlacementMiniPrompt(
           decan: c.decan ? {
             number: c.decan.number,
             ruler: c.decan.elementalFamilyRuler,
-            meaning: short(c.decan.teaching?.behavioralNuance ?? c.decan.teaching?.label, 160),
+            meaning: short(c.decan.teaching?.statement ?? c.decan.teaching?.label, 160),
           } : null,
         },
         methods,
