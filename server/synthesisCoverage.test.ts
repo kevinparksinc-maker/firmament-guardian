@@ -21,6 +21,12 @@ describe("Unified synthesis method-coverage contract", () => {
       if (layer.status !== "computed-with-result") continue;
       const records = Array.isArray(layer.results) ? layer.results : layer.results == null ? [] : [layer.results];
       expect(records.length).toBeGreaterThan(0);
+      const outcome = synthesis.methodOutcomes.find(method => method.methodId === layer.id)!;
+      if (outcome.status !== "interpreted") {
+        expect(linked.has(`prop-method-${layer.id}-0`)).toBe(false);
+        expect(synthesis.methodOutcomeAudit.incompleteMethodIds).toContain(layer.id);
+        continue;
+      }
       for (let index = 0; index < records.length; index++) {
         const id = `prop-method-${layer.id}-${index}`;
         expect(propositions.some(prop => prop.id === id)).toBe(true);

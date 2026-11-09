@@ -3,6 +3,7 @@ import { buildUnifiedMasterChart } from "./masterChart";
 import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/canon/retriever";
 import { buildCanonRuleApplications } from "./astrologyKnowledge/synthesis/canonApplications";
 import { buildMethodOutcomes } from "./astrologyKnowledge/synthesis/methodOutcomes";
+import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis/synthesizer";
 import type { UnifiedMasterChartSnapshot } from "./masterChart/types";
 
 const input = {
@@ -51,13 +52,13 @@ describe("structured method-specific outcomes", () => {
         ...snapshot.layers,
         "elemental-decans": {
           ...snapshot.layers["elemental-decans"],
-          results: [{ body: "Sun", sign: "Altered", decanIndex: 99, behavioralNuance: "Altered calculated testimony" }],
-          evidenceIds: ["decan-sun-99"],
+          results: [{ body: "Sun", sign: "Altered", decanIndex: 14, behavioralNuance: "challenging obstacle and restriction" }],
+          evidenceIds: ["decan-sun-14"],
         },
       },
       methodExecutionLedger: snapshot.methodExecutionLedger.map(layer =>
         layer.id === "elemental-decans"
-          ? { ...layer, results: [{ body: "Sun", sign: "Altered", decanIndex: 99, behavioralNuance: "Altered calculated testimony" }], evidenceIds: ["decan-sun-99"] }
+          ? { ...layer, results: [{ body: "Sun", sign: "Altered", decanIndex: 14, behavioralNuance: "challenging obstacle and restriction" }], evidenceIds: ["decan-sun-14"] }
           : layer,
       ),
     };
@@ -65,8 +66,12 @@ describe("structured method-specific outcomes", () => {
       outcome => outcome.methodId === "elemental-decans",
     )!;
 
-    expect(changed.interpretation).toContain("Altered calculated testimony");
-    expect(changed.interpretation).not.toBe(original.interpretation);
-    expect(changed.evidenceIds).toEqual(["decan-sun-99"]);
+    expect(changed.judgmentBasis.polarity).not.toBe(original.judgmentBasis.polarity);
+    expect(changed.judgment).not.toBe(original.judgment);
+    expect(changed.judgmentBasis.factors).toContain("polarity:challenging");
+
+    const originalSynthesis = await synthesizeMasterReading({ snapshot, readingMode: "natal", userQuestion: "What is this chart saying?", canonApplications: canon });
+    const changedSynthesis = await synthesizeMasterReading({ snapshot: altered, readingMode: "natal", userQuestion: "What is this chart saying?", canonApplications: canon });
+    expect(changedSynthesis.dominantConclusion).not.toBe(originalSynthesis.dominantConclusion);
   });
 });

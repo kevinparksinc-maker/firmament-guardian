@@ -5,6 +5,8 @@ import {
   clusterPropositionsIntoThemes,
   synthesizeMasterReading,
 } from "./astrologyKnowledge/synthesis";
+import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/canon/retriever";
+import { buildCanonRuleApplications } from "./astrologyKnowledge/synthesis/canonApplications";
 
 const SAMPLE_INPUT = {
   location: "Athens, Greece",
@@ -59,10 +61,15 @@ describe("Master Synthesizer Pipeline", () => {
 
   it("synthesizes a complete master reading with dominant conclusion, integrated prose, and 100% evidence traceability", async () => {
     const snapshot = await buildUnifiedMasterChart(SAMPLE_INPUT);
+    const canonApplications = buildCanonRuleApplications(
+      snapshot,
+      canonDossierToEvidenceItems(retrieveChartCanonDossier(snapshot.natal!)),
+    ).filter(application => application.calculationEvidenceIds.length > 0);
     const result = await synthesizeMasterReading({
       snapshot,
       readingMode: "natal",
       userQuestion: "What is my core life trajectory and highest calling?",
+      canonApplications,
     });
 
     expect(result.snapshotId).toBe(snapshot.snapshotId);

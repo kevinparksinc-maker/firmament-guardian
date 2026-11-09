@@ -1,6 +1,7 @@
 import type { LayerRecord, UnifiedMasterChartSnapshot } from "../../masterChart/types";
 import type {
   CanonRuleApplication,
+  JudgmentPolarity,
   MethodOutcome,
   MethodOutcomeFinding,
 } from "./types";
@@ -101,8 +102,62 @@ function canonForLayer(
 ): CanonRuleApplication[] {
   const ids = new Set(layer.evidenceIds.map(id => `${prefix}${id}`));
   return canonApplications.filter(application =>
+    application.confidence !== "reference-only" &&
+    application.implementationStatus !== "incomplete" &&
     application.calculationEvidenceIds.some(id => ids.has(id)),
   );
+}
+
+function polarityFor(findings: MethodOutcomeFinding[], applications: CanonRuleApplication[]): JudgmentPolarity {
+  const findingText = findings.map(finding => finding.calculatedValue.toLowerCase()).join(" ");
+  const ruleText = applications.map(application => application.statement.toLowerCase()).join(" ");
+  const text = `${findingText} ${ruleText}`;
+  const supportive = (text.match(/supportive|harmony|harmonic|fortunate|gain|growth|strength|benefic|success|constructive|cooperation|favorable/g) ?? []).length;
+  const challenging = (text.match(/challenging|friction|frictional|delay|obstacle|loss|affliction|conflict|difficult|burden|restriction|destruction/g) ?? []).length;
+  if (supportive > 0 && challenging > 0) return "mixed";
+  if (supportive > 0) return "supportive";
+  if (challenging > 0) return "challenging";
+  return "neutral";
+}
+
+function deriveJudgment(
+  layer: LayerRecord,
+  findings: MethodOutcomeFinding[],
+  applications: CanonRuleApplication[],
+  templateJudgment: string,
+) {
+  const polarity = polarityFor(findings, applications);
+  const strength: "strong" | "moderate" | "limited" = applications.length >= 3 ? "strong" : applications.length > 0 ? "moderate" : "limited";
+  const ruleIds = applications.map(application => application.ruleId);
+  const evidenceIds = findings.map(finding => finding.evidenceId);
+  if (!applications.length) {
+    return {
+      judgment: "No traditional judgment issued because no applicable Canon rule is matched to the calculated finding.",
+      basis: { calculatedEvidenceIds: evidenceIds, canonRuleIds: [], polarity: "neutral" as const, strength: "limited" as const, factors: [] },
+    };
+  }
+  const firstFinding = findings[0]?.calculatedValue ?? "the returned calculation";
+  const decan = firstFinding.match(/decanIndex[\": ]+(\d+)/i)?.[1];
+  const decanRuler = firstFinding.match(/(?:elementalFamilyRuler|triplicitySubRuler)[\": ]+\"?([^,}\"]+)/i)?.[1]?.trim();
+  const aspect = firstFinding.match(/(?:aspect|nature)[\": ]+\"?([^,}\"]+)/i)?.[1]?.trim();
+  const orb = firstFinding.match(/orb[\": ]+([0-9.]+)/i)?.[1];
+  const factors = [
+    ...(decan ? [`decan:${decan}`] : []),
+    ...(decanRuler ? [`ruler:${decanRuler}`] : []),
+    ...(aspect ? [`aspect:${aspect}`] : []),
+    ...(orb ? [`orb:${orb}`] : []),
+    `polarity:${polarity}`,
+  ];
+  const detail = decan
+    ? `the calculated decan ${decan}${decanRuler ? ` ruled by ${decanRuler}` : ""}`
+    : aspect
+      ? `the calculated ${aspect} testimony`
+      : `the returned ${layer.name} finding`;
+  const judgment = `The matched Canon rules ${ruleIds.join(", ")} judge ${detail} as ${polarity} testimony at ${strength} strength. ${templateJudgment}`;
+  return {
+    judgment,
+    basis: { calculatedEvidenceIds: evidenceIds, canonRuleIds: ruleIds, polarity, strength, factors },
+  };
 }
 
 function outcomeForLayer(
@@ -140,6 +195,13 @@ function outcomeForLayer(
       evidenceIds: calculatedFindings.map(f => f.evidenceId),
       strengthAndLimitations: limitations,
       missingCanon: false,
+      judgmentBasis: {
+        calculatedEvidenceIds: calculatedFindings.map(finding => finding.evidenceId),
+        canonRuleIds: applications.map(application => application.ruleId),
+        polarity: "neutral",
+        strength: "limited",
+        factors: [],
+      },
     };
   }
   if (layer.status === "not-applicable") {
@@ -158,6 +220,13 @@ function outcomeForLayer(
       evidenceIds: [],
       strengthAndLimitations: [layer.notes ?? "Method not applicable."],
       missingCanon: false,
+      judgmentBasis: {
+        calculatedEvidenceIds: [],
+        canonRuleIds: [],
+        polarity: "neutral",
+        strength: "limited",
+        factors: [],
+      },
     };
   }
   if (layer.status === "failed" || layer.status === "not-implemented" || layer.status === "computed-no-result") {
@@ -177,12 +246,20 @@ function outcomeForLayer(
       evidenceIds: calculatedFindings.map(f => f.evidenceId),
       strengthAndLimitations: [reason],
       missingCanon: false,
+      judgmentBasis: {
+        calculatedEvidenceIds: calculatedFindings.map(finding => finding.evidenceId),
+        canonRuleIds: applications.map(application => application.ruleId),
+        polarity: "neutral",
+        strength: "limited",
+        factors: [],
+      },
     };
   }
 
   const findingText = calculatedFindings.map(f => `${f.label}: ${f.calculatedValue}`).join(" | ");
   const canonText = applications.map(application => `[${application.ruleId}] ${application.statement}`).join(" ");
   const missingCanon = applications.length === 0;
+  const derived = deriveJudgment(layer, calculatedFindings, applications, template.judgment);
   return {
     methodId: layer.id,
     methodName: layer.name,
@@ -193,11 +270,12 @@ function outcomeForLayer(
     calculatedFindings,
     canonApplications: applications,
     interpretation: `${template.meaning} Actual calculation: ${findingText || "no finding records"} Canon applied: ${canonText || "NONE — required traditional rule coverage is missing"}`,
-    judgment: missingCanon ? "No traditional judgment issued because the applicable Canon rule is missing." : template.judgment,
+    judgment: derived.judgment,
     contribution: missingCanon ? "The method is withheld from the authoritative synthesis until its Canon coverage is supplied." : `This ${layer.tradition} method contributes its calculated testimony to the cross-method synthesis without replacing other methods.`,
     evidenceIds: calculatedFindings.map(f => f.evidenceId),
     strengthAndLimitations: limitations,
     missingCanon,
+    judgmentBasis: derived.basis,
   };
 }
 

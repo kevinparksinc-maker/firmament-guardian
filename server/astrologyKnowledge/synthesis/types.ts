@@ -43,6 +43,8 @@ export interface MethodOutcomeFinding {
   calculatedValue: string;
 }
 
+export type JudgmentPolarity = "supportive" | "challenging" | "mixed" | "neutral";
+
 export interface MethodOutcome {
   methodId: string;
   methodName: string;
@@ -58,6 +60,13 @@ export interface MethodOutcome {
   evidenceIds: string[];
   strengthAndLimitations: string[];
   missingCanon: boolean;
+  judgmentBasis: {
+    calculatedEvidenceIds: string[];
+    canonRuleIds: string[];
+    polarity: JudgmentPolarity;
+    strength: "strong" | "moderate" | "limited";
+    factors: string[];
+  };
 }
 
 export interface InterpretedProposition {
