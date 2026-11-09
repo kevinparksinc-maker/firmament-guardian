@@ -503,7 +503,7 @@ export function startPlacementReadingJob(
     .digest("hex");
   const oldId = jobIdsByChart.get(identity);
   const oldJob = oldId && placementJobs.get(oldId);
-  if (oldJob && oldJob.expiresAt > Date.now() && oldJob.state !== "error")
+  if (oldJob && oldJob.expiresAt > Date.now() && (oldJob.state === "running" || (oldJob.state === "done" && !oldJob.result?.failed?.length)))
     return { jobId: oldJob.id };
   const id = randomBytes(24).toString("hex");
   const job: PlacementJob = {
