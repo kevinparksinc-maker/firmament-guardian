@@ -7,10 +7,8 @@ import {
   detectHoraryAndTraditionalMechanisms,
   evaluatePlacementDignityAndCondition,
 } from "./dignitiesAndHorary";
-import {
-  calculateChartHermeticLots,
-  findFixedStarContactsForLongitude,
-} from "../canon/fixedStarsAndLots";
+import { calculateChartHermeticLots } from "./hermeticLots";
+import { findFixedStarContactsForLongitude } from "./fixedStarContacts";
 import { HOUSE_CANON_RECORDS, synthesizePlanetInHouse } from "./housesAndFrames";
 import { getManzilCanonByLongitude } from "./manazil28";
 import { getNakshatraCanonByLongitude } from "./nakshatras27";
