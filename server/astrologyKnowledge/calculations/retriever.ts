@@ -24,7 +24,7 @@ import type {
   ChartCanonDossier,
   RetrievedPlacementDossier,
   VedicAyanamsaMode,
-} from "./types";
+} from "../canon/types";
 import { evaluateVedicJyotishSystem } from "./vedicJyotishCanon";
 import {
   buildDispositorChains,

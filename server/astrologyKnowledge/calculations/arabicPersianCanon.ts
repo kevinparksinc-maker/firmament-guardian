@@ -15,7 +15,7 @@ import type {
   ArabicPersianTraditionSummary,
   LotCanonRecord,
   ProvenanceRecord,
-} from "./types";
+} from "../canon/types";
 
 /**
  * Distinct Medieval Arabic & Persian Author Lineages (preserving authorial differences rather than flattening under one generic label).

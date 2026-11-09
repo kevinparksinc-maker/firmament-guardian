@@ -6,8 +6,8 @@ import { calculateMasterChart } from "./masterChart/entry";
 import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { buildMasterPipeline } from "./master-pipeline";
 import { buildMasterGameChart } from "./simulationLab/masterGameChart";
-import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/canon/nakshatras27";
-import { getManzilCanonByLongitude } from "./astrologyKnowledge/canon/manazil28";
+import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/calculations/nakshatras27";
+import { getManzilCanonByLongitude } from "./astrologyKnowledge/calculations/manazil28";
 
 const input = {
   location: "Dallas, Texas, USA",

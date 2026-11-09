@@ -6,7 +6,7 @@ import {
   clusterPropositionsIntoThemes,
   synthesizeMasterReading,
 } from "./astrologyKnowledge/synthesis";
-import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/canon/retriever";
+import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/calculations/retriever";
 import { buildCanonRuleApplications } from "./astrologyKnowledge/synthesis/canonApplications";
 
 const SAMPLE_INPUT = {

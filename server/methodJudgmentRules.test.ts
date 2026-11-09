@@ -4,7 +4,7 @@ import type { UnifiedMasterChartSnapshot } from "./masterChart/types";
 import * as outcomesModule from "./astrologyKnowledge/synthesis/methodOutcomes";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis/synthesizer";
 import { packSynthesis } from "./astrologyKnowledge/synthesis/context";
-import { getDecanCanonByLongitude } from "./astrologyKnowledge/canon/decans36";
+import { getDecanCanonByLongitude } from "./astrologyKnowledge/calculations/decans36";
 import { ZODIAC_SIGNS } from "../shared/hybrid";
 
 const input = {

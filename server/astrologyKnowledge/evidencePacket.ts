@@ -17,7 +17,7 @@ import {
 import {
   canonDossierToEvidenceItems,
   retrieveChartCanonDossier,
-} from "./canon";
+} from "./calculations";
 import type { AstrologyEvidencePacket, EvidenceItem } from "./types";
 import { overlay as canonicalOverlay } from "../../shared/hybrid";
 

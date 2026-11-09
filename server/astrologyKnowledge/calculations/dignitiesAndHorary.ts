@@ -5,7 +5,7 @@ import type {
   DetectedTraditionalMechanism,
   HoraryMechanismRecord,
   RetrievedPlacementDossier,
-} from "./types";
+} from "../canon/types";
 
 /**
  * Egyptian Bounds / Terms (Hellenistic & Arabic standard: Nechepso/Petosiris, Valens, Dorotheus, Abu Ma'shar).

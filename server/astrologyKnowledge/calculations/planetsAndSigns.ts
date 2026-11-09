@@ -1,4 +1,4 @@
-import type { PlanetCanonRecord, SignCanonRecord } from "./types";
+import type { PlanetCanonRecord, SignCanonRecord } from "../canon/types";
 
 export const PLANET_CANON_RECORDS: Record<string, PlanetCanonRecord> = {
   Sun: {

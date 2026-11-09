@@ -11,8 +11,8 @@ import {
   synthesizeChartForReading,
   synthesizeMasterSnapshot,
 } from "./astrologyKnowledge/synthesis/readingBridge";
-import { retrievePlacementDossier } from "./astrologyKnowledge/canon/retriever";
-import { elementalDecanTeaching } from "./astrologyKnowledge/canon/decans36";
+import { retrievePlacementDossier } from "./astrologyKnowledge/calculations/retriever";
+import { elementalDecanTeaching } from "./astrologyKnowledge/calculations/decans36";
 import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
 
 const summarySchema = z.object({

@@ -1,6 +1,6 @@
 import { DECANS, ELEMENTAL_DECAN_SIGNS, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import { PLANET_CANON_RECORDS, SIGN_CANON_RECORDS } from "./planetsAndSigns";
-import type { DecanCanonRecord } from "./types";
+import type { DecanCanonRecord } from "../canon/types";
 
 const TRIPLICITY_SUB_RULERS: Record<string, [string, string, string]> = {
   Aries: ["Mars", "Sun", "Jupiter"],

@@ -1,5 +1,5 @@
 import type { Tradition } from "../types";
-import type { PlanetInHouseKnowledgeRecord } from "./planetInHouseInterpretations";
+import type { PlanetInHouseKnowledgeRecord } from "../calculations/planetInHouseInterpretations";
 
 /**
  * Epistemic separation required by Firmament architecture:

@@ -1,5 +1,5 @@
 import { MANAZIL, normalizeLongitude } from "../../../shared/hybrid";
-import type { ManzilCanonRecord } from "./types";
+import type { ManzilCanonRecord } from "../canon/types";
 
 const MANZIL_SPAN = 360 / 28; // ~12.85714286°
 

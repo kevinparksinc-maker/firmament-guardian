@@ -6,7 +6,7 @@ import {
 } from "../../../shared/hybrid";
 import type { ChartResult } from "../../astronomy";
 import { HOUSE_CANON_RECORDS } from "./housesAndFrames";
-import type { FixedStarCanonRecord, LotCanonRecord } from "./types";
+import type { FixedStarCanonRecord, LotCanonRecord } from "../canon/types";
 
 const FIXED_STAR_DOCTRINE: Record<
   string,

@@ -1,4 +1,4 @@
-import { PLANET_CANON_RECORDS } from "../astrologyKnowledge/canon/planetsAndSigns";
+import { PLANET_CANON_RECORDS } from "../astrologyKnowledge/calculations/planetsAndSigns";
 import { SUMERIAN_CELESTIAL_ASSOCIATIONS, SUMERIAN_CELESTIAL_SOURCE_ID, ENLIL_HISTORICAL_NOTE } from "../astrologyKnowledge/canon/sumerianCelestial";
 import { detectAllYogas } from "../genesisBackup/vedicYogaDetector";
 import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "../../shared/energyScoring";
@@ -23,19 +23,19 @@ import {
 } from "../../shared/hybrid";
 import {
   calculateChartHermeticLots,
-} from "../astrologyKnowledge/canon/fixedStarsAndLots";
-import { getNakshatraCanonByLongitude } from "../astrologyKnowledge/canon/nakshatras27";
-import { getManzilCanonByLongitude } from "../astrologyKnowledge/canon/manazil28";
+} from "../astrologyKnowledge/calculations/fixedStarsAndLots";
+import { getNakshatraCanonByLongitude } from "../astrologyKnowledge/calculations/nakshatras27";
+import { getManzilCanonByLongitude } from "../astrologyKnowledge/calculations/manazil28";
 import {
   CHINESE_MANSIONS,
   CHINESE_MANSION_HISTORICAL_SOURCE,
 } from "../astrologyKnowledge/canon/chineseMansions28";
-import { getDecanCanonByLongitude, elementalDecanTeaching } from "../astrologyKnowledge/canon/decans36";
+import { getDecanCanonByLongitude, elementalDecanTeaching } from "../astrologyKnowledge/calculations/decans36";
 import {
   resolveVedicTimingAndAshtakavarga,
   timingMethodCalculations,
 } from "../astrologyKnowledge/vedic/timingAndAshtakavarga";
-import { seferYetzirahEvidence } from "../astrologyKnowledge/canon/seferYetzirah";
+import { seferYetzirahEvidence } from "../astrologyKnowledge/calculations/seferYetzirah";
 import { runGenesisPatternPipeline } from "../genesisBackup/adapter";
 import type {
   LayerRecord,

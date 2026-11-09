@@ -1,13 +1,9 @@
+/**
+ * Static Canon reference surface.
+ *
+ * Chart calculations and lookup adapters live under ../calculations. This
+ * barrel intentionally exports only immutable reference records and types.
+ */
 export * from "./types";
-export * from "./planetsAndSigns";
-export * from "./housesAndFrames";
-export * from "./dignitiesAndHorary";
-export * from "./decans36";
-export * from "./manazil28";
-export * from "./nakshatras27";
-export * from "./fixedStarsAndLots";
-export * from "./westernRelationalAndTiming";
-export * from "./vedicJyotishCanon";
-export * from "./planetInHouseInterpretations";
-export * from "./arabicPersianCanon";
-export * from "./retriever";
+export * from "./chineseMansions28";
+export * from "./sumerianCelestial";

@@ -1,7 +1,7 @@
 import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { describe, expect, it } from "vitest";
 import { buildUnifiedMasterChart } from "./masterChart";
-import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/canon/retriever";
+import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/calculations/retriever";
 import { buildCanonRuleApplications } from "./astrologyKnowledge/synthesis/canonApplications";
 import { buildMethodOutcomes } from "./astrologyKnowledge/synthesis/methodOutcomes";
 import type { UnifiedMasterChartSnapshot } from "./masterChart/types";

@@ -16,7 +16,7 @@ import {
   SIMPLE_LETTERS,
   CONTRARY_PAIRS,
   FOUR_WORLDS,
-} from "../../../server/astrologyKnowledge/canon/seferYetzirah";
+} from "../../../server/astrologyKnowledge/calculations/seferYetzirah";
 import {
   detectAllYogas,
   type PlanetPlacement,

@@ -6,27 +6,27 @@ import {
   PLANET_CANON_RECORDS,
   SIGN_CANON_RECORDS,
   synthesizePlanetInSign,
-} from "../canon/planetsAndSigns";
+} from "../calculations/planetsAndSigns";
 import {
   HOUSE_CANON_RECORDS,
   synthesizePlanetInHouse,
-} from "../canon/housesAndFrames";
-import { getManzilCanonByLongitude } from "../canon/manazil28";
-import { getNakshatraCanonByLongitude } from "../canon/nakshatras27";
+} from "../calculations/housesAndFrames";
+import { getManzilCanonByLongitude } from "../calculations/manazil28";
+import { getNakshatraCanonByLongitude } from "../calculations/nakshatras27";
 import {
   getDecanCanonByLongitude,
   elementalDecanTeaching,
-} from "../canon/decans36";
+} from "../calculations/decans36";
 import {
   FIXED_STAR_CANON_RECORDS,
   LOT_CANON_RECORDS,
-} from "../canon/fixedStarsAndLots";
-import { TRADITIONAL_ASPECT_DOCTRINE } from "../canon/dignitiesAndHorary";
+} from "../calculations/fixedStarsAndLots";
+import { TRADITIONAL_ASPECT_DOCTRINE } from "../calculations/dignitiesAndHorary";
 import {
   DOUBLE_LETTERS,
   SIMPLE_LETTERS,
   CONTRARY_PAIRS,
-} from "../canon/seferYetzirah";
+} from "../calculations/seferYetzirah";
 import type { ChartRow } from "../../astronomy";
 import type {
   LayerRecord,

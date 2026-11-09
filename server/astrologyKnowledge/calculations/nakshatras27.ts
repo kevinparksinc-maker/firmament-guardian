@@ -1,5 +1,5 @@
 import { NAKSHATRAS, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
-import type { NakshatraCanonRecord, NakshatraPadaRecord } from "./types";
+import type { NakshatraCanonRecord, NakshatraPadaRecord } from "../canon/types";
 
 const NAK_SPAN = 360 / 27; // 13.33333333°
 const PADA_SPAN = NAK_SPAN / 4; // 3.33333333°

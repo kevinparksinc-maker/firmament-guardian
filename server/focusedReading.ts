@@ -8,8 +8,8 @@ import {
   type ChartRow,
 } from "./astronomy";
 import { synthesizeChartForReading, synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
-import { retrievePlacementDossier } from "./astrologyKnowledge/canon/retriever";
-import { FIXED_STAR_CANON_RECORDS } from "./astrologyKnowledge/canon/fixedStarsAndLots";
+import { retrievePlacementDossier } from "./astrologyKnowledge/calculations/retriever";
+import { FIXED_STAR_CANON_RECORDS } from "./astrologyKnowledge/calculations/fixedStarsAndLots";
 import { describeAspectPair } from "../shared/energyInterpretation";
 import { invokeLLM } from "./_core/llm";
 import { MINI_SYNTHESIS_STYLE } from "./master-interpreter";

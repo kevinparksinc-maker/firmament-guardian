@@ -3,7 +3,7 @@ import { invokeLLM } from "./_core/llm";
 vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
 import { calculateChart } from "./astronomy";
 import { buildFocusedReading } from "./focusedReading";
-import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/canon/nakshatras27";
+import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/calculations/nakshatras27";
 const input = {
   location: "Dallas, Texas, USA",
   latitude: 32.7767,

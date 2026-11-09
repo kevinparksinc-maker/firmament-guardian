@@ -4,8 +4,8 @@ import {
   formatEvidencePacket,
 } from "./evidencePacket";
 import { planKnowledge } from "./planner";
-import { canonDossierToEvidenceItems, retrieveChartCanonDossier } from "./canon";
-import { PLANET_IN_HOUSE, getPlanetInHouseKnowledge } from "./canon/planetInHouseInterpretations";
+import { canonDossierToEvidenceItems, retrieveChartCanonDossier } from "./calculations";
+import { PLANET_IN_HOUSE, getPlanetInHouseKnowledge } from "./calculations/planetInHouseInterpretations";
 import { ASTROLOGY_RULES, ASTROLOGY_SOURCES } from "./registry";
 import { resolveRelationships } from "./resolver";
 import type { ChartResult } from "../astronomy";

@@ -12,9 +12,9 @@ import {
 } from "./astrologyKnowledge";
 import { runGenesisPatternPipeline } from "./genesisBackup/adapter";
 import { generateReading } from "./genesisBackup/readingEngine";
-import { getDecanCanonByLongitude } from "./astrologyKnowledge/canon/decans36";
-import { getManzilCanonByLongitude } from "./astrologyKnowledge/canon/manazil28";
-import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/canon/nakshatras27";
+import { getDecanCanonByLongitude } from "./astrologyKnowledge/calculations/decans36";
+import { getManzilCanonByLongitude } from "./astrologyKnowledge/calculations/manazil28";
+import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/calculations/nakshatras27";
 import { overlay as canonicalOverlay } from "../shared/hybrid";
 import { buildMasterPipeline, formatMasterGateContext } from "./master-pipeline";
 

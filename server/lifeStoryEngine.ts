@@ -10,9 +10,9 @@ import {
 } from "../shared/hybrid";
 import { calculateArabicLots, calculateLot, LOT_FORMULAS, type Sect } from "./utils/arabicLots";
 
-import { DOUBLE_LETTERS, SIMPLE_LETTERS, MOTHER_LETTERS } from "./astrologyKnowledge/canon/seferYetzirah";
-import { DECAN_CANON_RECORDS } from "./astrologyKnowledge/canon/decans36";
-import { MANZIL_CANON_RECORDS } from "./astrologyKnowledge/canon/manazil28";
+import { DOUBLE_LETTERS, SIMPLE_LETTERS, MOTHER_LETTERS } from "./astrologyKnowledge/calculations/seferYetzirah";
+import { DECAN_CANON_RECORDS } from "./astrologyKnowledge/calculations/decans36";
+import { MANZIL_CANON_RECORDS } from "./astrologyKnowledge/calculations/manazil28";
 import { CHINESE_MANSIONS } from "./astrologyKnowledge/canon/chineseMansions28";
 import { invokeLLM } from "./_core/llm";
 import { buildAstrologyEvidencePacket, formatEvidencePacket } from "./astrologyKnowledge/evidencePacket";
@@ -750,7 +750,7 @@ export function runAstrologyEngineAudit(chart: ChartResult): MethodAuditStatus[]
       layer: "28 Arabic Manazil",
       name: "Traditional Arabic Lunar Stations",
       status: "implemented-verified",
-      calculationSource: "shared/hybrid.ts (overlay) & server/astrologyKnowledge/canon/manazil28.ts",
+      calculationSource: "shared/hybrid.ts (overlay) & server/astrologyKnowledge/calculations/manazil28.ts",
       dataOutput: "ChartRow.overlay.manzil",
       apiProcedure: "hybrid.calculate",
       interpreterIntegration: "arabicPersianCanon.ts",
@@ -774,7 +774,7 @@ export function runAstrologyEngineAudit(chart: ChartResult): MethodAuditStatus[]
       layer: "36 Elemental Decans",
       name: "Triplicity Family Decan Divisions (10°)",
       status: "implemented-verified",
-      calculationSource: "shared/hybrid.ts & server/astrologyKnowledge/canon/decans36.ts",
+      calculationSource: "shared/hybrid.ts & server/astrologyKnowledge/calculations/decans36.ts",
       dataOutput: "ChartRow.overlay.decan (sign, number, ruler, element)",
       apiProcedure: "hybrid.calculate",
       interpreterIntegration: "elementalDecans.test.ts",
@@ -858,7 +858,7 @@ export function runAstrologyEngineAudit(chart: ChartResult): MethodAuditStatus[]
       layer: "House Classifications",
       name: "Kendra, Trikona, Dusthana & Upachaya Groups",
       status: "implemented-verified",
-      calculationSource: "server/astrologyKnowledge/canon/jyotishHouseGroups.ts",
+      calculationSource: "server/astrologyKnowledge/calculations/jyotishHouseGroups.ts",
       dataOutput: "Kendra (1,4,7,10), Trikona (1,5,9), Dusthana (6,8,12), Upachaya (3,6,10,11)",
       apiProcedure: "astrologyKnowledge.diagnose",
       interpreterIntegration: "jyotishHouseGroups.test.ts",
@@ -882,7 +882,7 @@ export function runAstrologyEngineAudit(chart: ChartResult): MethodAuditStatus[]
       layer: "Kabbalistic Correspondences",
       name: "Sefer Yetzirah Letters & Four Worlds",
       status: "implemented-verified",
-      calculationSource: "server/astrologyKnowledge/canon/seferYetzirah.ts",
+      calculationSource: "server/astrologyKnowledge/calculations/seferYetzirah.ts",
       dataOutput: "MOTHER_LETTERS (3), DOUBLE_LETTERS (7), SIMPLE_LETTERS (12), Four Worlds mapping",
       apiProcedure: "astrologyKnowledge.diagnose",
       interpreterIntegration: "seferYetzirah.integration.test.ts",

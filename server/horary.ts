@@ -12,8 +12,8 @@ import { HORARY_SYSTEM as HORARY_SPECIALIZED_SYSTEM } from "./horary-instruction
 import { FULL_SYNTHESIS_STYLE } from "./master-interpreter";
 import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
 import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
-import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever";
-import { getPlanetInHouseKnowledge } from "./astrologyKnowledge/canon/planetInHouseInterpretations";
+import { retrieveChartCanonDossier } from "./astrologyKnowledge/calculations/retriever";
+import { getPlanetInHouseKnowledge } from "./astrologyKnowledge/calculations/planetInHouseInterpretations";
 
 export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
   question: string;

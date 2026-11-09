@@ -1,6 +1,6 @@
 import { translationFor } from "../../astrologyCore";
 import { PLANET_CANON_RECORDS } from "./planetsAndSigns";
-import type { HouseCanonRecord } from "./types";
+import type { HouseCanonRecord } from "../canon/types";
 
 export const HOUSE_CANON_RECORDS: Record<number, HouseCanonRecord> = {
   1: {

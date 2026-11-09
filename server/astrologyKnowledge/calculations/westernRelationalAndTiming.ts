@@ -14,7 +14,7 @@ import type {
   ProvenanceRecord,
   RelationalHouseChainSynthesis,
   WesternTimingActivationRecord,
-} from "./types";
+} from "../canon/types";
 
 /**
  * Complete Language of Planetary Relationships & Condition vs. Delivery Doctrine

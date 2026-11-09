@@ -8,7 +8,7 @@ import type {
   VedicStrengthAndPanchangaSummary,
   VedicVargaDoctrineRecord,
   VedicYogaCanonRecord,
-} from "./types";
+} from "../canon/types";
 
 /**
  * Compute approximate Lahiri (Chitrapaksha) or Raman Ayanamsa for a given Julian Day / UTC date,
