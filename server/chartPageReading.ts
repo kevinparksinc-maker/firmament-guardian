@@ -146,52 +146,48 @@ export function buildPlacementPackets(
   });
 }
 
-/** Retain every relevant judgment once; repeated doctrine is interned losslessly. */
+/** Full Canon findings remain in the evidence ledger. The AI gets a short,
+ * traceable digest for every applicable finding, without repeated house and
+ * planet dictionary definitions or bibliographic metadata.
+ */
 export function packPlacementMiniPrompt(
   packets: ReturnType<typeof buildPlacementPackets>
 ) {
-  const unique = Array.from(
-    new Map(
-      packets.flatMap(p => p.judgments).map(j => [j.findingId, j])
-    ).values()
-  );
-  const split = (text: string) => text.split(/(?<=[.!?])(?=\s)/);
-  const counts = new Map<string, number>();
-  for (const j of unique)
-    for (const part of split(j.judgment))
-      counts.set(part, (counts.get(part) ?? 0) + 1);
-  const textTable = Array.from(counts)
-    .filter(([part, n]) => part.length >= 60 && n > 1)
-    .map(([part]) => part);
-  const textIndex = new Map(textTable.map((part, i) => [part, i]));
-  const sources = Array.from(new Set(unique.flatMap(j => j.sources)));
-  const findingIndex = new Map(unique.map((j, i) => [j.findingId, i]));
+  const compactJudgment = (text: string, planet: string) => {
+    const normalized = text
+      .replace(new RegExp(planet.replace(/[.*+?^\u0024{}()|[\]\\]/g, "\\\\$&") + "'s [A-Z][^.\\n]*? (?:cooperates with|takes|has|operates through|is refined by|occupies|at) ", "g"), planet + " ")
+      .replace(/House (\\d+): [^.;]+/g, "H$1")
+      .replace(/This four-condition dignity subset is distinct from the separately calculated Shadbala capacity\\.?/gi, "")
+      .replace(/This four-condition subset gives it no special essential status; house placement and the host's condition determine delivery\\.?/gi, "")
+      .replace(/\\s+/g, " ")
+      .trim();
+    // Capture beginning and conclusion of the judgment instead of copying
+    // several full paragraphs. Neither coordinates nor Canon are recalculated.
+    if (normalized.length <= 460) return normalized;
+    const sentences = normalized.match(/[^.!?]+[.!?]?/g) ?? [normalized];
+    const selected: string[] = [];
+    let length = 0;
+    for (const sentence of sentences) {
+      const piece = sentence.trim();
+      if (!piece || length + piece.length > 430) continue;
+      selected.push(piece);
+      length += piece.length + 1;
+    }
+    return selected.join(" ").slice(0, 460) || normalized.slice(0, 460);
+  };
   return {
-    textTable,
-    sources,
-    findingColumns: [
-      "judgmentParts",
-      "methodId",
-      "evidenceIds",
-      "frame",
-      "sourceRefs",
-      "limitation",
-    ],
-    findings: unique.map(j => [
-      split(j.judgment).map(part => textIndex.get(part) ?? part),
-      j.methodId,
-      j.evidenceIds,
-      j.frame,
-      j.sources.map(s => sources.indexOf(s)),
-      j.limitation ?? null,
-    ]),
     placements: packets.map(p => ({
       name: p.name,
       position: p.facts[0].value,
       placementEvidenceId: p.placementEvidenceId,
+      // Foundational Canon is retrieved locally and carried into synthesis.
       canon: p.canon,
-      facts: p.facts.map(f => ({ id: f.id, layerId: f.layerId })),
-      findingRefs: p.judgments.map(j => findingIndex.get(j.findingId)),
+      findings: p.judgments.map(j => ({
+        method: j.methodId,
+        frame: j.frame,
+        evidenceIds: j.evidenceIds,
+        teaching: compactJudgment(j.judgment, p.name),
+      })),
     })),
   };
 }
@@ -344,8 +340,9 @@ second-person mini-story with spiritual weight and natural 2026 language.
 Honor the fixed-XYZ God/Agent house distinction, harmonious conjunctions,
 each supplied mansion/pada, decan, aspects, rulers, strength, and star contact.
 Do not invent missing chart facts, interpretations, biographies or timings.
-The packet is indexed: findingRefs select the rows in findings; findingColumns
-define their order; textTable indices expand judgmentParts in order.
+Every applicable finding is supplied as a compact teaching with its method
+and evidenceIds. Use the local Canon for deeper meaning; do not request or
+reconstruct the full technical ledger.
 ` + `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Use the locally retrieved Canon's actual planetary functions, sign qualities, house topics, mansion/pada teachings, decan and calculated method judgments as your authoritative astrological knowledge. Your only job is to weave their interactions into a deeply specific paragraph, not to look up doctrine, rederive calculations, or simply concatenate Canon descriptions. Explain how the supplied layers change one another for this particular placement, with a concrete everyday example. Avoid repeating the same house definition or psychological scaffold across readings. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. The selected placements' locally retrieved Canon meanings and all applicable calculated judgments are supplied in a compact indexed packet. Read every supplied finding and Canon principle, then synthesize rather than restating the reference text. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`;
   const request = {
     max_tokens: 2000,
