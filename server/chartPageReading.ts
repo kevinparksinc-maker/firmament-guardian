@@ -1,5 +1,5 @@
 import { readingProse } from "../shared/readingProse";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   placementRows,
   placementMiniIdentity,
@@ -447,4 +447,74 @@ reconstruct the full technical ledger.
         .facts.filter(f => p.evidenceIds.includes(f.id)),
     })),
   };
+}
+
+/** Long-running NVIDIA work must never keep an HTTP request open.
+ * The browser starts a job and polls with short requests; the local Canon
+ * and finished synthesis are cached by chart identity on this instance.
+ */
+type PlacementJobResult = Pick<ChartPageReading, "snapshotId" | "placements">;
+type PlacementJob = {
+  id: string;
+  identity: string;
+  expiresAt: number;
+  state: "running" | "done" | "error";
+  result?: PlacementJobResult;
+  error?: string;
+};
+const placementJobs = new Map<string, PlacementJob>();
+const jobIdsByChart = new Map<string, string>();
+
+export function startPlacementReadingJob(
+  chart: ChartResult,
+  mode: "natal" | "transit" | "combined",
+  names: string[]
+): { jobId: string } {
+  if (!names.length || names.length > 2 || new Set(names).size !== names.length)
+    throw new Error("PLACEMENT_MINI_SCOPE: Request one or two placements.");
+  const identity = createHash("sha256")
+    .update(placementMiniIdentity(chart, mode === "transit" ? "transit" : "natal") + mode + JSON.stringify(names))
+    .digest("hex");
+  const oldId = jobIdsByChart.get(identity);
+  const oldJob = oldId && placementJobs.get(oldId);
+  if (oldJob && oldJob.expiresAt > Date.now() && oldJob.state !== "error")
+    return { jobId: oldJob.id };
+  const id = randomBytes(24).toString("hex");
+  const job: PlacementJob = {
+    id, identity, expiresAt: Date.now() + 30 * 60_000, state: "running"
+  };
+  placementJobs.set(id, job);
+  jobIdsByChart.set(identity, id);
+  // Keep a bounded server-side store, removing oldest jobs first.
+  while (placementJobs.size > 80) {
+    const first = placementJobs.keys().next().value;
+    if (!first) break;
+    const removed = placementJobs.get(first);
+    placementJobs.delete(first);
+    if (removed && jobIdsByChart.get(removed.identity) === first)
+      jobIdsByChart.delete(removed.identity);
+  }
+  void buildChartPageReading(chart, mode, names).then(
+    reading => {
+      job.state = "done";
+      job.result = { snapshotId: reading.snapshotId, placements: reading.placements };
+    },
+    failure => {
+      job.state = "error";
+      job.error = failure instanceof Error ? failure.message : "Placement synthesis failed.";
+      console.warn("Placement synthesis job failed:", job.error.split("\n")[0]?.slice(0, 180));
+    }
+  );
+  return { jobId: id };
+}
+
+export function getPlacementReadingJob(jobId: string) {
+  const job = placementJobs.get(jobId);
+  if (!job || job.expiresAt <= Date.now())
+    return { state: "error" as const, error: "READING_JOB_EXPIRED: Start this planet's reading again." };
+  if (job.state === "done")
+    return { state: "done" as const, result: job.result! };
+  if (job.state === "error")
+    return { state: "error" as const, error: job.error || "Placement synthesis failed." };
+  return { state: "running" as const };
 }
