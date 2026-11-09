@@ -233,8 +233,8 @@ export function validatePlacementSummaries(
     const warnings: string[] = [];
     const validIds = new Set(packet.facts.map(f => f.id));
     const validLayers = new Set(packet.facts.map(f => f.layerId));
-    const evidenceIds = Array.fromnew Set((item.evidenceIds ?? []).filter(id => validIds.has(id)));
-    const layerIds = Array.fromnew Set((item.layerIds ?? []).filter(id => validLayers.has(id)));
+    const evidenceIds = Array.from(new Set((item.evidenceIds ?? []).filter(id => validIds.has(id))));
+    const layerIds = Array.from(new Set((item.layerIds ?? []).filter(id => validLayers.has(id))));
     if (evidenceIds.length !== (item.evidenceIds ?? []).length) warnings.push("Unknown evidence references removed");
     if (layerIds.length !== (item.layerIds ?? []).length) warnings.push("Unknown method references removed");
     if (!evidenceIds.includes(packet.placementEvidenceId)) {
