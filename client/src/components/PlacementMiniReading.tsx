@@ -72,10 +72,18 @@ export function usePlacementMiniReadings(
         };
       const result = await generate.mutateAsync({ chart, mode: layer, names });
       try {
+        // The server includes a complete 19-method ledger in every response.
+        // Never persist that huge repeated ledger 14 times: store only the
+        // finished narrative and its exact per-planet evidence.
+        const compact = {
+          snapshotId: result.snapshotId,
+          placements: result.placements,
+        };
         const keys = Object.keys(localStorage).filter(k =>
           k.startsWith(storagePrefix)
         );
-        for (const old of keys.slice(0, Math.max(0, keys.length - 55)))
+        // Purge stale prior-version readings that may contain full ledgers.
+        for (const old of keys.filter(k => !k.startsWith(storagePrefix + identity + ":")))
           localStorage.removeItem(old);
         for (const placement of result.placements)
           localStorage.setItem(
@@ -85,9 +93,9 @@ export function usePlacementMiniReadings(
               placements: [placement],
             })
           );
-        localStorage.setItem(batchKey, JSON.stringify(result));
+        localStorage.setItem(batchKey, JSON.stringify(compact));
       } catch {
-        /* Storage is optional. */
+        /* Storage is optional, the completed reading still displays. */
       }
       return result;
     },
