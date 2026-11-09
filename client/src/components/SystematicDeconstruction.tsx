@@ -40,8 +40,9 @@ function PlacementBatch({
       ? result.data.methodOutcomes
       : undefined;
   useEffect(() => {
-    // A failed batch remains visible and retryable; it cannot block later planets.
-    if (active && (result.isSuccess || result.isError) && !result.isFetching)
+    // Stop automatic generation on the first failure; proceeding would spend
+    // NVIDIA requests on 13 more planets while the provider is timing out.
+    if (active && result.isSuccess && !result.isFetching)
       onSettled();
   }, [active, result.isSuccess, result.isError, result.isFetching, onSettled]);
   return (
@@ -84,7 +85,7 @@ function PlacementBatch({
                   role="alert"
                   className="space-y-2 break-words text-sm text-rose-200"
                 >
-                  <p>{result.error.message}</p>
+                  <p>{result.error.message.includes("502") ? "The reading request hit an upstream gateway error. Automatic generation is paused; inspect Render diagnostics before retrying." : result.error.message}</p>
                   <button
                     type="button"
                     onClick={() => result.refetch()}
