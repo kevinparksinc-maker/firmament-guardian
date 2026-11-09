@@ -216,6 +216,77 @@ export function packPlacementMiniPrompt(
   };
 }
 
+/**
+ * Canon Characteristic Master List.
+ * One deterministic, inspectable record per body. Calculations remain in the
+ * chart engine; Canon lookups and method judgments supply the characteristics.
+ * No AI, re-calculation, generic method definitions or inferred traits here.
+ */
+export function buildPlanetaryCharacteristicMasterList(
+  packets: ReturnType<typeof buildPlacementPackets>
+) {
+  return {
+    planets: packets.map(packet => {
+      const canon = packet.canon;
+      const characteristics = (values: Array<string | null | undefined>) =>
+        Array.from(new Set(values.map(value => value?.trim()).filter((value): value is string => Boolean(value))));
+      const layers: Array<{
+        method: string;
+        result: unknown;
+        characteristics: string[];
+        evidenceIds: string[];
+      }> = [];
+      const add = (method: string, result: unknown, values: Array<string | null | undefined>, evidenceIds: string[] = []) => {
+        const traits = characteristics(values);
+        if (result != null || traits.length) layers.push({ method, result, characteristics: traits, evidenceIds });
+      };
+      add("planet-nature", packet.name, [...(canon.planetCore ?? []), ...(canon.planetPsychology ?? [])]);
+      add("sign", (packet.facts[0].value as { display?: string }).display, [
+        ...(canon.signQualities ?? []), canon.signTheme, canon.planetInSign
+      ]);
+      add("house", {
+        agent: (packet.facts[0].value as { agentHouse?: number }).agentHouse,
+        god: (packet.facts[0].value as { godHouse?: number }).godHouse,
+      }, [...(canon.houseTopics ?? []), canon.houseField, canon.planetInHouse, canon.godToAgent]);
+      add("degree", (packet.facts[0].value as { longitude?: number }).longitude, []);
+      add("decan", canon.decan ? { number: canon.decan.number, ruler: canon.decan.elementalFamilyRuler } : null,
+        [canon.decan?.teaching?.statement, canon.decan?.teaching?.label]);
+      add("vedic-nakshatra", canon.nakshatra?.name, [
+        canon.nakshatra?.psychologicalPattern,
+      ]);
+      add("vedic-pada", canon.pada ? {
+        number: canon.pada.pada, sign: canon.pada.navamshaSign, ruler: canon.pada.navamshaRuler
+      } : null, []);
+      add("arabic-mansion", canon.manzil?.name, [
+        canon.manzil?.traditionalQuality, canon.manzil?.natalAndPsychologicalMeaning
+      ]);
+      add("dignity-and-condition", canon.condition, [canon.condition]);
+      if (canon.houseKnowledge) add("house-specific-knowledge", null, [
+        canon.houseKnowledge.core, canon.houseKnowledge.challenge,
+        canon.houseKnowledge.gift, canon.houseKnowledge.career, canon.houseKnowledge.relationships,
+      ]);
+      const byMethod = new Map<string, typeof packet.judgments>();
+      for (const judgment of packet.judgments) {
+        const list = byMethod.get(judgment.methodId) ?? [];
+        list.push(judgment);
+        byMethod.set(judgment.methodId, list);
+      }
+      for (const [method, findings] of byMethod) {
+        add(method, findings.map(f => ({ findingId: f.findingId, frame: f.frame })),
+          findings.flatMap(f => [f.judgment, f.mechanism]),
+          Array.from(new Set(findings.flatMap(f => f.evidenceIds))));
+      }
+      return {
+        planet: packet.name,
+        position: packet.facts[0].value,
+        placementEvidenceId: packet.placementEvidenceId,
+        layers,
+        gaps: layers.filter(layer => !layer.characteristics.length).map(layer => layer.method),
+      };
+    }),
+  };
+}
+
 export function validatePlacementSummaries(
   value: unknown,
   packets: ReturnType<typeof buildPlacementPackets>
@@ -389,11 +460,9 @@ second-person mini-story with spiritual weight and natural 2026 language.
 Honor the fixed-XYZ God/Agent house distinction, harmonious conjunctions,
 each supplied mansion/pada, decan, aspects, rulers, strength, and star contact.
 Do not invent missing chart facts, interpretations, biographies or timings.
-Canon already calculated and classified every method. The payload contains
-factual placement results, one compact summary per applicable method and exact
-evidence IDs grouped by layer. Weave the results together without recomputing
+Canon already calculated and classified every method. The payload is a Canon Characteristic Master List: each planet has its actual\nmethod result beside the exact characteristics supplied by that method, plus\nsource evidence IDs. Read the layers as contributions to one planetary nature. Weave the results together without recomputing
 astrology or requesting the full local evidence ledger.
-` + `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Use the locally retrieved Canon's actual planetary functions, sign qualities, house topics, mansion/pada teachings, decan and calculated method judgments as your authoritative astrological knowledge. Your only job is to weave their interactions into a deeply specific paragraph, not to look up doctrine, rederive calculations, or simply concatenate Canon descriptions. Explain how the supplied layers change one another for this particular placement, with a concrete everyday example. Avoid repeating the same house definition or psychological scaffold across readings. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. The selected placements' locally retrieved Canon meanings and all applicable calculated judgments are supplied in a compact indexed packet. Read every supplied finding and Canon principle, then synthesize rather than restating the reference text. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`;
+` + `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Use the locally retrieved Canon's actual planetary functions, sign qualities, house topics, mansion/pada teachings, decan and calculated method judgments as your authoritative astrological knowledge. Your only job is to weave their interactions into a deeply specific paragraph, not to look up doctrine, rederive calculations, or simply concatenate Canon descriptions. Explain how the supplied layers change one another for this particular placement, with a concrete everyday example. Avoid repeating the same house definition or psychological scaffold across readings. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. The selected placements' Canon characteristics and all applicable method judgments are supplied as a planetary Master List. Read every supplied finding and Canon principle, then synthesize rather than restating the reference text. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`;
   const request = {
     max_tokens: 2000,
     timeoutMs: 180_000,
@@ -432,7 +501,7 @@ astrology or requesting the full local evidence ledger.
         content: JSON.stringify({
           chartScope: synthesis.methodOutcomes[0]?.chartScope,
           question: "Synthesize these requested placements using their local Canon meanings and calculated findings.",
-          ...packPlacementMiniPrompt(packets),
+          ...buildPlanetaryCharacteristicMasterList(packets),
         }),
       },
     ],
