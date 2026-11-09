@@ -112,9 +112,25 @@ export function buildPlacementPackets(
       facts,
       judgments,
       canon: {
+        // Retrieve the applicable foundational meanings locally. Claude
+        // synthesizes these completed Canon findings, not the doctrine library.
+        planetCore: dossier.planetDoctrine?.coreMeanings,
+        planetPsychology: dossier.planetDoctrine?.psychologicalFunctions,
+        signQualities: dossier.signDoctrine?.traditionalQualities,
+        signTheme: dossier.signDoctrine?.psychologicalTheme,
+        houseTopics: dossier.houseDoctrine?.coreTopics,
+        houseField: dossier.houseDoctrine?.psychologicalField,
         planetInSign: dossier.planetInSignSynthesis,
         planetInHouse: dossier.planetInHouseSynthesis,
-        houseKnowledge: dossier.planetInHouseKnowledge,
+        houseKnowledge: dossier.planetInHouseKnowledge
+          ? {
+              core: dossier.planetInHouseKnowledge.core,
+              challenge: dossier.planetInHouseKnowledge.challenge,
+              gift: dossier.planetInHouseKnowledge.gift,
+              career: dossier.planetInHouseKnowledge.career,
+              relationships: dossier.planetInHouseKnowledge.relationships,
+            }
+          : null,
         condition: dossier.dignityAndCondition.conditionSummary,
         godToAgent: dossier.godToAgentNote,
         nakshatra: dossier.nakshatraRecord,
@@ -322,7 +338,7 @@ async function generatePlacementParagraphs(
 ): Promise<ChartPageReading> {
   const instruction = buildAstrologyInterpreterSystem(
     MINI_SYNTHESIS_STYLE,
-    `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Treat dictionary definitions and method judgments as reference inputs to reason from, never as finished prose to concatenate or copy. Explain how the supplied layers change one another for this particular placement, with a concrete everyday example. Avoid repeating the same house definition or psychological scaffold across readings. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. The selected placements' locally retrieved Canon meanings and all applicable calculated judgments are supplied in a compact indexed packet. Read every supplied finding and Canon principle, then synthesize rather than restating the reference text. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`
+    `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Use the locally retrieved Canon's actual planetary functions, sign qualities, house topics, mansion/pada teachings, decan and calculated method judgments as your authoritative astrological knowledge. Your only job is to weave their interactions into a deeply specific paragraph, not to look up doctrine, rederive calculations, or simply concatenate Canon descriptions. Explain how the supplied layers change one another for this particular placement, with a concrete everyday example. Avoid repeating the same house definition or psychological scaffold across readings. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. The selected placements' locally retrieved Canon meanings and all applicable calculated judgments are supplied in a compact indexed packet. Read every supplied finding and Canon principle, then synthesize rather than restating the reference text. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`
   );
   const request = {
     max_tokens: 2000,
