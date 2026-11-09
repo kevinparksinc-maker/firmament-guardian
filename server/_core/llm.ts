@@ -388,10 +388,9 @@ async function invokeNvidia(params: InvokeParams): Promise<InvokeResult> {
     },
     body: requestBody,
     signal: params.signal,
-    // Render's HTTP proxy can fail before the previous 180-second chart timeout.
-    // Bound NVIDIA inference itself so the caller receives a meaningful JSON
-    // error instead of Render's HTML 502 response.
-    timeoutMs: Math.min(params.timeoutMs ?? 60_000, 60_000),
+    // NVIDIA inference runs in a background placement job, not a held HTTP request.
+    // Configure NVIDIA_TIMEOUT_MS on the host if the model needs a different limit.
+    timeoutMs: Math.min(Math.max(Number(process.env.NVIDIA_TIMEOUT_MS) || 150_000, 10_000), 300_000),
     });
   } catch (error) {
     console.warn(`NVIDIA synthesis transport failed: elapsedMs=${Date.now() - startedAt} inputBytes=${requestBytes} reason=${error instanceof Error && error.message.startsWith("AI_REQUEST_TIMEOUT:") ? "timeout" : "network"}`);
