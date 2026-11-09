@@ -3,7 +3,7 @@ import { synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/reading
 import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
 import { calculateMasterChart as calculateChart } from "./masterChart/entry";
 import { buildEnergyReading } from "./energyReading";
-import { buildChartPageReading } from "./chartPageReading";
+import { buildChartPageReading, startPlacementReadingJob, getPlacementReadingJob } from "./chartPageReading";
 import { buildChartBriefing } from "./chartBriefing";
 import { buildFocusedReading } from "./focusedReading";
 import { calculateHarmonicForecast } from "./harmonicForecast";
@@ -373,6 +373,12 @@ export const appRouter = router({
       .query(({ input }) => buildChartMethodOutcomes(input.chart, input.mode)),
     energyReading: publicProcedure.input(chartResultInput).mutation(({ input }) => buildEnergyReading(input.chart)),
     chartPage: publicProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]), names: z.array(z.string().min(1).max(80)).min(1).max(2).default(["Sun", "Moon"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode, input.names)),
+    chartPageStart: publicProcedure
+      .input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]), names: z.array(z.string().min(1).max(80)).min(1).max(2) }))
+      .mutation(({ input }) => startPlacementReadingJob(input.chart, input.mode, input.names)),
+    chartPageStatus: publicProcedure
+      .input(z.object({ jobId: z.string().length(48) }))
+      .query(({ input }) => getPlacementReadingJob(input.jobId)),
     chartBriefing: publicProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
     focusedPlacement: publicProcedure
       .input(z.object({ chart: chartPayload, target: z.object({ kind: z.enum(["placement", "star", "contact"]), name: z.string().min(1).max(80), otherName: z.string().min(1).max(80).optional(), layer: z.enum(["natal", "transit"]) }) }))
