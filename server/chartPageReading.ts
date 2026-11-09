@@ -1,4 +1,3 @@
-import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
 import { readingProse } from "../shared/readingProse";
 import { createHash } from "node:crypto";
 import {
@@ -8,7 +7,6 @@ import {
 import { z } from "zod";
 import type { ChartResult, ChartRow } from "./astronomy";
 import { invokeLLM } from "./_core/llm";
-import { buildAstrologyInterpreterSystem, MINI_SYNTHESIS_STYLE } from "./master-interpreter";
 import {
   synthesizeChartForReading,
   synthesizeMasterSnapshot,
@@ -336,10 +334,19 @@ async function generatePlacementParagraphs(
   packets: ReturnType<typeof buildPlacementPackets>,
   synthesis: SynthesisResult
 ): Promise<ChartPageReading> {
-  const instruction = buildAstrologyInterpreterSystem(
-    MINI_SYNTHESIS_STYLE,
-    `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Use the locally retrieved Canon's actual planetary functions, sign qualities, house topics, mansion/pada teachings, decan and calculated method judgments as your authoritative astrological knowledge. Your only job is to weave their interactions into a deeply specific paragraph, not to look up doctrine, rederive calculations, or simply concatenate Canon descriptions. Explain how the supplied layers change one another for this particular placement, with a concrete everyday example. Avoid repeating the same house definition or psychological scaffold across readings. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. The selected placements' locally retrieved Canon meanings and all applicable calculated judgments are supplied in a compact indexed packet. Read every supplied finding and Canon principle, then synthesize rather than restating the reference text. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`
-  );
+  // The Canon and calculated findings are already in the compact packet.
+  // Sending the full 19-method master manual for every two cards wastes
+  // thousands of input tokens and makes hosted inference much slower.
+  const instruction = `THE ABSOLUTE — CANON-FIRST PLANETARY SYNTHESIS.
+Use only the supplied calculated positions, Canon teachings and method findings.
+The Canon does the astrology; your task is to weave it into a coherent, vivid
+second-person mini-story with spiritual weight and natural 2026 language.
+Honor the fixed-XYZ God/Agent house distinction, harmonious conjunctions,
+each supplied mansion/pada, decan, aspects, rulers, strength, and star contact.
+Do not invent missing chart facts, interpretations, biographies or timings.
+The packet is indexed: findingRefs select the rows in findings; findingColumns
+define their order; textTable indices expand judgmentParts in order.
+` + `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Use the locally retrieved Canon's actual planetary functions, sign qualities, house topics, mansion/pada teachings, decan and calculated method judgments as your authoritative astrological knowledge. Your only job is to weave their interactions into a deeply specific paragraph, not to look up doctrine, rederive calculations, or simply concatenate Canon descriptions. Explain how the supplied layers change one another for this particular placement, with a concrete everyday example. Avoid repeating the same house definition or psychological scaffold across readings. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. The selected placements' locally retrieved Canon meanings and all applicable calculated judgments are supplied in a compact indexed packet. Read every supplied finding and Canon principle, then synthesize rather than restating the reference text. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`;
   const request = {
     max_tokens: 2000,
     timeoutMs: 180_000,
@@ -375,7 +382,7 @@ async function generatePlacementParagraphs(
       { role: "system" as const, content: instruction },
       {
         role: "user" as const,
-        content: stringifyEvidence({
+        content: JSON.stringify({
           chartScope: synthesis.methodOutcomes[0]?.chartScope,
           question: "Synthesize these requested placements using their local Canon meanings and calculated findings.",
           ...packPlacementMiniPrompt(packets),
