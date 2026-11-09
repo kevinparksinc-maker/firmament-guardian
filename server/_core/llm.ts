@@ -340,8 +340,25 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
     timeoutMs: params.timeoutMs,
   });
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Anthropic invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+    // Never expose provider JSON, request IDs, or chart content to the UI.
+    // Billing and authentication failures are actionable, not retryable.
+    const status = response.status;
+    let providerCode = "";
+    try {
+      const payload = await response.json() as { error?: { type?: string; message?: string } };
+      const message = (payload.error?.message ?? "").toLowerCase();
+      if (message.includes("credit balance") || message.includes("billing")) providerCode = "AI_BILLING_REQUIRED";
+      else if (status === 401 || status === 403) providerCode = "AI_AUTH_FAILED";
+      else if (status === 429) providerCode = "AI_RATE_LIMITED";
+    } catch { /* Do not surface raw provider responses. */ }
+    console.error("Anthropic request rejected", { status, code: providerCode || "AI_PROVIDER_ERROR" });
+    throw new Error(providerCode === "AI_BILLING_REQUIRED"
+      ? "AI_BILLING_REQUIRED: Anthropic API credits are insufficient. Your chart calculations are preserved. Add credits or select another configured AI provider."
+      : providerCode === "AI_AUTH_FAILED"
+      ? "AI_AUTH_FAILED: Check the Anthropic API key and permissions."
+      : providerCode === "AI_RATE_LIMITED"
+      ? "AI_RATE_LIMITED: Anthropic usage limit reached. Try again later."
+      : `AI_PROVIDER_ERROR: Anthropic could not complete the interpretation (HTTP ${status}).`);
   }
   const result = await response.json() as { id: string; model: string; content?: Array<{ type: string; text?: string }>; stop_reason?: string };
   const text = (result.content ?? []).filter(part => part.type === "text").map(part => part.text ?? "").join("\n");
