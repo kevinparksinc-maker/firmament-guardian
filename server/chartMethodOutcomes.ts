@@ -25,6 +25,7 @@ export async function buildChartMethodOutcomes(
   const interpreted = synthesis.methodOutcomes.filter(m => m.calculatedFindings.length || m.findingJudgments.length);
   const miniReadings: Record<string, string> = {};
   if (interpreted.length) {
+    try {
     const response = await invokeLLM({
       max_tokens: 8192,
       timeoutMs: 180_000,
@@ -43,6 +44,13 @@ export async function buildChartMethodOutcomes(
       const reading = (parsed as Record<string, unknown>)[method.methodId];
       if (typeof reading !== "string" || !reading.trim()) throw new Error("METHOD_MINI_READING_MISSING: " + method.methodId);
       miniReadings[method.methodId] = reading.trim();
+    }
+    } catch (error) {
+      // The authoritative method findings are already calculated locally.
+      // Optional prose generation must not make their inspection unavailable.
+      console.warn("[MethodOutcomes] Optional AI mini readings unavailable", {
+        category: error instanceof Error ? error.message.split(":")[0] : "unknown",
+      });
     }
   }
 

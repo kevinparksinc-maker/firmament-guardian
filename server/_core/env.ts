@@ -24,7 +24,6 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   groqApiKey: process.env.GROQ_API_KEY?.trim() ?? "",
   groqModel: process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-120b",
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   nvidiaApiKey: process.env.NVIDIA_API_KEY?.trim() ?? "",
   nvidiaModel: process.env.NVIDIA_MODEL?.trim() || "deepseek-ai/deepseek-v4.1-flash",
   openaiApiBase: process.env.OPENAI_API_BASE ?? process.env.OPENAI_BASE_URL ?? "",

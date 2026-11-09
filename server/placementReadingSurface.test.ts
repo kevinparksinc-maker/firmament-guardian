@@ -90,7 +90,7 @@ describe("Chart placement reading surface", () => {
       React.createElement(SystematicDeconstruction, { chart })
     );
     expect(html).toContain("credit balance too low");
-    expect(html).toContain("Retry this reading batch");
+    expect(html).toContain("Retry this reading");
     expect(html).not.toContain("Personal story");
     expect(html).not.toContain("REPEATED INTERNAL DICTIONARY");
   });

@@ -10,7 +10,7 @@ import {
 import {
   calculateChartHermeticLots,
   findFixedStarContactsForLongitude,
-} from "./fixedStarsAndLots";
+} from "../canon/fixedStarsAndLots";
 import { HOUSE_CANON_RECORDS, synthesizePlanetInHouse } from "./housesAndFrames";
 import { getManzilCanonByLongitude } from "./manazil28";
 import { getNakshatraCanonByLongitude } from "./nakshatras27";

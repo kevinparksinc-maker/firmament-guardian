@@ -227,8 +227,8 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.nvidiaApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
-    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, NVIDIA_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.nvidiaApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, NVIDIA_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
 
@@ -251,7 +251,7 @@ const readableAssistantText = (result: ProviderResponse): string => {
   return result.output?.flatMap(item => item.content ?? []).map(item => item.text ?? "").filter(Boolean).join("\n") ?? "";
 };
 
-// All interpretation callers use this adapter, including legacy Claude model hints.
+// All interpretation callers use this adapter, including legacy model hints.
 // A Groq failure stays a Groq failure: never fall through to paid providers.
 async function invokeGroq(params: InvokeParams): Promise<InvokeResult> {
   const messages = params.messages.map(message => {
@@ -317,54 +317,6 @@ async function invokeGroq(params: InvokeParams): Promise<InvokeResult> {
   return result;
 }
 
-async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
-  const system = params.messages.filter(message => message.role === "system").map(message => contentToText(message.content)).join("\n\n");
-  const messages = params.messages.filter(message => message.role !== "system" && (message.role === "user" || message.role === "assistant")).map(message => ({
-    role: message.role,
-    content: contentToText(message.content),
-  }));
-  const maxTokens = params.max_tokens ?? params.maxTokens ?? 4096;
-  const body: Record<string, unknown> = { model: params.model ?? "claude-haiku-5-5", max_tokens: maxTokens, messages };
-  const thinking = params.thinking as { type?: string; budget_tokens?: number } | undefined;
-  if (thinking?.type === "enabled") {
-    const budget = Math.max(1024, Math.floor(thinking.budget_tokens ?? 1024));
-    body.thinking = { type: "enabled", budget_tokens: budget };
-    body.max_tokens = maxTokens + budget; // thinking tokens must not eat the visible answer
-  }
-  if (system) body.system = system;
-  const response = await fetchWithBackoff("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": ENV.anthropicApiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify(body),
-    signal: params.signal,
-    timeoutMs: params.timeoutMs,
-  });
-  if (!response.ok) {
-    // Never expose provider JSON, request IDs, or chart content to the UI.
-    // Billing and authentication failures are actionable, not retryable.
-    const status = response.status;
-    let providerCode = "";
-    try {
-      const payload = await response.json() as { error?: { type?: string; message?: string } };
-      const message = (payload.error?.message ?? "").toLowerCase();
-      if (message.includes("credit balance") || message.includes("billing")) providerCode = "AI_BILLING_REQUIRED";
-      else if (status === 401 || status === 403) providerCode = "AI_AUTH_FAILED";
-      else if (status === 429) providerCode = "AI_RATE_LIMITED";
-    } catch { /* Do not surface raw provider responses. */ }
-    console.error("Anthropic request rejected", { status, code: providerCode || "AI_PROVIDER_ERROR" });
-    throw new Error(providerCode === "AI_BILLING_REQUIRED"
-      ? "AI_BILLING_REQUIRED: Anthropic API credits are insufficient. Your chart calculations are preserved. Add credits or select another configured AI provider."
-      : providerCode === "AI_AUTH_FAILED"
-      ? "AI_AUTH_FAILED: Check the Anthropic API key and permissions."
-      : providerCode === "AI_RATE_LIMITED"
-      ? "AI_RATE_LIMITED: Anthropic usage limit reached. Try again later."
-      : `AI_PROVIDER_ERROR: Anthropic could not complete the interpretation (HTTP ${status}).`);
-  }
-  const result = await response.json() as { id: string; model: string; content?: Array<{ type: string; text?: string }>; stop_reason?: string };
-  const text = (result.content ?? []).filter(part => part.type === "text").map(part => part.text ?? "").join("\n");
-  return { id: result.id, created: Math.floor(Date.now() / 1000), model: result.model, choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: result.stop_reason ?? null }] };
-}
-
 async function invokeNvidia(params: InvokeParams): Promise<InvokeResult> {
   // NVIDIA NIM exposes an OpenAI-compatible chat endpoint. The model name
   // comes from the user's selected NVIDIA Build example, not a Claude hint.
@@ -388,10 +340,9 @@ async function invokeNvidia(params: InvokeParams): Promise<InvokeResult> {
     },
     body: requestBody,
     signal: params.signal,
-    // Render's HTTP proxy can fail before the previous 180-second chart timeout.
-    // Bound NVIDIA inference itself so the caller receives a meaningful JSON
-    // error instead of Render's HTML 502 response.
-    timeoutMs: Math.min(params.timeoutMs ?? 60_000, 60_000),
+    // NVIDIA inference runs in a background placement job, not a held HTTP request.
+    // Configure NVIDIA_TIMEOUT_MS on the host if the model needs a different limit.
+    timeoutMs: Math.min(Math.max(Number(process.env.NVIDIA_TIMEOUT_MS) || 150_000, 10_000), 300_000),
     });
   } catch (error) {
     console.warn(`NVIDIA synthesis transport failed: elapsedMs=${Date.now() - startedAt} inputBytes=${requestBytes} reason=${error instanceof Error && error.message.startsWith("AI_REQUEST_TIMEOUT:") ? "timeout" : "network"}`);
@@ -522,10 +473,9 @@ const RETRY_BASE_DELAY_MS = 500;
 const RETRY_MAX_DELAY_MS = 30_000;
 const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
-function selectedProvider(): "groq" | "anthropic" | "nvidia" | "openai-compatible" | "gemini" | "built-in-forge" | "unconfigured" {
+function selectedProvider(): "groq" | "nvidia" | "openai-compatible" | "gemini" | "built-in-forge" | "unconfigured" {
   const preference = (process.env.AI_PRIMARY_PROVIDER ?? "").trim().toLowerCase();
   const available = {
-    anthropic: Boolean(ENV.anthropicApiKey),
     nvidia: Boolean(ENV.nvidiaApiKey),
     groq: Boolean(ENV.groqApiKey),
     "openai-compatible": Boolean(ENV.openaiApiKey && ENV.openaiApiBase),
@@ -538,9 +488,7 @@ function selectedProvider(): "groq" | "anthropic" | "nvidia" | "openai-compatibl
     if (!available[provider]) throw new Error(`AI_PROVIDER_NOT_CONFIGURED: ${provider} selected but its key is missing`);
     return provider;
   }
-  // Anthropic takes precedence when both Anthropic and Groq keys exist.
   if (available.nvidia) return "nvidia";
-  if (available.anthropic) return "anthropic";
   if (available.groq) return "groq";
   if (available["openai-compatible"]) return "openai-compatible";
   if (available.gemini) return "gemini";
@@ -718,7 +666,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const provider = selectedProvider();
   console.info(`LLM provider selected: ${provider}`);
   if (provider === "groq") return invokeGroq(params);
-  if (provider === "anthropic") return invokeAnthropic(params);
   if (provider === "nvidia") return invokeNvidia(params);
   if (provider === "openai-compatible") return invokeOpenAI(params);
   if (provider === "gemini") return invokeGemini(params);

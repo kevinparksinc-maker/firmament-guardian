@@ -20,7 +20,7 @@ import {
 import {
   FIXED_STAR_CANON_RECORDS,
   LOT_CANON_RECORDS,
-} from "../calculations/fixedStarsAndLots";
+} from "../canon/fixedStarsAndLots";
 import { TRADITIONAL_ASPECT_DOCTRINE } from "../calculations/dignitiesAndHorary";
 import {
   DOUBLE_LETTERS,

@@ -14,6 +14,12 @@ type MiniBatch = Awaited<
   >
 >;
 const storagePrefix = "absolute:placement-minis:";
+function connectionError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/502|503|504|bad gateway|unexpected token.*</i.test(message))
+    return "Reading server connection failed (502/503/504). Retry this planet in a moment.";
+  return message;
+}
 
 export function usePlacementMiniReadings(
   chart: ChartResult,
@@ -42,7 +48,7 @@ export function usePlacementMiniReadings(
         ) as MiniBatch | null;
         if (
           cachedBatch?.snapshotId &&
-          cachedBatch.placements?.length === names.length &&
+          !cachedBatch.failed?.length && cachedBatch.placements?.length === names.length &&
           names.every(name => cachedBatch.placements.some(p => p.name === name))
         )
           return cachedBatch;
@@ -70,14 +76,26 @@ export function usePlacementMiniReadings(
         return {
           snapshotId: saved[0]!.snapshotId,
           placements: saved.flatMap(value => value!.placements),
+          failed: [] as MiniBatch["failed"],
         };
       // Start NVIDIA synthesis in the server and poll short-lived HTTP calls.
       // Holding a mutation open during generation causes Render HTML 502s.
-      const { jobId } = await generate.mutateAsync({ chart, mode: layer, names });
+      const missing = names.filter((_, i) => !saved[i]);
+      let jobId: string;
+      try {
+        ({ jobId } = await generate.mutateAsync({ chart, mode: layer, names: missing }));
+      } catch (error) {
+        throw new Error(connectionError(error));
+      }
       let result: MiniBatch | undefined;
-      for (let poll = 0; poll < 90; poll++) {
+      for (let poll = 0; poll < 180; poll++) {
         await new Promise(resolve => setTimeout(resolve, 2000));
-        const status = await trpcUtils.interpretation.chartPageStatus.fetch({ jobId });
+        let status;
+        try {
+          status = await trpcUtils.interpretation.chartPageStatus.fetch({ jobId });
+        } catch (error) {
+          throw new Error(connectionError(error));
+        }
         if (status.state === "error")
           throw new Error(status.error);
         if (status.state === "done") {
@@ -87,6 +105,10 @@ export function usePlacementMiniReadings(
       }
       if (!result)
         throw new Error("READING_JOB_TIMEOUT: The planet reading exceeded the polling window. Retry it.");
+      result = {
+        ...result,
+        placements: [...saved.filter((v): v is MiniBatch => Boolean(v)).flatMap(v => v.placements), ...result.placements],
+      };
       try {
         // The server includes a complete 19-method ledger in every response.
         // Never persist that huge repeated ledger 14 times: store only the
@@ -94,6 +116,7 @@ export function usePlacementMiniReadings(
         const compact = {
           snapshotId: result.snapshotId,
           placements: result.placements,
+          failed: result.failed,
         };
         const keys = Object.keys(localStorage).filter(k =>
           k.startsWith(storagePrefix)
@@ -109,7 +132,8 @@ export function usePlacementMiniReadings(
               placements: [placement],
             })
           );
-        localStorage.setItem(batchKey, JSON.stringify(compact));
+        if (!result.failed?.length && result.placements.length === names.length)
+          localStorage.setItem(batchKey, JSON.stringify(compact));
       } catch {
         /* Storage is optional, the completed reading still displays. */
       }
@@ -199,6 +223,16 @@ export function PlacementMiniReading({
       >
         Read {name}’s mini reading
       </button>
+    );
+  const failure = result.data?.failed?.find(f => f.name === name);
+  if (failure)
+    return (
+      <div role="alert" className="mt-3 space-y-2 text-sm text-rose-200">
+        <p>{failure.error}</p>
+        <button type="button" onClick={() => result.refetch()} className="underline">
+          Retry {name} reading
+        </button>
+      </div>
     );
   if (result.error)
     return (

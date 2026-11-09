@@ -536,6 +536,12 @@ export async function openHoraryQuestion(input: HoraryInput) {
     { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. Present the judgment and evidence in the order most useful to this question; headings are optional.\n\n${chart.judgmentEvidenceText}\n\nFULL TECHNICAL EVIDENCE (all configured layers):\n${chart.evidenceText}\n\nUNIFIED MASTER METHOD EVIDENCE (supplementary; Horary significators remain authoritative):\n${chart.unifiedSynthesisContext}\n\nGive the complete, human-centered horary judgment now.` },
   ], 3200).then(
     reading => ({ reading, synthesisStatus: "ai_completed" as const }),
+    error => {
+      console.warn("[Horary] AI narration unavailable; returning calculated Horary judgment", {
+        category: error instanceof Error ? error.message.split(":")[0] : "unknown",
+      });
+      return { reading: coreReading, synthesisStatus: "deterministic_fallback" as const };
+    },
   );
   return { chart, ...reading };
 }

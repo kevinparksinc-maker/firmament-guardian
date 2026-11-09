@@ -14,8 +14,9 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     auth: { me: { useQuery: () => ({ data: null, isPending: false }) } },
+    useUtils: () => ({ interpretation: { chartPageStatus: { fetch: vi.fn() } } }),
     interpretation: {
-      chartPage: { useMutation: () => ({ mutateAsync: vi.fn() }) },
+      chartPageStart: { useMutation: () => ({ mutateAsync: vi.fn() }) },
     },
   },
 }));
@@ -63,7 +64,7 @@ describe("Chart page placement boxes", () => {
       React.createElement(SystematicDeconstruction, { chart })
     );
     expect(failure).toContain('role="alert"');
-    expect(failure).toContain("Retry summaries");
+    expect(failure).toContain("Retry this reading");
     expect(failure).not.toContain("Sun-specific synthesized meaning");
   });
 });

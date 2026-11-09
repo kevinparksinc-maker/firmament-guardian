@@ -21,9 +21,7 @@ import {
   overlay,
   ZODIAC_SIGNS,
 } from "../../shared/hybrid";
-import {
-  calculateChartHermeticLots,
-} from "../astrologyKnowledge/calculations/fixedStarsAndLots";
+import { calculateChartHermeticLots } from "../astrologyKnowledge/calculations/hermeticLots";
 import { getNakshatraCanonByLongitude } from "../astrologyKnowledge/calculations/nakshatras27";
 import { getManzilCanonByLongitude } from "../astrologyKnowledge/calculations/manazil28";
 import {

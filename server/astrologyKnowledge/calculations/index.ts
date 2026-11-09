@@ -11,7 +11,6 @@ export * from "./dignitiesAndHorary";
 export * from "./decans36";
 export * from "./manazil28";
 export * from "./nakshatras27";
-export * from "./fixedStarsAndLots";
 export * from "./westernRelationalAndTiming";
 export * from "./vedicJyotishCanon";
 export * from "./planetInHouseInterpretations";

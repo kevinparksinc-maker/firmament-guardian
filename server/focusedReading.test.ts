@@ -142,6 +142,32 @@ describe("focused source-backed interpretation", () => {
       "Master Chart mismatch"
     );
   });
+
+  it("returns a chart-grounded mini reading when optional AI synthesis fails", async () => {
+    const chart = await calculateChart(input);
+    vi.mocked(invokeLLM).mockRejectedValueOnce(new Error("upstream gateway timeout"));
+
+    const reading = await buildFocusedReading(chart, placement("Sun"), true);
+
+    expect(reading.miniNarrative).toContain("calculated chart");
+    expect(reading.miniNarrative).toContain("symbolic reflection");
+    expect(reading.miniNarrative).toContain("Sun");
+    expect(reading.source).toBe("deterministic_fallback");
+    expect(reading.evidence.some(item => item.id.startsWith("placement-"))).toBe(true);
+  });
+
+  it("keeps AI synthesis as the primary mini-reading path", async () => {
+    const chart = await calculateChart(input);
+    const aiText = "Your Sun placement concentrates the chart's calculated vitality into a specific life area, where confidence grows through deliberate practice and honest self-direction.";
+    vi.mocked(invokeLLM).mockResolvedValueOnce({
+      choices: [{ finish_reason: "stop", message: { content: aiText } }],
+    } as never);
+
+    const reading = await buildFocusedReading(chart, placement("Sun"), true);
+
+    expect(reading.miniNarrative).toBe(aiText);
+    expect(reading.source).toBe("ai_synthesis");
+  });
 });
 
 describe("focused contact interpretation", () => {

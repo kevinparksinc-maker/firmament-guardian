@@ -9,7 +9,7 @@ import {
 } from "./astronomy";
 import { synthesizeChartForReading, synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
 import { retrievePlacementDossier } from "./astrologyKnowledge/calculations/retriever";
-import { FIXED_STAR_CANON_RECORDS } from "./astrologyKnowledge/calculations/fixedStarsAndLots";
+import { FIXED_STAR_CANON_RECORDS } from "./astrologyKnowledge/canon/fixedStarsAndLots";
 import { describeAspectPair } from "../shared/energyInterpretation";
 import { invokeLLM } from "./_core/llm";
 import { MINI_SYNTHESIS_STYLE } from "./master-interpreter";
@@ -40,6 +40,43 @@ async function narrateFocusedContactMini(reading: FocusedReading, synthesis: Syn
   return text;
 }
 
+/**
+ * The mini narrative is an enhancement, not a prerequisite for returning the
+ * calculated reading. Provider throttles and gateway timeouts must not turn a
+ * valid chart calculation into a failed tRPC request.
+ */
+function deterministicFocusedMini(reading: FocusedReading): string {
+  const paragraphs = reading.sections
+    .flatMap(section => section.paragraphs)
+    .filter(Boolean)
+    .slice(0, 3);
+  const evidence = reading.evidence
+    .slice(0, 2)
+    .map(item => `${item.label}: ${item.value}`)
+    .join(" ");
+  const body = paragraphs.join(" ");
+  return [
+    `${reading.title} is read from the calculated chart rather than from a generic profile.`,
+    body,
+    evidence ? `The supporting calculation is ${evidence}` : "The supporting calculation is recorded in the evidence panel below.",
+    "Treat this as a symbolic reflection: the chart describes themes and conditions to consider, not guaranteed events or verified biography.",
+  ].filter(Boolean).join(" ");
+}
+
+async function narrateFocusedContactWithFallback(
+  reading: FocusedReading,
+  synthesis: SynthesisResult
+): Promise<{ text: string; source: "ai_synthesis" | "deterministic_fallback" }> {
+  try {
+    return {
+      text: await narrateFocusedContactMini(reading, synthesis),
+      source: "ai_synthesis",
+    };
+  } catch {
+    return { text: deterministicFocusedMini(reading), source: "deterministic_fallback" };
+  }
+}
+
 
 export type FocusTarget = {
   kind: "placement" | "star" | "contact";
@@ -50,6 +87,7 @@ export type FocusTarget = {
 export type FocusedReading = {
   title: string;
   miniNarrative?: string;
+  source: "calculated" | "ai_synthesis" | "deterministic_fallback";
   snapshotId: string;
   moment: string;
   sections: Array<{
@@ -88,6 +126,7 @@ export async function buildFocusedReading(
   ].filter((row): row is ChartRow => Boolean(row));
   const reading: FocusedReading = {
     title: `${target.layer === "transit" ? "Transit" : "Natal"} ${target.name}`,
+    source: "calculated",
     snapshotId: synthesis.snapshotId,
     moment: canonicalChart.utc,
     sections: [],
@@ -169,8 +208,11 @@ export async function buildFocusedReading(
         "No selected-chart body is within the displayed 5° contact window. Catalog meaning alone is not a personal activation."
       );
     reading.sourceNotes.push(star.firmamentOrbRule.statement);
-    if (includeMiniNarrative && !reading.miniNarrative)
-      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis);
+    if (includeMiniNarrative && !reading.miniNarrative) {
+      const mini = await narrateFocusedContactWithFallback(reading, verification.synthesis);
+      reading.miniNarrative = mini.text;
+      reading.source = mini.source;
+    }
     return reading;
   }
   const row = bodies.find(row => row.name === target.name);
@@ -330,8 +372,11 @@ export async function buildFocusedReading(
         rootedDossier.planetInHouseKnowledge.sourceCaveat,
         rootedDossier.planetInHouseKnowledge.interpretiveGuardrail
       );
-    if (includeMiniNarrative)
-      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis);
+    if (includeMiniNarrative) {
+      const mini = await narrateFocusedContactWithFallback(reading, verification.synthesis);
+      reading.miniNarrative = mini.text;
+      reading.source = mini.source;
+    }
     return reading;
   }
   const sun = canonicalChart.movingBodies.find(body => body.name === "Sun");
@@ -552,7 +597,10 @@ export async function buildFocusedReading(
       "This is the selected transit moment. Event-house meanings describe current context; natal personality and life-history claims are not inferred from a temporary transit placement."
     );
   }
-  if (includeMiniNarrative)
-    reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis);
+  if (includeMiniNarrative) {
+    const mini = await narrateFocusedContactWithFallback(reading, verification.synthesis);
+    reading.miniNarrative = mini.text;
+    reading.source = mini.source;
+  }
   return reading;
 }

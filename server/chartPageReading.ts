@@ -16,18 +16,19 @@ import { elementalDecanTeaching } from "./astrologyKnowledge/calculations/decans
 import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
 
 const summarySchema = z.object({
-  placements: z.array(
-    z.object({
-      name: z.string(),
-      paragraph: z
-        .string()
-        .transform(readingProse)
-        .pipe(z.string().min(120).max(1600)),
-      evidenceIds: z.array(z.string()).min(2),
-      layerIds: z.array(z.string()).min(2),
-    })
-  ),
+  placements: z.array(z.object({
+    name: z.string(),
+    paragraph: z.string(),
+    evidenceIds: z.array(z.string()).optional(),
+    layerIds: z.array(z.string()).optional(),
+  })),
 });
+type PlacementSummary = {
+  name: string; paragraph: string; evidenceIds: string[]; layerIds: string[];
+  warnings?: string[];
+};
+type PlacementFailure = { name: string; error: string };
+
 type Fact = { id: string; layerId: string; value: unknown };
 
 /** Select planet-specific findings once; never ship the 575k-character life-story context. */
@@ -218,73 +219,53 @@ export function packPlacementMiniPrompt(
 export function validatePlacementSummaries(
   value: unknown,
   packets: ReturnType<typeof buildPlacementPackets>
-) {
-  const result = summarySchema.parse(value);
-  const expected = new Map(packets.map(p => [p.name, p]));
-  if (
-    result.placements.length !== expected.size ||
-    new Set(result.placements.map(p => p.name)).size !== expected.size
-  ) {
-    throw new Error(
-      "PLACEMENT_SUMMARY_INCOMPLETE: A paragraph is required for each displayed planet."
-    );
+): { placements: PlacementSummary[]; failed: PlacementFailure[] } {
+  const parsed = summarySchema.safeParse(value);
+  const supplied = parsed.success ? parsed.data.placements : [];
+  const placements: PlacementSummary[] = [];
+  const failed: PlacementFailure[] = [];
+  for (const packet of packets) {
+    const item = supplied.find(p => p.name === packet.name);
+    if (!item) {
+      failed.push({ name: packet.name, error: "PLACEMENT_SUMMARY_INCOMPLETE: Missing or malformed reading." });
+      continue;
+    }
+    const warnings: string[] = [];
+    const validIds = new Set(packet.facts.map(f => f.id));
+    const validLayers = new Set(packet.facts.map(f => f.layerId));
+    const evidenceIds = Array.from(new Set((item.evidenceIds ?? []).filter(id => validIds.has(id))));
+    const layerIds = Array.from(new Set((item.layerIds ?? []).filter(id => validLayers.has(id))));
+    if (evidenceIds.length !== (item.evidenceIds ?? []).length) warnings.push("Unknown evidence references removed");
+    if (layerIds.length !== (item.layerIds ?? []).length) warnings.push("Unknown method references removed");
+    if (!evidenceIds.includes(packet.placementEvidenceId)) {
+      evidenceIds.unshift(packet.placementEvidenceId);
+      warnings.push("Placement reference restored; verify the prose uses this placement");
+    }
+    const prose = readingProse(item.paragraph).replace(/\s+/g, " ").trim();
+    const words = prose.split(/\s+/);
+    let paragraph = prose;
+    if (words.length > 140) {
+      const clipped = words.slice(0, 140).join(" ");
+      const sentence = Math.max(clipped.lastIndexOf("."), clipped.lastIndexOf("!"), clipped.lastIndexOf("?"));
+      paragraph = sentence >= 119 ? clipped.slice(0, sentence + 1) : clipped;
+      warnings.push("Long reading shortened");
+    }
+    if (paragraph.length < 120) {
+      failed.push({ name: packet.name, error: "PLACEMENT_SUMMARY_TOO_SHORT: Reading needs more detail." });
+      continue;
+    }
+    for (const layer of ["vedic-nakshatras-and-padas", "arabic-lunar-manazil", "elemental-decans"]) {
+      if (validLayers.has(layer) && !layerIds.includes(layer)) warnings.push("Uncited calculated layer: " + layer);
+    }
+    placements.push({ name: packet.name, paragraph, evidenceIds, layerIds, warnings });
   }
-  for (const placement of result.placements) {
-    const packet = expected.get(placement.name);
-    if (!packet)
-      throw new Error("PLACEMENT_SUMMARY_UNGROUNDED: Unknown planet.");
-    const ids = new Set(packet.facts.map(f => f.id));
-    const layers = new Set(packet.facts.map(f => f.layerId));
-    if (
-      placement.evidenceIds.some(id => !ids.has(id)) ||
-      placement.layerIds.some(id => !layers.has(id))
-    ) {
-      throw new Error(
-        `PLACEMENT_SUMMARY_UNGROUNDED: ${placement.name} cites unavailable evidence.`
-      );
-    }
-    if (
-      placement.paragraph.trim().split(/\s+/).length > 140 ||
-      /\n\s*\n/.test(placement.paragraph)
-    ) {
-      throw new Error(
-        `PLACEMENT_SUMMARY_TOO_LONG: ${placement.name} must fit one short paragraph.`
-      );
-    }
-    // Sign/house boilerplate alone cannot pass as a synthesized placement paragraph.
-    for (const layer of [
-      "vedic-nakshatras-and-padas",
-      "arabic-lunar-manazil",
-      "elemental-decans",
-    ]) {
-      if (
-        layers.has(layer) &&
-        (!placement.layerIds.includes(layer) ||
-          !packet.facts.some(
-            f => f.layerId === layer && placement.evidenceIds.includes(f.id)
-          ))
-      ) {
-        throw new Error(
-          `PLACEMENT_SUMMARY_SHALLOW: ${placement.name} omits its calculated mansion layers.`
-        );
-      }
-    }
-    if (!placement.evidenceIds.includes(packet.placementEvidenceId)) {
-      throw new Error(
-        `PLACEMENT_SUMMARY_UNGROUNDED: ${placement.name} lacks its own placement.`
-      );
-    }
-  }
-  return result;
+  return { placements, failed };
 }
 
-const placementCache = new Map<
-  string,
-  {
-    expiresAt: number;
-    promise: Promise<ChartPageReading>;
-  }
->();
+const placementCache = new Map<string, {
+  expiresAt: number;
+  promise: Promise<{ placements: PlacementSummary[]; failed: PlacementFailure[] }>;
+}>();
 
 export type ChartPageReading = {
   snapshotId: string;
@@ -293,9 +274,8 @@ export type ChartPageReading = {
   themes: SynthesisResult["themes"];
   methodLedgerSummary: SynthesisResult["methodLedgerSummary"];
   qualityAudit: SynthesisResult["qualityAudit"];
-  placements: Array<
-    z.infer<typeof summarySchema>["placements"][number] & { evidence: Fact[] }
-  >;
+  placements: Array<PlacementSummary & { evidence: Fact[] }>;
+  failed?: PlacementFailure[];
 };
 
 // Reuse the completed local 19-method Canon synthesis across all sequential
@@ -352,26 +332,48 @@ export async function buildChartPageReading(
       throw new Error(`PLACEMENT_MINI_SCOPE: Unknown placement ${name}`);
     return packet;
   });
-  const key = createHash("sha256")
-    .update(
-      placementMiniIdentity(chart, mode === "transit" ? "transit" : "natal") +
-        JSON.stringify(names)
-    )
-    .digest("hex");
-  const cached = placementCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.promise;
-  const promise = generatePlacementParagraphs(packets, synthesis);
-  placementCache.set(key, { expiresAt: Date.now() + 30 * 60_000, promise });
-  while (placementCache.size > 32)
-    placementCache.delete(placementCache.keys().next().value!);
-  try {
-    return await promise;
-  } catch (error) {
-    if (placementCache.get(key)?.promise === promise)
-      placementCache.delete(key);
-    throw error;
-  }
+  const outcomes = await Promise.all(packets.map(async packet => {
+    const key = createHash("sha256")
+      .update(placementMiniIdentity(chart, mode === "transit" ? "transit" : "natal") + ":" + mode + ":" + packet.name)
+      .digest("hex");
+    const cached = placementCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.promise;
+    const promise = (async () => {
+      let lastError = "Placement synthesis failed.";
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await generatePlacementParagraphs([packet], synthesis);
+          if (response.placements.length) return { placements: response.placements, failed: [] };
+          lastError = response.failed?.[0]?.error ?? lastError;
+        } catch (error) {
+          lastError = error instanceof Error ? error.message : lastError;
+          // A timed-out inference request must not be sent again automatically.
+          if (lastError.startsWith("AI_REQUEST_TIMEOUT:")) break;
+        }
+      }
+      return { placements: [] as PlacementSummary[], failed: [{ name: packet.name, error: lastError }] };
+    })();
+    placementCache.set(key, { expiresAt: Date.now() + 30 * 60_000, promise });
+    while (placementCache.size > 32) placementCache.delete(placementCache.keys().next().value!);
+    const outcome = await promise;
+    if (outcome.failed.length) placementCache.delete(key);
+    return outcome;
+  }));
+  return {
+    snapshotId: synthesis.snapshotId,
+    dominantConclusion: synthesis.dominantConclusion,
+    methodOutcomes: synthesis.methodOutcomes,
+    themes: synthesis.themes,
+    methodLedgerSummary: synthesis.methodLedgerSummary,
+    qualityAudit: synthesis.qualityAudit,
+    placements: outcomes.flatMap(o => o.placements).map(p => ({
+      ...p, evidence: packets.find(packet => packet.name === p.name)!.facts.filter(f => p.evidenceIds.includes(f.id)),
+    })),
+    failed: outcomes.flatMap(o => o.failed),
+  };
 }
+
+
 
 async function generatePlacementParagraphs(
   packets: ReturnType<typeof buildPlacementPackets>,
@@ -465,6 +467,7 @@ astrology or requesting the full local evidence ledger.
     themes: synthesis.themes,
     methodLedgerSummary: synthesis.methodLedgerSummary,
     qualityAudit: synthesis.qualityAudit,
+    failed: reading.failed,
     placements: reading.placements.map(p => ({
       ...p,
       evidence: packets
@@ -478,7 +481,7 @@ astrology or requesting the full local evidence ledger.
  * The browser starts a job and polls with short requests; the local Canon
  * and finished synthesis are cached by chart identity on this instance.
  */
-type PlacementJobResult = Pick<ChartPageReading, "snapshotId" | "placements">;
+type PlacementJobResult = Pick<ChartPageReading, "snapshotId" | "placements" | "failed">;
 type PlacementJob = {
   id: string;
   identity: string;
@@ -502,7 +505,7 @@ export function startPlacementReadingJob(
     .digest("hex");
   const oldId = jobIdsByChart.get(identity);
   const oldJob = oldId && placementJobs.get(oldId);
-  if (oldJob && oldJob.expiresAt > Date.now() && oldJob.state !== "error")
+  if (oldJob && oldJob.expiresAt > Date.now() && (oldJob.state === "running" || (oldJob.state === "done" && !oldJob.result?.failed?.length)))
     return { jobId: oldJob.id };
   const id = randomBytes(24).toString("hex");
   const job: PlacementJob = {
@@ -522,7 +525,7 @@ export function startPlacementReadingJob(
   void buildChartPageReading(chart, mode, names).then(
     reading => {
       job.state = "done";
-      job.result = { snapshotId: reading.snapshotId, placements: reading.placements };
+      job.result = { snapshotId: reading.snapshotId, placements: reading.placements, failed: reading.failed };
     },
     failure => {
       job.state = "error";

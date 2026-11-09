@@ -35,10 +35,10 @@ beforeEach(() => {
 describe("Master Interpreter prompt coverage", () => {
   it("keeps the current replacement interpretation contract and domain instructions", () => {
     expect(MASTER_INTERPRETER_PROMPT).toContain("THE ABSOLUTE — INTERPRETATION ENGINE");
-    expect(MASTER_INTERPRETER_PROMPT).toContain("The calculation engine supplies positions");
-    expect(MASTER_INTERPRETER_PROMPT).toContain("Read the relevant evidence from all supplied traditions");
-    expect(MASTER_INTERPRETER_PROMPT).toContain("WHAT the configuration indicates, WHY");
-    expect(MASTER_INTERPRETER_PROMPT).toContain("without flattering, sugarcoating");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("do not recalculate or invent data");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("every applicable supplied method");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("reconcile reinforcing or conflicting testimony");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("what, why, how, consequence and meaning");
     expect(buildAstrologyInterpreterSystem("fixture domain instruction")).toContain("fixture domain instruction");
 
   });
