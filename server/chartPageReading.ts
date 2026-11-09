@@ -153,16 +153,15 @@ export function buildPlacementPackets(
 export function packPlacementMiniPrompt(
   packets: ReturnType<typeof buildPlacementPackets>
 ) {
-  const compactJudgment = (text: string, planet: string) => {
+  const compactJudgment = (text: string) => {
     const normalized = text
-      .replace(new RegExp(planet.replace(/[.*+?^\u0024{}()|[\]\\]/g, "\\\\$&") + "'s [A-Z][^.\\n]*? (?:cooperates with|takes|has|operates through|is refined by|occupies|at) ", "g"), planet + " ")
-      .replace(/House (\\d+): [^.;]+/g, "H$1")
-      .replace(/This four-condition dignity subset is distinct from the separately calculated Shadbala capacity\\.?/gi, "")
-      .replace(/This four-condition subset gives it no special essential status; house placement and the host's condition determine delivery\\.?/gi, "")
-      .replace(/\\s+/g, " ")
+      .replace(/House (\d+): [^.;]+/g, "H$1")
+      .replace(/This four-condition dignity subset is distinct from the separately calculated Shadbala capacity\.?/gi, "")
+      .replace(/This four-condition subset gives it no special essential status; house placement and the host's condition determine delivery\.?/gi, "")
+      .replace(/\s+/g, " ")
       .trim();
-    // Capture beginning and conclusion of the judgment instead of copying
-    // several full paragraphs. Neither coordinates nor Canon are recalculated.
+    // Preserve a concise distinctive teaching from every calculated finding.
+    // Longer originals remain available unchanged in the on-page evidence.
     if (normalized.length <= 460) return normalized;
     const sentences = normalized.match(/[^.!?]+[.!?]?/g) ?? [normalized];
     const selected: string[] = [];
@@ -186,7 +185,7 @@ export function packPlacementMiniPrompt(
         method: j.methodId,
         frame: j.frame,
         evidenceIds: j.evidenceIds,
-        teaching: compactJudgment(j.judgment, p.name),
+        teaching: compactJudgment(j.judgment),
       })),
     })),
   };
