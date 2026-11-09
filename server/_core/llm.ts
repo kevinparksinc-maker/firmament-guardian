@@ -368,24 +368,36 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
 async function invokeNvidia(params: InvokeParams): Promise<InvokeResult> {
   // NVIDIA NIM exposes an OpenAI-compatible chat endpoint. The model name
   // comes from the user's selected NVIDIA Build example, not a Claude hint.
-  const response = await fetchWithBackoff("https://integrate.api.nvidia.com/v1/chat/completions", {
+  const requestBody = JSON.stringify({
+    model: ENV.nvidiaModel,
+    messages: params.messages.map(normalizeMessage),
+    max_tokens: Math.min(params.max_tokens ?? params.maxTokens ?? 1200, 4096),
+    stream: false,
+  });
+  const requestBytes = Buffer.byteLength(requestBody);
+  const startedAt = Date.now();
+  // Metrics only; never log API credentials, birth data or prompt text.
+  console.info(`NVIDIA synthesis request: inputBytes=${requestBytes} model=${ENV.nvidiaModel}`);
+  let response: Response;
+  try {
+    response = await fetchWithBackoff("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${ENV.nvidiaApiKey}`,
     },
-    body: JSON.stringify({
-      model: ENV.nvidiaModel,
-      messages: params.messages.map(normalizeMessage),
-      max_tokens: Math.min(params.max_tokens ?? params.maxTokens ?? 1200, 4096),
-      stream: false,
-    }),
+    body: requestBody,
     signal: params.signal,
     // Render's HTTP proxy can fail before the previous 180-second chart timeout.
     // Bound NVIDIA inference itself so the caller receives a meaningful JSON
     // error instead of Render's HTML 502 response.
     timeoutMs: Math.min(params.timeoutMs ?? 60_000, 60_000),
-  });
+    });
+  } catch (error) {
+    console.warn(`NVIDIA synthesis transport failed: elapsedMs=${Date.now() - startedAt} inputBytes=${requestBytes} reason=${error instanceof Error && error.message.startsWith("AI_REQUEST_TIMEOUT:") ? "timeout" : "network"}`);
+    throw error;
+  }
+  console.info(`NVIDIA synthesis response: status=${response.status} elapsedMs=${Date.now() - startedAt} inputBytes=${requestBytes}`);
   if (!response.ok) {
     const status = response.status;
     // Never log a response body that may include private chart text.
