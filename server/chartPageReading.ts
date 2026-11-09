@@ -146,48 +146,72 @@ export function buildPlacementPackets(
   });
 }
 
-/** Full Canon findings remain in the evidence ledger. The AI gets a short,
- * traceable digest for every applicable finding, without repeated house and
- * planet dictionary definitions or bibliographic metadata.
+/** Only local calculated RESULTS cross the API boundary. All original
+ * per-method Canon judgments and their full evidence remain in packets
+ * and are returned to the UI ledger; no textbook records are sent to NVIDIA.
  */
 export function packPlacementMiniPrompt(
   packets: ReturnType<typeof buildPlacementPackets>
 ) {
-  const compactJudgment = (text: string) => {
-    const normalized = text
-      .replace(/House (\d+): [^.;]+/g, "H$1")
-      .replace(/This four-condition dignity subset is distinct from the separately calculated Shadbala capacity\.?/gi, "")
-      .replace(/This four-condition subset gives it no special essential status; house placement and the host's condition determine delivery\.?/gi, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    // Preserve a concise distinctive teaching from every calculated finding.
-    // Longer originals remain available unchanged in the on-page evidence.
-    if (normalized.length <= 460) return normalized;
-    const sentences = normalized.match(/[^.!?]+[.!?]?/g) ?? [normalized];
-    const selected: string[] = [];
-    let length = 0;
-    for (const sentence of sentences) {
-      const piece = sentence.trim();
-      if (!piece || length + piece.length > 430) continue;
-      selected.push(piece);
-      length += piece.length + 1;
-    }
-    return selected.join(" ").slice(0, 460) || normalized.slice(0, 460);
-  };
+  const short = (value: unknown, max = 170) =>
+    typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : undefined;
   return {
-    placements: packets.map(p => ({
-      name: p.name,
-      position: p.facts[0].value,
-      placementEvidenceId: p.placementEvidenceId,
-      // Foundational Canon is retrieved locally and carried into synthesis.
-      canon: p.canon,
-      findings: p.judgments.map(j => ({
-        method: j.methodId,
-        frame: j.frame,
-        evidenceIds: j.evidenceIds,
-        teaching: compactJudgment(j.judgment),
-      })),
-    })),
+    placements: packets.map(p => {
+      const byMethod = new Map<string, typeof p.judgments>();
+      for (const finding of p.judgments)
+        byMethod.set(finding.methodId, [...(byMethod.get(finding.methodId) ?? []), finding]);
+      // One compact result per applicable method, not hundreds of repeated
+      // prose explanations. Counts make omissions visible in the audit.
+      const methods = Array.from(byMethod, ([id, findings]) => ({
+        id,
+        totalFindings: findings.length,
+        results: Array.from(new Set(findings.map(f => short(f.judgment, 180)).filter(Boolean))).slice(0, 3),
+      }));
+      const evidenceByLayer = Array.from(
+        p.facts.reduce((map, fact) => {
+          const ids = map.get(fact.layerId) ?? [];
+          if (ids.length < 3 && !ids.includes(fact.id)) ids.push(fact.id);
+          map.set(fact.layerId, ids);
+          return map;
+        }, new Map<string, string[]>())
+      ).map(([layerId, evidenceIds]) => ({ layerId, evidenceIds }));
+      const c = p.canon;
+      return {
+        name: p.name,
+        position: p.facts[0].value,
+        placementEvidenceId: p.placementEvidenceId,
+        canonResults: {
+          planetCore: c.planetCore?.slice(0, 3),
+          signQualities: c.signQualities,
+          houseTopics: c.houseTopics?.slice(0, 5),
+          condition: short(c.condition, 180),
+          godToAgent: short(c.godToAgent, 160),
+          nakshatra: c.nakshatra ? {
+            name: c.nakshatra.name,
+            deity: c.nakshatra.deity,
+            ruler: c.nakshatra.vimshottariRuler,
+            meaning: short(c.nakshatra.psychologicalPattern, 160),
+          } : null,
+          pada: c.pada ? {
+            number: c.pada.pada,
+            navamshaSign: c.pada.navamshaSign,
+            ruler: c.pada.navamshaRuler,
+          } : null,
+          arabicMansion: c.manzil ? {
+            name: c.manzil.name,
+            quality: c.manzil.traditionalQuality,
+            meaning: short(c.manzil.natalAndPsychologicalMeaning, 160),
+          } : null,
+          decan: c.decan ? {
+            number: c.decan.number,
+            ruler: c.decan.elementalFamilyRuler,
+            meaning: short(c.decan.teaching?.behavioralNuance ?? c.decan.teaching?.label, 160),
+          } : null,
+        },
+        methods,
+        evidenceByLayer,
+      };
+    }),
   };
 }
 
@@ -363,9 +387,10 @@ second-person mini-story with spiritual weight and natural 2026 language.
 Honor the fixed-XYZ God/Agent house distinction, harmonious conjunctions,
 each supplied mansion/pada, decan, aspects, rulers, strength, and star contact.
 Do not invent missing chart facts, interpretations, biographies or timings.
-Every applicable finding is supplied as a compact teaching with its method
-and evidenceIds. Use the local Canon for deeper meaning; do not request or
-reconstruct the full technical ledger.
+Canon already calculated and classified every method. The payload contains
+factual placement results, one compact summary per applicable method and exact
+evidence IDs grouped by layer. Weave the results together without recomputing
+astrology or requesting the full local evidence ledger.
 ` + `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Use the locally retrieved Canon's actual planetary functions, sign qualities, house topics, mansion/pada teachings, decan and calculated method judgments as your authoritative astrological knowledge. Your only job is to weave their interactions into a deeply specific paragraph, not to look up doctrine, rederive calculations, or simply concatenate Canon descriptions. Explain how the supplied layers change one another for this particular placement, with a concrete everyday example. Avoid repeating the same house definition or psychological scaffold across readings. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. The selected placements' locally retrieved Canon meanings and all applicable calculated judgments are supplied in a compact indexed packet. Read every supplied finding and Canon principle, then synthesize rather than restating the reference text. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`;
   const request = {
     max_tokens: 2000,
