@@ -535,7 +535,7 @@ const computeBackoffDelay = (
   return Math.min(Math.max(jittered, retryAfterMs ?? 0), RETRY_MAX_DELAY_MS);
 };
 
-// Retries non-2xx responses and network errors with exponential backoff, then
+// Retries transient failures, but returns HTTP 429 immediately so callers can\n// surface provider rate limits rather than exceeding the proxy timeout.\n// Other eligible network and HTTP failures use exponential backoff, then
 // returns the final Response so callers keep their existing error handling.
 const fetchWithBackoff = async (
   url: string,
@@ -568,7 +568,7 @@ const fetchWithBackoff = async (
       }
       // Preserve the original body for billing, invalid-input and auth errors.
       // Repeating a rejected 400 request hides the useful provider explanation.
-      if (response.ok || ![408, 409, 429, 500, 502, 503, 504, 529].includes(response.status) || attempt === RETRY_MAX_RETRIES) {
+      if (response.ok || response.status === 429 || ![408, 409, 500, 502, 503, 504, 529].includes(response.status) || attempt === RETRY_MAX_RETRIES) {
         return response;
       }
 
