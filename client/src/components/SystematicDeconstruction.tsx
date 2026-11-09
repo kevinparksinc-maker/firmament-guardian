@@ -40,9 +40,9 @@ function PlacementBatch({
       ? result.data.methodOutcomes
       : undefined;
   useEffect(() => {
-    // Stop automatic generation on the first failure; proceeding would spend
-    // NVIDIA requests on 13 more planets while the provider is timing out.
-    if (active && result.isSuccess && !result.isFetching)
+    // Advance the queue after either success or transport failure.
+    // Each failed planet retains its own retry control.
+    if (active && (result.isSuccess || result.isError) && !result.isFetching)
       onSettled();
   }, [active, result.isSuccess, result.isError, result.isFetching, onSettled]);
   return (
@@ -80,12 +80,12 @@ function PlacementBatch({
               </header>
               {summary ? (
                 <MiniReadingContent summary={summary} />
-              ) : result.error ? (
+              ) : result.data?.failed?.some(f => f.name === body.name) || result.error ? (
                 <div
                   role="alert"
                   className="space-y-2 break-words text-sm text-rose-200"
                 >
-                  <p>{result.error.message.includes("502") ? "The reading request hit an upstream gateway error. Automatic generation is paused; inspect Render diagnostics before retrying." : result.error.message}</p>
+                  <p>{result.data?.failed?.find(f => f.name === body.name)?.error ?? (result.error?.message.includes("502") ? "The reading request hit an upstream gateway error. Retry this planet after checking Render diagnostics." : result.error?.message)}</p>
                   <button
                     type="button"
                     onClick={() => result.refetch()}
