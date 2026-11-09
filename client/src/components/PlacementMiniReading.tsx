@@ -87,7 +87,7 @@ export function usePlacementMiniReadings(
         throw new Error(connectionError(error));
       }
       let result: MiniBatch | undefined;
-      for (let poll = 0; poll < 90; poll++) {
+      for (let poll = 0; poll < 180; poll++) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         let status;
         try {
