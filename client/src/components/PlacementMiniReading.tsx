@@ -21,7 +21,8 @@ export function usePlacementMiniReadings(
   names: string[] = ["Sun", "Moon"],
   enabled = true
 ) {
-  const generate = trpc.interpretation.chartPage.useMutation();
+  const generate = trpc.interpretation.chartPageStart.useMutation();
+  const trpcUtils = trpc.useUtils();
   const me = trpc.auth.me.useQuery();
   const identity = placementMiniIdentity(
     chart,
@@ -70,7 +71,22 @@ export function usePlacementMiniReadings(
           snapshotId: saved[0]!.snapshotId,
           placements: saved.flatMap(value => value!.placements),
         };
-      const result = await generate.mutateAsync({ chart, mode: layer, names });
+      // Start NVIDIA synthesis in the server and poll short-lived HTTP calls.
+      // Holding a mutation open during generation causes Render HTML 502s.
+      const { jobId } = await generate.mutateAsync({ chart, mode: layer, names });
+      let result: MiniBatch | undefined;
+      for (let poll = 0; poll < 90; poll++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const status = await trpcUtils.interpretation.chartPageStatus.fetch({ jobId });
+        if (status.state === "error")
+          throw new Error(status.error);
+        if (status.state === "done") {
+          result = status.result as MiniBatch;
+          break;
+        }
+      }
+      if (!result)
+        throw new Error("READING_JOB_TIMEOUT: The planet reading exceeded the polling window. Retry it.");
       try {
         // The server includes a complete 19-method ledger in every response.
         // Never persist that huge repeated ledger 14 times: store only the
