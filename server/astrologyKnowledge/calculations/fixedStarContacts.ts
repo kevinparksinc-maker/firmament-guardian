@@ -1,5 +1,6 @@
 import { normalizeLongitude } from "../../../shared/hybrid";
 import { FIXED_STAR_CANON_RECORDS } from "../canon/fixedStarsAndLots";
+import type { FixedStarCanonRecord } from "../canon/types";
 
 /** Angular separations are mathematical engine evidence, not Canon knowledge. */
 export function findFixedStarContactsForLongitude(
