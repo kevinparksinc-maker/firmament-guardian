@@ -90,7 +90,7 @@ function PlacementBatch({
                     onClick={() => result.refetch()}
                     className="underline"
                   >
-                    Retry this reading batch
+                    Retry this reading
                   </button>
                 </div>
               ) : (
@@ -158,10 +158,9 @@ function PlacementReadings({
   const [filter, setFilter] = useState("All");
   const [activeBatch, setActiveBatch] = useState(0);
   const rows = placementRows(chart);
-  // Keep the server's two-placement request budget, while covering every row.
-  const batches = Array.from({ length: Math.ceil(rows.length / 2) }, (_, i) =>
-    rows.slice(i * 2, i * 2 + 2)
-  );
+  // One placement per NVIDIA request. The existing activeBatch gate ensures
+  // the next one starts only after the current reading succeeds or fails.
+  const batches = rows.map(row => [row]);
   return (
     <section
       aria-label="Planetary placement meanings"
@@ -177,8 +176,8 @@ function PlacementReadings({
         </p>
         <p role="status" className="mt-2 text-xs text-cyan-200">
           {activeBatch < batches.length
-            ? `Processing placement batch ${activeBatch + 1} of ${batches.length}. Readings appear as each batch finishes.`
-            : "All placement batches processed. Any failed readings show their error and a retry button."}
+            ? `Processing placement ${activeBatch + 1} of ${batches.length}, one at a time. Each completed reading appears immediately.`
+            : "All placements processed. Failed readings can be retried individually."}
         </p>
       </header>
       <div
