@@ -53,7 +53,14 @@ export const MINI_SYNTHESIS_STYLE = `${SOUL_REMEMBRANCE_STYLE}\n\nMINI READING: 
 export const FULL_SYNTHESIS_STYLE = `${SOUL_REMEMBRANCE_STYLE}\n\nFULL READING: Give each relevant planet a complete integrated testimony, trace planetary and house relationships, then deliver the unified synthesis. For horary answer the question and assess its significators; for synastry assess interactions between the charts. Respect the endpoint's output contract.`;
 
 export function buildAstrologyInterpreterSystem(...domainInstructions: string[]): string {
-  return [MASTER_INTERPRETER_PROMPT, SOUL_REMEMBRANCE_STYLE, ...domainInstructions]
+  // MINI_SYNTHESIS_STYLE and FULL_SYNTHESIS_STYLE already contain the shared
+  // doctrine. Do not ship that multi-page directive twice on every request.
+  const normalized = domainInstructions.map(section =>
+    section.startsWith(SOUL_REMEMBRANCE_STYLE)
+      ? section.slice(SOUL_REMEMBRANCE_STYLE.length).trim()
+      : section
+  );
+  return [MASTER_INTERPRETER_PROMPT, SOUL_REMEMBRANCE_STYLE, ...normalized]
     .filter(section => section.trim().length > 0)
     .join("\n\n---\n\n");
 }
