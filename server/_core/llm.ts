@@ -381,7 +381,10 @@ async function invokeNvidia(params: InvokeParams): Promise<InvokeResult> {
       stream: false,
     }),
     signal: params.signal,
-    timeoutMs: params.timeoutMs,
+    // Render's HTTP proxy can fail before the previous 180-second chart timeout.
+    // Bound NVIDIA inference itself so the caller receives a meaningful JSON
+    // error instead of Render's HTML 502 response.
+    timeoutMs: Math.min(params.timeoutMs ?? 60_000, 60_000),
   });
   if (!response.ok) {
     const status = response.status;
