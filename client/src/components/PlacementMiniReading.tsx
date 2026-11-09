@@ -76,6 +76,7 @@ export function usePlacementMiniReadings(
         return {
           snapshotId: saved[0]!.snapshotId,
           placements: saved.flatMap(value => value!.placements),
+          failed: [] as MiniBatch["failed"],
         };
       // Start NVIDIA synthesis in the server and poll short-lived HTTP calls.
       // Holding a mutation open during generation causes Render HTML 502s.
