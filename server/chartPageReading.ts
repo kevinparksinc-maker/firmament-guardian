@@ -274,16 +274,40 @@ export type ChartPageReading = {
   >;
 };
 
+// Reuse the completed local 19-method Canon synthesis across all sequential
+// planetary calls for the same chart. Failed calculations are never cached.
+const chartCanonCache = new Map<string, {
+  expiresAt: number;
+  promise: ReturnType<typeof synthesizeChartForReading>;
+}>();
+function cachedChartCanon(
+  chart: ChartResult,
+  mode: "natal" | "transit" | "combined"
+) {
+  const key = createHash("sha256")
+    .update(placementMiniIdentity(chart, mode === "transit" ? "transit" : "natal") + ":" + mode)
+    .digest("hex");
+  const existing = chartCanonCache.get(key);
+  if (existing && existing.expiresAt > Date.now()) return existing.promise;
+  const promise = synthesizeChartForReading(
+    chart,
+    mode === "transit" ? "combined" : "natal",
+    "Compact individual placement card summaries"
+  );
+  chartCanonCache.set(key, { expiresAt: Date.now() + 10 * 60_000, promise });
+  while (chartCanonCache.size > 6) chartCanonCache.delete(chartCanonCache.keys().next().value!);
+  void promise.catch(() => {
+    if (chartCanonCache.get(key)?.promise === promise) chartCanonCache.delete(key);
+  });
+  return promise;
+}
+
 export async function buildChartPageReading(
   chart: ChartResult,
   mode: "natal" | "transit" | "combined",
   names: string[] = ["Sun", "Moon"]
 ): Promise<ChartPageReading> {
-  const verified = await synthesizeChartForReading(
-    chart,
-    mode === "transit" ? "combined" : "natal",
-    "Compact individual placement card summaries"
-  );
+  const verified = await cachedChartCanon(chart, mode);
   const event = verified.snapshot.transit?.framework;
   if (mode === "transit" && !event)
     throw new Error("TRANSIT_FRAMEWORK_MISSING: Refresh the event chart.");
