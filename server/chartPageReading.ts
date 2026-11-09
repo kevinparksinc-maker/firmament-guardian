@@ -347,6 +347,8 @@ export async function buildChartPageReading(
           lastError = response.failed?.[0]?.error ?? lastError;
         } catch (error) {
           lastError = error instanceof Error ? error.message : lastError;
+          // A timed-out inference request must not be sent again automatically.
+          if (lastError.startsWith("AI_REQUEST_TIMEOUT:")) break;
         }
       }
       return { placements: [] as PlacementSummary[], failed: [{ name: packet.name, error: lastError }] };
