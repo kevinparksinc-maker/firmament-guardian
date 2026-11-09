@@ -1,10 +1,11 @@
+import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
 import { packSynthesis } from "./astrologyKnowledge/synthesis/context";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { ChartResult } from "./astronomy";
 import { calculateEnergyRead } from "../shared/energyScoring";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { buildAstrologyInterpreterSystem, MINI_SYNTHESIS_STYLE } from "./master-interpreter";
 import { invokeLLM } from "./_core/llm";
 
 const readingSchema = z.object({
@@ -112,15 +113,17 @@ export async function generateEnergyReading(chart: ChartResult) {
       {
         role: "system",
         content: buildAstrologyInterpreterSystem(
-          `Write the final compact Energy overview, 3–6 connected paragraphs, about 300–450 words total. This is the final synthesis before the user's scores and chart evidence are displayed. Read ALL supplied Master method findings and Canon applications. Explain the dominant interaction, how actual placements and available conditions modify the strongest personal transit contacts, their concrete consequences, and how specific support interacts with specific pressure. For the principal contacts, explain how BOTH the transit planet’s and natal target’s supplied nakshatra/pada, Arabic manzil, elemental-family decan and actual fixed-star activations modify the interaction; do not merely list their names. An empty star-contact list means no activation, not a missing planet meaning. Distinguish event houses from natal houses, God from Agent, and transient conditions from natal traits. Do not invent easing windows without forecast evidence. Do not substitute planet dictionaries, aspect slogans, a method inventory, repeated advice, a life story, or percentages alone for synthesis. Explain both support and friction without forcing a happy resolution. Return JSON {"headline":"...","paragraphs":[{"text":"...","contactIds":["exact supplied contact ID"],"methodIds":["exact supplied method ID"],"evidenceIds":["exact calculated natal evidence ID","exact calculated transit: evidence ID"]}],"methodsReviewed":["every supplied method ID, including unavailable statuses"]}. Every paragraph must connect actual contacts to method findings and cite the exact calculated evidence IDs. Across the reading, actually USE and cite the natal and transit nakshatra/pada, Arabic manzil, elemental-decan and fixed-star layers; explain no activation where a star list is empty. A methodsReviewed list alone cannot satisfy depth; list only the methods used in that paragraph. Scores are model weights, never event probabilities.`
+          MINI_SYNTHESIS_STYLE,
+          `Write the final compact Energy overview, 3 connected paragraphs, about 210–300 words total. This is the final synthesis before the user's scores and chart evidence are displayed. Read ALL supplied Master method findings and Canon applications. Explain the dominant interaction, how actual placements and available conditions modify the strongest personal transit contacts, their concrete consequences, and how specific support interacts with specific pressure. For the principal contacts, explain how BOTH the transit planet’s and natal target’s supplied nakshatra/pada, Arabic manzil, elemental-family decan and actual fixed-star activations modify the interaction; do not merely list their names. An empty star-contact list means no activation, not a missing planet meaning. Distinguish event houses from natal houses, God from Agent, and transient conditions from natal traits. Do not invent easing windows without forecast evidence. Do not substitute planet dictionaries, aspect slogans, a method inventory, repeated advice, a life story, or percentages alone for synthesis. Explain both support and friction without forcing a happy resolution. Return JSON {"headline":"...","paragraphs":[{"text":"...","contactIds":["exact supplied contact ID"],"methodIds":["exact supplied method ID"],"evidenceIds":["exact calculated natal evidence ID","exact calculated transit: evidence ID"]}],"methodsReviewed":["every supplied method ID, including unavailable statuses"]}. Every paragraph must connect actual contacts to method findings and cite the exact calculated evidence IDs. Across the reading, actually USE and cite the natal and transit nakshatra/pada, Arabic manzil, elemental-decan and fixed-star layers; explain no activation where a star list is empty. A methodsReviewed list alone cannot satisfy depth; list only the methods used in that paragraph. Scores are model weights, never event probabilities.`
         ),
       },
       {
         role: "user",
-        content: JSON.stringify({
+        content: stringifyEvidence({
           // Preserve every method and Canon application once. The bridge's prose
           // repeats raw findings inside themes and can exceed provider context limits.
           synthesis: packSynthesis(synthesis),
+          packetFormat: "judgmentColumns names row cells. judgmentParts numeric entries index textTable; concatenate resolved parts in order. sourceRefs index canonApplications. Evidence IDs remain literal strings and must be cited exactly.",
           moment: canonicalChart.transitDate,
           natal: {
             location: canonicalChart.input.location,

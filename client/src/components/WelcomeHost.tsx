@@ -351,7 +351,7 @@ To unlock deeply personalized interpretations grounded in your exact birth sky, 
               </span>
               {hasChart && (
                 <Badge variant="outline" className="border-cyan-400/30 text-cyan-300 text-[10px]">
-                  16-System Synthesis
+                  Whole-Chart Synthesis
                 </Badge>
               )}
             </div>

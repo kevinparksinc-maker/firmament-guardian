@@ -35,7 +35,8 @@ export type MethodOutcomeStatus =
   | "interpreted"
   | "reference-only"
   | "not-applicable"
-  | "failed";
+  | "failed"
+  | "no-result";
 
 export interface MethodOutcomeFinding {
   evidenceId: string;
@@ -43,7 +44,19 @@ export interface MethodOutcomeFinding {
   calculatedValue: string;
 }
 
-export type JudgmentPolarity = "supportive" | "challenging" | "mixed" | "neutral";
+export interface FindingJudgment {
+  frame?: "god" | "agent" | "shared" | "transit";
+  id: string;
+  subject: string;
+  domain: HumanDomain;
+  judgment: string;
+  mechanism: string;
+  valence: InterpretedProposition["valence"];
+  strength: InterpretedProposition["strength"];
+  evidenceIds: string[];
+  rules: CanonRuleApplication[];
+  limitation?: string;
+}
 
 export interface MethodOutcome {
   methodId: string;
@@ -53,6 +66,7 @@ export interface MethodOutcome {
   frame: "god" | "agent" | "shared" | "transit";
   status: MethodOutcomeStatus;
   calculatedFindings: MethodOutcomeFinding[];
+  findingJudgments: FindingJudgment[];
   canonApplications: CanonRuleApplication[];
   interpretation: string;
   judgment: string;
@@ -60,13 +74,6 @@ export interface MethodOutcome {
   evidenceIds: string[];
   strengthAndLimitations: string[];
   missingCanon: boolean;
-  judgmentBasis: {
-    calculatedEvidenceIds: string[];
-    canonRuleIds: string[];
-    polarity: JudgmentPolarity;
-    strength: "strong" | "moderate" | "limited";
-    factors: string[];
-  };
 }
 
 export interface InterpretedProposition {
@@ -116,6 +123,8 @@ export interface SynthesizedTheme {
 }
 
 export interface SynthesisResult {
+  /** Complete calculation snapshot for the AI evidence packet. */
+  sourceSnapshot: UnifiedMasterChartSnapshot;
   snapshotId: string;
   mode: "natal" | "transit" | "combined";
   dominantConclusion: string;

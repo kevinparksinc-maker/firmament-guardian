@@ -17,6 +17,8 @@ export default defineConfig({
     include: [
       "server/**/*.test.ts",
       "server/**/*.spec.ts",
+      "client/src/config/profileNavigation.test.ts",
+      "client/src/hooks/overlayHistory.test.ts",
       "shared/xyzWheel.test.ts",
       "test/astrology/invariant_engine.test.ts",
       "test/astrology/sunrise_ascendant.test.ts",

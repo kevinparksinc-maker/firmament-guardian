@@ -41,7 +41,6 @@ export function clusterPropositionsIntoThemes(
 } {
   const groups = new Map<HumanDomain, InterpretedProposition[]>();
   for (const proposition of propositions) {
-    if (proposition.id.startsWith("prop-method-ledger-")) continue;
     const group = groups.get(proposition.domain) ?? [];
     group.push(proposition);
     groups.set(proposition.domain, group);
@@ -110,7 +109,7 @@ export function clusterPropositionsIntoThemes(
         ...combined,
         ...relationships.map(r => `CROSS-METHOD CONNECTION: ${r}`),
       ].join("\n"),
-      concreteManifestations: ordered.slice(0, 4).map(p =>
+      concreteManifestations: ordered.map(p =>
         `${p.themeTitle}: ${p.plainLanguageMeaning} The relevant chart condition is ${p.causalMechanism}; consider how this traditional expression may appear in the life area being examined. Evidence: ${p.supportingEvidenceIds.join(", ")}`
       ),
       consequences: consequenceParts.join("\n"),

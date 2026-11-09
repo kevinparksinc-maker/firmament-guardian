@@ -1,9 +1,9 @@
+import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { describe, expect, it } from "vitest";
 import { buildUnifiedMasterChart } from "./masterChart";
 import { retrieveChartCanonDossier, canonDossierToEvidenceItems } from "./astrologyKnowledge/canon/retriever";
 import { buildCanonRuleApplications } from "./astrologyKnowledge/synthesis/canonApplications";
 import { buildMethodOutcomes } from "./astrologyKnowledge/synthesis/methodOutcomes";
-import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis/synthesizer";
 import type { UnifiedMasterChartSnapshot } from "./masterChart/types";
 
 const input = {
@@ -20,11 +20,11 @@ describe("structured method-specific outcomes", () => {
     );
     const outcomes = buildMethodOutcomes(snapshot, canon);
 
-    expect(outcomes).toHaveLength(16);
-    expect(new Set(outcomes.map(outcome => outcome.methodId)).size).toBe(16);
+    expect(outcomes).toHaveLength(MASTER_METHOD_IDS.length);
+    expect(new Set(outcomes.map(outcome => outcome.methodId)).size).toBe(MASTER_METHOD_IDS.length);
     for (const outcome of outcomes) {
       expect(["interpreted", "reference-only", "not-applicable", "failed"]).toContain(outcome.status);
-      expect(outcome.chartScope).toBe("natal");
+      expect(outcome.chartScope).toBe(outcome.methodId === "transit-activation-layer" ? "event" : "natal");
       expect(outcome.interpretation.length).toBeGreaterThan(0);
       expect(outcome.judgment.length).toBeGreaterThan(0);
       expect(outcome.contribution.length).toBeGreaterThan(0);
@@ -37,7 +37,7 @@ describe("structured method-specific outcomes", () => {
     expect(outcomes.find(outcome => outcome.methodId === "chinese-lunar-mansions-xiu")?.status).toBe("reference-only");
   });
 
-  it("changes the method judgment when the calculated finding changes", async () => {
+  it("rejects an invalid decan finding instead of promoting its raw text", async () => {
     const snapshot = await buildUnifiedMasterChart(input);
     const canon = buildCanonRuleApplications(
       snapshot,
@@ -52,13 +52,13 @@ describe("structured method-specific outcomes", () => {
         ...snapshot.layers,
         "elemental-decans": {
           ...snapshot.layers["elemental-decans"],
-          results: [{ body: "Sun", sign: "Altered", decanIndex: 14, behavioralNuance: "challenging obstacle and restriction" }],
-          evidenceIds: ["decan-sun-14"],
+          results: [{ body: "Sun", sign: "Altered", decanIndex: 99, behavioralNuance: "Altered calculated testimony" }],
+          evidenceIds: ["decan-sun-99"],
         },
       },
       methodExecutionLedger: snapshot.methodExecutionLedger.map(layer =>
         layer.id === "elemental-decans"
-          ? { ...layer, results: [{ body: "Sun", sign: "Altered", decanIndex: 14, behavioralNuance: "challenging obstacle and restriction" }], evidenceIds: ["decan-sun-14"] }
+          ? { ...layer, results: [{ body: "Sun", sign: "Altered", decanIndex: 99, behavioralNuance: "Altered calculated testimony" }], evidenceIds: ["decan-sun-99"] }
           : layer,
       ),
     };
@@ -66,12 +66,10 @@ describe("structured method-specific outcomes", () => {
       outcome => outcome.methodId === "elemental-decans",
     )!;
 
-    expect(changed.judgmentBasis.polarity).not.toBe(original.judgmentBasis.polarity);
-    expect(changed.judgment).not.toBe(original.judgment);
-    expect(changed.judgmentBasis.factors).toContain("polarity:challenging");
-
-    const originalSynthesis = await synthesizeMasterReading({ snapshot, readingMode: "natal", userQuestion: "What is this chart saying?", canonApplications: canon });
-    const changedSynthesis = await synthesizeMasterReading({ snapshot: altered, readingMode: "natal", userQuestion: "What is this chart saying?", canonApplications: canon });
-    expect(changedSynthesis.dominantConclusion).not.toBe(originalSynthesis.dominantConclusion);
+    expect(changed.status).toBe("failed");
+    expect(changed.interpretation).toContain("METHOD_RULE_INPUT_INVALID");
+    expect(changed.judgment).not.toContain("Altered calculated testimony");
+    expect(changed.interpretation).not.toBe(original.interpretation);
+    expect(changed.evidenceIds).toEqual(["decan-sun-99"]);
   });
 });

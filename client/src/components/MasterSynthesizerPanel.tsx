@@ -1,3 +1,4 @@
+import { readingProse } from "@shared/readingProse";
 import { useLocation } from "wouter";
 import React, { useState } from "react";
 import {
@@ -18,18 +19,19 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
-import type { SynthesisResult } from "../../../server/astrologyKnowledge/synthesis/types";
 
 export interface MasterSynthesizerPanelProps {
   chart: ChartResult;
   presentation?: "summary" | "full" | "evidence";
   initialQuestion?: string;
+  mode?: "natal" | "transit" | "combined";
 }
 
 export function MasterSynthesizerPanel({
   chart,
   initialQuestion,
   presentation = "full",
+  mode,
 }: MasterSynthesizerPanelProps) {
   const [, navigate] = useLocation();
   const [question, setQuestion] = useState(
@@ -40,10 +42,10 @@ export function MasterSynthesizerPanel({
   const [activeEvidenceFilter, setActiveEvidenceFilter] = useState<string | null>(null);
 
   const synthesizeMutation = trpc.interpretation.masterSynthesize.useMutation();
-  const [result, setResult] = useState<SynthesisResult | null>(null);
+  const [result, setResult] = useState<NonNullable<typeof synthesizeMutation.data> | null>(null);
   const requestVersion = React.useRef(0);
+  const selectedMode = mode ?? chart.readingScope;
 
-  const evidencePercent = result ? Math.round(result.qualityAudit.groundedRatio * 100) : 0;
 
   const handleSynthesize = (qToUse?: string) => {
     const version = ++requestVersion.current;
@@ -51,13 +53,14 @@ export function MasterSynthesizerPanel({
     synthesizeMutation.mutate(
       {
         ...chart.input,
+        chart,
         worldview: chart.worldview,
-        mode: chart.readingScope === "transit" ? "transit" : chart.readingScope === "combined" ? "combined" : "natal",
+        mode: selectedMode,
         question: qToUse ?? question,
       },
       {
         onSuccess: data => {
-          if (version === requestVersion.current) setResult(data as SynthesisResult);
+          if (version === requestVersion.current) setResult(data);
         },
       }
     );
@@ -67,7 +70,7 @@ export function MasterSynthesizerPanel({
     if (initialQuestion) setQuestion(initialQuestion);
     handleSynthesize(initialQuestion || question);
     return () => { requestVersion.current += 1; };
-  }, [chart, initialQuestion]);
+  }, [chart, initialQuestion, selectedMode]);
 
   return (
     <div className="space-y-6">
@@ -130,16 +133,13 @@ export function MasterSynthesizerPanel({
             <div className="flex items-center gap-2 mb-3">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                Dominant Core Synthesis
+                Full Master Reading
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3" />
-                {result.qualityAudit.passed ? `${evidencePercent}% Evidence Traced` : `Evidence Review Required · ${evidencePercent}% Traced`}
-              </span>
+
             </div>
 
             <p className="text-sm md:text-base leading-relaxed text-slate-100 font-medium">
-              {result.dominantConclusion}
+              {result.narrative?.sections?.[0]?.text ? "Your complete interpretation is presented below." : (result.narrative?.answer ?? result.dominantConclusion)}
             </p>
 
             <div className="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
@@ -158,22 +158,25 @@ export function MasterSynthesizerPanel({
           </>}
           {presentation === "full" && <>
           {/* Integrated Flow Narrative */}
-          <details className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6 space-y-4"><summary className="cursor-pointer text-sm text-cyan-200">Read the integrated narrative</summary>
+          <details open className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6 space-y-4"><summary className="cursor-pointer text-sm text-cyan-200">Read the integrated narrative</summary>
             <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               Integrated Narrative
             </h3>
             <div className="space-y-4 text-xs md:text-sm text-slate-200 leading-relaxed">
-              {result.integratedNarrative.map((paragraph, idx) => (
-                <p key={idx} className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/50">
-                  {paragraph}
-                </p>
+              {(result.narrative?.sections?.length ? result.narrative.sections : (result.integratedNarrative ?? []).map((text, index) => ({ id: `reading-${index}`, title: index === 0 ? "Master Reading" : `Reading Part ${index + 1}`, text }))).map(section => (
+                <div key={section.id} className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/50 space-y-2">
+                  <h4 className="font-semibold text-cyan-100">{section.title}</h4>
+                  <p className="whitespace-pre-line">{readingProse(section.text)}</p>
+                </div>
               ))}
             </div>
           </details>
+          {Boolean(result.narrative?.methodContributions?.length) && <details className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6"><summary className="cursor-pointer text-sm text-cyan-200">How every method shaped the reading</summary><div className="mt-4 space-y-4">{(result.narrative?.methodContributions ?? []).map(contribution => <div key={contribution.methodId}><h4 className="text-sm font-semibold text-cyan-100">{result.methodOutcomes.find(m => m.methodId === contribution.methodId)?.methodName} · {contribution.methodId.startsWith("transit:") ? "Event" : "Base chart"}</h4><p className="text-sm text-slate-200">{contribution.contribution}</p><p className="mt-1 text-xs text-slate-400">Findings: {contribution.findingIds.join(", ")}</p></div>)}</div></details>}
 
-          {/* Human Domain Themes Grid */}
-          <div className="space-y-4">
+          <details className="rounded-2xl border border-slate-800 p-4">
+          <summary className="cursor-pointer text-sm text-cyan-200">Calculation analysis and rule-based themes</summary>
+          <div className="mt-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
                 <Layers className="w-4 h-4" />
@@ -300,6 +303,7 @@ export function MasterSynthesizerPanel({
             </div>
           )}
 
+          </details>
           </>}
           {/* Expandable "How was this calculated?" Evidence Drawer */}
           {(presentation === "evidence" || presentation === "full" && showEvidenceDrawer) && (
@@ -337,8 +341,8 @@ export function MasterSynthesizerPanel({
                   <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Reference-Only</p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                  <span className="text-lg font-bold text-cyan-400 font-mono">{evidencePercent}%</span>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Evidence Traced</p>
+                  <span className="text-lg font-bold text-cyan-400 font-mono">{result.narrativeAudit.deliveredMethodIds.length}</span>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Layers Sent to AI</p>
                 </div>
               </div>
 

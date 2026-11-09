@@ -50,7 +50,7 @@ export function buildCanonRuleApplications(
   snapshot: UnifiedMasterChartSnapshot,
   canonEvidence: EvidenceItem[],
 ): CanonRuleApplication[] {
-  return canonEvidence.map(item => ({
+  const applications: CanonRuleApplication[] = canonEvidence.map(item => ({
     canonEvidenceId: item.id,
     ruleId: item.ruleId ?? item.sourceTrace.ruleId ?? "unknown-canon-rule",
     sourceId: item.sourceId,
@@ -62,4 +62,5 @@ export function buildCanonRuleApplications(
     confidence: item.sourceTrace.confidence,
     implementationStatus: item.sourceTrace.implementationStatus,
   }));
+  return applications;
 }

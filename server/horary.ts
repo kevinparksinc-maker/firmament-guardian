@@ -9,6 +9,7 @@ import { HORARY_TOPICS } from "../shared/horary";
 import { calculateLookahead, type Lookahead } from "./horaryLookahead";
 import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
 import { HORARY_SYSTEM as HORARY_SPECIALIZED_SYSTEM } from "./horary-instructions";
+import { FULL_SYNTHESIS_STYLE } from "./master-interpreter";
 import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
 import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
 import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever";
@@ -351,7 +352,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `Moon: ${moon.display}, ${moon.sign}, house ${moon.house}${moon.retrograde ? ", retrograde" : ""}.`,
     `Traditional planetary placements:\n${placementLines}`,
     `House cusps and traditional rulers:\n${houseLines}`,
-    `GOD VIEW / AGENT VIEW RELATIONSHIP EVIDENCE (contextual layer; do not replace horary testimony):\n${frameLines}`,
+    `GOD VIEW / AGENT VIEW RELATIONSHIP SYNTHESIS (contextual layer; do not replace horary testimony):\n${frameLines}`,
     `Major aspects among the querent, person, matter significators, and Moon (maximum 5° orb):\n${aspectLines}`,
     `Other close major aspects among the seven classical planets (max 5° orb; at least one planet is not a significator or the Moon):\n${otherAspectLines}`,
     `Upcoming exact aspects (calculated from the ephemeris; local timezone ${input.timezone}; Moon contacts cover ${lookahead.moonWindowDays} days and other contacts cover ${lookahead.windowDays} days). A listed date/time is when the planetary contact becomes exact, not a prediction of when an event will happen:\n${upcomingLines}`,
@@ -366,6 +367,11 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
     `RADICALITY / CONSIDERATIONS BEFORE JUDGMENT: status ${traditional.radicality.status}; ${traditional.radicality.explanation}\n${traditional.radicality.considerations.length ? traditional.radicality.considerations.map(row => `- ${row}`).join("\n") : "- No configured caution was triggered."}`,
     `TRADITIONAL EVENT-TIMING AID (degrees to perfection and modality estimate; not a guaranteed event date):\n${timingLines}`,
     `LUNAR MANSION / MANZIL / DECAN CONTEXT FOR CLASSICAL PLANETS AND ASCENDANT:\n${overlayLines}`,
+    "FULL 16/20-LAYER SYNTHESIS REPORT (contextual; horary testimony remains primary)",
+    "16 SELF-KNOWLEDGE DIMENSIONS: supplied through the unified Master method evidence when available; missing dimensions remain explicitly unavailable.",
+    "16-SYSTEM CONVERGENCE AUDIT: compare returned system evidence without inventing absent results.",
+    "PLANET INTERACTION MATRIX: use the calculated aspects and relationship evidence supplied above.",
+    "LANGUAGE SAFETY RESTRICTIONS: symbolic possibilities are not diagnoses, guarantees, biographies, or claims about another person’s private mind.",
     natalEvidence,
     transitEvidence,
     godEvidence,
@@ -419,7 +425,7 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   };
 }
 
-const HORARY_SYSTEM = `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY READING PRESENTATION — FLEXIBLE\nThe three-wheel framework guides examination, not the conclusion or format. Select the order, emphasis, and level of detail that best answer the actual question. No exact headings or mandatory emotional preamble. Give clear evidence for conclusions, including challenging and contradictory testimony.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
+const HORARY_SYSTEM = `${FULL_SYNTHESIS_STYLE}\n\n---\n\n${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY READING PRESENTATION — FLEXIBLE\nThe three-wheel framework guides examination, not the conclusion or format. Select the order, emphasis, and level of detail that best answer the actual question. No exact headings or mandatory emotional preamble. Give clear evidence for conclusions, including challenging and contradictory testimony.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
 
 function responseText(content: string | Array<{ type: string; text?: string }> | undefined) {
   return typeof content === "string"
@@ -486,6 +492,7 @@ function deterministicHoraryReading(chart: HoraryChart) {
     "## The astrological picture",
     aspectSentence,
     `Traditional testimony: ${traditionalSummary}`,
+    `God View / Agent View synthesis from the displayed evidence box: ${chart.placements.filter(row => row.frameRelationship).map(row => row.frameRelationship?.synthesis).filter(Boolean).join(" ") || "No dual-frame synthesis was calculated."}`,
     `The Moon is ${chart.moon.display}, ${chart.moon.sign}, in House ${chart.moon.house}. ${chart.canonEvidenceText.split("\n").slice(0, 6).join(" ")}`,
     natalSummary,
     transitSummary.length
@@ -529,12 +536,6 @@ export async function openHoraryQuestion(input: HoraryInput) {
     { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. Present the judgment and evidence in the order most useful to this question; headings are optional.\n\n${chart.judgmentEvidenceText}\n\nFULL TECHNICAL EVIDENCE (all configured layers):\n${chart.evidenceText}\n\nUNIFIED MASTER METHOD EVIDENCE (supplementary; Horary significators remain authoritative):\n${chart.unifiedSynthesisContext}\n\nGive the complete, human-centered horary judgment now.` },
   ], 3200).then(
     reading => ({ reading, synthesisStatus: "ai_completed" as const }),
-    error => {
-      const category = error instanceof Error && /time|abort|deadline/i.test(error.message) ? "timeout" : "provider_error";
-      // Deliberately exclude prompts, provider responses and credentials from logs.
-      console.warn("[Horary] AI synthesis unavailable; deterministic fallback used", { category });
-      return { reading: coreReading, synthesisStatus: "deterministic_fallback" as const };
-    },
   );
   return { chart, ...reading };
 }
@@ -548,7 +549,5 @@ export async function horaryFollowUp(
     { role: "system", content: `${HORARY_SYSTEM}\n\nThis is a follow-up in an existing horary conversation. Keep the original chart and question fixed. Answer the specific follow-up, connect it to the supplied evidence and prior discussion, and do not recast the chart or silently change the original topic.` },
     { role: "user", content: `Original horary judgment evidence:\n\n${chart.judgmentEvidenceText}\n\nUnified Master method evidence:\n${chart.unifiedSynthesisContext || "Not recorded; do not claim uncalculated methods."}\n\nFull configured chart and canon evidence:\n\n${chart.evidenceText}` },
     ...withCurrentQuestion(history, question, 12),
-  ], 1800).catch(() =>
-    `The core chart remains fixed for this follow-up. The deterministic judgment is ${chart.traditional.judgment.verdict}. The relevant significators are ${chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler} and ${chart.topicRuler}; Moon status: ${chart.traditional.moonStatus.explanation} The optional language-synthesis service did not return within its time budget, so no new claim is being added beyond the calculated evidence.`,
-  );
+  ], 1800);
 }

@@ -1,4 +1,5 @@
-import { DECANS, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+import { DECANS, ELEMENTAL_DECAN_SIGNS, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+import { PLANET_CANON_RECORDS, SIGN_CANON_RECORDS } from "./planetsAndSigns";
 import type { DecanCanonRecord } from "./types";
 
 const TRIPLICITY_SUB_RULERS: Record<string, [string, string, string]> = {
@@ -105,4 +106,17 @@ export const DECAN_CANON_RECORDS: DecanCanonRecord[] = DECANS.map((label, idx) =
 export function getDecanCanonByLongitude(longitude: number): DecanCanonRecord {
   const index = Math.floor(normalizeLongitude(longitude) / 10) % 36;
   return DECAN_CANON_RECORDS[index];
+}
+
+/** The Absolute uses elemental-family decans; Chaldean faces remain a separate catalog. */
+export function elementalDecanTeaching(record: DecanCanonRecord) {
+  const subSign = ELEMENTAL_DECAN_SIGNS[Math.floor((record.index - 1) / 3)][record.decanNumber - 1];
+  const sign = SIGN_CANON_RECORDS[subSign];
+  const ruler = PLANET_CANON_RECORDS[record.triplicitySubRuler];
+  return {
+    subSign,
+    label: `${record.sign} decan ${record.decanNumber}: ${subSign} / ${record.triplicitySubRuler}`,
+    statement: `The ${record.decanNumber === 1 ? "first" : record.decanNumber === 2 ? "second" : "third"} ten-degree sector of ${record.sign} takes the ${subSign} member of its elemental family. ${sign.psychologicalTheme} Its ruler ${record.triplicitySubRuler} brings ${ruler.coreMeanings[0]}.`,
+    sourceTitle: "The Absolute elemental-family decan policy; local planetary and sign Canon",
+  };
 }

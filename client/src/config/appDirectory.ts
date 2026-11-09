@@ -72,6 +72,12 @@ export const APP_DIRECTORY = [
     group: "Timing",
   },
   {
+    href: "/sports-lab",
+    title: "Sports Simulation Lab",
+    description: "AI astrology matchups, symbolic method scores and evidence-ledger predictions",
+    group: "Explore",
+  },
+  {
     href: "/horary",
     title: "Horary",
     description: "Cast a chart for a specific question",

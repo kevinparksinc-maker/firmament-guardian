@@ -1,4 +1,4 @@
-import { FocusedPlacementReading } from "./FocusedPlacementReading";
+import { PlacementMiniReading } from "./PlacementMiniReading";
 import { useEffect, useMemo, useState } from "react";
 import { Sparkles, Compass, Orbit, ShieldCheck } from "lucide-react";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
@@ -381,7 +381,7 @@ export function DiamondChart({
                   </div>
                 </div>
 
-                <FocusedPlacementReading chart={chart} name={selectedPoint.row.name} layer={selectedPoint.kind}/>
+                <PlacementMiniReading chart={chart} name={selectedPoint.row.name} layer={selectedPoint.kind}/>
               </div>
             ) : selectedHouse != null ? (
               <div className="mt-4 space-y-3 animate-in fade-in duration-200">

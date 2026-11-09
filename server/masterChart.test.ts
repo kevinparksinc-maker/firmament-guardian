@@ -1,3 +1,4 @@
+import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { describe, it, expect } from "vitest";
 import { buildUnifiedMasterChart, getLayer, getEvidence, getModeView } from "./masterChart";
 
@@ -24,7 +25,7 @@ describe("Unified Master Chart Architecture", () => {
     expect(snapshot.schemaVersion).toBe("1.0.0");
     expect(snapshot.validation.complete).toBe(false); // Chinese Xiu remains reference-only, not computed.\n    expect(snapshot.validation.warnings.some(w => w.includes("Chinese"))).toBe(true);
     expect(snapshot.validation.errors).toHaveLength(0);
-    expect(snapshot.validation.totalMethods).toBe(16);
+    expect(snapshot.validation.totalMethods).toBe(MASTER_METHOD_IDS.length);
     expect(snapshot.validation.computedWithResultCount).toBeGreaterThanOrEqual(10);
     expect(snapshot.frameConfig.zodiacMode).toBe("fixed-cartesian-xyz");
     expect(snapshot.frameConfig.firmamentAnchorVersion).toBe("sunrise-xyz-15deg-hour-v1");

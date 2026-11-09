@@ -1,7 +1,9 @@
+import { buildChartMethodOutcomes } from "./chartMethodOutcomes";
 import { synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
+import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
 import { calculateMasterChart as calculateChart } from "./masterChart/entry";
 import { buildEnergyReading } from "./energyReading";
-import { buildChartPageReading } from "./chartPageReading";
+import { buildChartPageReading, startPlacementReadingJob, getPlacementReadingJob } from "./chartPageReading";
 import { buildChartBriefing } from "./chartBriefing";
 import { buildFocusedReading } from "./focusedReading";
 import { calculateHarmonicForecast } from "./harmonicForecast";
@@ -41,13 +43,17 @@ import {
   diagnoseAstrologyEvidence,
   evaluateBehavioralIntelligence,
 } from "./astrologyKnowledge";
+import { synthesizePlacement } from "./placement-synthesis";
 import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
 import { invokeLLM } from "./_core/llm";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { buildAstrologyInterpreterSystem, FULL_SYNTHESIS_STYLE } from "./master-interpreter";
 import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
 import { buildUnifiedMasterChart, getMasterNatalChart } from "./masterChart/builder";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
 import { buildMasterPipeline } from "./master-pipeline";
+import { buildMasterGameChart } from "./simulationLab/masterGameChart";
+import { evaluatePlanetaryTeamHouses, predictSportsGame } from "./simulationLab/sportsPredictor";
+import { evaluateGameMethods } from "../shared/simulationLab/registry";
 
 
 const chartInput = z.object({
@@ -68,6 +74,7 @@ const chartInput = z.object({
   worldview: z.enum(["god", "agent", "agent-vs-god"]).default("agent"),
   readingScope: z.enum(["natal", "transit", "combined"]).default("combined"),
   birthTimeKnown: z.boolean().optional(),
+  chartRole: z.enum(["natal", "event"]).optional(),
   elevation: z.number().optional(),
   sunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),
   transitSunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),
@@ -180,6 +187,36 @@ export const appRouter = router({
         db.createSavedReading({ openId: ctx.user.openId, ...input })
       ),
   }),
+  simulationLab: router({
+    predict: publicProcedure
+      .input(z.object({
+        id: z.string().trim().min(1).max(120),
+        league: z.enum(["NFL", "NBA", "NHL"]),
+        scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        scheduledTime: z.string().regex(/^\d{2}:\d{2}$/),
+        venue: z.object({
+          name: z.string().trim().min(1).max(240),
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+          timezone: z.string().min(2).max(100),
+        }),
+        ascTeam: z.string().trim().min(1).max(120),
+        descTeam: z.string().trim().min(1).max(120),
+      }))
+      .mutation(async ({ input }) => {
+        const { snapshot, chart } = await buildMasterGameChart({
+          ...input,
+          chartVersion: "sports-master-2026.1",
+        });
+        const methods = evaluateGameMethods(snapshot, [{
+          id: "sports-team-house-occupancy",
+          name: "God/Agent event-chart team-house occupancy baseline",
+          evaluate: () => evaluatePlanetaryTeamHouses(chart),
+        }]);
+        const prediction = await predictSportsGame(snapshot, methods);
+        return { snapshot, methods, prediction };
+      }),
+  }),
   hybrid: router({
     geocode: publicProcedure
       .input(z.object({ query: z.string().min(2) }))
@@ -287,6 +324,14 @@ export const appRouter = router({
       }),
   }),
   astrologyKnowledge: router({
+    placementSynthesis: publicProcedure
+      .input(
+        chartResultInput.extend({
+          body: z.string().trim().min(1).max(40),
+          question: z.string().trim().max(2000).default(""),
+        })
+      )
+      .mutation(({ input }) => synthesizePlacement(input.chart, input.body, input.question)),
     behavioralReport: publicProcedure
       .input(
         chartResultInput.extend({
@@ -323,12 +368,21 @@ export const appRouter = router({
       }),
   }),
   interpretation: router({
+    methodOutcomes: publicProcedure
+      .input(chartResultInput.extend({ mode: z.enum(["natal", "transit", "combined"]).default("natal") }))
+      .query(({ input }) => buildChartMethodOutcomes(input.chart, input.mode)),
     energyReading: publicProcedure.input(chartResultInput).mutation(({ input }) => buildEnergyReading(input.chart)),
-    chartPage: publicProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode)),
+    chartPage: publicProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]), names: z.array(z.string().min(1).max(80)).min(1).max(2).default(["Sun", "Moon"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode, input.names)),
+    chartPageStart: publicProcedure
+      .input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]), names: z.array(z.string().min(1).max(80)).min(1).max(2) }))
+      .mutation(({ input }) => startPlacementReadingJob(input.chart, input.mode, input.names)),
+    chartPageStatus: publicProcedure
+      .input(z.object({ jobId: z.string().length(48) }))
+      .query(({ input }) => getPlacementReadingJob(input.jobId)),
     chartBriefing: publicProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
     focusedPlacement: publicProcedure
       .input(z.object({ chart: chartPayload, target: z.object({ kind: z.enum(["placement", "star", "contact"]), name: z.string().min(1).max(80), otherName: z.string().min(1).max(80).optional(), layer: z.enum(["natal", "transit"]) }) }))
-      .mutation(({ input }) => buildFocusedReading(input.chart, input.target)),
+      .mutation(({ input }) => buildFocusedReading(input.chart, input.target, true)),
     host: publicProcedure
       .input(
         z.object({
@@ -368,6 +422,7 @@ export const appRouter = router({
     masterSynthesize: publicProcedure
       .input(
         chartInput.extend({
+          chart: chartPayload.optional(),
           mode: z.enum(["natal", "transit", "combined"]).default("natal"),
           question: z
             .string()
@@ -377,8 +432,13 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
+        if (input.chart) {
+          const { synthesis } = await synthesizeChartForReading(input.chart, input.mode, input.question);
+          return narrateMasterSynthesis(synthesis, input.question);
+        }
         const snapshot = await buildUnifiedMasterChart({ ...input, mode: input.mode });
-        return (await synthesizeMasterSnapshot(snapshot, input.mode, input.question)).synthesis;
+        const { synthesis } = await synthesizeMasterSnapshot(snapshot, input.mode, input.question);
+        return narrateMasterSynthesis(synthesis, input.question);
       }),
     chapter: publicProcedure
       .input(
@@ -636,7 +696,7 @@ Speak in a generous, flowing narrative connecting this present celestial moment 
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `You are the Master Interpreter evaluating synastry and soulmate connection.
+        const prompt = `${FULL_SYNTHESIS_STYLE}\n\nThis is a natal relationship-potential reading, not actual two-person synastry. Never claim to know an unprovided future partner or meeting event. You are the Master Interpreter evaluating relationship symbolism.
 Placements: ${input.natalPlacements}
 Gender: ${input.gender || "other"}
 Analyze their 7th house, Venus, Moon, and descendant aspects to describe their cosmic soulmate connection in deep, evocative 2026 relational terms. Return a JSON with:
@@ -668,23 +728,23 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `Analyze synastry between:
+        const prompt = `${FULL_SYNTHESIS_STYLE}\n\nAnalyze synastry between:
 Person 1: ${input.natalPlacements}
 Person 2: ${input.soulmatePlacements}
-Generate a rich, deeply insightful relationship compatibility breakdown in JSON format with:
+Do not invent cross-chart aspects, orbs or compatibility scores. If the inputs contain placements but no verified cross-aspect calculations, return an empty aspects array and explain only the relationship themes that those natal placements can actually support. Generate a grounded relationship interpretation in JSON format with:
 {
   "interpretation": "A flowing, comprehensive synthesis of this relationship's potential and spiritual purpose",
   "aspectGroups": [
     {
       "type": "harmonious",
       "aspects": [
-        { "planet1": "Sun", "planet2": "Moon", "aspect": "Trine", "orb": 1.5, "interpretation": "Deep natural understanding and intuitive emotional harmony." }
+        
       ]
     },
     {
       "type": "challenging",
       "aspects": [
-        { "planet1": "Mars", "planet2": "Saturn", "aspect": "Square", "orb": 2.1, "interpretation": "Patience and timing require conscious communication." }
+        
       ]
     }
   ]

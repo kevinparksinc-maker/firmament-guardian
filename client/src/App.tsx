@@ -6,6 +6,7 @@ import { CelestialCommandShell } from "./components/CelestialCommandShell";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
+import { MobilePageSkeleton } from "./components/MobilePageSkeleton";
 import { Redirect, Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -23,11 +24,12 @@ const LifeStoryPage = lazy(() => import("./pages/LifeStoryPage"));
 const SynastryPage = lazy(() => import("./pages/SynastryPage"));
 const StandaloneTransitPage = lazy(() => import("./pages/StandaloneTransitPage"));
 const ExplorePage = lazy(() => import("./pages/ExplorePage"));
+const SportsLabPage = lazy(() => import("./pages/SportsLabPage"));
 
 function AccountEntryGate({ children }: { children: React.ReactNode }) {
   const { user, loading, error, refresh } = useAuth();
   const [useDeviceProfiles, setUseDeviceProfiles] = useState(false);
-  if (loading) return <main role="status" className="p-8 text-center text-cyan-100">Checking your account session…</main>;
+  if (loading) return <MobilePageSkeleton label="Opening your saved session…" />;
   if (error && !useDeviceProfiles) return <main className="mx-auto max-w-lg space-y-4 p-8 text-slate-100"><h1 className="text-xl">Your account connection needs another try</h1><p role="alert">Your saved profiles have not been changed. We could not check your session.</p><button type="button" onClick={() => void refresh()} className="rounded-xl border border-white/20 p-3">Retry connection</button><button type="button" onClick={() => setUseDeviceProfiles(true)} className="ml-3 rounded-xl border border-white/20 p-3">Use device profiles</button></main>;
   const accountId = error && useDeviceProfiles ? "guest" : user?.openId ?? "guest";
   // Remounting clears the previous account's in-memory charts and callbacks.
@@ -55,6 +57,7 @@ function Router() {
       <Route path={"/synastry"} component={SynastryPage} />
       <Route path={"/transit-sky"} component={StandaloneTransitPage} />
       <Route path={"/explore"} component={ExplorePage} />
+      <Route path={"/sports-lab"} component={SportsLabPage} />
       <Route path={"/sky"} component={SkyHomePrototype} />
       <Route path={"/life-story"} component={LifeStoryPage} />
       <Route path={"/horary"} component={HoraryPage} />
@@ -75,7 +78,7 @@ function App() {
         <TooltipProvider>
           <SovereignTierProvider>
             <Toaster />
-            <Suspense fallback={<main role="status" className="flex min-h-[55vh] items-center justify-center px-6 text-center text-sm text-cyan-100"><div className="rounded-2xl border border-cyan-200/20 bg-slate-950/70 px-6 py-5" aria-live="polite">Opening your celestial observatory…</div></main>}>
+            <Suspense fallback={<MobilePageSkeleton />}>
               <AccountEntryGate><Router /></AccountEntryGate>
             </Suspense>
           </SovereignTierProvider>

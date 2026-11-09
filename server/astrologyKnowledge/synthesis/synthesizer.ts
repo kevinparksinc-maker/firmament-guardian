@@ -3,7 +3,7 @@ import type {
   SynthesisInput,
   SynthesisResult,
 } from "./types";
-import { extractPropositionsFromSnapshot } from "./normalizer";
+import { extractPropositionsFromMethodOutcomes } from "./normalizer";
 import { clusterPropositionsIntoThemes } from "./clustering";
 import { buildMethodOutcomes } from "./methodOutcomes";
 
@@ -17,34 +17,10 @@ export async function synthesizeMasterReading(
   const { snapshot, readingMode } = input;
 
   // 1. Extract normalized propositions across all available traditions and methods
-  const canonApplications = input.canonApplications ?? [];
-  const methodOutcomes = buildMethodOutcomes(snapshot, canonApplications);
-  const incompleteMethodIds = new Set(
-    methodOutcomes.filter(outcome => outcome.status === "failed").map(outcome => outcome.methodId),
-  );
-  const incompleteSourceIds = new Set(
-    snapshot.methodExecutionLedger
-      .filter(layer => incompleteMethodIds.has(layer.id))
-      .flatMap(layer => layer.sourceIds),
-  );
-  const interpretedMethodIds = new Set(
-    methodOutcomes
-      .filter(outcome => outcome.status === "interpreted")
-      .map(outcome => outcome.methodId),
-  );
-  const methodIdFromProposition = (id: string) =>
-    id
-      .replace(/^prop-method-/, "")
-      .replace(/-(?:remaining|\d+)$/, "");
-  const propositions = extractPropositionsFromSnapshot(snapshot, canonApplications).filter(proposition => {
-    if (proposition.id.startsWith("prop-method-ledger-")) {
-      return interpretedMethodIds.has(proposition.id.slice("prop-method-ledger-".length));
-    }
-    if (proposition.id.startsWith("prop-method-")) {
-      return interpretedMethodIds.has(methodIdFromProposition(proposition.id));
-    }
-    return !proposition.sourceDoctrineIds.some(id => incompleteSourceIds.has(id));
-  });
+  const suppliedCanon = input.canonApplications ?? [];
+  const methodOutcomes = buildMethodOutcomes(snapshot, suppliedCanon);
+  const canonApplications = Array.from(new Map([...suppliedCanon, ...methodOutcomes.flatMap(outcome=>outcome.canonApplications)].map(rule=>[rule.canonEvidenceId,rule])).values());
+  const propositions = extractPropositionsFromMethodOutcomes(methodOutcomes);
 
   // 2. Cluster into human domain themes and reconcile tensions
   const { themes, tensions } = clusterPropositionsIntoThemes(propositions);
@@ -64,8 +40,10 @@ export async function synthesizeMasterReading(
   const prioritized = Object.entries(relevantDomains)
     .filter(([, terms]) => terms.some(term => query.includes(term)))
     .map(([domain]) => domain);
+  const strengthWeight={dominant:4,strong:3,moderate:2,subtle:1};
+  const signal=(theme:typeof themes[number])=>Math.max(0,...propositions.filter(p=>theme.linkedPropositionIds.includes(p.id)).map(p=>strengthWeight[p.strength]));
   const orderedThemes = [...themes].sort((a, b) =>
-    (prioritized.includes(b.domain) ? 1 : 0) - (prioritized.includes(a.domain) ? 1 : 0)
+    (prioritized.includes(b.domain) ? 1 : 0) - (prioritized.includes(a.domain) ? 1 : 0) || signal(b)-signal(a)
   );
   const methodFindings = snapshot.methodExecutionLedger.map(layer => {
     const raw = layer.results;
@@ -93,15 +71,9 @@ export async function synthesizeMasterReading(
   });
   const methodCounts = snapshot.methodExecutionLedger
     .map(layer => `${layer.name}: ${layer.status}${Array.isArray(layer.results) ? ` (${layer.results.length} results)` : ""}`);
-  const assertedMethodJudgments = methodOutcomes
-    .filter(outcome => outcome.status === "interpreted")
-    .map(outcome => `${outcome.methodName}: ${outcome.judgment}`);
-  const withheldMethods = methodOutcomes
-    .filter(outcome => outcome.status === "failed")
-    .map(outcome => outcome.methodId);
   const dominantConclusion = orderedThemes.length
-    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. Primary evidence domain: ${orderedThemes[0].humanTheme}. ${orderedThemes[0].primaryConclusion}${assertedMethodJudgments.length ? ` Method-backed judgments: ${assertedMethodJudgments.join(" ")}` : ""}${withheldMethods.length ? ` Withheld methods: ${withheldMethods.join(", ")}; their findings do not assert a conclusion.` : ""}`
-    : `Question: ${question}. No calculated propositions were available for synthesis.`;
+    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. ${orderedThemes.map(theme=>theme.primaryConclusion).join(" ")}`
+    : `Question: ${question}. No successfully interpreted method outcomes are available.`;
 
   // The complete recorded results remain in the propositions and snapshot.
   // Emit each computed finding so no doctrine disappears behind a generic summary.
@@ -110,8 +82,6 @@ export async function synthesizeMasterReading(
     ...methodOutcomes.map(outcome =>
       `METHOD OUTCOME [${outcome.methodId}] scope=${outcome.chartScope} frame=${outcome.frame} status=${outcome.status}. Interpretation: ${outcome.interpretation} Judgment: ${outcome.judgment} Contribution: ${outcome.contribution} Evidence: ${outcome.evidenceIds.join(", ") || "none"}. Limitations: ${outcome.strengthAndLimitations.join(" | ") || "none"}.`
     ),
-    ...assertedMethodJudgments.map(judgment => `ASSERTED METHOD JUDGMENT: ${judgment}`),
-    ...(withheldMethods.length ? [`WITHHELD METHOD JUDGMENTS: ${withheldMethods.join(", ")}; incomplete methods contribute no asserted meaning.`] : []),
     ...canonApplications.map(application =>
       `Canon rule applied to ${application.subject}: [${application.ruleId}] ${application.statement} Source: ${application.sourceTitle}. Matched calculation evidence: ${application.calculationEvidenceIds.join(", ")}.`
     ),
@@ -142,21 +112,15 @@ export async function synthesizeMasterReading(
 
   // 7. Evidence coverage audit. Do not claim a perfect score without checking.
   const expectedEvidenceIds = new Set(
-    methodOutcomes.filter(outcome => outcome.status === "interpreted").flatMap(outcome => outcome.evidenceIds)
+    ledger.filter(l => l.status === "computed-with-result").flatMap(l => l.evidenceIds)
   );
   // Only evidence actually incorporated into a synthesized theme counts as interpreted.
   // Inventory-only ledger entries cannot inflate the interpretation coverage score.
   const tracedEvidenceIds = new Set(themes.flatMap(theme => theme.evidenceIds));
   const missingEvidenceIds = Array.from(expectedEvidenceIds).filter(id => !tracedEvidenceIds.has(id));
   const computedLayers = ledger.filter(l => l.status === "computed-with-result");
-  const themeLinkedMethodIds = new Set(
-    themes.flatMap(theme => theme.linkedPropositionIds)
-      .filter(id => id.startsWith("prop-method-"))
-      .map(id => id.replace(/^prop-method-(?:ledger-)?/, "").replace(/-([0-9]+|remaining)$/, ""))
-  );
-  const uninterpretedMethods = computedLayers.filter(layer =>
-    interpretedMethodIds.has(layer.id) && !themeLinkedMethodIds.has(layer.id)
-  );
+  const interpretedMethodIds = new Set(methodOutcomes.filter(outcome=>outcome.status==="interpreted" && outcome.findingJudgments.every(finding=>themes.some(theme=>theme.linkedPropositionIds.includes(finding.id)))).map(outcome=>outcome.methodId));
+  const uninterpretedMethods = computedLayers.filter(layer => !interpretedMethodIds.has(layer.id));
   const linkedPropositionIds = new Set(themes.flatMap(theme => theme.linkedPropositionIds));
   const interpretedCanonEvidenceIds = new Set(
     propositions
@@ -164,9 +128,7 @@ export async function synthesizeMasterReading(
       .flatMap(proposition => (proposition.canonApplications ?? []).map(application => application.canonEvidenceId))
   );
   const missingCanonApplications = canonApplications.filter(application =>
-    application.confidence !== "reference-only" &&
-    (application.calculationEvidenceIds.length === 0 || application.calculationEvidenceIds.some(id => tracedEvidenceIds.has(id))) &&
-    !interpretedCanonEvidenceIds.has(application.canonEvidenceId)
+    application.confidence !== "reference-only" && !interpretedCanonEvidenceIds.has(application.canonEvidenceId)
   );
   const incompleteMethodOutcomes = methodOutcomes.filter(outcome => outcome.status === "failed");
   const groundedRatio = expectedEvidenceIds.size === 0
@@ -175,11 +137,12 @@ export async function synthesizeMasterReading(
   const qualityAudit = {
     groundedRatio,
     unsupportedClaims: [
+      ...incompleteMethodOutcomes.map(outcome=>`Method judgment failed: ${outcome.methodId}: ${outcome.interpretation}`),
       ...missingEvidenceIds.map(id => `Not incorporated into interpreted themes: ${id}`),
       ...uninterpretedMethods.map(layer => `Computed method missing from interpreted themes: ${layer.id}`),
       ...missingCanonApplications.map(application => `Canon rule not applied to an interpreted proposition: ${application.ruleId} (${application.canonEvidenceId})`),
     ],
-    passed: missingEvidenceIds.length === 0 && uninterpretedMethods.length === 0 && missingCanonApplications.length === 0,
+    passed: missingEvidenceIds.length === 0 && uninterpretedMethods.length === 0 && missingCanonApplications.length === 0 && incompleteMethodOutcomes.length === 0,
   };
   // Report method coverage explicitly; reference-only or unavailable layers are never
   // described as calculated. The raw evidence remains available in the snapshot.
@@ -193,6 +156,7 @@ export async function synthesizeMasterReading(
   );
 
   return {
+    sourceSnapshot: snapshot,
     snapshotId: snapshot.snapshotId,
     mode: readingMode,
     dominantConclusion,
@@ -210,7 +174,7 @@ export async function synthesizeMasterReading(
         ? {
             activeWindow: snapshot.transit?.transitInstantUtc ?? "Transit moment not supplied",
             turningPoints: snapshot.transit?.aspectsToNatal?.length
-              ? snapshot.transit.aspectsToNatal.map(contact => `${contact.transitBody} ${contact.aspect} natal ${contact.natalBody} (orb ${contact.orb}°)`).slice(0, 12)
+              ? snapshot.transit.aspectsToNatal.map(contact => `${contact.transitBody} ${contact.aspect} natal ${contact.natalBody} (orb ${contact.orb}°)`)
               : ["No calculated natal transit contacts available; peak and easing times are not established."],
           }
         : undefined,

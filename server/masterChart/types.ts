@@ -22,6 +22,7 @@ export interface LayerRecord<T = unknown> {
     | "hellenistic"
     | "vedic"
     | "babylonian"
+    | "sumerian"
     | "arabic-persian"
     | "chinese"
     | "kabbalah"
@@ -56,6 +57,7 @@ export interface MasterChartInput {
   transitInstantUtc?: string;
   instantUtc?: string;
   birthTimeKnown?: boolean;
+  chartRole?: "natal" | "event";
   elevation?: number;
   mode?: "natal" | "transit" | "combined";
   worldview?: "god" | "agent" | "agent-vs-god";
@@ -79,6 +81,7 @@ export interface UnifiedMasterChartSnapshot {
       longitude: number;
     };
     mode: "natal" | "transit" | "combined";
+    chartRole?: "natal" | "event";
   };
   frameConfig: {
     zodiacMode: "fixed-cartesian-xyz";
@@ -87,7 +90,7 @@ export interface UnifiedMasterChartSnapshot {
     obliquityMode: "zero-tilt-xy-projection";
     precessionMode: "none-user-frame-fixed-anchor";
     houseSystem: "topocentric-equal-house-ascendant";
-    engineVersion: "firmament-master-2026.2";
+    engineVersion: "firmament-master-2026.3";
   };
   baseCelestialState: {
     julianDay: number;

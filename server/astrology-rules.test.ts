@@ -233,7 +233,10 @@ describe("deterministic astrology rule fixtures", () => {
     const patterns = runGenesisPatternPipeline(chart);
     expect(patterns.engine).toBe("genesis-pattern-engine-original");
     expect(patterns.analysis.config.orbConjunction).toBe(8);
-    expect(patterns.analysis.dominantPatterns.length).toBeGreaterThan(0);
+    // Natal geometry need not contain a configured dominant pattern.
+    // It must still evaluate real natal aspects, without self-transits.
+    expect(patterns.analysis.aspects.length).toBeGreaterThan(0);
+    expect(patterns.analysis.aspects.every(aspect => aspect.isNatalToNatal && !aspect.isTransitToNatal)).toBe(true);
     expect(
       Object.keys(patterns.analysis.planetaryStrength).length
     ).toBeGreaterThan(0);

@@ -1,5 +1,6 @@
+import { prepareBirthStep } from "@shared/profileOnboarding";
 import { KNOWN_CITIES } from "@shared/profileLocations";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Sparkles,
   Calendar,
@@ -232,6 +233,26 @@ export function NatalProfileBuilder({
     }
   };
 
+  const birthDraft = useRef("");
+  birthDraft.current = JSON.stringify([formData.name,formData.date,formData.time,formData.birthTimeUnknown,citySearch]);
+  const handleNext = async () => {
+    const draft = birthDraft.current;
+    setFormError("");
+    setCitySearchError("");
+    setIsSearchingCity(true);
+    try {
+      const next = await prepareBirthStep(formData,citySearch,query=>trpcUtils.hybrid.geocode.fetch({query}));
+      if(draft !== birthDraft.current) {setFormError("Your details changed while resolving the city. Click Next again.");return;}
+      setFormData(prev=>({...prev,location:next.location,latitude:next.latitude,longitude:next.longitude,timezone:next.timezone,
+        ...(currentCitySame?{transitLocation:next.location,transitLatitude:next.latitude,transitLongitude:next.longitude,transitTimezone:next.timezone}:{}),
+      }));
+      setCitySearch(next.location);
+      setStep(2);
+    } catch(error) {
+      setFormError(error instanceof Error ? error.message : "Could not resolve your birth city. Try a quick preset.");
+    } finally {setIsSearchingCity(false);}
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setFormError("");
@@ -315,6 +336,8 @@ export function NatalProfileBuilder({
           </div>
         </div>
       </div>
+
+      {formError && <div role="alert" aria-live="assertive" className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{formError}</div>}
 
       {step === 1 && (
         <div className="space-y-5 animate-in fade-in duration-200">
@@ -407,7 +430,12 @@ export function NatalProfileBuilder({
                   id="profile-city"
                   placeholder="Enter city (e.g., Dallas, TX, London, Tokyo)"
                   value={citySearch}
-                  onChange={e => setCitySearch(e.target.value)}
+                  onChange={e => {
+                    setCitySearch(e.target.value);
+                    setFormError("");
+                    setCitySearchError("");
+                    setFormData(prev=>({...prev,location:"",latitude:0,longitude:0,timezone:""}));
+                  }}
                   onKeyDown={e => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -436,7 +464,7 @@ export function NatalProfileBuilder({
             </div>
 
             {/* Resolved Status or Error */}
-            {formData.latitude !== 0 && formData.timezone && (
+            {formData.location && formData.timezone && (
               <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
                 <span>
@@ -483,16 +511,11 @@ export function NatalProfileBuilder({
 
             <Button
               type="button"
-              onClick={() => {
-                if (!formData.name.trim() || !formData.date || (!formData.birthTimeUnknown && !formData.time) || !formData.latitude) {
-                  handleSubmit();
-                  return;
-                }
-                setStep(2);
-              }}
+              onClick={() => void handleNext()}
+              disabled={isSearchingCity}
               className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:from-cyan-400 hover:to-blue-500"
             >
-              <span>Next: Cosmic Focus</span>
+              <span>{isSearchingCity ? "Verifying birth city…" : "Next: Cosmic Focus"}</span>
               <ArrowRight className="h-4 w-4 ml-1.5" />
             </Button>
           </div>
@@ -572,11 +595,7 @@ export function NatalProfileBuilder({
             )}
           </div>
 
-          {formError && (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
-              {formError}
-            </div>
-          )}
+
 
           {/* Action Row */}
           <div className="flex items-center justify-between pt-2">
@@ -626,7 +645,7 @@ export function NatalProfileBuilder({
               {currentProfile?.name ? `Update Profile: ${currentProfile.name}` : "Build Your Celestial Natal Profile"}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-400">
-              Anchor the 16-system astronomical engine to your exact moment of birth.
+              Anchor the complete astronomical method engine to your exact moment of birth.
             </DialogDescription>
           </DialogHeader>
 
@@ -654,7 +673,7 @@ export function NatalProfileBuilder({
               Create Your Celestial Natal Profile First
             </h2>
             <p className="mt-1 max-w-xl text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Before the algorithms reveal your 16-system Celestial Blueprint, Synastry chemistry, or AI Master Interpreter readings, the engine must anchor to your unique birth coordinates.
+              Before the algorithms reveal your layered Celestial Blueprint, Synastry chemistry, or AI Master Interpreter readings, the engine must anchor to your unique birth coordinates.
             </p>
           </div>
 

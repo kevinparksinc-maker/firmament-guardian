@@ -1,287 +1,214 @@
-import type { LayerRecord, UnifiedMasterChartSnapshot } from "../../masterChart/types";
+import type {
+  LayerRecord,
+  UnifiedMasterChartSnapshot,
+} from "../../masterChart/types";
 import type {
   CanonRuleApplication,
-  JudgmentPolarity,
   MethodOutcome,
   MethodOutcomeFinding,
 } from "./types";
+import { applyMethodRules } from "./methodRules";
 
-const METHOD_INTERPRETATIONS: Record<string, {
-  meaning: string;
-  judgment: string;
-}> = {
-  "western-planets-and-signs": {
-    meaning: "Classical planetary placement rules establish the planet's sign-based agency and condition before houses and timing modify its expression.",
-    judgment: "The sign and degree testimony is valid as a foundational disposition, not a complete life judgment by itself.",
-  },
-  "western-houses-and-angles": {
-    meaning: "Hellenistic house and angle rules locate the calculated planetary testimony in concrete areas of life through the chart's local horizon.",
-    judgment: "The house placement identifies where the testimony manifests; the local Ascendant and equal-house cusps are required for this judgment.",
-  },
-  "western-aspects-and-orbs": {
-    meaning: "Ptolemaic aspect rules describe how the planets modify one another, with orb and aspect nature determining the force of the testimony.",
-    judgment: "An aspect is judged only when its calculated orb is present; harmony and friction are retained as distinct testimony.",
-  },
-  "western-essential-dignities": {
-    meaning: "Essential dignity rules assess whether a planet can act according to its nature through domicile, exaltation, or peregrine condition.",
-    judgment: "Dignity changes the planet's ability to deliver its promise; it does not replace accidental or house strength.",
-  },
-  "fixed-stars-royal-watchers": {
-    meaning: "The fixed-star layer applies the recorded Royal Watcher contact rules in the God View firmament frame.",
-    judgment: "Only the calculated star contacts carry a judgment; unactivated stars remain background reference and cannot be promoted.",
-  },
-  "arabic-hermetic-lots": {
-    meaning: "Hermetic Lot rules derive specific life topics from the chart's validated day/night formula and place them in the Agent View house frame.",
-    judgment: "The Lot testimony describes the relevant topic's mode of arrival and agency, subject to the calculated formula and house.",
-  },
-  "arabic-lunar-manazil": {
-    meaning: "Arabic Manzil rules assign each calculated longitude to a lunar station with its recorded quality and psychological or operational meaning.",
-    judgment: "The Manzil modifies the planet's expression as a fine-grained lunar condition; it must be read with, not instead of, the planet and house.",
-  },
-  "vedic-nakshatras-and-padas": {
-    meaning: "Vedic Nakshatra and Pada rules assign the calculated longitude to an asterism, deity, Shakti, motivation, and quarter-level expression.",
-    judgment: "The Nakshatra supplies the planet's patterned motivation and the Pada refines its mode; no sidereal conversion or missing Pada is invented.",
-  },
-  "vedic-vargas-divisional": {
-    meaning: "Parashari divisional rules derive the recorded D1, D2, D3, D9, and D10 placements from the same authoritative natal longitudes.",
-    judgment: "A varga modifies the relevant life topic only through its recorded division, formula, and placement; it is not an independent astronomical chart.",
-  },
-  "vedic-dasha-and-ashtakavarga": {
-    meaning: "The Vedic timing layer applies its validated Dasha sequence and Ashtakavarga checksums to identify activation and planetary support.",
-    judgment: "Timing is issued only when the Dasha or bindu calculation passes its validation rules; failed checks produce no inferred timing.",
-  },
-  "vedic-graha-drishti": {
-    meaning: "Parashari Graha Drishti rules apply the universal seventh aspect and the recorded Mars, Jupiter, and Saturn special aspects.",
-    judgment: "The aspect modifies the target sign or house according to the calculated offset and is not conflated with Western aspect geometry.",
-  },
-  "chinese-lunar-mansions-xiu": {
-    meaning: "The Chinese Xiu catalog is preserved as historical reference because the required ancient sector boundaries are not calculated for personal placement.",
-    judgment: "No personal Xiu judgment is issued from this reference-only layer.",
-  },
-  "elemental-decans": {
-    meaning: "The decan layer applies the recorded 10-degree face and elemental-family ruler to refine each planetary expression.",
-    judgment: "The decan is a modifying character trait and must be reconciled with dignity, house, aspect, and the other calculated testimony.",
-  },
-  "kabbalah-sefer-yetzirah": {
-    meaning: "Sefer Yetzirah correspondences apply the recorded planetary gates and contrary pairs to describe the constructive and difficult poles of the configuration.",
-    judgment: "The Kabbalistic outcome identifies a polarity to be consciously directed; it does not create a placement absent from the calculation.",
-  },
-  "genesis-behavioral-patterns": {
-    meaning: "The Genesis behavioral engine applies its recorded pattern and Yoga analysis to the validated planetary, house, and aspect inputs.",
-    judgment: "Only the returned pattern analysis is judged; an absent or failed engine result is not replaced with personality prose.",
-  },
-  "transit-activation-layer": {
-    meaning: "The transit layer applies the calculated event-to-natal contacts, orbs, flow, intensity, and strength to the natal foundation.",
-    judgment: "The event testimony describes what is active now and must remain separate from natal disposition and from event-chart house claims.",
-  },
-};
-
-function renderValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
-
-function findingsForLayer(layer: LayerRecord, prefix = ""): MethodOutcomeFinding[] {
-  const raw = layer.results;
-  const values = Array.isArray(raw) ? raw : raw == null ? [] : [raw];
+const frameOf = (layer: LayerRecord): MethodOutcome["frame"] =>
+  ["god", "agent", "transit"].includes(layer.frame)
+    ? (layer.frame as MethodOutcome["frame"])
+    : "shared";
+function findings(layer: LayerRecord): MethodOutcomeFinding[] {
+  const values = Array.isArray(layer.results)
+    ? layer.results
+    : layer.results == null
+      ? []
+      : [layer.results];
   return values.map((value, index) => ({
-    evidenceId: `${prefix}${layer.evidenceIds[index] ?? layer.evidenceIds[0] ?? layer.id}`,
+    evidenceId: layer.evidenceIds[index] ?? layer.evidenceIds[0] ?? layer.id,
     label: `${layer.name} finding ${index + 1}`,
-    calculatedValue: renderValue(value),
+    calculatedValue: typeof value === "string" ? value : JSON.stringify(value),
   }));
 }
-
-function canonForLayer(
-  layer: LayerRecord,
-  canonApplications: CanonRuleApplication[],
-  prefix = "",
-): CanonRuleApplication[] {
-  const ids = new Set(layer.evidenceIds.map(id => `${prefix}${id}`));
-  return canonApplications.filter(application =>
-    application.confidence !== "reference-only" &&
-    application.implementationStatus !== "incomplete" &&
-    application.calculationEvidenceIds.some(id => ids.has(id)),
-  );
-}
-
-function polarityFor(findings: MethodOutcomeFinding[], applications: CanonRuleApplication[]): JudgmentPolarity {
-  const findingText = findings.map(finding => finding.calculatedValue.toLowerCase()).join(" ");
-  const ruleText = applications.map(application => application.statement.toLowerCase()).join(" ");
-  const text = `${findingText} ${ruleText}`;
-  const supportive = (text.match(/supportive|harmony|harmonic|fortunate|gain|growth|strength|benefic|success|constructive|cooperation|favorable/g) ?? []).length;
-  const challenging = (text.match(/challenging|friction|frictional|delay|obstacle|loss|affliction|conflict|difficult|burden|restriction|destruction/g) ?? []).length;
-  if (supportive > 0 && challenging > 0) return "mixed";
-  if (supportive > 0) return "supportive";
-  if (challenging > 0) return "challenging";
-  return "neutral";
-}
-
-function deriveJudgment(
-  layer: LayerRecord,
-  findings: MethodOutcomeFinding[],
-  applications: CanonRuleApplication[],
-  templateJudgment: string,
-) {
-  const polarity = polarityFor(findings, applications);
-  const strength: "strong" | "moderate" | "limited" = applications.length >= 3 ? "strong" : applications.length > 0 ? "moderate" : "limited";
-  const ruleIds = applications.map(application => application.ruleId);
-  const evidenceIds = findings.map(finding => finding.evidenceId);
-  if (!applications.length) {
-    return {
-      judgment: "No traditional judgment issued because no applicable Canon rule is matched to the calculated finding.",
-      basis: { calculatedEvidenceIds: evidenceIds, canonRuleIds: [], polarity: "neutral" as const, strength: "limited" as const, factors: [] },
-    };
-  }
-  const firstFinding = findings[0]?.calculatedValue ?? "the returned calculation";
-  const decan = firstFinding.match(/decanIndex[\": ]+(\d+)/i)?.[1];
-  const decanRuler = firstFinding.match(/(?:elementalFamilyRuler|triplicitySubRuler)[\": ]+\"?([^,}\"]+)/i)?.[1]?.trim();
-  const aspect = firstFinding.match(/(?:aspect|nature)[\": ]+\"?([^,}\"]+)/i)?.[1]?.trim();
-  const orb = firstFinding.match(/orb[\": ]+([0-9.]+)/i)?.[1];
-  const factors = [
-    ...(decan ? [`decan:${decan}`] : []),
-    ...(decanRuler ? [`ruler:${decanRuler}`] : []),
-    ...(aspect ? [`aspect:${aspect}`] : []),
-    ...(orb ? [`orb:${orb}`] : []),
-    `polarity:${polarity}`,
-  ];
-  const detail = decan
-    ? `the calculated decan ${decan}${decanRuler ? ` ruled by ${decanRuler}` : ""}`
-    : aspect
-      ? `the calculated ${aspect} testimony`
-      : `the returned ${layer.name} finding`;
-  const judgment = `The matched Canon rules ${ruleIds.join(", ")} judge ${detail} as ${polarity} testimony at ${strength} strength. ${templateJudgment}`;
-  return {
-    judgment,
-    basis: { calculatedEvidenceIds: evidenceIds, canonRuleIds: ruleIds, polarity, strength, factors },
-  };
-}
-
-function outcomeForLayer(
+function outcome(
   layer: LayerRecord,
   snapshot: UnifiedMasterChartSnapshot,
-  canonApplications: CanonRuleApplication[],
-  prefix = "",
+  canon: CanonRuleApplication[]
 ): MethodOutcome {
-  const event = prefix === "transit:" || layer.id.startsWith("transit:");
-  const calculatedFindings = findingsForLayer(layer, prefix);
-  const applications = canonForLayer(layer, canonApplications, prefix);
-  const template = METHOD_INTERPRETATIONS[layer.id.replace(/^transit:/, "")] ?? {
-    meaning: "This method's calculated result must be interpreted through its registered traditional rules and recorded evidence.",
-    judgment: "No unrecorded judgment is permitted when the method's rule coverage is incomplete.",
-  };
-  const limitations: string[] = [];
-  if (layer.notes) limitations.push(layer.notes);
-  if (layer.frame === "god") limitations.push("God View frame: no local houses are inferred for a location-free cosmic chart.");
-  if (layer.frame === "agent" && !snapshot.baseCelestialState.ascendant) limitations.push("Agent View house judgment unavailable because no local Ascendant was calculated.");
-  if (!applications.length && layer.status === "computed-with-result") limitations.push("No applicable Canon rule was matched to this method's calculated evidence; traditional judgment is incomplete.");
-
-  if (layer.status === "reference-only") {
-    return {
-      methodId: layer.id,
-      methodName: layer.name,
-      tradition: layer.tradition,
-      chartScope: event ? "event" : "natal",
-      frame: layer.frame === "transit" ? "transit" : layer.frame === "god" ? "god" : layer.frame === "agent" ? "agent" : "shared",
-      status: "reference-only",
-      calculatedFindings,
-      canonApplications: applications,
-      interpretation: template.meaning,
-      judgment: template.judgment,
-      contribution: "Reference context only; it does not contribute a personal method judgment.",
-      evidenceIds: calculatedFindings.map(f => f.evidenceId),
-      strengthAndLimitations: limitations,
-      missingCanon: false,
-      judgmentBasis: {
-        calculatedEvidenceIds: calculatedFindings.map(finding => finding.evidenceId),
-        canonRuleIds: applications.map(application => application.ruleId),
-        polarity: "neutral",
-        strength: "limited",
-        factors: [],
-      },
-    };
-  }
-  if (layer.status === "not-applicable") {
-    return {
-      methodId: layer.id,
-      methodName: layer.name,
-      tradition: layer.tradition,
-      chartScope: event ? "event" : "natal",
-      frame: "transit",
-      status: "not-applicable",
-      calculatedFindings: [],
-      canonApplications: [],
-      interpretation: "This method is not applicable to the requested chart scope.",
-      judgment: "No judgment is issued.",
-      contribution: "No contribution for this chart scope.",
-      evidenceIds: [],
-      strengthAndLimitations: [layer.notes ?? "Method not applicable."],
-      missingCanon: false,
-      judgmentBasis: {
-        calculatedEvidenceIds: [],
-        canonRuleIds: [],
-        polarity: "neutral",
-        strength: "limited",
-        factors: [],
-      },
-    };
-  }
-  if (layer.status === "failed" || layer.status === "not-implemented" || layer.status === "computed-no-result") {
-    const reason = layer.notes ?? layer.errorCode ?? "No valid calculated result was returned.";
-    return {
-      methodId: layer.id,
-      methodName: layer.name,
-      tradition: layer.tradition,
-      chartScope: event ? "event" : "natal",
-      frame: layer.frame === "transit" ? "transit" : layer.frame === "god" ? "god" : layer.frame === "agent" ? "agent" : "shared",
-      status: "failed",
-      calculatedFindings,
-      canonApplications: applications,
-      interpretation: "No method-specific interpretation is issued because the calculation did not return a valid result.",
-      judgment: "No traditional judgment is issued.",
-      contribution: "This method contributes an explicit unavailable status, not an inferred meaning.",
-      evidenceIds: calculatedFindings.map(f => f.evidenceId),
-      strengthAndLimitations: [reason],
-      missingCanon: false,
-      judgmentBasis: {
-        calculatedEvidenceIds: calculatedFindings.map(finding => finding.evidenceId),
-        canonRuleIds: applications.map(application => application.ruleId),
-        polarity: "neutral",
-        strength: "limited",
-        factors: [],
-      },
-    };
-  }
-
-  const findingText = calculatedFindings.map(f => `${f.label}: ${f.calculatedValue}`).join(" | ");
-  const canonText = applications.map(application => `[${application.ruleId}] ${application.statement}`).join(" ");
-  const missingCanon = applications.length === 0;
-  const derived = deriveJudgment(layer, calculatedFindings, applications, template.judgment);
-  return {
+  const event =
+    layer.id.startsWith("transit:") ||
+    layer.id === "transit-activation-layer" ||
+    snapshot.inputs.chartRole === "event";
+  const base = {
     methodId: layer.id,
     methodName: layer.name,
     tradition: layer.tradition,
-    chartScope: event ? "event" : "natal",
-    frame: layer.frame === "transit" ? "transit" : layer.frame === "god" ? "god" : layer.frame === "agent" ? "agent" : "shared",
-    status: missingCanon ? "failed" : "interpreted",
-    calculatedFindings,
-    canonApplications: applications,
-    interpretation: `${template.meaning} Actual calculation: ${findingText || "no finding records"} Canon applied: ${canonText || "NONE — required traditional rule coverage is missing"}`,
-    judgment: derived.judgment,
-    contribution: missingCanon ? "The method is withheld from the authoritative synthesis until its Canon coverage is supplied." : `This ${layer.tradition} method contributes its calculated testimony to the cross-method synthesis without replacing other methods.`,
-    evidenceIds: calculatedFindings.map(f => f.evidenceId),
-    strengthAndLimitations: limitations,
-    missingCanon,
-    judgmentBasis: derived.basis,
+    chartScope: event ? ("event" as const) : ("natal" as const),
+    frame: frameOf(layer),
+    calculatedFindings: findings(layer),
+    findingJudgments: [],
+    canonApplications: [],
+    evidenceIds: layer.evidenceIds,
+    strengthAndLimitations: layer.notes ? [layer.notes] : [],
+    missingCanon: false,
   };
+  if (layer.status === "reference-only")
+    return {
+      ...base,
+      status: "reference-only",
+      interpretation:
+        layer.notes ??
+        "Reference catalog; no executable personal placement method.",
+      judgment:
+        "No personal method judgment is issued from this reference-only catalog.",
+      contribution: "Historical reference; excluded from interpreted themes.",
+    };
+  if (layer.status === "not-applicable")
+    return {
+      ...base,
+      status: "not-applicable",
+      interpretation:
+        layer.notes ?? "This method's required chart scope is absent.",
+      judgment: "No judgment for this scope.",
+      contribution: "Not applicable; excluded from interpreted themes.",
+    };
+  if (layer.status === "computed-no-result")
+    return {
+      ...base,
+      status: "no-result",
+      interpretation:
+        "The calculation completed and found no qualifying result.",
+      judgment:
+        "No positive activation was found under the method's configured conditions.",
+      contribution:
+        "Successful empty calculation; no personal indication inferred.",
+    };
+  if (layer.status !== "computed-with-result")
+    return {
+      ...base,
+      status: "failed",
+      interpretation:
+        layer.notes ?? layer.errorCode ?? "The calculation is unavailable.",
+      judgment: "Judgment blocked by the calculation failure.",
+      contribution: "Calculation status is retained in the complete raw snapshot for AI interpretation.",
+    };
+  try {
+    const judgments = applyMethodRules(layer, snapshot);
+    if (!judgments.length)
+      throw new Error(
+        "METHOD_RULE_MISSING: No applicable finding judgments were produced."
+      );
+    const allIds = new Set(layer.evidenceIds);
+    const linked = canon.filter(rule =>
+      rule.calculationEvidenceIds.some(id => allIds.has(id))
+    );
+    // Link retrieved chart-specific doctrine to the outcome's actual judgments.
+    // Detached rules remain unlinked and fail the final audit.
+    for (const judgment of judgments)
+      judgment.rules.push(
+        ...linked.filter(rule =>
+          rule.calculationEvidenceIds.some(id =>
+            judgment.evidenceIds.includes(id)
+          )
+        )
+      );
+    // These producers already calculate relational/condition testimony from
+    // explicit chart relationships. Admit that testimony as a judged modifier,
+    // once in its owning method, rather than re-normalizing the raw snapshot.
+    const owner: Record<string, string> = {
+      "firmament-traditional-mechanisms": "western-planets-and-signs",
+      "firmament-relational-chain": "western-houses-and-angles",
+      "firmament-vedic-yogas": "genesis-behavioral-patterns",
+      "firmament-arabic-persian-tradition": "arabic-hermetic-lots",
+    };
+    const localId = layer.id.replace(/^transit:/, "");
+    const scopeIds = new Set(
+      snapshot.methodExecutionLedger
+        .filter(
+          m => m.id.startsWith("transit:") === layer.id.startsWith("transit:")
+        )
+        .flatMap(m => m.evidenceIds)
+    );
+    for (const rule of canon.filter(
+      rule =>
+        owner[rule.ruleId] === localId &&
+        rule.calculationEvidenceIds.some(id => scopeIds.has(id)) &&
+        rule.implementationStatus !== "incomplete" &&
+        rule.confidence !== "reference-only"
+    )) {
+      const ids = rule.calculationEvidenceIds.filter(id => scopeIds.has(id));
+      const supportive = [
+        "mutual-reception",
+        "unilateral-reception",
+        "translation-of-light",
+        "collection-of-light",
+        "cazimi",
+      ].includes(rule.technique);
+      const challenging = [
+        "combustion",
+        "besiegement",
+        "prohibition",
+        "frustration",
+        "void-of-course",
+      ].includes(rule.technique);
+      judgments.push({
+        id: `prop-method-${layer.id}-canon-${rule.canonEvidenceId}`,
+        subject: rule.subject,
+        domain: judgments[0].domain,
+        judgment: rule.statement,
+        mechanism: rule.technique,
+        valence: supportive
+          ? "supportive"
+          : challenging
+            ? "challenging"
+            : "neutral",
+        strength: "moderate",
+        evidenceIds: ids,
+        rules: [rule],
+      });
+    }
+    const applications = Array.from(
+      new Map(
+        judgments
+          .flatMap(j => j.rules)
+          .map(rule => [rule.canonEvidenceId, rule])
+      ).values()
+    );
+    const missingIds = layer.evidenceIds.filter(
+      id => !judgments.some(j => j.evidenceIds.includes(id))
+    );
+    if (missingIds.length)
+      throw new Error(
+        `METHOD_EVIDENCE_UNINTERPRETED: ${missingIds.join(", ")}`
+      );
+    return {
+      ...base,
+      status: "interpreted",
+      findingJudgments: judgments,
+      canonApplications: applications,
+      interpretation: judgments.map(j => j.judgment).join("\n\n"),
+      judgment: judgments.map(j => j.judgment).join("\n\n"),
+      contribution: `${judgments.length} finding-specific judgments contribute to ${Array.from(new Set(judgments.map(j => j.domain))).join(", ")}.`,
+      strengthAndLimitations: [
+        ...base.strengthAndLimitations,
+        ...judgments.flatMap(j => (j.limitation ? [j.limitation] : [])),
+      ],
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return {
+      ...base,
+      status: "failed",
+      missingCanon: reason.includes("RULE_MISSING") || reason.includes("CANON"),
+      interpretation: reason,
+      judgment:
+        "No traditional judgment issued: this method failed rule application.",
+      contribution:
+        "Rule interpretation failed; calculated values remain available in the raw snapshot for AI interpretation.",
+      strengthAndLimitations: [...base.strengthAndLimitations, reason],
+    };
+  }
 }
-
 export function buildMethodOutcomes(
   snapshot: UnifiedMasterChartSnapshot,
-  canonApplications: CanonRuleApplication[],
+  canonApplications: CanonRuleApplication[]
 ): MethodOutcome[] {
-  return snapshot.methodExecutionLedger.map(layer => outcomeForLayer(layer, snapshot, canonApplications));
+  return snapshot.methodExecutionLedger.map(layer =>
+    outcome(layer, snapshot, canonApplications)
+  );
 }

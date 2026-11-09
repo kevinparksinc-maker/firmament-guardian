@@ -1,3 +1,4 @@
+import { readingProse } from "@shared/readingProse";
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
@@ -102,12 +103,29 @@ export function FocusedPlacementReading({
               Calculated moment: {new Date(reading.moment).toLocaleString()}
             </p>
           </header>
-          {reading.sections.map(section => (
+          {reading.miniNarrative && (
+            <p className="text-sm leading-7 text-slate-100">{readingProse(reading.miniNarrative)}</p>
+          )}
+          {reading.miniNarrative ? (
+            <details className="rounded-xl border border-white/10 p-3 text-xs text-slate-300">
+              <summary className="cursor-pointer text-cyan-200">Read the complete contact breakdown</summary>
+              <div className="mt-4 space-y-5">
+                {reading.sections.map(section => (
+                  <article key={section.id} className="space-y-3">
+                    <h5 className="font-semibold text-cyan-100">{section.title}</h5>
+                    {section.paragraphs.map((paragraph, index) => (
+                      <p key={index} className="text-sm leading-7 text-slate-200">{readingProse(paragraph)}</p>
+                    ))}
+                  </article>
+                ))}
+              </div>
+            </details>
+          ) : reading.sections.map(section => (
             <article key={section.id} className="space-y-3">
               <h5 className="font-semibold text-cyan-100">{section.title}</h5>
               {section.paragraphs.map((paragraph, index) => (
                 <p key={index} className="text-sm leading-7 text-slate-200">
-                  {paragraph}
+                  {readingProse(paragraph)}
                 </p>
               ))}
               {section.sources.length > 0 && (

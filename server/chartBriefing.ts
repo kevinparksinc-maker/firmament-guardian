@@ -1,30 +1,20 @@
 import type { ChartResult } from "./astronomy";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
 
-/** Audio reuses the calculated synthesis; it never supplies a prewritten daily script. */
+/** Audio reads the same AI synthesis as the chart, never rule-template prose. */
 export async function buildChartBriefing(chart: ChartResult) {
-  const { synthesis } = await synthesizeChartForReading(
-    chart,
-    chart.readingScope,
-    "Explain the selected chart's strongest patterns, their mechanisms, strengths and challenges for an audio reading."
-  );
-  const chapters = synthesis.themes
-    .map(theme => ({
-      id: theme.id,
-      title: theme.humanTheme,
-      subtitle: `${theme.evidenceIds.length} linked evidence records · ${synthesis.mode}`,
-      text: [
-        theme.primaryConclusion,
-        theme.consequences.replace(/Evidence:[^\n]*/g, "").trim(),
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-      evidenceIds: theme.evidenceIds,
-    }))
-    .filter(chapter => chapter.text.trim() && chapter.evidenceIds.length > 0);
-  if (!chapters.length)
-    throw new Error(
-      "The selected chart produced no source-backed briefing chapters."
-    );
-  return { snapshotId: synthesis.snapshotId, chapters };
+  const question = "Explain the selected chart’s integrated patterns, mechanisms, strengths and challenges as a complete personal reading suitable for listening.";
+  const { synthesis } = await synthesizeChartForReading(chart, chart.readingScope, question);
+  const narrated = await narrateMasterSynthesis(synthesis, question);
+  return {
+    snapshotId: synthesis.snapshotId,
+    chapters: narrated.narrative.sections.map(section => ({
+      id: section.id,
+      title: section.title,
+      subtitle: "Your integrated chart reading",
+      text: section.text,
+      evidenceIds: synthesis.sourceSnapshot.methodExecutionLedger.flatMap(layer => layer.evidenceIds),
+    })),
+  };
 }

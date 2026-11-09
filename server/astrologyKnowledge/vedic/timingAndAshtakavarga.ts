@@ -38,7 +38,7 @@ function subperiods(start:number,end:number,lord:(typeof ORDER)[number]){
  return ORDER.map((_,offset)=>{const child=ORDER[(index+offset)%9];const next=cursor+years*YEARS[child]/120*365.25;const item={lord:child,start:cursor,end:next};cursor=next;return item;});
 }
 function activePeriod<T extends {start:number;end:number}>(items:T[],now:number){return items.find(item=>now>=item.start&&now<item.end);}
-function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number):EvidenceItem[]{
+function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number,asOf:Date):EvidenceItem[]{
  if(chart.input.birthTimeKnown===false||!chart.input.time||!chart.input.timezone) return [{
   id:"vedic-dasha-time-uncertain",tradition:"vedic",category:"uncertainty",technique:"dasha",subject:"Vimshottari Dasha",
   statement:"Vimshottari periods were not asserted because birth time is date-only or marked unknown. The Moon's fixed-Firmament position and Dasha balance can change within the day; provide a verified birth time for an exact timeline.",
@@ -48,7 +48,7 @@ function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number):Evidenc
  const firstLord=ORDER[starIndex%9]; const balance=(size-progressed)/size*YEARS[firstLord]; const elapsed=YEARS[firstLord]-balance;
  let cursor=birth-elapsed*365.25; const timeline:Array<{lord:(typeof ORDER)[number];start:number;end:number}>=[];
  for(let i=0;i<18;i++){const lord=ORDER[(ORDER.indexOf(firstLord)+i)%9];const end=cursor+YEARS[lord]*365.25;timeline.push({lord,start:cursor,end});cursor=end;}
- const now=dayNumber(new Date()); const active=activePeriod(timeline,now); const details=[
+ const now=dayNumber(asOf); const active=activePeriod(timeline,now); const details=[
   "Firmament fixed Moon "+moon.toFixed(4)+"°; fixed stellar reference offset 0°.",
   "Birth Nakshatra "+NAKSHATRAS[starIndex]+"; starting Mahadasha "+firstLord+".",
   "Balance at birth "+balance.toFixed(3)+" years using a 365.25-day year."
@@ -78,14 +78,14 @@ function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,fram
  const parts=["Firmament fixed, unreduced Parashari Bhinnashtakavarga and Sarvashtakavarga; fixed stellar reference offset 0°.","SAV total checksum 337 bindus.","Highest SAV signs: "+high.map(x=>x.sign+" "+x.score).join(", ")+".","Lowest SAV signs: "+low.map(x=>x.sign+" "+x.score).join(", ")+".",...CLASSICAL.map(p=>p+" BAV total "+bav[p].reduce((a,b)=>a+b,0)+": "+bav[p].map((score,i)=>ZODIAC_SIGNS[i]+" "+score).join(", ")+".")];
  return [{id:"vedic-ashtakavarga-bav-sav",tradition:"vedic",category:"calculated-fact",technique:"ashtakavarga",subject:"Bhinnashtakavarga and Sarvashtakavarga",statement:parts.join(" "),concepts:["ashtakavarga","bhinnashtakavarga","sarvashtakavarga","bindu-scores"],polarity:"neutral",strength:1,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("ashtakavarga","vedic-ashtakavarga-classical"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,system:"Parashari unreduced BAV/SAV",excludedContributors:["Rahu","Ketu"],checksums:{Sun:48,Moon:49,Mars:39,Mercury:54,Jupiter:56,Venus:52,Saturn:39,SAV:337}}}}];
 }
-export function resolveVedicTimingAndAshtakavarga(chart:ChartResult):EvidenceItem[]{
+export function resolveVedicTimingAndAshtakavarga(chart:ChartResult, asOf:Date = timingInstant(chart)):EvidenceItem[]{
  if(!Number.isFinite(chart.julianDay)||!chart.utc) return [{id:"vedic-advanced-no-epoch",tradition:"vedic",category:"uncertainty",technique:"dasha-ashtakavarga",subject:"Dasha and Ashtakavarga",statement:"Dasha and Ashtakavarga were not calculated because the chart has no valid birth epoch.",concepts:["dasha","ashtakavarga","unavailable"],polarity:"neutral",strength:0,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:TRACE("dasha-ashtakavarga","vedic-dasha-architecture")}];
  let dasha:EvidenceItem[]=[];
  let moonSidereal:{longitude:number;frameOffset:number};
  try {
   const moon=chart.movingBodies.find(row=>row.name==="Moon");if(!moon)throw new Error("Natal Moon is missing.");
   moonSidereal=fixedFirmamentPosition(moon.longitude);
-  dasha=dashaEvidence(chart,moonSidereal.frameOffset,moonSidereal.longitude);
+  dasha=dashaEvidence(chart,moonSidereal.frameOffset,moonSidereal.longitude,asOf);
  } catch(error) {
   return [{id:"vedic-dasha-calculation-error",tradition:"vedic",category:"uncertainty",technique:"dasha",subject:"Vimshottari Dasha",statement:"Vimshottari calculation failed safely: "+(error instanceof Error?error.message:String(error))+". No inferred timing is supplied.",concepts:["dasha","calculation-error"],polarity:"neutral",strength:0,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:TRACE("dasha","vedic-dasha-architecture")}];
  }
@@ -141,6 +141,30 @@ export function buildVimshottariTimeline(chart: ChartResult, asOf: Date = new Da
     startingLord: firstLord, balanceYears, asOf: asOf.toISOString(),
     periods, yearLengthDays: 365.25,
   };
+}
+
+export function timingInstant(chart: ChartResult) {
+  return new Date(chart.input.chartRole === "event" ? chart.utc : chart.transitDate || chart.utc);
+}
+
+/** Structured values retained by the method ledger; never inferred from prose by the reader. */
+export function timingMethodCalculations(chart: ChartResult) {
+  const asOf = timingInstant(chart);
+  const timeline = buildVimshottariTimeline(chart, asOf);
+  const activeLords: Array<{level:string;lord:string;start:string;end:string}> = [];
+  if (timeline.available) {
+    const maha = timeline.periods.find(period => period.active);
+    if (maha) {
+      activeLords.push({level:"Mahadasha",lord:maha.lord,start:maha.start,end:maha.end});
+      const antar=maha.antardashas.find(period=>period.active);
+      if (antar) {
+        activeLords.push({level:"Antardasha",lord:antar.lord,start:antar.start,end:antar.end});
+        const praty=antar.pratyantardashas.find(period=>period.active);
+        if (praty) activeLords.push({level:"Pratyantardasha",lord:praty.lord,start:praty.start,end:praty.end});
+      }
+    }
+  }
+  return { dasha:{available:timeline.available,asOf:asOf.toISOString(),activeLords}, ashtakavarga:getAshtakavargaVisual(chart) };
 }
 
 /** Visual BAV/SAV output from the same evidence engine used by synthesis.

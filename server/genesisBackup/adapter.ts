@@ -127,7 +127,7 @@ export function runGenesisPatternPipeline(
     chart.readingScope === "natal" ? [] : chart.transits,
     "transit"
   );
-  const effectiveTransit = Object.keys(transit).length ? transit : natal;
+  const effectiveTransit = transit;
   return {
     engine: "genesis-pattern-engine-original",
     analysis: analyzePatterns(natal, effectiveTransit, {

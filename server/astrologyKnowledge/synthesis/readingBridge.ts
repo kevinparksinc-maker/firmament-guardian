@@ -123,20 +123,6 @@ export async function synthesizeMasterSnapshot(
   mode: "natal" | "transit" | "combined",
   question: string
 ) {
-  const failedMethods = snapshot.methodExecutionLedger.filter(layer =>
-    ["failed", "not-implemented"].includes(layer.status)
-  );
-  if (failedMethods.length > 0) {
-    const failedIds = failedMethods.map(layer => layer.id).join(", ");
-    console.error(
-      "[MASTER_METHOD_FAILED] Required calculated methods failed:",
-      failedIds
-    );
-    throw new Error(
-      `MASTER_METHOD_FAILED: Calculated method(s) failed: ${failedIds}.`
-    );
-  }
-
   // The Master Chart remains the only calculation source. Its canonical natal
   // ChartResult is passed to the existing deterministic retriever; no second
   // astronomical calculation or alternate house/frame pipeline is introduced.
@@ -154,17 +140,10 @@ export async function synthesizeMasterSnapshot(
       ...layer,
       id: `transit:${layer.id}`,
       name: `Current sky · ${layer.name}`,
-      frame: "transit" as const,
+      frame: layer.frame,
       evidenceIds: layer.evidenceIds.map(id => `transit:${id}`),
       prerequisites: layer.prerequisites.map(id => `transit:${id}`),
     })) ?? [];
-  const eventFailures = eventLayers.filter(layer =>
-    ["failed", "not-implemented"].includes(layer.status)
-  );
-  if (eventFailures.length)
-    throw new Error(
-      `MASTER_METHOD_FAILED: ${eventFailures.map(layer => layer.id).join(", ")}`
-    );
   if (event?.natal) {
     const applications = buildCanonRuleApplications(
       event,
@@ -189,28 +168,16 @@ export async function synthesizeMasterSnapshot(
     },
     methodExecutionLedger: [...snapshot.methodExecutionLedger, ...eventLayers],
   };
-  const applicableCanonApplications = canonApplications.filter(
-    application => application.calculationEvidenceIds.length > 0
-  );
-  if (applicableCanonApplications.length === 0) {
-    throw new Error(
-      "CANON_RETRIEVAL_FAILED: Retrieved Canon rules could not be matched to Master Chart evidence."
-    );
-  }
-
   const synthesis = await synthesizeMasterReading({
     snapshot: synthesisSnapshot,
     readingMode: mode,
     userQuestion: question,
-    canonApplications: applicableCanonApplications,
+    canonApplications,
   });
   if (!synthesis.qualityAudit.passed) {
-    console.error(
-      "[SYNTHESIS_COVERAGE_FAILED] Uninterpreted calculated evidence:",
+    console.warn(
+      "[SYNTHESIS_THEME_COVERAGE] Rule-based theme coverage is incomplete; forwarding all calculated results to the AI:",
       synthesis.qualityAudit.unsupportedClaims
-    );
-    throw new Error(
-      "SYNTHESIS_COVERAGE_FAILED: Not all calculated evidence was incorporated into the synthesis."
     );
   }
   const context = formatSynthesisContext(synthesis);

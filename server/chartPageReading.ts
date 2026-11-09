@@ -1,16 +1,28 @@
+import { readingProse } from "../shared/readingProse";
+import { createHash, randomBytes } from "node:crypto";
+import {
+  placementRows,
+  placementMiniIdentity,
+} from "../shared/placementMiniReadings";
 import { z } from "zod";
 import type { ChartResult, ChartRow } from "./astronomy";
 import { invokeLLM } from "./_core/llm";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
-import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+import {
+  synthesizeChartForReading,
+  synthesizeMasterSnapshot,
+} from "./astrologyKnowledge/synthesis/readingBridge";
 import { retrievePlacementDossier } from "./astrologyKnowledge/canon/retriever";
+import { elementalDecanTeaching } from "./astrologyKnowledge/canon/decans36";
 import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
 
 const summarySchema = z.object({
   placements: z.array(
     z.object({
       name: z.string(),
-      paragraph: z.string().min(120).max(1600),
+      paragraph: z
+        .string()
+        .transform(readingProse)
+        .pipe(z.string().min(120).max(1600)),
       evidenceIds: z.array(z.string()).min(2),
       layerIds: z.array(z.string()).min(2),
     })
@@ -24,149 +36,183 @@ export function buildPlacementPackets(
   synthesis: SynthesisResult
 ) {
   const sun = chart.movingBodies.find(p => p.name === "Sun");
-  const isDay = Boolean(sun && sun.house >= 7);
-  const methods = synthesis.methodFindings;
-  const parsed = methods
-    .filter(m => m.status === "computed-with-result")
-    .map(method => ({
-      ...method,
-      values: method.findings.map(f => {
-        try {
-          return JSON.parse(f.details);
-        } catch {
-          return f.details;
-        }
-      }),
-    }));
-  const short = (text: string | undefined) => text?.slice(0, 500);
-  return chart.movingBodies.map(row => {
-    const dossier = retrievePlacementDossier(row, chart, isDay);
-    if (
-      !dossier.nakshatraRecord ||
-      !dossier.manzilRecord ||
-      !dossier.decanRecord
-    )
-      throw new Error(
-        `PLACEMENT_CANON_MISSING: ${row.name} mansion or decan Canon is unavailable.`
-      );
-    const facts: Fact[] = [];
-    const add = (layerId: string, id: string, value: unknown) => {
-      if (value != null) facts.push({ id, layerId, value });
-    };
-    add("western-planets-and-signs", `planet-${row.name.toLowerCase()}`, {
-      longitude: row.longitude,
-      display: row.display,
-      house: row.house,
-      godHouse: row.godHouse,
-      agentHouse: row.agentHouse,
-      retrograde: row.retrograde,
-    });
-    for (const method of parsed) {
-      for (let index = 0; index < method.values.length; index++) {
-        const value = method.values[index];
-        const id = method.evidenceIds[index] ?? method.evidenceIds[0];
-        if (!id || !value || typeof value !== "object") continue;
-        if (method.id === "vedic-vargas-divisional") {
-          const placement = value.placements?.find(
-            (p: ChartRow & { body?: string }) => p.body === row.name
-          );
-          if (placement)
-            add(method.id, id, {
-              division: value.division,
-              purpose: value.purpose,
-              placement: {
-                sign: placement.sign,
-                house: placement.house,
-                longitude: placement.longitude,
-                divisionPart: placement.divisionPart,
-              },
-              ascendant: {
-                sign: value.ascendant?.sign,
-                longitude: value.ascendant?.longitude,
-              },
-            });
-        } else if (method.id === "fixed-stars-royal-watchers") {
-          const contacts = value.contacts?.filter(
-            (c: { body: string }) => c.body === row.name
-          );
-          if (contacts?.length)
-            add(method.id, id, { star: value.name, contacts });
-        } else if (method.id === "vedic-dasha-and-ashtakavarga") {
-          // Keep this planet's BAV row and global SAV, not seven repeated matrices.
-          if (value.technique === "ashtakavarga") {
-            const statement = String(value.statement);
-            const start = statement.indexOf(`${row.name} BAV total`);
-            const end = start < 0 ? -1 : statement.indexOf(".", start);
-            if (start >= 0)
-              add(method.id, id, {
-                bav: statement.slice(start, end < 0 ? undefined : end + 1),
-                sav: statement.slice(0, statement.indexOf("Sun BAV total")),
-              });
-          }
-        } else if (
-          method.id === "elemental-decans" &&
-          value.body === row.name
-        ) {
-          add(method.id, id, {
-            sign: value.sign,
-            decanIndex: value.decanIndex,
-            elementalFamilyRuler: value.elementalFamilyRuler,
-          });
-        } else if (
-          [value.body, value.planet, value.body1, value.body2].includes(
-            row.name
+  return placementRows(chart).map(row => {
+    const dossier = retrievePlacementDossier(
+      row,
+      chart,
+      Boolean(sun && sun.house >= 7)
+    );
+    const escaped = row.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const bodyMatch = new RegExp(`(^|[^A-Za-z])${escaped}([^A-Za-z]|$)`, "i");
+    const slug = row.name.toLowerCase().replace(/\s+/g, "-");
+    const facts: Fact[] = [
+      {
+        id: `planet-${slug}`,
+        layerId: "western-planets-and-signs",
+        value: {
+          display: row.display,
+          longitude: row.longitude,
+          house: row.house,
+          godHouse: row.godHouse,
+          agentHouse: row.agentHouse,
+          retrograde: row.retrograde,
+        },
+      },
+    ];
+    const judgments = synthesis.methodOutcomes
+      .filter(
+        o => o.status === "interpreted" && !o.methodId.startsWith("transit:")
+      )
+      .flatMap(outcome =>
+        outcome.findingJudgments
+          .filter(
+            f =>
+              (!outcome.methodId.includes("dasha-and-ashtakavarga") ||
+                f.subject.startsWith("SAV ")) &&
+              (bodyMatch.test(f.subject) ||
+                f.evidenceIds.some(
+                  id => id.includes(`-${slug}-`) || id.endsWith(`-${slug}`)
+                ) ||
+                f.subject === `House ${row.agentHouse ?? row.house}` ||
+                f.subject === `SAV ${row.display.split(" ")[0]}`)
           )
-        ) {
-          add(method.id, id, value);
-        } else if (
-          method.id === "kabbalah-sefer-yetzirah" &&
-          (value.subject === row.name ||
-            value.concepts?.some(
-              (c: string) => c.toLowerCase() === row.name.toLowerCase()
-            ))
-        ) {
-          add(method.id, id, {
-            subject: value.subject,
-            statement: value.statement,
+          .map(f => ({
+            findingId: f.id,
+            methodId: outcome.methodId,
+            frame: f.frame ?? outcome.frame,
+            judgment: f.judgment,
+            mechanism: f.mechanism,
+            evidenceIds: f.evidenceIds,
+            sources: Array.from(new Set(f.rules.map(r => r.sourceTitle))),
+            limitation: f.limitation,
+          }))
+      );
+    if (!judgments.length)
+      throw new Error(`PLACEMENT_JUDGMENTS_MISSING: ${row.name}`);
+    for (const j of judgments)
+      for (const id of j.evidenceIds) {
+        if (!facts.some(f => f.id === id && f.layerId === j.methodId))
+          facts.push({
+            id,
+            layerId: j.methodId,
+            value: {
+              judgment: j.judgment,
+              mechanism: j.mechanism,
+              frame: j.frame,
+              sources: j.sources,
+              limitation: j.limitation,
+            },
           });
-        }
       }
-    }
-    const lordName = dossier.nakshatraRecord.vimshottariRuler;
-    const lord = chart.movingBodies.find(p => p.name === lordName);
     return {
       name: row.name,
+      placementEvidenceId: `planet-${slug}`,
       facts,
+      judgments,
       canon: {
-        planetInSign: short(dossier.planetInSignSynthesis),
-        planetInHouse: short(dossier.planetInHouseSynthesis),
-        dignity: dossier.dignityAndCondition,
-        nakshatra: {
-          name: dossier.nakshatraRecord.name,
-          ruler: lordName,
-          deity: dossier.nakshatraRecord.deity,
-          shakti: dossier.nakshatraRecord.shakti,
-          meaning: dossier.nakshatraRecord.coreMeaning,
-          pattern: dossier.nakshatraRecord.psychologicalPattern,
-          pada: dossier.activePada,
-          rulerPlacement: lord && {
-            display: lord.display,
-            house: lord.house,
-            retrograde: lord.retrograde,
-          },
-        },
-        manzil: {
-          name: dossier.manzilRecord.name,
-          meaning: dossier.manzilRecord.natalAndPsychologicalMeaning,
-        },
-        decan: {
-          number: dossier.decanRecord.decanNumber,
-          elementalFamilyRuler: dossier.decanRecord.triplicitySubRuler,
-        },
-        stars: dossier.fixedStarContacts,
+        // Retrieve the applicable foundational meanings locally. Claude
+        // synthesizes these completed Canon findings, not the doctrine library.
+        planetCore: dossier.planetDoctrine?.coreMeanings,
+        planetPsychology: dossier.planetDoctrine?.psychologicalFunctions,
+        signQualities: dossier.signDoctrine?.traditionalQualities,
+        signTheme: dossier.signDoctrine?.psychologicalTheme,
+        houseTopics: dossier.houseDoctrine?.coreTopics,
+        houseField: dossier.houseDoctrine?.psychologicalField,
+        planetInSign: dossier.planetInSignSynthesis,
+        planetInHouse: dossier.planetInHouseSynthesis,
+        houseKnowledge: dossier.planetInHouseKnowledge
+          ? {
+              core: dossier.planetInHouseKnowledge.core,
+              challenge: dossier.planetInHouseKnowledge.challenge,
+              gift: dossier.planetInHouseKnowledge.gift,
+              career: dossier.planetInHouseKnowledge.career,
+              relationships: dossier.planetInHouseKnowledge.relationships,
+            }
+          : null,
+        condition: dossier.dignityAndCondition.conditionSummary,
+        godToAgent: dossier.godToAgentNote,
+        nakshatra: dossier.nakshatraRecord,
+        pada: dossier.activePada,
+        manzil: dossier.manzilRecord,
+        decan: dossier.decanRecord
+          ? {
+              number: dossier.decanRecord.decanNumber,
+              elementalFamilyRuler: dossier.decanRecord.triplicitySubRuler,
+              teaching: elementalDecanTeaching(dossier.decanRecord),
+            }
+          : null,
       },
     };
   });
+}
+
+/** Only local calculated RESULTS cross the API boundary. All original
+ * per-method Canon judgments and their full evidence remain in packets
+ * and are returned to the UI ledger; no textbook records are sent to NVIDIA.
+ */
+export function packPlacementMiniPrompt(
+  packets: ReturnType<typeof buildPlacementPackets>
+) {
+  const short = (value: unknown, max = 170) =>
+    typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : undefined;
+  return {
+    placements: packets.map(p => {
+      const byMethod = new Map<string, typeof p.judgments>();
+      for (const finding of p.judgments)
+        byMethod.set(finding.methodId, [...(byMethod.get(finding.methodId) ?? []), finding]);
+      // One compact result per applicable method, not hundreds of repeated
+      // prose explanations. Counts make omissions visible in the audit.
+      const methods = Array.from(byMethod, ([id, findings]) => ({
+        id,
+        totalFindings: findings.length,
+        results: Array.from(new Set(findings.map(f => short(f.judgment, 180)).filter(Boolean))).slice(0, 3),
+      }));
+      const evidenceByLayer = Array.from(
+        p.facts.reduce((map, fact) => {
+          const ids = map.get(fact.layerId) ?? [];
+          if (ids.length < 3 && !ids.includes(fact.id)) ids.push(fact.id);
+          map.set(fact.layerId, ids);
+          return map;
+        }, new Map<string, string[]>())
+      ).map(([layerId, evidenceIds]) => ({ layerId, evidenceIds }));
+      const c = p.canon;
+      return {
+        name: p.name,
+        position: p.facts[0].value,
+        placementEvidenceId: p.placementEvidenceId,
+        canonResults: {
+          planetCore: c.planetCore?.slice(0, 3),
+          signQualities: c.signQualities,
+          houseTopics: c.houseTopics?.slice(0, 5),
+          condition: short(c.condition, 180),
+          godToAgent: short(c.godToAgent, 160),
+          nakshatra: c.nakshatra ? {
+            name: c.nakshatra.name,
+            deity: c.nakshatra.deity,
+            ruler: c.nakshatra.vimshottariRuler,
+            meaning: short(c.nakshatra.psychologicalPattern, 160),
+          } : null,
+          pada: c.pada ? {
+            number: c.pada.pada,
+            navamshaSign: c.pada.navamshaSign,
+            ruler: c.pada.navamshaRuler,
+          } : null,
+          arabicMansion: c.manzil ? {
+            name: c.manzil.name,
+            quality: c.manzil.traditionalQuality,
+            meaning: short(c.manzil.natalAndPsychologicalMeaning, 160),
+          } : null,
+          decan: c.decan ? {
+            number: c.decan.number,
+            ruler: c.decan.elementalFamilyRuler,
+            meaning: short(c.decan.teaching?.statement ?? c.decan.teaching?.label, 160),
+          } : null,
+        },
+        methods,
+        evidenceByLayer,
+      };
+    }),
+  };
 }
 
 export function validatePlacementSummaries(
@@ -209,6 +255,7 @@ export function validatePlacementSummaries(
     for (const layer of [
       "vedic-nakshatras-and-padas",
       "arabic-lunar-manazil",
+      "elemental-decans",
     ]) {
       if (
         layers.has(layer) &&
@@ -222,9 +269,7 @@ export function validatePlacementSummaries(
         );
       }
     }
-    if (
-      !placement.evidenceIds.includes(`planet-${placement.name.toLowerCase()}`)
-    ) {
+    if (!placement.evidenceIds.includes(packet.placementEvidenceId)) {
       throw new Error(
         `PLACEMENT_SUMMARY_UNGROUNDED: ${placement.name} lacks its own placement.`
       );
@@ -237,21 +282,82 @@ const placementCache = new Map<
   string,
   {
     expiresAt: number;
-    promise: Promise<Awaited<ReturnType<typeof generatePlacementParagraphs>>>;
+    promise: Promise<ChartPageReading>;
   }
 >();
 
-export async function buildChartPageReading(
+export type ChartPageReading = {
+  snapshotId: string;
+  dominantConclusion: string;
+  methodOutcomes: SynthesisResult["methodOutcomes"];
+  themes: SynthesisResult["themes"];
+  methodLedgerSummary: SynthesisResult["methodLedgerSummary"];
+  qualityAudit: SynthesisResult["qualityAudit"];
+  placements: Array<
+    z.infer<typeof summarySchema>["placements"][number] & { evidence: Fact[] }
+  >;
+};
+
+// Reuse the completed local 19-method Canon synthesis across all sequential
+// planetary calls for the same chart. Failed calculations are never cached.
+const chartCanonCache = new Map<string, {
+  expiresAt: number;
+  promise: ReturnType<typeof synthesizeChartForReading>;
+}>();
+function cachedChartCanon(
   chart: ChartResult,
   mode: "natal" | "transit" | "combined"
 ) {
-  const { synthesis, canonicalChart } = await synthesizeChartForReading(
+  const key = createHash("sha256")
+    .update(placementMiniIdentity(chart, mode === "transit" ? "transit" : "natal") + ":" + mode)
+    .digest("hex");
+  const existing = chartCanonCache.get(key);
+  if (existing && existing.expiresAt > Date.now()) return existing.promise;
+  const promise = synthesizeChartForReading(
     chart,
-    mode,
-    "Compact planetary placement card summaries"
+    mode === "transit" ? "combined" : "natal",
+    "Compact individual placement card summaries"
   );
-  const packets = buildPlacementPackets(canonicalChart, synthesis);
-  const key = `${synthesis.snapshotId}:${mode}:placement-paragraphs-v2`;
+  chartCanonCache.set(key, { expiresAt: Date.now() + 10 * 60_000, promise });
+  while (chartCanonCache.size > 6) chartCanonCache.delete(chartCanonCache.keys().next().value!);
+  void promise.catch(() => {
+    if (chartCanonCache.get(key)?.promise === promise) chartCanonCache.delete(key);
+  });
+  return promise;
+}
+
+export async function buildChartPageReading(
+  chart: ChartResult,
+  mode: "natal" | "transit" | "combined",
+  names: string[] = ["Sun", "Moon"]
+): Promise<ChartPageReading> {
+  const verified = await cachedChartCanon(chart, mode);
+  const event = verified.snapshot.transit?.framework;
+  if (mode === "transit" && !event)
+    throw new Error("TRANSIT_FRAMEWORK_MISSING: Refresh the event chart.");
+  const { synthesis, canonicalChart } =
+    mode === "transit"
+      ? await synthesizeMasterSnapshot(
+          event!,
+          "natal",
+          "Compact event placement card summaries"
+        )
+      : verified;
+  if (!names.length || names.length > 2 || new Set(names).size !== names.length)
+    throw new Error("PLACEMENT_MINI_SCOPE: Request one or two placements.");
+  const allPackets = buildPlacementPackets(canonicalChart, synthesis);
+  const packets = names.map(name => {
+    const packet = allPackets.find(p => p.name === name);
+    if (!packet)
+      throw new Error(`PLACEMENT_MINI_SCOPE: Unknown placement ${name}`);
+    return packet;
+  });
+  const key = createHash("sha256")
+    .update(
+      placementMiniIdentity(chart, mode === "transit" ? "transit" : "natal") +
+        JSON.stringify(names)
+    )
+    .digest("hex");
   const cached = placementCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.promise;
   const promise = generatePlacementParagraphs(packets, synthesis);
@@ -270,32 +376,66 @@ export async function buildChartPageReading(
 async function generatePlacementParagraphs(
   packets: ReturnType<typeof buildPlacementPackets>,
   synthesis: SynthesisResult
-) {
-  const result = await invokeLLM({
-    max_tokens: 4500,
+): Promise<ChartPageReading> {
+  // The Canon and calculated findings are already in the compact packet.
+  // Sending the full 19-method master manual for every two cards wastes
+  // thousands of input tokens and makes hosted inference much slower.
+  const instruction = `THE ABSOLUTE — CANON-FIRST PLANETARY SYNTHESIS.
+Use only the supplied calculated positions, Canon teachings and method findings.
+The Canon does the astrology; your task is to weave it into a coherent, vivid
+second-person mini-story with spiritual weight and natural 2026 language.
+Honor the fixed-XYZ God/Agent house distinction, harmonious conjunctions,
+each supplied mansion/pada, decan, aspects, rulers, strength, and star contact.
+Do not invent missing chart facts, interpretations, biographies or timings.
+Canon already calculated and classified every method. The payload contains
+factual placement results, one compact summary per applicable method and exact
+evidence IDs grouped by layer. Weave the results together without recomputing
+astrology or requesting the full local evidence ledger.
+` + `Write only the requested placement mini readings. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}. Each placement gets ONE connected story-like paragraph addressed directly to the reader as you, 70–110 words, maximum 140 words. Let one sentence lead into the next. Never print bracketed tradition/source/category labels, [TRADITION], MODERN_SYNTHESIS, headings, quotation marks around the reading, or a method inventory. Use the locally retrieved Canon's actual planetary functions, sign qualities, house topics, mansion/pada teachings, decan and calculated method judgments as your authoritative astrological knowledge. Your only job is to weave their interactions into a deeply specific paragraph, not to look up doctrine, rederive calculations, or simply concatenate Canon descriptions. Explain how the supplied layers change one another for this particular placement, with a concrete everyday example. Avoid repeating the same house definition or psychological scaffold across readings. Weave the meaning into a readable personal narrative; sources belong only in evidence. Combine its drive, house, actual nakshatra/pada, Arabic manzil and elemental decan with the relevant conditions/aspects. Read all supplied method outcomes; distinguish support from pressure and explain a concrete consequence. The selected placements' locally retrieved Canon meanings and all applicable calculated judgments are supplied in a compact indexed packet. Read every supplied finding and Canon principle, then synthesize rather than restating the reference text. Use no invented biography, dignity, star contact or missing method. Angles and Nodes are not planets. Event scope describes the event sky, never natal biography. Cite the placementEvidenceId and the exact evidenceIds for the mansion/decan methods and other methods actually used. Include only supplied layerIds. This short output contract applies only to these boxes.`;
+  const request = {
+    max_tokens: 2000,
     timeoutMs: 180_000,
-    response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content: buildAstrologyInterpreterSystem(
-          `Write SHORT Chart page placement cards. Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}, one entry for EVERY supplied planet. Each paragraph is 70–110 words, 4–6 connected sentences, maximum 140 words. This is a compact natal placement interpretation, never a life story, full-chart report, chapter sequence or method inventory. Keep depth by explaining the central drive, a precise modification from its nakshatra/pada AND Arabic manzil, and how the strongest relevant aspect, ruler condition, varga, Ashtakavarga or star finding changes its expression. End with a concrete strength/tension or recognizable consequence. Prioritize Sun equally with Moon; include every planet. Use only supplied facts and retrieved Canon. Do not equate pada and D9 with independent corroboration, invent manzil rulers, conflate essential dignity with Shadbala, or fabricate Chinese-mansion/strength results. Decans use the supplied elemental-family ruler. No generic sign/house-only descriptions, repeated boilerplate, predetermined biography or flattering filler. Cite the planet's own evidence ID and the mansion IDs; list all actually used layer IDs. Rely on the same Master Interpreter depth within ONE paragraph per planet.`
-        ),
+    response_format: {
+      type: "json_schema" as const,
+      json_schema: {
+        name: "placement_minis",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            placements: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string", enum: packets.map(p => p.name) },
+                  paragraph: { type: "string" },
+                  evidenceIds: { type: "array", items: { type: "string" } },
+                  layerIds: { type: "array", items: { type: "string" } },
+                },
+                required: ["name", "paragraph", "evidenceIds", "layerIds"],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ["placements"],
+          additionalProperties: false,
+        },
       },
+    },
+    messages: [
+      { role: "system" as const, content: instruction },
       {
-        role: "user",
+        role: "user" as const,
         content: JSON.stringify({
-          scope: "Natal planetary cards for the displayed chart",
-          packets,
-          unavailableMethods: synthesis.methodFindings
-            .filter(m => m.status !== "computed-with-result")
-            .map(m => ({ id: m.id, status: m.status })),
-          strengthAvailability:
-            "Shadbala and Bhava Bala are not present in this method ledger; dignity and BAV are distinct measures.",
+          chartScope: synthesis.methodOutcomes[0]?.chartScope,
+          question: "Synthesize these requested placements using their local Canon meanings and calculated findings.",
+          ...packPlacementMiniPrompt(packets),
         }),
       },
     ],
-  });
+  };
+  const result = await invokeLLM(request);
   const choice = result.choices[0];
   if (!choice || ["length", "max_tokens"].includes(choice.finish_reason ?? ""))
     throw new Error("PLACEMENT_SUMMARY_INCOMPLETE: AI response was truncated.");
@@ -320,6 +460,11 @@ async function generatePlacementParagraphs(
   const reading = validatePlacementSummaries(raw, packets);
   return {
     snapshotId: synthesis.snapshotId,
+    dominantConclusion: synthesis.dominantConclusion,
+    methodOutcomes: synthesis.methodOutcomes,
+    themes: synthesis.themes,
+    methodLedgerSummary: synthesis.methodLedgerSummary,
+    qualityAudit: synthesis.qualityAudit,
     placements: reading.placements.map(p => ({
       ...p,
       evidence: packets
@@ -327,4 +472,74 @@ async function generatePlacementParagraphs(
         .facts.filter(f => p.evidenceIds.includes(f.id)),
     })),
   };
+}
+
+/** Long-running NVIDIA work must never keep an HTTP request open.
+ * The browser starts a job and polls with short requests; the local Canon
+ * and finished synthesis are cached by chart identity on this instance.
+ */
+type PlacementJobResult = Pick<ChartPageReading, "snapshotId" | "placements">;
+type PlacementJob = {
+  id: string;
+  identity: string;
+  expiresAt: number;
+  state: "running" | "done" | "error";
+  result?: PlacementJobResult;
+  error?: string;
+};
+const placementJobs = new Map<string, PlacementJob>();
+const jobIdsByChart = new Map<string, string>();
+
+export function startPlacementReadingJob(
+  chart: ChartResult,
+  mode: "natal" | "transit" | "combined",
+  names: string[]
+): { jobId: string } {
+  if (!names.length || names.length > 2 || new Set(names).size !== names.length)
+    throw new Error("PLACEMENT_MINI_SCOPE: Request one or two placements.");
+  const identity = createHash("sha256")
+    .update(placementMiniIdentity(chart, mode === "transit" ? "transit" : "natal") + mode + JSON.stringify(names))
+    .digest("hex");
+  const oldId = jobIdsByChart.get(identity);
+  const oldJob = oldId && placementJobs.get(oldId);
+  if (oldJob && oldJob.expiresAt > Date.now() && oldJob.state !== "error")
+    return { jobId: oldJob.id };
+  const id = randomBytes(24).toString("hex");
+  const job: PlacementJob = {
+    id, identity, expiresAt: Date.now() + 30 * 60_000, state: "running"
+  };
+  placementJobs.set(id, job);
+  jobIdsByChart.set(identity, id);
+  // Keep a bounded server-side store, removing oldest jobs first.
+  while (placementJobs.size > 80) {
+    const first = placementJobs.keys().next().value;
+    if (!first) break;
+    const removed = placementJobs.get(first);
+    placementJobs.delete(first);
+    if (removed && jobIdsByChart.get(removed.identity) === first)
+      jobIdsByChart.delete(removed.identity);
+  }
+  void buildChartPageReading(chart, mode, names).then(
+    reading => {
+      job.state = "done";
+      job.result = { snapshotId: reading.snapshotId, placements: reading.placements };
+    },
+    failure => {
+      job.state = "error";
+      job.error = failure instanceof Error ? failure.message : "Placement synthesis failed.";
+      console.warn("Placement synthesis job failed:", job.error.split("\n")[0]?.slice(0, 180));
+    }
+  );
+  return { jobId: id };
+}
+
+export function getPlacementReadingJob(jobId: string) {
+  const job = placementJobs.get(jobId);
+  if (!job || job.expiresAt <= Date.now())
+    return { state: "error" as const, error: "READING_JOB_EXPIRED: Start this planet's reading again." };
+  if (job.state === "done")
+    return { state: "done" as const, result: job.result! };
+  if (job.state === "error")
+    return { state: "error" as const, error: job.error || "Placement synthesis failed." };
+  return { state: "running" as const };
 }

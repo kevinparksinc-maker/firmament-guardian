@@ -227,8 +227,8 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
-    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.nvidiaApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, NVIDIA_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
 
@@ -275,17 +275,32 @@ async function invokeGroq(params: InvokeParams): Promise<InvokeResult> {
   if (toolChoice) payload.tool_choice = toolChoice;
   const format = normalizeResponseFormat(params);
   if (format) payload.response_format = format;
-  const response = await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions", {
+  let response = await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${ENV.groqApiKey}` },
     body: JSON.stringify(payload),
     signal: params.signal,
     timeoutMs: params.timeoutMs,
   });
+  let safeCode="";
+  if(response.status===400){
+    try { const body=await response.clone().json() as {error?:{code?:unknown}};
+      const code=body.error?.code;
+      if(typeof code==="string" && ["json_validate_failed","invalid_request_error","model_not_found","model_decommissioned","unsupported_parameter"].includes(code)) safeCode=code;
+    } catch { /* Never expose a provider body that might echo the chart. */ }
+    if(safeCode==="json_validate_failed" && format && !params.tools?.length){
+      // Retry only a provider JSON-generation failure, once. The caller's JSON
+      // parser and evidence validation still apply to the returned text.
+      delete payload.response_format;
+      response=await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions",{
+        method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${ENV.groqApiKey}`},body:JSON.stringify(payload),signal:params.signal,timeoutMs:params.timeoutMs,
+      });
+    }
+  }
   if (!response.ok) {
     // Provider response bodies can echo private chart prompts; expose only status.
     const retryAfter = response.headers.get("retry-after");
-    throw new Error(`GROQ_REQUEST_FAILED: HTTP ${response.status}. ${response.status === 429
+    throw new Error(`GROQ_REQUEST_FAILED: HTTP ${response.status}${safeCode ? ` (${safeCode})` : ""}. ${response.status === 429
       ? `Groq usage limit reached.${retryAfter ? ` Retry after ${retryAfter} seconds.` : " Try again later."}`
       : response.status === 401 ? "Check GROQ_API_KEY in the server environment."
       : response.status === 413 ? "This reading exceeds the Groq account request limit."
@@ -309,7 +324,7 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
     content: contentToText(message.content),
   }));
   const maxTokens = params.max_tokens ?? params.maxTokens ?? 4096;
-  const body: Record<string, unknown> = { model: params.model ?? "claude-sonnet-4-6", max_tokens: maxTokens, messages };
+  const body: Record<string, unknown> = { model: params.model ?? "claude-haiku-5-5", max_tokens: maxTokens, messages };
   const thinking = params.thinking as { type?: string; budget_tokens?: number } | undefined;
   if (thinking?.type === "enabled") {
     const budget = Math.max(1024, Math.floor(thinking.budget_tokens ?? 1024));
@@ -325,12 +340,87 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
     timeoutMs: params.timeoutMs,
   });
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Anthropic invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+    // Never expose provider JSON, request IDs, or chart content to the UI.
+    // Billing and authentication failures are actionable, not retryable.
+    const status = response.status;
+    let providerCode = "";
+    try {
+      const payload = await response.json() as { error?: { type?: string; message?: string } };
+      const message = (payload.error?.message ?? "").toLowerCase();
+      if (message.includes("credit balance") || message.includes("billing")) providerCode = "AI_BILLING_REQUIRED";
+      else if (status === 401 || status === 403) providerCode = "AI_AUTH_FAILED";
+      else if (status === 429) providerCode = "AI_RATE_LIMITED";
+    } catch { /* Do not surface raw provider responses. */ }
+    console.error("Anthropic request rejected", { status, code: providerCode || "AI_PROVIDER_ERROR" });
+    throw new Error(providerCode === "AI_BILLING_REQUIRED"
+      ? "AI_BILLING_REQUIRED: Anthropic API credits are insufficient. Your chart calculations are preserved. Add credits or select another configured AI provider."
+      : providerCode === "AI_AUTH_FAILED"
+      ? "AI_AUTH_FAILED: Check the Anthropic API key and permissions."
+      : providerCode === "AI_RATE_LIMITED"
+      ? "AI_RATE_LIMITED: Anthropic usage limit reached. Try again later."
+      : `AI_PROVIDER_ERROR: Anthropic could not complete the interpretation (HTTP ${status}).`);
   }
   const result = await response.json() as { id: string; model: string; content?: Array<{ type: string; text?: string }>; stop_reason?: string };
   const text = (result.content ?? []).filter(part => part.type === "text").map(part => part.text ?? "").join("\n");
   return { id: result.id, created: Math.floor(Date.now() / 1000), model: result.model, choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: result.stop_reason ?? null }] };
+}
+
+async function invokeNvidia(params: InvokeParams): Promise<InvokeResult> {
+  // NVIDIA NIM exposes an OpenAI-compatible chat endpoint. The model name
+  // comes from the user's selected NVIDIA Build example, not a Claude hint.
+  const requestBody = JSON.stringify({
+    model: ENV.nvidiaModel,
+    messages: params.messages.map(normalizeMessage),
+    max_tokens: Math.min(params.max_tokens ?? params.maxTokens ?? 1200, 4096),
+    stream: false,
+  });
+  const requestBytes = Buffer.byteLength(requestBody);
+  const startedAt = Date.now();
+  // Metrics only; never log API credentials, birth data or prompt text.
+  console.info(`NVIDIA synthesis request: inputBytes=${requestBytes} model=${ENV.nvidiaModel}`);
+  let response: Response;
+  try {
+    response = await fetchWithBackoff("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${ENV.nvidiaApiKey}`,
+    },
+    body: requestBody,
+    signal: params.signal,
+    // Render's HTTP proxy can fail before the previous 180-second chart timeout.
+    // Bound NVIDIA inference itself so the caller receives a meaningful JSON
+    // error instead of Render's HTML 502 response.
+    timeoutMs: Math.min(params.timeoutMs ?? 60_000, 60_000),
+    });
+  } catch (error) {
+    console.warn(`NVIDIA synthesis transport failed: elapsedMs=${Date.now() - startedAt} inputBytes=${requestBytes} reason=${error instanceof Error && error.message.startsWith("AI_REQUEST_TIMEOUT:") ? "timeout" : "network"}`);
+    throw error;
+  }
+  console.info(`NVIDIA synthesis response: status=${response.status} elapsedMs=${Date.now() - startedAt} inputBytes=${requestBytes}`);
+  if (!response.ok) {
+    const status = response.status;
+    // Never log a response body that may include private chart text.
+    throw new Error(status === 429
+      ? "AI_RATE_LIMITED: NVIDIA's hosted inference limit was reached."
+      : status === 401 || status === 403
+      ? "AI_AUTH_FAILED: Verify NVIDIA_API_KEY in Render."
+      : `NVIDIA_REQUEST_FAILED: HTTP ${status}.`);
+  }
+  const result = await response.json() as ProviderResponse;
+  const choice = result.choices?.[0];
+  if (choice?.finish_reason === "length" || choice?.finish_reason === "max_tokens")
+    throw new Error("NVIDIA_INCOMPLETE_READING: Generation reached the output token limit.");
+  const output = readableAssistantText(result);
+  if (!output.trim()) throw new Error("NVIDIA_EMPTY_READING: The model returned no readable text.");
+  if (!choice?.message?.content) {
+    result.choices = [{
+      index: 0,
+      message: { role: "assistant", content: output },
+      finish_reason: choice?.finish_reason ?? "stop",
+    }];
+  }
+  return result;
 }
 
 async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
@@ -367,6 +457,9 @@ async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
       const choice = result.choices?.[0];
       const text = readableAssistantText(result);
       if (text.trim()) {
+        if (choice?.finish_reason === "length" || choice?.finish_reason === "max_tokens") {
+          throw new Error("OPENAI_INCOMPLETE_READING: AI output reached its token limit.");
+        }
         if (!choice?.message?.content) {
           result.choices = [{ index: 0, message: { role: "assistant", content: text }, finish_reason: choice?.finish_reason ?? "stop" }];
         }
@@ -429,18 +522,34 @@ const RETRY_BASE_DELAY_MS = 500;
 const RETRY_MAX_DELAY_MS = 30_000;
 const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
+function selectedProvider(): "groq" | "anthropic" | "nvidia" | "openai-compatible" | "gemini" | "built-in-forge" | "unconfigured" {
+  const preference = (process.env.AI_PRIMARY_PROVIDER ?? "").trim().toLowerCase();
+  const available = {
+    anthropic: Boolean(ENV.anthropicApiKey),
+    nvidia: Boolean(ENV.nvidiaApiKey),
+    groq: Boolean(ENV.groqApiKey),
+    "openai-compatible": Boolean(ENV.openaiApiKey && ENV.openaiApiBase),
+    gemini: Boolean(ENV.geminiApiKey),
+    "built-in-forge": Boolean(ENV.forgeApiKey),
+  };
+  if (preference) {
+    if (!(preference in available)) throw new Error(`AI_PROVIDER_INVALID: Unknown AI_PRIMARY_PROVIDER ${preference}`);
+    const provider = preference as keyof typeof available;
+    if (!available[provider]) throw new Error(`AI_PROVIDER_NOT_CONFIGURED: ${provider} selected but its key is missing`);
+    return provider;
+  }
+  // Anthropic takes precedence when both Anthropic and Groq keys exist.
+  if (available.nvidia) return "nvidia";
+  if (available.anthropic) return "anthropic";
+  if (available.groq) return "groq";
+  if (available["openai-compatible"]) return "openai-compatible";
+  if (available.gemini) return "gemini";
+  if (available["built-in-forge"]) return "built-in-forge";
+  return "unconfigured";
+}
+
 export function getLLMProviderStatus() {
-  const provider = ENV.groqApiKey
-    ? "groq"
-    : ENV.anthropicApiKey
-    ? "anthropic"
-    : ENV.openaiApiKey && ENV.openaiApiBase
-      ? "openai-compatible"
-      : ENV.geminiApiKey
-        ? "gemini"
-        : ENV.forgeApiKey
-          ? "built-in-forge"
-          : "unconfigured";
+  const provider = selectedProvider();
   return {
     configured: provider !== "unconfigured",
     provider,
@@ -486,7 +595,7 @@ const computeBackoffDelay = (
   return Math.min(Math.max(jittered, retryAfterMs ?? 0), RETRY_MAX_DELAY_MS);
 };
 
-// Retries non-2xx responses and network errors with exponential backoff, then
+// Retries transient failures, but returns HTTP 429 immediately so callers can\n// surface provider rate limits rather than exceeding the proxy timeout.\n// Other eligible network and HTTP failures use exponential backoff, then
 // returns the final Response so callers keep their existing error handling.
 const fetchWithBackoff = async (
   url: string,
@@ -519,7 +628,7 @@ const fetchWithBackoff = async (
       }
       // Preserve the original body for billing, invalid-input and auth errors.
       // Repeating a rejected 400 request hides the useful provider explanation.
-      if (response.ok || ![408, 409, 429, 500, 502, 503, 504, 529].includes(response.status) || attempt === RETRY_MAX_RETRIES) {
+      if (response.ok || response.status === 429 || ![408, 409, 500, 502, 503, 504, 529].includes(response.status) || attempt === RETRY_MAX_RETRIES) {
         return response;
       }
 
@@ -606,10 +715,14 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
-  if (ENV.groqApiKey) return invokeGroq(params);
-  if (ENV.anthropicApiKey) return invokeAnthropic(params);
-  if (ENV.openaiApiKey && ENV.openaiApiBase) return invokeOpenAI(params);
-  if (ENV.geminiApiKey && !ENV.forgeApiKey) return invokeGemini(params);
+  const provider = selectedProvider();
+  console.info(`LLM provider selected: ${provider}`);
+  if (provider === "groq") return invokeGroq(params);
+  if (provider === "anthropic") return invokeAnthropic(params);
+  if (provider === "nvidia") return invokeNvidia(params);
+  if (provider === "openai-compatible") return invokeOpenAI(params);
+  if (provider === "gemini") return invokeGemini(params);
+  if (provider === "unconfigured") throw new Error("AI_PROVIDER_NOT_CONFIGURED");
 
   const {
     messages,

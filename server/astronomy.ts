@@ -24,6 +24,7 @@ export type ChartInput = {
   worldview?: Worldview;
   readingScope?: ReadingScope;
   birthTimeKnown?: boolean;
+  chartRole?: "natal" | "event";
   elevation?: number;
   /** Verified historical sunrise anchor in the fixed EQUATORIAL frame. Optional until provider validation is complete. */
   sunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: FixedVector };
@@ -114,7 +115,7 @@ export function ephemerisXYZ(jd: number, planet: number, extraFlags = 0) {
   const speed = velocity.every(Number.isFinite)
     ? ((xyz.x * velocity[1] - xyz.y * velocity[0]) / (xyz.x * xyz.x + xyz.y * xyz.y)) * 180 / Math.PI
     : 0;
-  return { xyz, longitude, speed };
+  return { xyz, longitude, speed, velocity };
 }
 function calculatedXYZ(jd: number, planet: number) {
   return ephemerisXYZ(jd, planet);
@@ -188,7 +189,7 @@ function julianDay(date: Date) {
 // NOAA solar-calculator equations: apparent sunrise at solar zenith 90.833 degrees.
 // Inputs are the LOCAL civil date and signed geographic coordinates (east positive).
 // A missing sunrise (polar day/night) is an error, never a substituted angle.
-function noaaSunriseUtc(localDate: string, latitude: number, longitude: number): Date {
+export function noaaSunriseUtc(localDate: string, latitude: number, longitude: number, setting = false): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate) || !Number.isFinite(latitude) || Math.abs(latitude) > 90 || !Number.isFinite(longitude) || Math.abs(longitude) > 180)
     throw new Error("Valid local date and coordinates required for NOAA sunrise.");
   const midnight = Date.parse(localDate + "T00:00:00.000Z");
@@ -212,19 +213,22 @@ function noaaSunriseUtc(localDate: string, latitude: number, longitude: number):
     const eqtime = 4 * (180 / Math.PI) * (y * Math.sin(2 * l) - 2 * ecc * Math.sin(m) + 4 * ecc * y * Math.sin(m) * Math.cos(2 * l) - 0.5 * y * y * Math.sin(4 * l) - 1.25 * ecc * ecc * Math.sin(2 * m));
     const cosH = (Math.cos(90.833 * rad) - Math.sin(latitude * rad) * Math.sin(decl)) / (Math.cos(latitude * rad) * Math.cos(decl));
     if (!Number.isFinite(cosH) || cosH < -1 || cosH > 1) throw new Error("NOAA sunrise undefined for this location/date; no fallback.");
-    return 720 - 4 * (longitude + Math.acos(cosH) / rad) - eqtime;
+    return 720 - 4 * (longitude + (setting ? -1 : 1) * Math.acos(cosH) / rad) - eqtime;
   };
   let minutes = solar(jd0 + 0.5);
   minutes = solar(jd0 + minutes / 1440);
   return new Date(midnight + minutes * 60000);
 }
-function automaticSunriseAnchor(localDate: string, latitude: number, longitude: number, event: Date) {
-  let sunrise = noaaSunriseUtc(localDate, latitude, longitude);
-  if (sunrise.getTime() > event.getTime()) {
-    const previousDate = new Date(`${localDate}T12:00:00.000Z`);
-    previousDate.setUTCDate(previousDate.getUTCDate() - 1);
-    sunrise = noaaSunriseUtc(previousDate.toISOString().slice(0, 10), latitude, longitude);
-  }
+function automaticSunriseAnchor(latitude: number, longitude: number, event: Date) {
+  // NOAA's civil-date calculation can cross a UTC day at eastern/western
+  // longitudes. Select the latest real sunrise before the exact event,
+  // rather than assuming its input timezone is the observer's civil day.
+  const day = Date.UTC(event.getUTCFullYear(), event.getUTCMonth(), event.getUTCDate());
+  const candidates = [-1, 0, 1].map(offset =>
+    noaaSunriseUtc(new Date(day + offset * 86400000).toISOString().slice(0, 10), latitude, longitude)
+  ).filter(sunrise => sunrise.getTime() <= event.getTime());
+  if (!candidates.length) throw new Error("No preceding NOAA sunrise found; no fallback.");
+  const sunrise = candidates.reduce((latest, candidate) => candidate > latest ? candidate : latest);
   return { sunriseUtc: sunrise.toISOString(), sunriseSunXYZ: calculatedXYZ(julianDay(sunrise), 0).xyz };
 }
 function row(name: string, longitude: number, house: number, worldview: Worldview, ascendant: number | null, extra: Partial<ChartRow> = {}): ChartRow {
@@ -255,7 +259,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   if (worldview !== "god" && (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || Math.abs(input.latitude) > 90 || Math.abs(input.longitude) > 180))
     throw new Error("Master Celestial: valid birth coordinates are required. No default Ascendant.");
   const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
-  const natalSunrise = hasAgentLocation ? input.sunriseAnchor ?? automaticSunriseAnchor(input.date, input.latitude, input.longitude, utcDate) : null;
+  const natalSunrise = hasAgentLocation ? input.sunriseAnchor ?? automaticSunriseAnchor(input.latitude, input.longitude, utcDate) : null;
   const asc = hasAgentLocation
     ? ascendantFromSunrise({ ...natalSunrise!, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
     : null;
@@ -289,7 +293,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitHasLocation = worldview !== "god" && (transitLocationResolved || hasAgentLocation);
   const transitLatitude = transitLocationResolved ? input.transitLatitude! : input.latitude;
   const transitLongitude = transitLocationResolved ? input.transitLongitude! : input.longitude;
-  const transitSunrise = transitHasLocation ? input.transitSunriseAnchor ?? automaticSunriseAnchor(localDateTime(transitDate, input.transitTimezone || input.timezone).date, transitLatitude, transitLongitude, transitDate) : null;
+  const transitSunrise = transitHasLocation ? input.transitSunriseAnchor ?? automaticSunriseAnchor(transitLatitude, transitLongitude, transitDate) : null;
   const transitAsc = transitHasLocation
     ? ascendantFromSunrise({ ...transitSunrise!, eventUtc: transitDate.toISOString(), latitude: transitLatitude }).ascendant
     : null;

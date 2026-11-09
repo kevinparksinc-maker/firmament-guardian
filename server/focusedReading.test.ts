@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { invokeLLM } from "./_core/llm";
+vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
 import { calculateChart } from "./astronomy";
 import { buildFocusedReading } from "./focusedReading";
 import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/canon/nakshatras27";
@@ -192,10 +194,13 @@ describe("focused contact interpretation", () => {
 
 describe("calculated audio chapters", () => {
   it("uses source-linked synthesis chapters rather than a fixed daily advice script", async () => {
+    vi.mocked(invokeLLM).mockResolvedValue({ id:"audio-test", created:0, model:"test", choices:[{index:0, finish_reason:"stop", message:{role:"assistant", content:"You bring your chart’s distinct strengths and pressures into the same decisions. This audio reading interprets the calculated layers together rather than repeating a fixed advice script."}}] });
     const { buildChartBriefing } = await import("./chartBriefing");
     const chart = await calculateChart(input);
     const briefing = await buildChartBriefing(chart);
     expect(briefing.chapters.length).toBeGreaterThan(0);
+    expect(invokeLLM).toHaveBeenCalled();
+    expect(briefing.chapters[0].text).toContain("This audio reading");
     expect(
       briefing.chapters.every(chapter => chapter.evidenceIds.length > 0)
     ).toBe(true);
