@@ -1,3 +1,4 @@
+import { readingCacheIdentity } from "@shared/readingIdentity";
 import { useEffect, useRef, useState } from "react";
 import {
   BookOpen,
@@ -48,20 +49,15 @@ const READING_MEMORY_CACHE = new Map<
   { interpretation: Interpretation; messages: Message[] }
 >();
 
-function getReadingCacheKey(chart: ChartResult, mode: ReadingMode): string {
-  const loc = chart.input.location || "god-view";
-  const date = chart.input.date || "live";
-  const time = chart.input.time || "none";
-  const natalSignature = chart.movingBodies.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
-  const transitSignature = chart.transits.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
-  return `absolute-reading-v4:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${natalSignature}:${transitSignature}`;
-}
+const getReadingCacheKey = readingCacheIdentity;
 
 function loadCachedReading(
   chart: ChartResult,
-  mode: ReadingMode
+  mode: ReadingMode,
+  question = "",
+  accountId = "guest"
 ): { interpretation: Interpretation; messages: Message[] } | null {
-  const key = getReadingCacheKey(chart, mode);
+  const key = getReadingCacheKey(chart, mode, question, accountId);
   const inMem = READING_MEMORY_CACHE.get(key);
   if (inMem) return inMem;
   try {
@@ -100,10 +96,12 @@ function saveCachedReading(
   chart: ChartResult,
   mode: ReadingMode,
   interpretation: Interpretation | null,
-  messages: Message[]
+  messages: Message[],
+  question = "",
+  accountId = "guest"
 ) {
   if (!interpretation) return;
-  const key = getReadingCacheKey(chart, mode);
+  const key = getReadingCacheKey(chart, mode, question, accountId);
   const payload = { interpretation, messages };
   READING_MEMORY_CACHE.set(key, payload);
   try {
@@ -229,25 +227,28 @@ function ReadingProgress({ chart }: { chart: ChartResult }) {
   );
 }
 
-export function InterpretationPanel({
+function InterpretationPanelInner({
   chart,
   initialMode = "combined",
   initialQuestion = "",
   onModeChange,
+  cacheScope = "guest",
 }: {
   chart: ChartResult;
   initialMode?: ReadingMode;
   initialQuestion?: string;
   onModeChange?: (mode: ReadingMode) => void;
+  cacheScope?: string;
 }) {
   const [mode, setMode] = useState<ReadingMode>(initialMode);
   const prevInitialModeRef = useRef<ReadingMode>(initialMode);
   const [activeQuestion, setActiveQuestion] = useState<string>(initialQuestion);
+  const [readingQuestion, setReadingQuestion] = useState(initialQuestion);
   const [interpretation, setInterpretation] = useState<Interpretation | null>(
-    () => loadCachedReading(chart, initialMode)?.interpretation ?? null
+    () => loadCachedReading(chart, initialMode, initialQuestion, cacheScope)?.interpretation ?? null
   );
   const [messages, setMessages] = useState<Message[]>(
-    () => loadCachedReading(chart, initialMode)?.messages ?? []
+    () => loadCachedReading(chart, initialMode, initialQuestion, cacheScope)?.messages ?? []
   );
   const [isGeneratingReading, setIsGeneratingReading] = useState(false);
   const [collapsedChapters, setCollapsedChapters] = useState<
@@ -263,7 +264,7 @@ export function InterpretationPanel({
       prevInitialModeRef.current = initialMode;
       if (!isGeneratingReading && initialMode !== mode) {
         setMode(initialMode);
-        const cached = loadCachedReading(chart, initialMode);
+        const cached = loadCachedReading(chart, initialMode, initialQuestion, cacheScope);
         setInterpretation(cached?.interpretation ?? null);
         setMessages(cached?.messages ?? []);
       }
@@ -272,9 +273,9 @@ export function InterpretationPanel({
 
   useEffect(() => {
     if (interpretation) {
-      saveCachedReading(chart, mode, interpretation, messages);
+      saveCachedReading(chart, mode, interpretation, messages, readingQuestion, cacheScope);
     }
-  }, [chart, mode, interpretation, messages]);
+  }, [chart, mode, interpretation, messages, readingQuestion, cacheScope]);
 
   const [oralQuestion, setOralQuestion] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -283,6 +284,25 @@ export function InterpretationPanel({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const generate = trpc.interpretation.generate.useMutation();
   const masterSynthesis = trpc.interpretation.masterSynthesize.useMutation();
+  const [visibleMasterSynthesis, setVisibleMasterSynthesis] = useState<NonNullable<typeof masterSynthesis.data> | null>(null);
+  const masterSynthesisRequest = useRef(0);
+  useEffect(() => {
+    const request = ++masterSynthesisRequest.current;
+    setVisibleMasterSynthesis(null);
+    // The full calculated synthesis is the primary chart reading, not an opt-in extra.
+    masterSynthesis.mutate({
+      ...chart.input,
+      chart,
+      worldview: chart.worldview,
+      mode,
+      question: activeQuestion || "Give me a complete personal reading that blends every calculated layer into a connected story about me.",
+    }, {
+      onSuccess: data => {
+        if (request === masterSynthesisRequest.current) setVisibleMasterSynthesis(data);
+      },
+    });
+    return () => { masterSynthesisRequest.current++; };
+  }, [chart, mode, activeQuestion]);
   const chapterMutation = trpc.interpretation.chapter.useMutation();
   const chat = trpc.interpretation.followUp.useMutation({
     onSuccess: answer => {
@@ -311,7 +331,7 @@ export function InterpretationPanel({
   const generateChapterAt = async (
     base: Interpretation,
     index: number,
-    questionOverride = activeQuestion
+    questionOverride = readingQuestion
   ) => {
     const chapter = base.chapters[index];
     if (!chapter) return;
@@ -339,7 +359,7 @@ export function InterpretationPanel({
         ),
       };
       setInterpretation(updatedBase);
-      saveCachedReading(chart, mode, updatedBase, messages);
+      saveCachedReading(chart, mode, updatedBase, messages, questionOverride, cacheScope);
       setCollapsedChapters(prev => ({ ...prev, [chapter.id]: false }));
       const nextIndex = index + 1;
       if (nextIndex < base.chapters.length)
@@ -356,6 +376,7 @@ export function InterpretationPanel({
   };
   const run = async (questionOverride?: string) => {
     const q = (questionOverride ?? activeQuestion).trim();
+    setReadingQuestion(q);
     if (questionOverride !== undefined) setActiveQuestion(questionOverride);
     setInterpretation(null);
     setMessages([]);
@@ -370,7 +391,7 @@ export function InterpretationPanel({
       });
       const initial = { ...base, chapters: base.chapters as Chapter[] };
       setInterpretation(initial);
-      saveCachedReading(chart, mode, initial, []);
+      saveCachedReading(chart, mode, initial, [], q, cacheScope);
       await generateChapterAt(initial, 0, q);
     } finally {
       setIsGeneratingReading(false);
@@ -486,7 +507,8 @@ export function InterpretationPanel({
     prevInitialModeRef.current = nextMode;
     setMode(nextMode);
     onModeChange?.(nextMode);
-    const cached = loadCachedReading(chart, nextMode);
+    const cached = loadCachedReading(chart, nextMode, activeQuestion, cacheScope);
+    setReadingQuestion(activeQuestion);
     setInterpretation(cached?.interpretation ?? null);
     setMessages(cached?.messages ?? []);
     setCollapsedChapters({});
@@ -506,23 +528,21 @@ export function InterpretationPanel({
     >
       <div className="mx-auto max-w-4xl rounded-2xl border border-cyan-300/25 bg-slate-950/60 p-5">
         <h3 className="text-xl font-semibold text-cyan-100">Unified Master Chart Synthesis</h3>
-        <p className="mt-2 text-sm text-slate-300">Calculate the complete available method ledger from this chart and display evidence-backed findings. Missing methods remain identified rather than silently counted.</p>
-        <Button className="mt-4" disabled={masterSynthesis.isPending} onClick={() => {
-          masterSynthesis.mutate({
-            ...chart.input,
-            worldview: chart.worldview,
-            mode,
-            question: activeQuestion || "Synthesize every calculated doctrine and show the evidence.",
-          });
-        }}>{masterSynthesis.isPending ? "Synthesizing…" : "Run unified synthesis"}</Button>
-        {masterSynthesis.error && <p role="alert" className="mt-3 text-sm text-rose-300">{masterSynthesis.error.message}</p>}
-        {masterSynthesis.data && <div className="mt-4 space-y-3 text-sm text-slate-200">
-          <p className="font-medium">{masterSynthesis.data.dominantConclusion}</p>
-          <p className="text-xs text-cyan-200">Methods evaluated: {masterSynthesis.data.methodLedgerSummary.totalEvaluated} · Computed: {masterSynthesis.data.methodLedgerSummary.computedWithResult} · Reference only: {masterSynthesis.data.methodLedgerSummary.referenceOnly} · Failed: {masterSynthesis.data.methodLedgerSummary.failed}</p>
-          {masterSynthesis.data.integratedNarrative.map((line, index) => <p key={index}>{line}</p>)}
+        <p className="mt-2 text-sm text-slate-300">Your calculated doctrines and their evidence-backed synthesis load automatically with the chart. Unavailable methods are identified rather than invented.</p>
+        {masterSynthesis.isPending && <p role="status" className="mt-3 text-sm text-cyan-200">Calculating your full synthesis and tracing each available doctrine…</p>}
+        {masterSynthesis.error && <div role="alert" className="mt-3 text-sm text-rose-300"><p>{masterSynthesis.error.message}</p><button type="button" className="mt-2 underline" onClick={() => {
+          const request = ++masterSynthesisRequest.current;
+          masterSynthesis.mutate({ ...chart.input, chart, worldview: chart.worldview, mode, question: activeQuestion || "Give me a complete personal reading that blends every calculated layer into a connected story about me." }, { onSuccess: data => { if (request === masterSynthesisRequest.current) setVisibleMasterSynthesis(data); } });
+        }}>Retry synthesis</button></div>}
+        {visibleMasterSynthesis && <div className="mt-4 space-y-3 text-sm text-slate-200">
+          <p className="text-xs text-slate-300">Calculated layers sent to the AI: {visibleMasterSynthesis.narrativeAudit.deliveredMethodIds.length}</p>
+
+          <p className="text-xs text-cyan-200">Methods evaluated: {visibleMasterSynthesis.methodLedgerSummary.totalEvaluated} · Computed: {visibleMasterSynthesis.methodLedgerSummary.computedWithResult} · Reference only: {visibleMasterSynthesis.methodLedgerSummary.referenceOnly} · Failed: {visibleMasterSynthesis.methodLedgerSummary.failed}</p>
+          {visibleMasterSynthesis.narrative.sections.map(section => <div key={section.id} className="space-y-2"><h4 className="font-semibold text-cyan-100">{section.title}</h4><p className="whitespace-pre-line">{section.text}</p></div>)}
+
           <div className="space-y-2">
             <h4 className="font-semibold text-cyan-100">Every recorded method and its calculated findings</h4>
-            {masterSynthesis.data.methodFindings.map(method => <details key={method.id} className="rounded-lg border border-white/10 p-3">
+            {visibleMasterSynthesis.methodFindings.map(method => <details key={method.id} className="rounded-lg border border-white/10 p-3">
               <summary className="cursor-pointer font-medium">{method.name} · {method.status} · {method.resultCount} result entries</summary>
               <p className="mt-2 text-xs text-slate-400">{method.tradition} · {method.frame} · Sources: {method.sourceIds.join(", ") || "Not recorded"}</p>
               {method.notes && <p className="mt-2 text-xs text-amber-200">{method.notes}</p>}
@@ -535,7 +555,7 @@ export function InterpretationPanel({
               </div>
             </details>)}
           </div>
-          {masterSynthesis.data.themes.map(theme => <details key={theme.id} className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer font-medium">{theme.humanTheme}</summary><p className="mt-2">{theme.primaryConclusion}</p><p className="mt-2">{theme.whyHow}</p><p className="mt-2 text-xs text-cyan-200">Evidence: {theme.evidenceIds.join(", ") || "Not recorded"}</p></details>)}
+          {visibleMasterSynthesis.themes.map(theme => <details key={theme.id} className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer font-medium">{theme.humanTheme}</summary><p className="mt-2">{theme.primaryConclusion}</p><p className="mt-2">{theme.whyHow}</p><p className="mt-2 text-xs text-cyan-200">Evidence: {theme.evidenceIds.join(", ") || "Not recorded"}</p></details>)}
         </div>}
       </div>
       <div className="mx-auto max-w-4xl text-center">
@@ -819,7 +839,7 @@ export function InterpretationPanel({
                         ? "Opening"
                         : "Queued"}
                   </span>
-                  <span className="mt-1 block truncate text-xs font-medium">
+                  <span className="mt-1 block whitespace-normal break-words text-xs font-medium">
                     {chapter.title}
                   </span>
                 </button>
@@ -1065,4 +1085,12 @@ export function InterpretationPanel({
       )}
     </section>
   );
+}
+
+
+/** Remount when the account, selected question or canonical chart changes. */
+export function InterpretationPanel(props: Parameters<typeof InterpretationPanelInner>[0]) {
+  const me = trpc.auth.me.useQuery(undefined, { retry: false });
+  const accountId = me.data?.openId || "guest";
+  return <InterpretationPanelInner key={getReadingCacheKey(props.chart, props.initialMode ?? "combined", props.initialQuestion || "", accountId)} {...props} cacheScope={accountId} />;
 }

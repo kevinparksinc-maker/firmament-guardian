@@ -16,7 +16,7 @@ import {
   SIMPLE_LETTERS,
   CONTRARY_PAIRS,
   FOUR_WORLDS,
-} from "../../../server/astrologyKnowledge/canon/seferYetzirah";
+} from "../../../server/astrologyKnowledge/calculations/seferYetzirah";
 import {
   detectAllYogas,
   type PlanetPlacement,
@@ -201,7 +201,7 @@ export const SYSTEMATIC_DECONSTRUCTION_REGISTRY: DrawerRegistryItem[] = [
     category: "Vedic Jyotish Architecture",
     iconName: "Scale",
     requiredInputs: ["Planetary dignities", "Hemispheric house placements", "Motion"],
-    calculationStatus: "partially-calculated",
+    calculationStatus: "fully-calculated",
     calculationProvider: "Parashari Shadbala Six-Fold Potency Framework",
     interpretationProvider: "Brihat Parashara Hora Shastra Chapter 27",
     provenance: "Sthana, Dig, Kala, Cheshta, Naisargika & Drik Bala indices",
@@ -214,7 +214,7 @@ export const SYSTEMATIC_DECONSTRUCTION_REGISTRY: DrawerRegistryItem[] = [
     category: "Vedic Jyotish Architecture",
     iconName: "Grid",
     requiredInputs: ["12 House cusps", "House lords", "Planetary aspects to houses"],
-    calculationStatus: "partially-calculated",
+    calculationStatus: "fully-calculated",
     calculationProvider: "Parashari Bhava Adhipati & Digbala Framework",
     interpretationProvider: "Vedic Bhava Synthesis & Life Domain Potency",
     provenance: "Bhava Lord dignity, angular placement and drishti support",

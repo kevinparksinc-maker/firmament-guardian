@@ -1,4 +1,4 @@
-import sweph from "sweph";
+import { ephemerisXYZ } from "./astronomy";
 import { normalizeLongitude } from "../shared/hybrid";
 
 // Look-ahead for the horary chart: finds when aspects between the seven classical
@@ -6,7 +6,6 @@ import { normalizeLongitude } from "../shared/hybrid";
 // computed from the same Moshier ephemeris flags the chart engine uses. Nothing
 // here interprets timing; it only reports when a planetary contact is exact.
 
-const MOSHIER_FLAGS = 4 | 256;
 const BODIES = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"] as const;
 type Body = (typeof BODIES)[number];
 
@@ -44,10 +43,9 @@ const ASPECT_OFFSETS: Array<[UpcomingAspectName, number[]]> = [
 ];
 
 function position(jd: number, bodyIndex: number) {
-  const result: any = (sweph as any).calc_ut(jd, bodyIndex, MOSHIER_FLAGS);
-  const data = result?.data ?? result;
-  if (!data || Number.isNaN(Number(data[0]))) throw new Error("Swiss Ephemeris failed during the look-ahead calculation.");
-  return { longitude: normalizeLongitude(Number(data[0])), speed: Number(data[3] ?? 0) };
+  // Share the chart's equatorial XYZ projection and angular velocity. Ecliptic
+  // contacts can occur at different times and must not drive this judgment.
+  return ephemerisXYZ(jd, bodyIndex);
 }
 
 // Signed distance in (-180, 180] from the exact-aspect offset.

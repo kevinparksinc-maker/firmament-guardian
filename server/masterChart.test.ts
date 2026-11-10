@@ -1,3 +1,4 @@
+import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { describe, it, expect } from "vitest";
 import { buildUnifiedMasterChart, getLayer, getEvidence, getModeView } from "./masterChart";
 
@@ -8,6 +9,10 @@ const SAMPLE_INPUT = {
   timezone: "Africa/Cairo",
   date: "1988-08-08",
   time: "12:00",
+  transitLocation: "Alexandria, Egypt",
+  transitLatitude: 31.2001,
+  transitLongitude: 29.9187,
+  transitTimezone: "Africa/Cairo",
   mode: "natal" as const,
 };
 
@@ -18,10 +23,12 @@ describe("Unified Master Chart Architecture", () => {
     expect(snapshot).toBeDefined();
     expect(snapshot.snapshotId).toMatch(/^umc-[a-f0-9]{16}$/);
     expect(snapshot.schemaVersion).toBe("1.0.0");
-    expect(snapshot.validation.complete).toBe(true);
+    expect(snapshot.validation.complete).toBe(false); // Chinese Xiu remains reference-only, not computed.\n    expect(snapshot.validation.warnings.some(w => w.includes("Chinese"))).toBe(true);
     expect(snapshot.validation.errors).toHaveLength(0);
-    expect(snapshot.validation.totalMethods).toBe(16);
+    expect(snapshot.validation.totalMethods).toBe(MASTER_METHOD_IDS.length);
     expect(snapshot.validation.computedWithResultCount).toBeGreaterThanOrEqual(10);
+    expect(snapshot.frameConfig.zodiacMode).toBe("fixed-cartesian-xyz");
+    expect(snapshot.frameConfig.firmamentAnchorVersion).toBe("sunrise-xyz-15deg-hour-v1");
   });
 
   it("produces identical snapshot IDs for identical inputs (deterministic stability)", async () => {
@@ -46,9 +53,10 @@ describe("Unified Master Chart Architecture", () => {
 
     expect(snapshot.godView.cosmicFrame).toBe("fixed-aries-1-to-pisces-12");
     expect(snapshot.godView.polarisCenter).toBe(true);
+    expect(snapshot.frameConfig.firmamentCenter).toBe("polaris-centered-firmament-dome");
     expect(snapshot.godView.placements.length).toBeGreaterThanOrEqual(7);
 
-    expect(snapshot.agentView.houseSystem).toBe("equal-house-from-ascendant");
+    expect(snapshot.agentView.houseSystem).toBe("topocentric-equal-house-from-ascendant");
     expect(snapshot.agentView.ascendantAnchor).toBeDefined();
     expect(snapshot.agentView.placements.length).toBeGreaterThanOrEqual(7);
 
@@ -108,6 +116,22 @@ describe("Unified Master Chart Architecture", () => {
     expect(found?.id).toBe("western-planets-and-signs");
   });
 
+  it("keeps natal geometry consistent across natal, transit and combined modes", async () => {
+    const base = { ...SAMPLE_INPUT, transitDate: "2026-10-31", transitTime: "12:00" };
+    const natal = await buildUnifiedMasterChart({ ...base, mode: "natal" });
+    const transit = await buildUnifiedMasterChart({ ...base, mode: "transit" });
+    const combined = await buildUnifiedMasterChart({ ...base, mode: "combined" });
+
+    for (const candidate of [transit, combined]) {
+      expect(candidate.baseCelestialState.planets).toEqual(natal.baseCelestialState.planets);
+      expect(candidate.baseCelestialState.houses).toEqual(natal.baseCelestialState.houses);
+      expect(candidate.baseCelestialState.ascendant).toEqual(natal.baseCelestialState.ascendant);
+    }
+    expect(transit.transit?.planets).toEqual(combined.transit?.planets);
+    expect(transit.snapshotId).not.toBe(combined.snapshotId);
+    expect(natal.snapshotId).not.toBe(combined.snapshotId);
+  });
+
   it("activates transit activation layer when mode is transit or combined", async () => {
     const snapshot = await buildUnifiedMasterChart({
       ...SAMPLE_INPUT,
@@ -121,5 +145,40 @@ describe("Unified Master Chart Architecture", () => {
     expect(transitLayer?.frame).toBe("transit");
     expect(transitLayer?.status).toBe("computed-with-result");
     expect(snapshot.transit).toBeDefined();
+  });
+
+  it("preserves transit observer and worldview in the authoritative snapshot", async () => {
+    const snapshot = await buildUnifiedMasterChart({
+      ...SAMPLE_INPUT,
+      mode: "combined",
+      worldview: "god",
+      transitLocation: "Las Vegas, Nevada, USA",
+      transitLatitude: 36.1699,
+      transitLongitude: -115.1398,
+      transitTimezone: "America/Los_Angeles",
+      transitDate: "2026-11-02",
+      transitTime: "12:00",
+    });
+
+    expect(snapshot.natal?.worldview).toBe("god");
+    expect(snapshot.natal?.transitHouseFrame).toBe("god-fixed");
+    expect(snapshot.natal?.ascendant).toBeNull();
+    expect(snapshot.natal?.houses).toEqual(Array.from({ length: 12 }, (_, i) => i * 30));
+    expect(Number.isFinite(snapshot.baseCelestialState.ascendant!.longitude)).toBe(true);
+    for (const body of snapshot.natal!.movingBodies) {
+      expect(body.house).toBe(Math.floor(body.longitude / 30) + 1);
+      expect(body.longitude).toBe(snapshot.baseCelestialState.planets.find(row => row.name === body.name)!.longitude);
+    }
+    expect(snapshot.snapshotId).not.toBe((await buildUnifiedMasterChart({
+      ...SAMPLE_INPUT,
+      mode: "combined",
+      worldview: "god",
+      transitLocation: "New York, New York, USA",
+      transitLatitude: 40.7128,
+      transitLongitude: -74.006,
+      transitTimezone: "America/New_York",
+      transitDate: "2026-11-02",
+      transitTime: "12:00",
+    })).snapshotId);
   });
 });

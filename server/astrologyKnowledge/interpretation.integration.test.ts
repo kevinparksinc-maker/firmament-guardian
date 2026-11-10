@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
 vi.mock("../_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
@@ -8,90 +8,52 @@ import {
   generateChapter,
   generateInterpretation,
 } from "../interpretation";
-import type { ChartResult } from "../astronomy";
+import { calculateChart, type ChartResult } from "../astronomy";
 
-const chart = {
-  input: {
-    location: "Synthetic City",
-    latitude: 0,
-    longitude: 0,
-    timezone: "UTC",
-    date: "1990-01-01",
-    time: "12:00",
-  },
-  utc: "1990-01-01T12:00:00.000Z",
-  julianDay: 2447893,
-  worldview: "agent",
-  readingScope: "natal",
-  agentViewAvailable: true,
-  ascendant: {
-    name: "Ascendant",
-    longitude: 100,
-    display: "Cancer 10°00′",
-    house: 1,
-    godHouse: 4,
-    agentHouse: 1,
-  },
-  descendant: null,
-  midheaven: null,
-  northNode: {
-    name: "North Node",
-    longitude: 20,
-    display: "Aries 20°00′",
-    house: 10,
-  },
-  southNode: {
-    name: "South Node",
-    longitude: 200,
-    display: "Libra 20°00′",
-    house: 4,
-  },
-  houses: [],
-  movingBodies: [
-    {
-      name: "Sun",
-      longitude: 10,
-      display: "Aries 10°00′",
-      house: 10,
-      godHouse: 1,
-      agentHouse: 10,
-    },
-    {
-      name: "Moon",
-      longitude: 12,
-      display: "Aries 12°00′",
-      house: 10,
-      godHouse: 1,
-      agentHouse: 10,
-    },
-    {
-      name: "Venus",
-      longitude: 190,
-      display: "Libra 10°00′",
-      house: 4,
-      godHouse: 7,
-      agentHouse: 4,
-    },
-  ],
-  frozenStars: [],
-  godPlacements: [],
-  transitDate: "1990-01-01T12:00:00.000Z",
-  momentPrecision: "exact",
-  transitHouseFrame: "natal-location",
-  transits: [],
-  validation: { passed: true, notes: [] },
-} as unknown as ChartResult;
+let chart: ChartResult;
+beforeAll(async () => {
+  chart = await calculateChart({
+    location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797,
+    timezone: "America/Chicago", date: "1986-11-20", time: "10:06",
+    worldview: "agent", readingScope: "combined",
+    transitLocation: "Las Vegas, Nevada, USA", transitLatitude: 36.1699,
+    transitLongitude: -115.1398, transitTimezone: "America/Los_Angeles",
+    transitDate: "2026-11-06", transitTime: "11:06",
+  });
+});
 
 describe("interpretation.generate knowledge gateway integration", () => {
   beforeEach(() => {
     mocked.invokeLLM.mockReset();
-    mocked.invokeLLM.mockResolvedValue({
-      choices: [
-        {
-          message: { role: "assistant", content: "not a valid plan" },
-          finish_reason: "stop",
-        },
-      ],
+    mocked.invokeLLM.mockImplementation(async request => {
+      const system = request.messages.find((message: { role: string }) => message.role === "system")?.content || "";
+      const plan = {
+        threads: [
+          { title: "Solar pattern", insight: "Fixture solar evidence.", evidence: ["Sun"], chapters: ["identity", "work-purpose"] },
+          { title: "Lunar pattern", insight: "Fixture lunar evidence.", evidence: ["Moon"], chapters: ["mind-heart", "relationships"] },
+        ],
+        tensions: [],
+        chapters: Object.fromEntries(["identity", "mind-heart", "relationships", "work-purpose"].map(id => [id, { angle: "Fixture evidence", evidence: [id === "identity" ? "Sun" : "Moon"] }])),
+      };
+      let content = system.includes("silent first reader") ? JSON.stringify(plan) : "A synthetic interpretation grounded in the supplied chart evidence. ".repeat(8);
+      if (system.includes("Interpret ALL supplied method outcomes")) {
+        const user = request.messages.find((m: {role:string}) => m.role === "user").content as string;
+        const packet = JSON.parse(user.slice(user.lastIndexOf("\n") + 1));
+        const active = packet.methodOutcomes.filter((o: {status:string}) => o.status === "interpreted");
+        const sections = Array.from({length:3}, (_,i) => ({id:`section-${i}`,title:`Integrated theme ${i}`,text:"A connected interpretation grounded in actual method judgments, explaining the chart-specific relationship between placement, mansion, condition, and their practical consequences. ".repeat(2),findingIds:[] as string[]}));
+        const methodContributions = active.map((o: any,i: number) => {
+          const row = o.findingJudgments[0];
+          sections[i%3].findingIds.push(row[8]);
+          const judgment = row[1].map((part: string | number) => typeof part === "number" ? packet.textTable[part] : part).join("");
+          return {methodId:o.methodId,sectionIds:[sections[i%3].id],findingIds:[row[8]],contribution:judgment.slice(0,1000)};
+        });
+        for (const valence of ["supportive","challenging"]) {
+          const row = active.flatMap((o:any)=>o.findingJudgments).find((row:any)=>row[4]===valence);
+          if(row) sections[0].findingIds.push(row[8]);
+        }
+        content = JSON.stringify({answer:"The supplied relationship findings connect natal disposition to concrete conditions, preserving both strengths and pressure in this reading.", sections, methodContributions, methodsReviewed:packet.methodOutcomes.map((o:any)=>o.methodId)});
+      }
+      return { choices: [{ message: { role: "assistant", content }, finish_reason: "stop" }] };
     });
   });
 
@@ -105,6 +67,9 @@ describe("interpretation.generate knowledge gateway integration", () => {
       expect.arrayContaining(["7th-house", "7th-lord", "D9"])
     );
     expect(result.intelligence).toContain("ASTROLOGY EVIDENCE PACKET");
+    expect(result.masterSynthesis.narrativeAudit.passed).toBeNull();
+    expect(result.reading).toContain(result.masterSynthesis.narrative.sections[0].text);
+    expect(result.masterSynthesis.narrativeAudit.deliveredMethodIds.length).toBeGreaterThan(10);
     expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "dasha")).toBe(true);
     expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "ashtakavarga")).toBe(true);
     const userPrompts = mocked.invokeLLM.mock.calls.map(call =>
@@ -195,12 +160,11 @@ describe("interpretation.generate knowledge gateway integration", () => {
         { message: { role: "assistant", content: JSON.stringify(plan) } },
       ],
     });
-    const result = await generateInterpretation(
+    await expect(generateInterpretation(
       chart,
       "natal",
       "What is the major pattern affecting my career?"
-    );
-    expect(result.analysis).not.toContain("Stellium in Scorpio");
-    expect(result.analysis).not.toContain("Genesis Astro Engine activation");
+    )).rejects.toThrow("READING_PLAN_FAILED");
+    expect(mocked.invokeLLM).toHaveBeenCalledTimes(1);
   });
 });

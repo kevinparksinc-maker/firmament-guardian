@@ -1,11 +1,4 @@
-import {
-  FIXED_STARS,
-  formatLongitude,
-  normalizeLongitude,
-  ZODIAC_SIGNS,
-} from "../../../shared/hybrid";
-import type { ChartResult } from "../../astronomy";
-import { HOUSE_CANON_RECORDS } from "./housesAndFrames";
+import { FIXED_STARS } from "../../../shared/hybrid";
 import type { FixedStarCanonRecord, LotCanonRecord } from "./types";
 
 const FIXED_STAR_DOCTRINE: Record<
@@ -392,7 +385,37 @@ export const FIXED_STAR_CANON_RECORDS: FixedStarCanonRecord[] = FIXED_STARS.map(
   ([name, lon]) => ({
     name,
     firmamentLockedLongitude: lon,
-    ...FIXED_STAR_DOCTRINE[name],
+    ...(FIXED_STAR_DOCTRINE[name] ?? {
+      isRoyalStar: false,
+      constellation: "Stellar catalog anchor; see astronomical identification",
+      astronomicalFact: {
+        category: "FACT" as const,
+        statement: `${name} is included as a permanent reference in the custom Aldebaran-calibrated stellar catalog.`,
+        provenance: {
+          tradition: "firmament" as const,
+          sourceTitle: "Fixed-star catalog: 2026 reference positions, Aldebaran 45-degree calibration",
+          epistemicCategory: "FACT" as const,
+        },
+      },
+      ptolemaicPlanetaryNature: "Not yet source-verified",
+      traditionalMeaning: "Historical star-specific interpretation pending source verification.",
+      giftWhenIntegrated: "Not assigned until traditional evidence is verified.",
+      nemesisOrTest: "Not assigned until traditional evidence is verified.",
+      firmamentOrbRule: {
+        category: "FIRMAMENT_CANON" as const,
+        statement: "A natal planet activates this fixed star within a 5-degree conjunction orb.",
+        provenance: {
+          tradition: "firmament" as const,
+          sourceTitle: "The Absolute fixed-star activation rule",
+          epistemicCategory: "FIRMAMENT_CANON" as const,
+        },
+      },
+      provenance: {
+        tradition: "firmament" as const,
+        sourceTitle: "The Absolute expanded fixed-star reference catalog",
+        epistemicCategory: "FIRMAMENT_CANON" as const,
+      },
+    }),
   })
 );
 
@@ -543,131 +566,3 @@ export const LOT_CANON_RECORDS: Record<string, LotCanonRecord> = {
     },
   },
 };
-
-export function findFixedStarContactsForLongitude(
-  longitude: number
-): Array<{ star: FixedStarCanonRecord; orbDeg: number }> {
-  const L = normalizeLongitude(longitude);
-  const contacts: Array<{ star: FixedStarCanonRecord; orbDeg: number }> = [];
-  for (const star of FIXED_STAR_CANON_RECORDS) {
-    const raw = Math.abs(L - normalizeLongitude(star.firmamentLockedLongitude));
-    const dist = Number(Math.min(raw, 360 - raw).toFixed(2));
-    const maxOrb = star.isRoyalStar ? 5.0 : 2.0;
-    if (dist <= maxOrb) {
-      contacts.push({ star, orbDeg: dist });
-    }
-  }
-  return contacts.sort((a, b) => a.orbDeg - b.orbDeg);
-}
-
-export function calculateChartHermeticLots(
-  chart: ChartResult,
-  isDayChart: boolean
-): Array<{
-  lot: LotCanonRecord;
-  longitude: number;
-  display: string;
-  sign: string;
-  house: number;
-  houseInterpretation: string;
-}> {
-  if (!chart.ascendant || !Number.isFinite(chart.ascendant.longitude)) {
-    return [];
-  }
-  const asc = normalizeLongitude(chart.ascendant.longitude);
-  const bodyLon = (name: string) => {
-    const found = chart.movingBodies.find(b => b.name === name);
-    return found && Number.isFinite(found.longitude)
-      ? normalizeLongitude(found.longitude)
-      : undefined;
-  };
-
-  const sun = bodyLon("Sun");
-  const moon = bodyLon("Moon");
-  if (sun == null || moon == null) return [];
-
-  const fortune = isDayChart
-    ? normalizeLongitude(asc + moon - sun)
-    : normalizeLongitude(asc + sun - moon);
-  const spirit = isDayChart
-    ? normalizeLongitude(asc + sun - moon)
-    : normalizeLongitude(asc + moon - sun);
-
-  const venus = bodyLon("Venus");
-  const mercury = bodyLon("Mercury");
-  const mars = bodyLon("Mars");
-  const jupiter = bodyLon("Jupiter");
-  const saturn = bodyLon("Saturn");
-
-  const computed: Array<[string, number | undefined]> = [
-    ["fortune", fortune],
-    ["spirit", spirit],
-    [
-      "eros",
-      venus != null
-        ? isDayChart
-          ? normalizeLongitude(asc + venus - spirit)
-          : normalizeLongitude(asc + spirit - venus)
-        : undefined,
-    ],
-    [
-      "necessity",
-      mercury != null
-        ? isDayChart
-          ? normalizeLongitude(asc + fortune - mercury)
-          : normalizeLongitude(asc + mercury - fortune)
-        : undefined,
-    ],
-    [
-      "courage",
-      mars != null
-        ? isDayChart
-          ? normalizeLongitude(asc + fortune - mars)
-          : normalizeLongitude(asc + mars - fortune)
-        : undefined,
-    ],
-    [
-      "victory",
-      jupiter != null
-        ? isDayChart
-          ? normalizeLongitude(asc + jupiter - spirit)
-          : normalizeLongitude(asc + spirit - jupiter)
-        : undefined,
-    ],
-    [
-      "nemesis",
-      saturn != null
-        ? isDayChart
-          ? normalizeLongitude(asc + fortune - saturn)
-          : normalizeLongitude(asc + saturn - fortune)
-        : undefined,
-    ],
-  ];
-
-  const houseForLon = (lon: number) => {
-    if (chart.agentViewAvailable && chart.ascendant) {
-      return (Math.floor(normalizeLongitude(lon - asc) / 30) % 12) + 1;
-    }
-    return (Math.floor(normalizeLongitude(lon) / 30) % 12) + 1;
-  };
-
-  return computed
-    .filter((entry): entry is [string, number] => entry[1] != null)
-    .map(([id, longitude]) => {
-      const lot = LOT_CANON_RECORDS[id];
-      const sign = ZODIAC_SIGNS[Math.floor(longitude / 30)];
-      const house = houseForLon(longitude);
-      const houseRec = HOUSE_CANON_RECORDS[house];
-      const houseInterpretation = houseRec
-        ? `${lot.name} falls in ${sign} in House ${house} (${houseRec.traditionalTitle}), anchoring ${lot.psychologicalMeaning.toLowerCase()} within ${houseRec.coreTopics[0].toLowerCase()}.`
-        : `${lot.name} falls in ${sign} in House ${house}.`;
-      return {
-        lot,
-        longitude: Number(longitude.toFixed(4)),
-        display: formatLongitude(longitude),
-        sign,
-        house,
-        houseInterpretation,
-      };
-    });
-}

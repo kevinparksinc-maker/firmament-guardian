@@ -1,5 +1,5 @@
 import type { Tradition } from "../types";
-import type { PlanetInHouseKnowledgeRecord } from "./planetInHouseInterpretations";
+import type { PlanetInHouseKnowledgeRecord } from "../calculations/planetInHouseInterpretations";
 
 /**
  * Epistemic separation required by Firmament architecture:
@@ -117,8 +117,8 @@ export type DecanCanonRecord = {
   decanNumber: 1 | 2 | 3;
   degreeRange: [number, number];
   label: string;
-  elementalFamilySign: string; // same-element sign governing this 10° segment
-  elementalFamilyRuler: string; // ruler of that sign (not a Chaldean face ruler)
+  chaldeanFaceRuler: string; // Hellenistic / Arabic Face ruler
+  triplicitySubRuler: string; // Western Triplicity sub-ruler (preserved separately, not merged)
   traditionalTitle: string;
   coreThemes: string[];
   behavioralNuance: string;
@@ -225,7 +225,6 @@ export type HoraryMechanismRecord = {
 };
 
 export type RetrievedPlacementDossier = {
-  chineseMansion?: { index: number; name: string; hanzi: string; guardian: string; rightAscension: number; degreeInMansion: number; source: string };
   body: string;
   display: string;
   longitude: number;
@@ -473,6 +472,5 @@ export type ChartCanonDossier = {
   vedicJyotishSystem?: VedicStrengthAndPanchangaSummary;
   arabicPersianSystem?: ArabicPersianTraditionSummary;
   relationalChains?: RelationalHouseChainSynthesis[];
-  shaniDoctrine?: import("./shaniDoctrine").ShaniDoctrineResult;
   formattedSummaryForInterpreter: string;
 };
