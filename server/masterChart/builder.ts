@@ -1,3 +1,4 @@
+import { buildPlanetaryLordshipConnections } from "../astrologyKnowledge/vedic/planetaryLordshipConnections";
 import { PLANET_CANON_RECORDS } from "../astrologyKnowledge/calculations/planetsAndSigns";
 import { SUMERIAN_CELESTIAL_ASSOCIATIONS, SUMERIAN_CELESTIAL_SOURCE_ID, ENLIL_HISTORICAL_NOTE } from "../astrologyKnowledge/canon/sumerianCelestial";
 import { detectAllYogas } from "../genesisBackup/vedicYogaDetector";
@@ -558,6 +559,37 @@ export async function buildUnifiedMasterChart(
     sourceIds:["brihat-parashara-hora-shastra-26-27"],
     ...(strengthError ? {errorCode:"VEDIC_STRENGTH_FAILED"} : {}),
     notes: !strengthApplicable ? "A known local Ascendant and birth time are required for numerical strength." : strengthError ?? `BPHS formulas applied to The Absolute's supplied XYZ and Equal Houses. Selected variants: ${JSON.stringify(strength!.coordinateVariant)}. Sources: ${JSON.stringify(strength!.sources)}. Temporal inputs: ${JSON.stringify(strength!.temporal)}`,
+  };
+
+  // Lordship is relational wiring, not a second Vedic/ephemeris calculation.
+  // Sign rulers follow the signs on the actual Equal House cusps; residence
+  // stays exactly as assigned by the authoritative Agent chart.
+  const lordshipApplicable = Boolean(ascendant && input.birthTimeKnown !== false);
+  const lordshipResults = lordshipApplicable ? buildPlanetaryLordshipConnections({
+    ascendantLongitude: ascendant!.longitude,
+    houseCusps: chart.houses,
+    placements: [
+      ...basePlanets,
+      { name: "Rahu", longitude: chart.northNode.longitude, house: chart.northNode.agentHouse ?? chart.northNode.house },
+      { name: "Ketu", longitude: chart.southNode.longitude, house: chart.southNode.agentHouse ?? chart.southNode.house },
+    ].filter(p => ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"].includes(p.name))
+      .map(p => ({ name: p.name, longitude: p.longitude, house: p.agentHouse ?? p.house })),
+  }) : [];
+  layers["vedic-planetary-lordship-connections"] = {
+    id: "vedic-planetary-lordship-connections",
+    tradition: "vedic",
+    technique: "planetary-lordship-connections",
+    name: "Planetary Lordship Connections",
+    status: lordshipApplicable ? "computed-with-result" : "not-applicable",
+    frame: "agent",
+    prerequisites: ["western-planets-and-signs", "western-houses-and-angles"],
+    calculationVersion: "lordship-wiring-v1",
+    evidenceIds: lordshipResults.map(r => `lordship-${r.planet.toLowerCase()}`),
+    sourceIds: ["brihat-parashara-hora-shastra"],
+    results: lordshipResults,
+    notes: lordshipApplicable
+      ? "Nine planet records (including empty node rulerships), one master method; Equal House occupancy, sign-cusp rulership, no scoring or duplicate aspects."
+      : "Requires valid birth time and local Equal House Ascendant.",
   };
 
   // Layer 11: Vedic Graha Drishti (Special Aspects)
