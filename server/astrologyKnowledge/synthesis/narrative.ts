@@ -1,9 +1,12 @@
 import { stringifyEvidence } from "./evidenceTransport";
 import { invokeLLM } from "../../_core/llm";
 import { FULL_SYNTHESIS_STYLE } from "../../master-interpreter";
+import { generateMethodMiniReadings } from "../../chartMethodOutcomes";
 
 import { buildNarrativePacket } from "./narrativePacket";
 import type { SynthesisResult } from "./types";
+
+const MAX_FINAL_NARRATIVE_CHARS = 240_000;
 
 export interface MasterNarrative {
   answer: string;
@@ -13,15 +16,24 @@ export interface MasterNarrative {
 }
 
 async function generate(synthesis: SynthesisResult, question: string) {
-  // Never block raw calculated outcomes from reaching the provider because an interpretation audit failed.
-  // Keep audit status in the supplied evidence instead.
-  const bindings = buildNarrativePacket(synthesis, question);
+  // Every interpreted method and its Canon applications are sent through bounded
+  // first-stage calls. The final narrator receives all method readings, coverage,
+  // deterministic themes, and explicit evidence lineage—not a duplicated raw dump.
+  const methodReadings = await generateMethodMiniReadings(
+    synthesis.snapshotId,
+    synthesis.mode,
+    synthesis.methodOutcomes
+  );
+  const bindings = buildNarrativePacket(synthesis, question, methodReadings);
+  const encodedPacket = stringifyEvidence(bindings.packet);
+  if (encodedPacket.length > MAX_FINAL_NARRATIVE_CHARS)
+    throw new Error(`MASTER_NARRATIVE_PACKET_TOO_LARGE: ${encodedPacket.length} characters exceeds the ${MAX_FINAL_NARRATIVE_CHARS}-character reducer limit.`);
   const response = await invokeLLM({
     max_tokens: 8192,
     timeoutMs: 180_000,
     messages: [
-      { role: "system", content: FULL_SYNTHESIS_STYLE + "\n\nTHE ABSOLUTE — MASTER SYNTHESIS. Read every supplied raw calculated outcome, complete method layer, and chart placement. The methodOutcomes contain each method's calculated findings, judgments, mechanisms, and Canon applications. Use them alongside the raw ledger; reconcile them yourself rather than copying their technical wording. The themeCoverage audit describes only the rule-based theme builder, never permission to ignore a calculated result. Preserve natal versus current-event scope and God versus Agent frame. Synthesize all applicable layers directly into a complete, natural second-person reading. Explain WHAT, WHY, HOW, CONSEQUENCES and MEANING through connected prose. Do not omit calculated results based on audit status, method ranking, or prewritten interpretations. OUTPUT DEPTH: This endpoint is the FULL MASTER READING. Give a substantial, connected interpretation of the whole chart and every applicable calculated method. Explain the person's character, motives, strengths, challenges, consequences, and the interaction of all layers in plain second-person language. Address the person directly: for example, explain what you want, how you respond under pressure, what that costs you, and how you can work with it, using the actual findings. Show how different layers modify the same planet and how planets and houses interact. Respond in natural prose without JSON, evidence IDs, method inventory, or canned introductory text. Do not invent missing calculations." },
-      { role: "user", content: "<chart_data>\n" + stringifyEvidence(bindings.packet) + "\n</chart_data>" },
+      { role: "system", content: FULL_SYNTHESIS_STYLE + "\n\nTHE ABSOLUTE — MASTER SYNTHESIS. You are the final narrative-delivery layer, not an astrology calculator or doctrine-retrieval system. The bounded method readings were generated from the authoritative completed method findings and their attached Canon applications. Use every supplied method reading, deterministic theme, tension, and coverage status; preserve method identity, evidence lineage, natal/event scope, and God/Agent frame. Do not recalculate chart facts, rediscover doctrine, substitute judgments, or invent methods or records. Reconcile findings and explicit tensions without silently changing a method's judgment. The coverage object reports missing or failed work; never conceal it with generic prose. Explain WHAT, WHY, HOW, CONSEQUENCE, and MEANING only where supported by the supplied ledger and readings. OUTPUT DEPTH: Give a substantial, connected second-person reading. Explain character, motives, strengths, challenges, consequences, and interactions only where supported. Respond in natural prose without JSON, evidence IDs, method inventory, or canned introductory text." },
+      { role: "user", content: "<chart_data>\n" + encodedPacket + "\n</chart_data>" },
     ],
   });
   const choice = response.choices?.[0];

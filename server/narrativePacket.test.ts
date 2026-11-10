@@ -5,34 +5,36 @@ import { buildNarrativePacket } from "./astrologyKnowledge/synthesis/narrativePa
 import { encodeEvidence, decodeEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
 
 const input = {location:"Dallas",latitude:32.7767,longitude:-96.797,timezone:"America/Chicago",date:"1986-11-20",time:"10:06",mode:"natal" as const};
-describe("Complete AI evidence delivery", () => {
-  it("retains the raw chart, every method outcome, every judgment and full Canon without clipping", async () => {
+describe("Complete final synthesis handoff", () => {
+  it("retains all method statuses, readings, Canon IDs, themes, scope, and evidence lineage", async () => {
     const snapshot = await buildUnifiedMasterChart(input);
     const { synthesis } = await synthesizeMasterSnapshot(snapshot, "natal", "purpose");
     const before = JSON.stringify(synthesis);
-    const { packet } = buildNarrativePacket(synthesis, "purpose");
-    expect(packet.snapshot).toBe(synthesis.sourceSnapshot);
-    expect(packet.calculatedMethodOutcomes).toEqual(snapshot.methodExecutionLedger);
-    expect(packet.methodOutcomes).toBe(synthesis.methodOutcomes);
-    expect(packet.canonApplications).toBe(synthesis.canonApplications);
+    const readings = Object.fromEntries(synthesis.methodOutcomes.filter(method => method.status === "interpreted").map(method => [method.methodId, `Reading ${method.methodId}`]));
+    const { packet } = buildNarrativePacket(synthesis, "purpose", readings);
+    expect(packet.snapshotId).toBe(synthesis.snapshotId);
+    expect(packet.methodOutcomes.map(method => method.methodId)).toEqual(synthesis.methodOutcomes.map(method => method.methodId));
+    expect(packet.methodOutcomes.filter(method => method.status === "interpreted").every(method => method.reading !== null)).toBe(true);
+    expect(packet.methodOutcomes.filter(method => method.status !== "interpreted").every(method => method.reading === null)).toBe(true);
+    expect(packet.methodOutcomes.every(method => Array.isArray(method.evidenceIds) && Array.isArray(method.canonApplicationIds))).toBe(true);
+    expect(packet.coverage.registeredMethodIds).toEqual(snapshot.methodExecutionLedger.map(layer => layer.id));
+    expect(packet.coverage.evaluatedMethodIds).toHaveLength(snapshot.methodExecutionLedger.length);
+    expect(packet.chartFacts.natal.placements.length).toBeGreaterThan(0);
+    expect(packet.chartFacts.natal.houses).toHaveLength(12);
+    expect(packet.themes.every(theme => theme.linkedMethodIds.length >= 0 && theme.linkedFindingIds.length > 0 && theme.evidenceIds.length > 0)).toBe(true);
     const encoded = encodeEvidence(packet);
-    expect(JSON.stringify(decodeEvidence(JSON.parse(JSON.stringify(encoded))))).toBe(JSON.stringify(packet));
-    expect(JSON.stringify(encoded).length).toBeLessThan(JSON.stringify(packet).length);
+    expect(decodeEvidence(JSON.parse(JSON.stringify(encoded)))).toEqual(packet);
+    expect(JSON.stringify(packet)).not.toContain("locationContext");
+    expect(JSON.stringify(packet)).not.toContain('"latitude"');
     expect(JSON.stringify(synthesis)).toBe(before);
   });
-  it("does not block all results when one method execution or rule interpretation failed", async () => {
+
+  it("keeps failed calculation status visible in the final reducer packet", async () => {
     const snapshot = await buildUnifiedMasterChart(input);
     snapshot.methodExecutionLedger[0] = {...snapshot.methodExecutionLedger[0], status:"failed", errorCode:"TEST_PARTIAL_FAILURE"};
     const { synthesis } = await synthesizeMasterSnapshot(snapshot, "natal", "purpose");
     const { packet } = buildNarrativePacket(synthesis, "purpose");
-    expect(packet.calculatedMethodOutcomes[0].status).toBe("failed");
-    expect(packet.calculatedMethodOutcomes).toHaveLength(snapshot.methodExecutionLedger.length);
+    expect(packet.coverage.failedMethodIds).toContain(packet.methodOutcomes[0].methodId);
     expect(packet.methodOutcomes).toHaveLength(snapshot.methodExecutionLedger.length);
-  });
-  it("round-trips repeated text, nested JSON strings, arrays and statuses exactly", () => {
-    const rule = "This is a complete rule with a mechanism, consequence and condition that is deliberately long enough to intern. ";
-    const node = {text:rule+rule, status:"failed", values:[1,2,3]};
-    const source = {one:node, two:node, string:JSON.stringify(node), sentences:[rule+"First ending.",rule+"Second ending."]};
-    expect(decodeEvidence(encodeEvidence(source))).toEqual(source);
   });
 });

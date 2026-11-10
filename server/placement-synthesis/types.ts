@@ -10,6 +10,8 @@ export type PlacementContribution = {
   status: PlacementMethodStatus;
   relation: PlacementRelation;
   result: string[];
+  /** Stable calculation/evidence IDs; distinct from display-oriented source provenance. */
+  evidenceIds: string[];
   sourceTrace: string[];
   reason?: string;
 };
@@ -69,10 +71,10 @@ export function contributionFromEvidence(
 ): PlacementContribution {
   const incomplete = context.packet.incomplete.filter(item => item.toLowerCase().includes(method.toLowerCase()) || item.toLowerCase().includes(label.toLowerCase()));
   if (incomplete.length && !items.length) {
-    return { method, label, status: "incomplete", relation: "unavailable", result: [], sourceTrace: [], reason: incomplete.join("; ") };
+    return { method, label, status: "incomplete", relation: "unavailable", result: [], evidenceIds: [], sourceTrace: [], reason: incomplete.join("; ") };
   }
   if (!items.length) {
-    return { method, label, status: "no-result", relation: "unavailable", result: [], sourceTrace: [], reason: options.reason ?? "No placement-specific evidence was returned for this chart and method." };
+    return { method, label, status: "no-result", relation: "unavailable", result: [], evidenceIds: [], sourceTrace: [], reason: options.reason ?? "No placement-specific evidence was returned for this chart and method." };
   }
   return {
     method,
@@ -80,6 +82,7 @@ export function contributionFromEvidence(
     status: "included",
     relation: options.relation ?? "contextual",
     result: items.map(item => item.statement),
+    evidenceIds: items.map(item => item.id),
     sourceTrace: items.map(item => `${item.sourceTrace.sourceTitle} · ${item.technique}`),
     reason: options.reason,
   };

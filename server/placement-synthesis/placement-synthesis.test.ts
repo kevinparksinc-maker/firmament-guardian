@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { calculateChart } from "../astronomy";
 import { PLACEMENT_METHODS } from "./registry";
-import { buildPlacementPacket } from "./orchestrator";
+import { buildPlacementPacket, selectRelationshipsForContributions } from "./orchestrator";
 
 describe("homepage placement synthesis", () => {
-  it("builds a complete, traceable Sun packet instead of a generic caption", async () => {
+  it("selects convergence and contradiction only by exact evidence IDs", () => {
+    const relationships = [
+      { id: "linked", evidenceIds: ["ev-sun", "ev-vedic"], explanation: "linked" },
+      { id: "unlinked", evidenceIds: ["ev-other"], explanation: "unlinked" },
+    ];
+    const contributions = [
+      { method: "western", label: "Western", status: "included" as const, relation: "contextual" as const, result: [], evidenceIds: ["ev-sun"], sourceTrace: ["A source title mentioning ev-other"] },
+    ];
+
+    expect(selectRelationshipsForContributions(relationships, contributions)).toEqual([relationships[0]]);
+  });
+
+  it("builds a complete, traceable Sun packet instead of a generic caption", async()=>{
     const chart = await calculateChart({
       location: "Dallas, Texas, USA",
       latitude: 32.7767,
@@ -25,6 +37,7 @@ describe("homepage placement synthesis", () => {
     const packet = buildPlacementPacket(chart, "Sun", "What does this exact Sun placement mean?");
     expect(packet.contributions).toHaveLength(PLACEMENT_METHODS.length);
     expect(packet.contributions.every(item => item.status)).toBe(true);
+    expect(packet.contributions.every(item => Array.isArray(item.evidenceIds))).toBe(true);
     expect(packet.prompt).toContain("PLACEMENT: Sun");
     expect(packet.prompt).toContain("METHOD: Vedic / Jyotish");
     expect(packet.prompt).toContain("METHOD: Genesis Astro / Pattern / Yoga");

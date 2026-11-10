@@ -42,6 +42,14 @@ ${packet.contradictions.length ? packet.contradictions.join("\n") : "None return
 Write exactly two dense paragraphs. Weave the methods into natural prose. Cover observable character, motivations, relationships, group/social expression, gifts, tensions, and developmental direction where supported. Mention meaningful qualifications when methods disagree or inputs are missing. Do not output a list, headings, a method inventory, or vague filler. Do not claim certainty about private mental states, diagnosis, fate, or guaranteed events.`;
 }
 
+export function selectRelationshipsForContributions<T extends { evidenceIds: string[] }>(
+  relationships: T[],
+  contributions: PlacementContribution[]
+): T[] {
+  const contributedIds = new Set(contributions.flatMap(item => item.evidenceIds));
+  return relationships.filter(item => item.evidenceIds.some(id => contributedIds.has(id)));
+}
+
 export function buildPlacementPacket(chart: ChartResult, body: string, question = "") : PlacementPacket {
   const row = findRow(chart, body);
   if (!row) throw new Error(`Placement ${body} was not found in the calculated chart.`);
@@ -49,13 +57,11 @@ export function buildPlacementPacket(chart: ChartResult, body: string, question 
   const context: PlacementAdapterContext = { chart, body, row, packet };
   const contributions: PlacementContribution[] = PLACEMENT_METHODS.map(({ adapter }) => {
     try { return adapter(context); }
-    catch (error) { return { method: "unknown", label: "Adapter failure", status: "failed", relation: "unavailable", result: [], sourceTrace: [], reason: error instanceof Error ? error.message : String(error) }; }
+    catch (error) { return { method: "unknown", label: "Adapter failure", status: "failed", relation: "unavailable", result: [], evidenceIds: [], sourceTrace: [], reason: error instanceof Error ? error.message : String(error) }; }
   });
-  const convergences = packet.convergences
-    .filter(item => item.evidenceIds.some(id => contributions.some(contribution => contribution.sourceTrace.some(trace => trace.includes(id)))))
+  const convergences = selectRelationshipsForContributions(packet.convergences, contributions)
     .map(item => item.explanation);
-  const contradictions = packet.contradictions
-    .filter(item => item.evidenceIds.some(id => contributions.some(contribution => contribution.sourceTrace.some(trace => trace.includes(id)))))
+  const contradictions = selectRelationshipsForContributions(packet.contradictions, contributions)
     .map(item => item.explanation);
   const result: PlacementPacket = {
     body,
