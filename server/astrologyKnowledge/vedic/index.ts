@@ -1,0 +1,172 @@
+import { resolveVargaEvidence } from "./vargas";
+import type { ChartResult, ChartRow } from "../../astronomy";
+import {
+  NAKSHATRAS,
+  ZODIAC_SIGNS,
+  normalizeLongitude,
+} from "../../../shared/hybrid";
+import { sourceById } from "../registry";
+import type { EvidenceItem, KnowledgePlan, SourceTrace } from "../types";
+import { resolveVedicTimingAndAshtakavarga } from "./timingAndAshtakavarga";
+
+const RULERS: Record<string, string> = {
+  Aries: "Mars",
+  Taurus: "Venus",
+  Gemini: "Mercury",
+  Cancer: "Moon",
+  Leo: "Sun",
+  Virgo: "Mercury",
+  Libra: "Venus",
+  Scorpio: "Mars",
+  Sagittarius: "Jupiter",
+  Capricorn: "Saturn",
+  Aquarius: "Saturn",
+  Pisces: "Jupiter",
+};
+const VEDIC_TRACE = (
+  technique: string,
+  ruleId: string,
+  sourceId = "local-vedic-rules"
+): SourceTrace => ({
+  sourceId,
+  tradition: "vedic",
+  technique,
+  sourceTitle: sourceById(sourceId)?.name ?? sourceId,
+  sourceUrl: sourceById(sourceId)?.url,
+  retrievedAt: new Date().toISOString(),
+  ruleId,
+  confidence: sourceId === "tvam-jyotish" ? "reference-only" : "high",
+});
+const FACT_TRACE: SourceTrace = {
+  sourceId: "firmament-ephemeris",
+  tradition: "firmament",
+  technique: "calculation",
+  sourceTitle: "Firmament local ephemeris",
+  retrievedAt: new Date().toISOString(),
+  confidence: "high",
+};
+function nakshatra(longitude: number) {
+  const size = 360 / 27;
+  const index = Math.floor(normalizeLongitude(longitude) / size);
+  const within = normalizeLongitude(longitude) - index * size;
+  return {
+    name: NAKSHATRAS[index],
+    pada: Math.floor(within / (size / 4)) + 1,
+    start: index * size,
+    end: (index + 1) * size,
+  };
+}
+function rows(chart: ChartResult) {
+  return [
+    ...chart.movingBodies,
+    chart.ascendant,
+    chart.northNode,
+    chart.southNode,
+  ].filter((row): row is ChartRow => Boolean(row));
+}
+/** Parashari graha drishti: house offsets count the occupied house as 1.
+ * Mars: 4th/7th/8th, Jupiter: 5th/7th/9th, Saturn: 3rd/7th/10th.
+ * Do not hardcode a target house: targets change with the planet's house.
+ */
+export function grahaDrishtiTargetHouses(planet: string, fromHouse: number): number[] {
+  const aspectCounts: Record<string, readonly number[]> = {
+    Mars: [4, 7, 8],
+    Jupiter: [5, 7, 9],
+    Saturn: [3, 7, 10],
+  };
+  const counts = aspectCounts[planet];
+  if (!counts) return [];
+  if (!Number.isInteger(fromHouse) || fromHouse < 1 || fromHouse > 12)
+    throw new RangeError("Graha drishti requires a valid occupied house 1–12");
+  return counts.map(count => ((fromHouse + count - 2) % 12) + 1);
+}
+
+export function resolveVedicEvidence(
+  chart: ChartResult,
+  plan: KnowledgePlan
+): EvidenceItem[] {
+  const all = rows(chart).filter(row => Number.isFinite(row.longitude));
+  const asc =
+    chart.ascendant && Number.isFinite(chart.ascendant.longitude)
+      ? chart.ascendant
+      : undefined;
+  const evidence: EvidenceItem[] = [];
+  for (const row of all) {
+    const n = nakshatra(row.longitude);
+    const sign = ZODIAC_SIGNS[Math.floor(row.longitude / 30)];
+    { // Universal method contract: calculate every applicable body before question prioritization.
+      evidence.push({
+        id: `vedic-nakshatra-${row.name}`,
+        tradition: "vedic",
+        category: "deterministic-rule",
+        technique: "nakshatra",
+        subject: row.name,
+        statement: `${row.name} crosses ${n.name}, pada ${n.pada}, from ${n.start.toFixed(2)}° to ${n.end.toFixed(2)}° on the fixed 0° Aries background.`,
+        concepts: [
+          "lunar-mansion",
+          n.name.toLowerCase(),
+          `pada-${n.pada}`,
+          sign.toLowerCase(),
+        ],
+        polarity: "neutral",
+        strength: 0.8,
+        ruleId: "vedic-nakshatra-27",
+        sourceId: "firmament-architecture",
+        sourceTrace: VEDIC_TRACE(
+          "nakshatra",
+          "vedic-nakshatra-27",
+          "firmament-architecture"
+        ),
+      });
+      if (asc) {
+        const ascSign = ZODIAC_SIGNS[Math.floor(asc.longitude / 30)];
+        const houseLord =
+          RULERS[
+            ZODIAC_SIGNS[(Math.floor(asc.longitude / 30) + row.house - 1) % 12]
+          ];
+        evidence.push({
+          id: `vedic-house-lord-${row.name}`,
+          tradition: "vedic",
+          category: "deterministic-rule",
+          technique: "house-lord",
+          subject: row.name,
+          statement: `From the ${ascSign} Ascendant, ${row.name} is placed in house ${row.house}; the sign governing that house is ruled by ${houseLord}.`,
+          concepts: [
+            `house-${row.house}`,
+            "house-lord",
+            houseLord.toLowerCase(),
+          ],
+          polarity: "neutral",
+          strength: 0.65,
+          ruleId: "vedic-house-lords",
+          sourceId: "local-vedic-rules",
+          sourceTrace: VEDIC_TRACE("house-lord", "vedic-house-lords"),
+        });
+      }
+    }
+  }
+  for (const row of all) {
+    if (!["Mars", "Jupiter", "Saturn"].includes(row.name)) continue;
+    for (const target of grahaDrishtiTargetHouses(row.name, row.house)) {
+      evidence.push({
+        id: `vedic-drishti-${row.name}-${target}`,
+        tradition: "vedic",
+        category: "deterministic-rule",
+        technique: "drishti",
+        subject: row.name,
+        statement: `Traditional ${row.name} graha drishti reaches house ${target} from its supplied house ${row.house}.`,
+        concepts: ["drishti", row.name.toLowerCase(), `house-${target}`],
+        polarity: row.name === "Jupiter" ? "supportive" : "pressured",
+        strength: 0.6,
+        ruleId: "vedic-graha-drishti",
+        sourceId: "local-vedic-rules",
+        sourceTrace: VEDIC_TRACE("drishti", "vedic-graha-drishti"),
+      });
+    }
+  }
+  // Advanced Vedic timing and strength are calculated in one auditable layer.
+  // The layer emits explicit uncertainty evidence when required birth data is missing.
+  evidence.push(...resolveVedicTimingAndAshtakavarga(chart));
+  evidence.push(...resolveVargaEvidence(chart));
+  return evidence;
+}
