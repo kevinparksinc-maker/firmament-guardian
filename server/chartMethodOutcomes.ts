@@ -14,9 +14,9 @@ function compactMethodOutcome(method: MethodOutcome) {
   const { canonApplications, findingJudgments, calculatedFindings, interpretation, judgment, ...metadata } = method;
   return {
     ...metadata,
-    // Full calculated values remain in the returned ledger. The model receives
-    // their stable IDs plus each specific, evidence-linked interpreted judgment.
-    calculatedFindings: calculatedFindings.map(({ evidenceId, label }) => ({ evidenceId, label })),
+    // Keep every calculated value; only repeated outcome prose and nested Canon
+    // objects are deduplicated from the separately linked authoritative records.
+    calculatedFindings,
     findingJudgments: findingJudgments.map(({ rules, ...finding }) => ({
       ...finding,
       canonApplicationIds: rules.map(rule => rule.canonEvidenceId),
