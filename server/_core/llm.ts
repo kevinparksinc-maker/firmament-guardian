@@ -488,8 +488,8 @@ function selectedProvider(): "groq" | "nvidia" | "openai-compatible" | "gemini" 
     if (!available[provider]) throw new Error(`AI_PROVIDER_NOT_CONFIGURED: ${provider} selected but its key is missing`);
     return provider;
   }
-  if (available.nvidia) return "nvidia";
   if (available.groq) return "groq";
+  if (available.nvidia) return "nvidia";
   if (available["openai-compatible"]) return "openai-compatible";
   if (available.gemini) return "gemini";
   if (available["built-in-forge"]) return "built-in-forge";
