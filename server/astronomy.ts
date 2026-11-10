@@ -49,7 +49,8 @@ export type ChartRow = {
   uncertainty?: MoonUncertainty;
 };
 export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition"; orb: number };
-export type TransitRow = ChartRow & { natalContacts: TransitContact[] };
+export type MinorTransitContact = { natalName: string; aspect: "semisextile" | "semisquare" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "flow" | "friction" };
+export type TransitRow = ChartRow & { natalContacts: TransitContact[]; minorNatalContacts: MinorTransitContact[] };
 export type ChartResult = {
   input: ChartInput;
   worldview: Worldview;
@@ -179,6 +180,19 @@ export function aspectBetween(a: number, b: number): { aspect: TransitContact["a
   const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
   const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= MAJOR_ASPECT_ORB_DEGREES ? best : null;
 }
+/** Secondary aspects: maximum five-degree orb, half of major-aspect weight. */
+export function minorAspectBetween(a: number, b: number): Omit<MinorTransitContact, "natalName"> | null {
+  if (aspectBetween(a, b)) return null;
+  const separation = angularDistance(a, b);
+  const targets = [
+    { target: 30, aspect: "semisextile" as const, classification: "flow" as const },
+    { target: 45, aspect: "semisquare" as const, classification: "friction" as const },
+    { target: 150, aspect: "quincunx" as const, classification: "friction" as const },
+  ];
+  const best = targets.map(({target, aspect, classification}) => ({aspect, classification, orb: Math.abs(separation - target)}))
+    .filter(contact => contact.orb <= 5).sort((a,b) => a.orb - b.orb)[0];
+  return best ? {...best, weightMultiplier: 0.5} : null;
+}
 function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope, transit = false) {
   const date = transit ? input.transitDate : input.date;
   const time = transit ? input.transitTime : input.time;
@@ -265,10 +279,11 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const transitAsc = transitAngles?.ascendant ?? null;
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
-  const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts }; });
+  const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
   const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
-  const transitRows = [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }];
+  const minorContactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = minorAspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
+  const transitRows = [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode), minorNatalContacts: minorContactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode), minorNatalContacts: minorContactsFor(transitSouthNode) }];
   const energyReadV2 = calculateEnergyRead(
     movingBodies.map(body => ({ name: body.name, longitude: body.longitude, agentHouse: body.agentHouse, godHouse: body.godHouse })),
     transits.map(body => ({ name: body.name, longitude: body.longitude, agentHouse: body.agentHouse, godHouse: body.godHouse })),
