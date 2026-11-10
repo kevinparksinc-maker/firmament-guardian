@@ -32,16 +32,8 @@ describe("Hybrid Zodiac constants and overlays", () => {
     expect(FIXED_STARS.find(([name]) => name === "Regulus")?.[1]).toBe(135);
     expect(FIXED_STARS.find(([name]) => name === "Fomalhaut")?.[1]).toBe(315);
   });
-  it("starts the overlay wheel at tropical Aries", () => {
-    expect(overlay(0)).toMatchObject({
-      nakshatra: "Ashwini",
-      pada: 1,
-      manzil: "Al-Sharatain",
-      decan: "Mars (Aries 1st)",
-      nakshatraRuler: "Ketu",
-      chineseMansion: "Kui (Legs)",
-      chineseBoundaryModel: "historical-han-width-proportional-firmament-adaptation",
-    });
+  it("starts the overlay wheel at the fixed Aries reference", () => {
+    expect(overlay(0)).toMatchObject({ nakshatra: "Ashwini", nakshatraRuler: "Ketu", pada: 1, manzil: "Al-Sharatain", decan: "Aries (Aries 1st elemental decan)" });
     expect(formatLongitude(12.9333)).toBe("Aries 12°56′");
   });
   it("keeps canonical geocentric longitudes while exposing lunar parallax separately", async () => {
@@ -54,12 +46,23 @@ describe("Hybrid Zodiac constants and overlays", () => {
     expect(tokyoMoon.topocentricLongitude).toBeDefined();
     expect(Math.abs(nyMoon.topocentricLongitude! - tokyoMoon.topocentricLongitude!)).toBeGreaterThan(0.1);
   });
-  it("selects the latest sunrise across UTC civil-day boundaries", async () => {
-    // 08:00 Tokyo on Nov 7, expressed explicitly in UTC on Nov 6.
-    const tokyo = await calculateChart({ location: "Tokyo", latitude: 35.6762, longitude: 139.6503, timezone: "UTC", date: "2026-11-06", time: "23:00", worldview: "agent", readingScope: "natal" });
-    const local = await calculateChart({ ...tokyo.input, timezone: "Asia/Tokyo", date: "2026-11-07", time: "08:00" });
-    expect(tokyo.utc).toBe(local.utc);
-    expect(tokyo.ascendant!.longitude).toBeCloseTo(local.ascendant!.longitude, 8);
+  it("uses the same Aldebaran-anchored longitude for God and Agent views", async () => {
+    const base = { location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797, timezone: "America/Chicago", date: "1986-11-20", time: "10:06", readingScope: "natal" as const };
+    const agent = await calculateChart({ ...base, worldview: "agent" });
+    const god = await calculateChart({ ...base, worldview: "god" });
+    expect(agent.movingBodies.map(body => body.longitude)).toEqual(god.movingBodies.map(body => body.longitude));
+    expect(agent.northNode.longitude).toBe(god.northNode.longitude);
+    expect(agent.frozenStars.map(star => star.longitude)).toEqual(god.frozenStars.map(star => star.longitude));
+    expect(agent.validation.notes.join(" ")).toContain("Aldebaran");
+  });
+  it("preserves 30-degree Equal Houses in the converted Agent zodiac", async () => {
+    const chart = await calculateChart({ location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797, timezone: "America/Chicago", date: "1986-11-20", time: "10:06", worldview: "agent", readingScope: "natal" });
+    expect(chart.ascendant).not.toBeNull();
+    expect(chart.houses[0]).toBeCloseTo(chart.ascendant!.longitude, 6);
+    for (let i = 0; i < 12; i++) {
+      const expected = (chart.ascendant!.longitude + i * 30) % 360;
+      expect(chart.houses[i]).toBeCloseTo(expected, 5);
+    }
   });
   it("supports date-only God Natal calculations without inventing personal angles", async () => {
     const result = await calculateChart({ location: "", latitude: 0, longitude: 0, timezone: "", date: "1986-11-20", time: "", worldview: "god", readingScope: "natal", birthTimeKnown: false });

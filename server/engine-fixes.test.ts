@@ -6,7 +6,7 @@ const dallas = { location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -
 
 describe("aspect wraparound", () => {
   it("finds every transit-to-natal contact, including pairs that cross 0°/360°", async () => {
-    const right = (a: number, b: number) => { let d = Math.abs(a - b) % 360; if (d > 180) d = 360 - d; return [0, 90, 120, 180].some(t => Math.abs(d - t) <= 5); };
+    const right = (a: number, b: number) => { let d = Math.abs(a - b) % 360; if (d > 180) d = 360 - d; return [0, 60, 90, 120, 180].some(t => Math.abs(d - t) <= 5); };
     let truth = 0, found = 0;
     for (let i = 0; i < 365; i += 5) {
       const transitDate = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10);
@@ -59,5 +59,34 @@ describe("God View live sky", () => {
     expect(chart.agentViewAvailable).toBe(false);
     expect(chart.ascendant).toBeNull();
     expect(chart.transits.every(row => row.natalContacts.length === 0)).toBe(true);
+  });
+});
+
+describe("integrated Fixed Firmament geometry", () => {
+  it("uses the same canonical longitudes for chart rows and dome positions", async () => {
+    const chart = await calculateChart({ ...dallas, worldview: "agent", readingScope: "natal" });
+    expect(chart.firmament.model).toBe("zero-obliquity-visual-convention");
+    expect(chart.firmament.horizonModel).toBe("zero-tilt-local-sidereal");
+    expect(chart.descendant!.longitude).toBeCloseTo((chart.ascendant!.longitude + 180) % 360, 8);
+    for (const body of [...chart.movingBodies, chart.northNode, chart.southNode]) {
+      expect(chart.firmament.natal.positions[body.name].bearing).toBeCloseTo(body.longitude, 8);
+    }
+    expect(chart.firmament.natal.houseCusps).toHaveLength(12);
+    chart.firmament.natal.houseCusps.forEach((cusp, index) => expect(cusp).toBeCloseTo(chart.houses[index], 5));
+    expect(chart.firmament.natal.lots.fortune).toBeCloseTo(
+      ((chart.ascendant!.longitude + chart.movingBodies.find(row => row.name === "Moon")!.longitude - chart.movingBodies.find(row => row.name === "Sun")!.longitude) % 360 + 360) % 360,
+      8,
+    );
+  });
+
+  it("keeps God View positions canonical while explicitly withholding a physical horizon", async () => {
+    const chart = await calculateChart({
+      location: "God View", latitude: 0, longitude: 0, timezone: "UTC", date: "", time: "",
+      transitLocation: "God View", transitLatitude: 0, transitLongitude: 0, transitTimezone: "UTC",
+      transitDate: "2026-10-03", transitTime: "17:13", worldview: "god", readingScope: "transit", birthTimeKnown: false,
+    });
+    expect(chart.firmament.horizonModel).toBe("not-available");
+    expect(chart.firmament.transit.houseCusps).toEqual(Array.from({ length: 12 }, (_, index) => index * 30));
+    for (const body of chart.transits) expect(chart.firmament.transit.positions[body.name].bearing).toBeCloseTo(body.longitude, 8);
   });
 });

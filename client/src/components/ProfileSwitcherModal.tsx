@@ -7,7 +7,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useProfileSession } from "@/contexts/ProfileSessionContext";
+import { useProfileSession, profileId } from "@/contexts/ProfileSessionContext";
 import {
   type UserProfileData,
   SAMPLE_PROFILE,
@@ -38,6 +38,7 @@ export function ProfileSwitcherModal({
 }: ProfileSwitcherModalProps) {
   const { profile: activeProfile, savedProfiles, setProfile, deleteSavedProfile } =
     useProfileSession();
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
 
   const handleSelect = (p: UserProfileData) => {
     setProfile(p);
@@ -45,13 +46,6 @@ export function ProfileSwitcherModal({
     onClose();
   };
 
-  const handleDelete = (e: React.MouseEvent, p: UserProfileData) => {
-    e.stopPropagation();
-    if (window.confirm(`Remove saved profile for ${p.name}?`)) {
-      deleteSavedProfile(p);
-      toast.info(`Removed profile for ${p.name}`);
-    }
-  };
 
   const handleLoadSample = () => {
     setProfile(SAMPLE_PROFILE);
@@ -89,9 +83,10 @@ export function ProfileSwitcherModal({
         <div className="mt-4 max-h-[50vh] space-y-2.5 overflow-y-auto pr-1">
           {savedProfiles.map((p, idx) => {
             const active = isCurrent(p);
+            const pKey = profileId(p);
             return (
               <div
-                key={`${p.name}-${p.date}-${p.time}-${idx}`}
+                key={`${pKey}-${idx}`}
                 onClick={() => handleSelect(p)}
                 className={`group relative flex cursor-pointer flex-col gap-2 rounded-2xl border p-4 transition-all ${
                   active
@@ -125,7 +120,7 @@ export function ProfileSwitcherModal({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     {!active && (
                       <Button
                         type="button"
@@ -139,12 +134,44 @@ export function ProfileSwitcherModal({
                         Load
                       </Button>
                     )}
-                    {(
+                    {confirmDeleteKey === pKey ? (
+                      <div
+                        className="flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-950/80 px-2 py-1 shadow-md"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="text-[11px] font-semibold text-rose-200">Delete?</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSavedProfile(p);
+                            setConfirmDeleteKey(null);
+                            toast.success(`Removed profile for ${p.name}`);
+                          }}
+                          className="rounded bg-rose-600 px-2 py-0.5 text-[11px] font-bold text-white transition-colors hover:bg-rose-500"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteKey(null);
+                          }}
+                          className="rounded bg-white/10 px-1.5 py-0.5 text-[11px] text-slate-300 transition-colors hover:bg-white/20"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        onClick={(e) => handleDelete(e, p)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 opacity-60 transition-opacity hover:bg-rose-500/20 hover:text-rose-300 hover:opacity-100"
-                        title="Delete saved profile"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteKey(pKey);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 opacity-70 transition-all hover:bg-rose-500/20 hover:text-rose-300 hover:opacity-100"
+                        title={`Delete ${p.name}'s profile`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -197,7 +224,8 @@ export function ProfileSwitcherModal({
         </div>
 
         <p className="mt-2 text-[11px] text-slate-400 text-center">
-          Profiles are saved in this browser only. Back up profiles before clearing browser data or switching devices.
+          Profiles are securely stored in your browser's private memory and remain
+          available across sessions.
         </p>
       </DialogContent>
     </Dialog>

@@ -1,3 +1,7 @@
+import { buildDerivationSheet } from "./canon/derivationSheet";
+import { FIXED_STAR_CANON_RECORDS } from "./canon/fixedStarsAndLots";
+import { formatUniversalMethodCoverage } from "./methodCoverage";
+import { seferYetzirahEvidence } from "./canon/seferYetzirah";
 import type { ChartResult } from "../astronomy";
 import { planKnowledge } from "./planner";
 import { resolveWesternEvidence } from "./western";
@@ -17,9 +21,8 @@ import {
 import {
   canonDossierToEvidenceItems,
   retrieveChartCanonDossier,
-} from "./calculations";
+} from "./canon";
 import type { AstrologyEvidencePacket, EvidenceItem } from "./types";
-import { overlay as canonicalOverlay } from "../../shared/hybrid";
 
 function genesisEvidence(
   genesis: ReturnType<typeof analyzeGenesisPatterns>
@@ -283,61 +286,82 @@ export function buildAstrologyEvidencePacket(
   const lunarEvidence = [...vedicEvidence, ...arabicEvidence].filter(item =>
     ["nakshatra", "manzil"].includes(item.technique)
   );
-  const lunarRows = mode === "natal" ? chart.movingBodies : [...chart.movingBodies, ...chart.transits];
-  const overlayEvidence: EvidenceItem[] = lunarRows.flatMap((row, index) => {
-    const lunarOverlay = row.overlay ?? (Number.isFinite(row.longitude) ? canonicalOverlay(row.longitude) : null);
-    if (!lunarOverlay) return [];
-    return [{
-      id: `fixed-frame-lunar-overlay-${index}-${row.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+  // Evaluate actual planetary/angle positions against the existing canonical star
+  // catalog. The previous implementation compared star rows against royal stars,
+  // leaving personal planet-to-star contacts out of this primary evidence family.
+  const fixedStarTargets = [
+    ...chart.movingBodies, chart.ascendant, chart.descendant, chart.midheaven,
+    chart.northNode, chart.southNode,
+  ].filter((row): row is NonNullable<typeof row> => row != null && Number.isFinite(row.longitude));
+  const STAR_ASPECTS = [
+    { name: "conjunction", angle: 0 },
+    { name: "sextile", angle: 60 },
+    { name: "square", angle: 90 },
+    { name: "trine", angle: 120 },
+    { name: "opposition", angle: 180 },
+  ] as const;
+  const angularSeparation = (a: number, b: number) => {
+    const raw = Math.abs(a - b) % 360;
+    return Math.min(raw, 360 - raw);
+  };
+  // Every configured fixed star is available for interpretation independently of aspects.
+  // An orb determines a CONTACT, never whether the star exists in the dossier.
+  const fixedStarCatalogEvidence: EvidenceItem[] = FIXED_STAR_CANON_RECORDS.map(star => ({
+    id: `fixed-star-position-${star.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    tradition: "firmament" as const,
+    category: "source-correspondence" as const,
+    technique: "fixed-star-position-and-meaning",
+    subject: star.name,
+    statement: `${star.name} is configured at ${star.firmamentLockedLongitude.toFixed(4)}° in the Firmament-locked zodiac (${star.constellation}). Traditional nature: ${star.ptolemaicPlanetaryNature}. Meaning: ${star.traditionalMeaning}. Gift: ${star.giftWhenIntegrated}. Challenge: ${star.nemesisOrTest}. This position and symbolic doctrine exist whether or not any planet is within aspect orb. Do not imply a personal contact without a separately computed aspect record.`,
+    concepts: ["fixed-star", "fixed-star-position", "fixed-star-meaning", star.name.toLowerCase()],
+    polarity: "neutral" as const,
+    strength: 1,
+    sourceId: "firmament-canon-knowledge",
+    sourceTrace: {
+      sourceId: "firmament-canon-knowledge",
       tradition: "firmament" as const,
-      category: "source-correspondence" as const,
-      technique: "fixed-frame-lunar-overlay",
-      subject: row.name,
-      statement: `${row.name} at ${row.display}: Nakshatra ${lunarOverlay.nakshatra}, Pada ${lunarOverlay.pada}, ruler ${lunarOverlay.nakshatraRuler}; Arabic Manzil ${lunarOverlay.manzil}; Chinese Xiu ${lunarOverlay.chineseMansion}, determinative star ${lunarOverlay.chineseDeterminativeStar}. Chinese assignment uses the ${lunarOverlay.chineseBoundaryModel} in the firmament-aldebaran-15-taurus frame. This overlay is derived from canonical longitude and does not apply another ayanamsha.`,
-      concepts: ["nakshatra", "nakshatra-ruler", "manzil", "chinese-xiu", "determinative-star", row.name.toLowerCase()],
-      polarity: "neutral" as const,
-      strength: 1,
-      sourceId: "firmament-fixed-frame-lunar-overlays",
-      sourceTrace: {
-        sourceId: "firmament-fixed-frame-lunar-overlays",
-        tradition: "firmament" as const,
-        technique: "fixed-frame-lunar-overlay",
-        sourceTitle: "Firmament canonical lunar overlay calculation",
-        retrievedAt: new Date().toISOString(),
-        confidence: "high" as const,
-        calculationSettings: {
-          longitude: row.longitude,
-          referenceFrame: "firmament-aldebaran-15-taurus",
-          chineseBoundaryModel: lunarOverlay.chineseBoundaryModel,
-        },
-      },
-    }];
-  });
-  lunarEvidence.push(...overlayEvidence);
-  const fixedStarEvidence: EvidenceItem[] = chart.frozenStars.flatMap(star =>
-    (star.royalStarContacts ?? [])
-      .filter(contact => contact.contact)
-      .map(contact => ({
-        id: `fixed-star-${star.name}-${contact.name}`,
-        tradition: "firmament" as const,
-        category: "calculated-fact" as const,
-        technique: "fixed-stars",
-        subject: star.name,
-        statement: `${star.name} is within ${contact.distance.toFixed(2)}° of ${contact.name}.`,
-        concepts: ["fixed-star", contact.name.toLowerCase()],
-        polarity: "neutral" as const,
-        strength: Math.max(0, 1 - contact.distance / 5),
-        sourceId: "firmament-ephemeris",
-        sourceTrace: {
-          sourceId: "firmament-ephemeris",
+      technique: "fixed-star-position-and-meaning",
+      sourceTitle: "Firmament configured fixed-star canon",
+      retrievedAt: new Date().toISOString(),
+      confidence: "moderate" as const,
+      calculationSettings: { longitude: star.firmamentLockedLongitude, reference: "firmament-locked", requiresAspect: false },
+    },
+  }));
+  const fixedStarEvidence: EvidenceItem[] = [
+    ...fixedStarCatalogEvidence,
+    ...fixedStarTargets.flatMap(body =>
+    FIXED_STAR_CANON_RECORDS.flatMap(star => {
+      const sep = angularSeparation(body.longitude, star.firmamentLockedLongitude);
+      return STAR_ASPECTS.flatMap(aspect => {
+        const orb = Math.abs(sep - aspect.angle);
+        if (orb > 5) return [];
+        // Every aspect retains the user's unified five-degree orb. Source records
+        // remain explicit about the configured, permanently locked sky reference.
+        return [{
+          id: `fixed-star-${body.name.replace(/\\s+/g, "-")}-${star.name.replace(/\\s+/g, "-")}-${aspect.name}`,
           tradition: "firmament" as const,
-          technique: "fixed-stars",
-          sourceTitle: "Firmament local ephemeris",
-          retrievedAt: new Date().toISOString(),
-          confidence: "high" as const,
-        },
-      }))
-  );
+          category: "deterministic-rule" as const,
+          technique: "fixed-star-aspects",
+          subject: body.name,
+          statement: `${body.name} at ${body.display}, house ${body.house}, forms a ${aspect.name} (${aspect.angle}°) to ${star.name}, configured at ${star.firmamentLockedLongitude.toFixed(4)}°; separation ${sep.toFixed(2)}°, orb ${orb.toFixed(2)}°. ${star.traditionalMeaning ?? "No individually sourced traditional interpretation configured."} ${star.giftWhenIntegrated ? "Potential gift: " + star.giftWhenIntegrated : ""} ${star.nemesisOrTest ? "Caution: " + star.nemesisOrTest : ""} This is a symbolic ecliptic-longitude aspect to a configured anchor, not observed physical proximity, parans, or an ancient discovery longitude.`,
+          concepts: ["fixed-star", "fixed-star-aspect", aspect.name, body.name.toLowerCase(), star.name.toLowerCase(), star.isRoyalStar ? "royal-star" : "nonroyal-star"],
+          polarity: aspect.name === "square" || aspect.name === "opposition" ? "pressured" as const : aspect.name === "conjunction" ? "neutral" as const : "supportive" as const,
+          strength: Math.max(0, 1 - orb / 5),
+          sourceId: "firmament-canon-knowledge",
+          sourceTrace: {
+            sourceId: "firmament-canon-knowledge",
+            tradition: "firmament" as const,
+            technique: "fixed-star-aspects",
+            sourceTitle: "Firmament configured fixed-star canon; longitude-only aspects",
+            retrievedAt: new Date().toISOString(),
+            confidence: "moderate" as const,
+            calculationSettings: { aspect: aspect.name, aspectAngleDegrees: aspect.angle, angularSeparationDegrees: sep, orbDegrees: orb, maximumOrbDegrees: 5, reference: "firmament-locked", isRoyal: star.isRoyalStar },
+          },
+        }];
+      });
+    })
+  ),
+  ];
   const timingEvidence: EvidenceItem[] =
     mode === "natal"
       ? []
@@ -383,7 +407,7 @@ export function buildAstrologyEvidencePacket(
   const { behavioralEvidence, lifeEventEvidence } =
     behavioralReportToEvidenceItems(behavioralReport);
   const canonDossier = retrieveChartCanonDossier(chart);
-  const canonEvidence = canonDossierToEvidenceItems(canonDossier);
+  const canonEvidence = [...canonDossierToEvidenceItems(canonDossier), ...seferYetzirahEvidence(chart), ...(mode !== "natal" ? seferYetzirahEvidence(chart, "transit") : [])];
   const all = [
     ...westernEvidence,
     ...astroEvidence,
@@ -525,6 +549,8 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
   });
   return [
     "ASTROLOGY EVIDENCE PACKET",
+    formatUniversalMethodCoverage(packet),
+    buildDerivationSheet(packet),
     `Question: ${packet.question}`,
     "Core policy: Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector are mandatory evaluated layers. The planner may prioritize their findings, but may not bypass the Genesis layer.",
     `Plan: ${packet.plan.reasons.join(" ")}`,
@@ -540,6 +566,8 @@ export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
       packet.lifeEventEvidence
     ),
     packet.canonDossier?.formattedSummaryForInterpreter ?? "",
+    section("ALL CANON CORRESPONDENCE EVIDENCE (including Sefer Yetzirah, Kabbalah Four Worlds, and planetary source variants)", packet.canonEvidence),
+    section("Fixed star evidence", packet.fixedStarEvidence),
     section("Vedic evidence", packet.vedicEvidence),
     section("Arabic evidence", packet.arabicEvidence),
     section("Lunar evidence", packet.lunarEvidence),

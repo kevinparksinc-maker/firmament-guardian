@@ -22,7 +22,6 @@ export interface LayerRecord<T = unknown> {
     | "hellenistic"
     | "vedic"
     | "babylonian"
-    | "sumerian"
     | "arabic-persian"
     | "chinese"
     | "kabbalah"
@@ -48,23 +47,9 @@ export interface MasterChartInput {
   timezone: string;
   date: string;
   time: string;
-  transitLocation?: string;
-  transitLatitude?: number;
-  transitLongitude?: number;
-  transitTimezone?: string;
   transitDate?: string;
   transitTime?: string;
-  transitInstantUtc?: string;
-  instantUtc?: string;
-  birthTimeKnown?: boolean;
-  chartRole?: "natal" | "event";
-  elevation?: number;
   mode?: "natal" | "transit" | "combined";
-  worldview?: "god" | "agent" | "agent-vs-god";
-  sunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: { x: number; y: number; z: number } };
-  transitSunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: { x: number; y: number; z: number } };
-  xyzPositions?: Record<string, { x: number; y: number; z: number }>;
-  transitXYZPositions?: Record<string, { x: number; y: number; z: number }>;
 }
 
 export interface UnifiedMasterChartSnapshot {
@@ -81,21 +66,19 @@ export interface UnifiedMasterChartSnapshot {
       longitude: number;
     };
     mode: "natal" | "transit" | "combined";
-    chartRole?: "natal" | "event";
   };
   frameConfig: {
-    zodiacMode: "fixed-cartesian-xyz";
-    firmamentAnchorVersion: "sunrise-xyz-15deg-hour-v1";
-    firmamentCenter: "polaris-centered-firmament-dome";
-    obliquityMode: "zero-tilt-xy-projection";
-    precessionMode: "none-user-frame-fixed-anchor";
-    houseSystem: "topocentric-equal-house-ascendant";
-    engineVersion: "firmament-master-2026.3";
+    zodiacMode: "hybrid-fixed-star-tropical";
+    firmamentAnchorVersion: "polaris-spica-fixed-frame-v2";
+    obliquityMode: "zero-tilt-equatorial-aligned";
+    precessionMode: "none-fixed-firmament";
+    houseSystem: "equal-house-ascendant";
+    engineVersion: "firmament-master-2026.1";
   };
   baseCelestialState: {
     julianDay: number;
     utc: string;
-    ascendant: ChartRow | null;
+    ascendant: ChartRow;
     midheaven?: ChartRow | null;
     descendant?: ChartRow | null;
     northNode: ChartRow;
@@ -106,7 +89,7 @@ export interface UnifiedMasterChartSnapshot {
   godView: {
     description: string;
     cosmicFrame: "fixed-aries-1-to-pisces-12";
-    polarisCenter: true;
+    polarisCenter: boolean;
     placements: Array<{
       body: string;
       longitude: number;
@@ -118,7 +101,7 @@ export interface UnifiedMasterChartSnapshot {
   agentView: {
     description: string;
     ascendantAnchor: string;
-    houseSystem: "topocentric-equal-house-from-ascendant";
+    houseSystem: "equal-house-from-ascendant";
     placements: Array<{
       body: string;
       longitude: number;
@@ -139,8 +122,6 @@ export interface UnifiedMasterChartSnapshot {
   transit?: {
     transitInstantUtc: string;
     planets: ChartRow[];
-    /** Same registered methods evaluated independently for the event sky. */
-    framework?: UnifiedMasterChartSnapshot;
     aspectsToNatal: Array<{
       transitBody: string;
       natalBody: string;
@@ -183,12 +164,4 @@ export function getModeView(
   if (mode === "god") return snapshot.godView;
   if (mode === "agent") return snapshot.agentView;
   return { godView: snapshot.godView, agentView: snapshot.agentView };
-}
-
-/** Calculated results travel with every published chart; no recursive ChartResult copies. */
-export interface MasterMethodBindings {
-  snapshotId: string;
-  base: LayerRecord[];
-  transit: LayerRecord[];
-  synthesisAudit: { passed: boolean; groundedRatio: number; canonApplicationCount: number };
 }

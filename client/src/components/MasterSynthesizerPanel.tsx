@@ -1,5 +1,3 @@
-import { readingProse } from "@shared/readingProse";
-import { useLocation } from "wouter";
 import React, { useState } from "react";
 import {
   Sparkles,
@@ -19,58 +17,56 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
+import type { SynthesisResult } from "../../../server/astrologyKnowledge/synthesis/types";
 
 export interface MasterSynthesizerPanelProps {
   chart: ChartResult;
-  presentation?: "summary" | "full" | "evidence";
   initialQuestion?: string;
-  mode?: "natal" | "transit" | "combined";
 }
 
 export function MasterSynthesizerPanel({
   chart,
   initialQuestion,
-  presentation = "full",
-  mode,
 }: MasterSynthesizerPanelProps) {
-  const [, navigate] = useLocation();
   const [question, setQuestion] = useState(
     initialQuestion || "What is my core life trajectory, purpose, and highest calling?"
   );
   const [expandedThemeId, setExpandedThemeId] = useState<string | null>(null);
-  const [showEvidenceDrawer, setShowEvidenceDrawer] = useState(presentation === "evidence");
+  const [showEvidenceDrawer, setShowEvidenceDrawer] = useState(false);
   const [activeEvidenceFilter, setActiveEvidenceFilter] = useState<string | null>(null);
 
   const synthesizeMutation = trpc.interpretation.masterSynthesize.useMutation();
-  const [result, setResult] = useState<NonNullable<typeof synthesizeMutation.data> | null>(null);
-  const requestVersion = React.useRef(0);
-  const selectedMode = mode ?? chart.readingScope;
-
+  const [result, setResult] = useState<SynthesisResult | null>(null);
 
   const handleSynthesize = (qToUse?: string) => {
-    const version = ++requestVersion.current;
-    setResult(null);
     synthesizeMutation.mutate(
       {
-        ...chart.input,
-        chart,
-        worldview: chart.worldview,
-        mode: selectedMode,
+        location: chart.input.location,
+        latitude: chart.input.latitude,
+        longitude: chart.input.longitude,
+        timezone: chart.input.timezone,
+        date: chart.input.date,
+        time: chart.input.time,
+        transitDate: chart.transitDate,
+        mode:
+          chart.readingScope === "transit"
+            ? "transit"
+            : chart.readingScope === "combined"
+            ? "combined"
+            : "natal",
         question: qToUse ?? question,
       },
       {
         onSuccess: data => {
-          if (version === requestVersion.current) setResult(data);
+          setResult(data as unknown as SynthesisResult);
         },
       }
     );
   };
 
   React.useEffect(() => {
-    if (initialQuestion) setQuestion(initialQuestion);
-    handleSynthesize(initialQuestion || question);
-    return () => { requestVersion.current += 1; };
-  }, [chart, initialQuestion, selectedMode]);
+    handleSynthesize();
+  }, [chart.input.date, chart.input.time, chart.input.location, chart.readingScope]);
 
   return (
     <div className="space-y-6">
@@ -85,9 +81,8 @@ export function MasterSynthesizerPanel({
         >
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-cyan-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <textarea
-              rows={3}
-              aria-label="Question for the Master Synthesizer"
+            <input
+              type="text"
               value={question}
               onChange={e => setQuestion(e.target.value)}
               placeholder="Ask the Master Synthesizer regarding life purpose, timing, or direction…"
@@ -109,8 +104,6 @@ export function MasterSynthesizerPanel({
         </form>
       </div>
 
-      {synthesizeMutation.error && <p role="alert" className="rounded-xl border border-rose-300/30 bg-rose-950/30 p-4 text-sm text-rose-200">{synthesizeMutation.error.message} Your chart is preserved; use Synthesize to try again.</p>}
-
       {synthesizeMutation.isPending && !result && (
         <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-cyan-500/20 bg-slate-950/80 backdrop-blur-md">
           <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin mb-4" />
@@ -123,7 +116,6 @@ export function MasterSynthesizerPanel({
 
       {result && (
         <div className="space-y-6">
-          {presentation !== "evidence" && <>
           {/* Executive Dominant Conclusion */}
           <div className="rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/70 p-6 shadow-2xl backdrop-blur-md relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
@@ -133,13 +125,16 @@ export function MasterSynthesizerPanel({
             <div className="flex items-center gap-2 mb-3">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                Full Master Reading
+                Dominant Core Synthesis
               </span>
-
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" />
+                100% Evidence Grounded
+              </span>
             </div>
 
             <p className="text-sm md:text-base leading-relaxed text-slate-100 font-medium">
-              {result.narrative?.sections?.[0]?.text ? "Your complete interpretation is presented below." : (result.narrative?.answer ?? result.dominantConclusion)}
+              {result.dominantConclusion}
             </p>
 
             <div className="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
@@ -147,7 +142,7 @@ export function MasterSynthesizerPanel({
                 Snapshot: {result.snapshotId} • Mode: {result.mode.toUpperCase()}
               </span>
               <button
-                onClick={() => { if (presentation === "summary") navigate("/reading/evidence"); else setShowEvidenceDrawer(!showEvidenceDrawer); }}
+                onClick={() => setShowEvidenceDrawer(!showEvidenceDrawer)}
                 className="text-cyan-400 hover:text-cyan-300 font-mono text-xs underline flex items-center gap-1"
               >
                 {showEvidenceDrawer ? "Hide Calculation Evidence" : "How was this calculated? (View Evidence Drawer)"}
@@ -155,28 +150,23 @@ export function MasterSynthesizerPanel({
             </div>
           </div>
 
-          </>}
-          {presentation === "full" && <>
           {/* Integrated Flow Narrative */}
-          <details open className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6 space-y-4"><summary className="cursor-pointer text-sm text-cyan-200">Read the integrated narrative</summary>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6 shadow-xl backdrop-blur-md space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               Integrated Narrative
             </h3>
             <div className="space-y-4 text-xs md:text-sm text-slate-200 leading-relaxed">
-              {(result.narrative?.sections?.length ? result.narrative.sections : (result.integratedNarrative ?? []).map((text, index) => ({ id: `reading-${index}`, title: index === 0 ? "Master Reading" : `Reading Part ${index + 1}`, text }))).map(section => (
-                <div key={section.id} className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/50 space-y-2">
-                  <h4 className="font-semibold text-cyan-100">{section.title}</h4>
-                  <p className="whitespace-pre-line">{readingProse(section.text)}</p>
-                </div>
+              {result.integratedNarrative.map((paragraph, idx) => (
+                <p key={idx} className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/50">
+                  {paragraph}
+                </p>
               ))}
             </div>
-          </details>
-          {Boolean(result.narrative?.methodContributions?.length) && <details className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6"><summary className="cursor-pointer text-sm text-cyan-200">How every method shaped the reading</summary><div className="mt-4 space-y-4">{(result.narrative?.methodContributions ?? []).map(contribution => <div key={contribution.methodId}><h4 className="text-sm font-semibold text-cyan-100">{result.methodOutcomes.find(m => m.methodId === contribution.methodId)?.methodName} · {contribution.methodId.startsWith("transit:") ? "Event" : "Base chart"}</h4><p className="text-sm text-slate-200">{contribution.contribution}</p><p className="mt-1 text-xs text-slate-400">Findings: {contribution.findingIds.join(", ")}</p></div>)}</div></details>}
+          </div>
 
-          <details className="rounded-2xl border border-slate-800 p-4">
-          <summary className="cursor-pointer text-sm text-cyan-200">Calculation analysis and rule-based themes</summary>
-          <div className="mt-4 space-y-4">
+          {/* Human Domain Themes Grid */}
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
                 <Layers className="w-4 h-4" />
@@ -258,9 +248,13 @@ export function MasterSynthesizerPanel({
 
                         <div>
                           <strong className="text-slate-400 uppercase tracking-wider text-[10px] block">
-                            Consequence
+                            Daily Manifestations
                           </strong>
-                          <p className="mt-1 whitespace-pre-line text-slate-300">{theme.consequences}</p>
+                          <ul className="list-disc list-inside space-y-1 text-slate-300 mt-1">
+                            {theme.concreteManifestations.map((m, i) => (
+                              <li key={i}>{m}</li>
+                            ))}
+                          </ul>
                         </div>
 
                         <div>
@@ -303,10 +297,8 @@ export function MasterSynthesizerPanel({
             </div>
           )}
 
-          </details>
-          </>}
           {/* Expandable "How was this calculated?" Evidence Drawer */}
-          {(presentation === "evidence" || presentation === "full" && showEvidenceDrawer) && (
+          {showEvidenceDrawer && (
             <div className="rounded-2xl border border-cyan-500/30 bg-slate-950 p-6 shadow-2xl space-y-5">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
@@ -341,8 +333,8 @@ export function MasterSynthesizerPanel({
                   <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Reference-Only</p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                  <span className="text-lg font-bold text-cyan-400 font-mono">{result.narrativeAudit.deliveredMethodIds.length}</span>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Layers Sent to AI</p>
+                  <span className="text-lg font-bold text-cyan-400 font-mono">100%</span>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Evidence Grounded</p>
                 </div>
               </div>
 

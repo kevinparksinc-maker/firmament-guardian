@@ -8,8 +8,7 @@ export {
 export { diagnoseAstrologyEvidence } from "./diagnostic";
 export { resolveRelationships } from "./resolver";
 export * from "./behavioral";
-export * from "./calculations";
-
-
-
 export * from "./canon";
+
+
+export * from "./methodCoverage";

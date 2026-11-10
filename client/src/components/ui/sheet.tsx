@@ -1,21 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { useOverlayBack } from "@/hooks/useOverlayBack";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  const [localOpen, setLocalOpen] = React.useState(props.defaultOpen ?? false);
-  const open = props.open ?? localOpen;
-  const changeOpen = (next: boolean) => {
-    if (props.open === undefined) setLocalOpen(next);
-    props.onOpenChange?.(next);
-  };
-  useOverlayBack(open, () => changeOpen(false));
-  return <SheetPrimitive.Root data-slot="sheet" {...props} open={open} onOpenChange={changeOpen} />;
+  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
 }
 
 function SheetTrigger({
@@ -80,7 +72,7 @@ function SheetContent({
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-2 right-2 flex min-h-12 min-w-12 items-center justify-center rounded-lg opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
           <XIcon className="size-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>

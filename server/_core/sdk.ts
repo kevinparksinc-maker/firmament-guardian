@@ -6,7 +6,7 @@ import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
-import { ENV, sessionConfiguration } from "./env";
+import { ENV } from "./env";
 import type {
   ExchangeTokenRequest,
   ExchangeTokenResponse,
@@ -154,7 +154,8 @@ class SDKServer {
   }
 
   private getSessionSecret() {
-    return new TextEncoder().encode(sessionConfiguration().secret);
+    const secret = ENV.cookieSecret;
+    return new TextEncoder().encode(secret);
   }
 
   /**
@@ -169,7 +170,7 @@ class SDKServer {
     return this.signSession(
       {
         openId,
-        appId: sessionConfiguration().appId,
+        appId: ENV.appId,
         name: options.name || "",
       },
       options
@@ -203,8 +204,8 @@ class SDKServer {
       return null;
     }
 
-    const secretKey = this.getSessionSecret();
     try {
+      const secretKey = this.getSessionSecret();
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
@@ -219,7 +220,7 @@ class SDKServer {
         return null;
       }
 
-      if (appId !== sessionConfiguration().appId) {
+      if (appId !== ENV.appId) {
         console.warn("[Auth] Session project ID did not match this application");
         return null;
       }
@@ -290,20 +291,13 @@ class SDKServer {
     }
 
     const sessionUserId = session.openId;
-    // Reject legacy shared demo cookies even if they were signed before demo-login was disabled.
-    if (sessionUserId === "local-observatory-user" &&
-        (ENV.isProduction || process.env.ENABLE_DEMO_LOGIN !== "true")) {
-      throw ForbiddenError("Shared demo sessions are disabled");
-    }
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
     // If user not in DB, sync from OAuth server automatically
-    if (!user && sessionUserId.startsWith("account:")) throw ForbiddenError("Account no longer exists");
     if (!user) {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionToken ?? "");
-        if (userInfo.openId !== sessionUserId) throw ForbiddenError("Session identity did not match the account provider");
         await db.upsertUser({
           openId: userInfo.openId,
           name: userInfo.name || null,
