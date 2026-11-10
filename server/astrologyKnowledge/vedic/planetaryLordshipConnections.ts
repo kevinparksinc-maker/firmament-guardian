@@ -1,11 +1,13 @@
+import { PLANET_CANON_RECORDS } from "../calculations/planetsAndSigns";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 
 /** Structural Parashari sign lordship only. Equal House occupancy comes from the Master Chart. */
-export const SIGN_LORDS: Record<string, string> = {
-  Aries: "Mars", Taurus: "Venus", Gemini: "Mercury", Cancer: "Moon",
-  Leo: "Sun", Virgo: "Mercury", Libra: "Venus", Scorpio: "Mars",
-  Sagittarius: "Jupiter", Capricorn: "Saturn", Aquarius: "Saturn", Pisces: "Jupiter",
-};
+/** Existing planetary Canon is the single source of traditional domicile rulership. */
+export const SIGN_LORDS: Record<string, string> = Object.fromEntries(
+  ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
+    .flatMap(planet => PLANET_CANON_RECORDS[planet].rulerships.domiciles
+      .map(sign => [sign, planet] as const))
+);
 export const LORDSHIP_PLANETS = [
   "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu",
 ] as const;
