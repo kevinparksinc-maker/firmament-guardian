@@ -6,9 +6,15 @@ import {
   formatEvidencePacket,
 } from "./astrologyKnowledge";
 import type { ChartResult } from "./astronomy";
-import { buildMasterPipeline, formatMasterGateContext } from "./master-pipeline";
+import {
+  buildMasterPipeline,
+  formatMasterGateContext,
+} from "./master-pipeline";
+import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 
-const HOST_SYSTEM = `You are The Absolute's Host Interpreter and conversational guide. Help with general questions, app navigation, and symbolic reflection naturally. For personal astrology questions, answer through the supplied chart evidence and the traditional meanings of its calculated methods. Interpret the strongest patterns directly, explain why the evidence supports the conclusion, and address contradictions. Do not impose a fixed personality, emotional narrative, cosmology lecture, or modern-life topic list. Do not invent chart facts or observed events.`;
+const HOST_SYSTEM = buildAstrologyInterpreterSystem(
+  `You are The Absolute's Host Interpreter and conversational guide. Help with general questions, app navigation, and symbolic reflection naturally. For personal astrology questions, answer through the supplied chart evidence and the traditional meanings of its calculated methods. Interpret the strongest patterns directly, explain why the evidence supports the conclusion, and address contradictions. Do not impose a fixed personality, emotional narrative, cosmology lecture, or modern-life topic list. Do not invent chart facts or observed events.`
+);
 
 export async function askHost(
   history: Array<{ role: "user" | "assistant"; content: string }>,
@@ -37,7 +43,9 @@ export async function askHost(
         .map(
           (b: any) =>
             `- ${b.name}: ${b.display} in House ${b.house}` +
-            (b.overlay?.nakshatra ? ` | Nakshatra: ${b.overlay.nakshatra} (Pada ${b.overlay.pada})` : "") +
+            (b.overlay?.nakshatra
+              ? ` | Nakshatra: ${b.overlay.nakshatra} (Pada ${b.overlay.pada})`
+              : "") +
             (b.overlay?.manzil ? ` | Manzil: ${b.overlay.manzil}` : "") +
             (b.overlay?.decan ? ` | Decan: ${b.overlay.decan}` : "") +
             (b.retrograde ? " [Retrograde]" : "")
@@ -50,7 +58,10 @@ export async function askHost(
             .map(
               (t: any) =>
                 `- Transit ${t.name} (${t.display}) in Natal House ${t.house} contacting: ${t.natalContacts
-                  .map((c: any) => `${c.natalName} (${c.aspect}, orb ${c.orb.toFixed(1)}°)`)
+                  .map(
+                    (c: any) =>
+                      `${c.natalName} (${c.aspect}, orb ${c.orb.toFixed(1)}°)`
+                  )
                   .join(", ")}`
             )
             .join("\n")
@@ -78,13 +89,18 @@ ${formattedPacket}
 ===================================================
 `;
     } catch (error) {
-      console.error("[HOST_EVIDENCE_FAILED] Full chart evidence retrieval failed:", error);
-      throw new Error("HOST_EVIDENCE_FAILED: Full chart evidence is unavailable; refusing a summary-only reading.");
-
+      console.error(
+        "[HOST_EVIDENCE_FAILED] Full chart evidence retrieval failed:",
+        error
+      );
+      throw new Error(
+        "HOST_EVIDENCE_FAILED: Full chart evidence is unavailable; refusing a summary-only reading."
+      );
     }
   }
 
-  if (synthesisContext) ragContext += `\n\nUNIFIED MASTER SYNTHESIS — COMPLETE METHOD EVIDENCE:\n${synthesisContext}`;
+  if (synthesisContext)
+    ragContext += `\n\nUNIFIED MASTER SYNTHESIS — COMPLETE METHOD EVIDENCE:\n${synthesisContext}`;
 
   const systemInstructions = [HOST_SYSTEM, ragContext].filter(Boolean);
 
@@ -96,13 +112,19 @@ ${formattedPacket}
   // Provider routing is resolved centrally by invokeLLM.
   const model = "claude-sonnet-4-6";
   const response = await invokeLLM({ model, messages, maxTokens: 1800 });
-  if (["length", "max_tokens"].includes(response.choices[0]?.finish_reason ?? "")) {
-    throw new Error("HOST_AI_TRUNCATED: Host response reached its token limit.");
+  if (
+    ["length", "max_tokens"].includes(response.choices[0]?.finish_reason ?? "")
+  ) {
+    throw new Error(
+      "HOST_AI_TRUNCATED: Host response reached its token limit."
+    );
   }
   const content = response.choices[0]?.message?.content;
   const reading = typeof content === "string" ? content.trim() : "";
   if (!reading) {
-    throw new Error("HOST_AI_EMPTY_RESPONSE: AI provider returned no readable interpretation.");
+    throw new Error(
+      "HOST_AI_EMPTY_RESPONSE: AI provider returned no readable interpretation."
+    );
   }
   return reading;
 }

@@ -42,33 +42,111 @@ export type ProfileChartScreenProps = {
 };
 
 const SIGNS = [
-  "Aries", "Taurus", "Gemini", "Cancer",
-  "Leo", "Virgo", "Libra", "Scorpio",
-  "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Cancer",
+  "Leo",
+  "Virgo",
+  "Libra",
+  "Scorpio",
+  "Sagittarius",
+  "Capricorn",
+  "Aquarius",
+  "Pisces",
 ] as const;
 
-const SIGN_GLYPHS = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"];
+const SIGN_GLYPHS = [
+  "♈",
+  "♉",
+  "♊",
+  "♋",
+  "♌",
+  "♍",
+  "♎",
+  "♏",
+  "♐",
+  "♑",
+  "♒",
+  "♓",
+];
 
 const ELEMENT_MAP: Record<string, "Fire" | "Earth" | "Air" | "Water"> = {
-  Aries: "Fire", Taurus: "Earth", Gemini: "Air", Cancer: "Water",
-  Leo: "Fire", Virgo: "Earth", Libra: "Air", Scorpio: "Water",
-  Sagittarius: "Fire", Capricorn: "Earth", Aquarius: "Air", Pisces: "Water",
+  Aries: "Fire",
+  Taurus: "Earth",
+  Gemini: "Air",
+  Cancer: "Water",
+  Leo: "Fire",
+  Virgo: "Earth",
+  Libra: "Air",
+  Scorpio: "Water",
+  Sagittarius: "Fire",
+  Capricorn: "Earth",
+  Aquarius: "Air",
+  Pisces: "Water",
 };
 
 const MODALITY_MAP: Record<string, "Cardinal" | "Fixed" | "Mutable"> = {
-  Aries: "Cardinal", Taurus: "Fixed", Gemini: "Mutable", Cancer: "Cardinal",
-  Leo: "Fixed", Virgo: "Mutable", Libra: "Cardinal", Scorpio: "Fixed",
-  Sagittarius: "Mutable", Capricorn: "Cardinal", Aquarius: "Fixed", Pisces: "Mutable",
+  Aries: "Cardinal",
+  Taurus: "Fixed",
+  Gemini: "Mutable",
+  Cancer: "Cardinal",
+  Leo: "Fixed",
+  Virgo: "Mutable",
+  Libra: "Cardinal",
+  Scorpio: "Fixed",
+  Sagittarius: "Mutable",
+  Capricorn: "Cardinal",
+  Aquarius: "Fixed",
+  Pisces: "Mutable",
 };
 
-const DIGNITY_TABLE: Record<string, { domicile: string[]; exaltation: string; fall: string; detriment: string[] }> = {
-  Sun: { domicile: ["Leo"], exaltation: "Aries", fall: "Libra", detriment: ["Aquarius"] },
-  Moon: { domicile: ["Cancer"], exaltation: "Taurus", fall: "Scorpio", detriment: ["Capricorn"] },
-  Mercury: { domicile: ["Gemini", "Virgo"], exaltation: "Virgo", fall: "Pisces", detriment: ["Sagittarius", "Pisces"] },
-  Venus: { domicile: ["Taurus", "Libra"], exaltation: "Pisces", fall: "Virgo", detriment: ["Aries", "Scorpio"] },
-  Mars: { domicile: ["Aries", "Scorpio"], exaltation: "Capricorn", fall: "Cancer", detriment: ["Taurus", "Libra"] },
-  Jupiter: { domicile: ["Sagittarius", "Pisces"], exaltation: "Cancer", fall: "Capricorn", detriment: ["Gemini", "Virgo"] },
-  Saturn: { domicile: ["Capricorn", "Aquarius"], exaltation: "Libra", fall: "Aries", detriment: ["Cancer", "Leo"] },
+const DIGNITY_TABLE: Record<
+  string,
+  { domicile: string[]; exaltation: string; fall: string; detriment: string[] }
+> = {
+  Sun: {
+    domicile: ["Leo"],
+    exaltation: "Aries",
+    fall: "Libra",
+    detriment: ["Aquarius"],
+  },
+  Moon: {
+    domicile: ["Cancer"],
+    exaltation: "Taurus",
+    fall: "Scorpio",
+    detriment: ["Capricorn"],
+  },
+  Mercury: {
+    domicile: ["Gemini", "Virgo"],
+    exaltation: "Virgo",
+    fall: "Pisces",
+    detriment: ["Sagittarius", "Pisces"],
+  },
+  Venus: {
+    domicile: ["Taurus", "Libra"],
+    exaltation: "Pisces",
+    fall: "Virgo",
+    detriment: ["Aries", "Scorpio"],
+  },
+  Mars: {
+    domicile: ["Aries", "Scorpio"],
+    exaltation: "Capricorn",
+    fall: "Cancer",
+    detriment: ["Taurus", "Libra"],
+  },
+  Jupiter: {
+    domicile: ["Sagittarius", "Pisces"],
+    exaltation: "Cancer",
+    fall: "Capricorn",
+    detriment: ["Gemini", "Virgo"],
+  },
+  Saturn: {
+    domicile: ["Capricorn", "Aquarius"],
+    exaltation: "Libra",
+    fall: "Aries",
+    detriment: ["Cancer", "Leo"],
+  },
 };
 
 const SABIAN_SYMBOLS: Record<string, string> = {
@@ -113,7 +191,9 @@ export function ProfileChartScreen({
   error,
 }: ProfileChartScreenProps) {
   // Toggle between North Indian Diamond (Default) and Circular Wheel
-  const [chartViewMode, setChartViewMode] = useState<"diamond" | "wheel">("diamond");
+  const [chartViewMode, setChartViewMode] = useState<"diamond" | "wheel">(
+    "diamond"
+  );
   const [interpretBody, setInterpretBody] = useState<string | null>(null);
 
   const sun = chart?.movingBodies.find(b => b.name === "Sun");
@@ -138,10 +218,17 @@ export function ProfileChartScreen({
 
   if (!chart) {
     return (
-      <section role="status" className="mx-auto max-w-4xl rounded-2xl border border-amber-300/30 bg-slate-950/80 p-8 text-center text-amber-100">
-        <h1 className="font-serif text-2xl font-bold">Your Calculated Diamond Chart</h1>
+      <section
+        role="status"
+        className="mx-auto max-w-4xl rounded-2xl border border-amber-300/30 bg-slate-950/80 p-8 text-center text-amber-100"
+      >
+        <h1 className="font-serif text-2xl font-bold">
+          Your Calculated Diamond Chart
+        </h1>
         <p className="mt-2 text-sm text-slate-300">
-          {calculating ? "Calculating exact Swiss Ephemeris astronomical positions…" : "Chart data currently unavailable."}
+          {calculating
+            ? "Calculating exact Swiss Ephemeris astronomical positions…"
+            : "Chart data currently unavailable."}
         </p>
         {error && <p className="mt-3 text-xs text-rose-300">{error}</p>}
       </section>
@@ -149,7 +236,7 @@ export function ProfileChartScreen({
   }
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-8 pb-20 pt-2 text-slate-100">
+    <div className="mx-auto max-w-5xl space-y-8 pb-20 pt-2 text-slate-100">
       {/* Header & Controls */}
       <section aria-label="Chart Controls" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
@@ -218,7 +305,9 @@ export function ProfileChartScreen({
 
           {/* God View vs Agent View Toggle */}
           <div className="flex items-center gap-1 bg-[#101628] p-1 rounded-xl border border-white/10">
-            <span className="text-[10px] uppercase font-bold text-slate-500 px-2 font-mono">Frame:</span>
+            <span className="text-[10px] uppercase font-bold text-slate-500 px-2 font-mono">
+              Frame:
+            </span>
             <button
               type="button"
               onClick={() => onWorldviewChange("agent")}
@@ -245,48 +334,89 @@ export function ProfileChartScreen({
         </div>
       </section>
 
-      {/* Main Chart Graphic Display */}
-      <section aria-label="Main Chart Visualizer">
-        {chartViewMode === "diamond" ? (
-          <GuardianDiamondCharts chart={chart} />
-        ) : (
-          <ChartWheel chart={chart} />
-        )}
+      <section
+        aria-label="Whole-chart reading first"
+        className="space-y-5 rounded-3xl border border-cyan-300/20 bg-gradient-to-br from-slate-950 via-slate-950 to-indigo-950/50 p-5 shadow-2xl shadow-cyan-950/20 sm:p-7"
+      >
+        <div className="max-w-2xl space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
+            Start with the meaning
+          </p>
+          <h2 className="font-serif text-2xl font-semibold text-white sm:text-3xl">
+            Your chart’s main message
+          </h2>
+          <p className="text-sm leading-6 text-slate-300">
+            Begin with the connected human reading. The chart geometry, method
+            outputs, and audit trail are still available below when you want to
+            examine the evidence behind it.
+          </p>
+        </div>
+        <MasterSynthesizerPanel
+          chart={chart}
+          mode={readingMode}
+          presentation="summary"
+        />
+        <Link
+          href="/reading/depth"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-200 hover:text-white"
+        >
+          Continue to the full explanation <span aria-hidden="true">→</span>
+        </Link>
       </section>
 
-      <SystematicDeconstruction chart={chart} mode="natal" onInterpretBody={setInterpretBody} />
+      <details className="group overflow-hidden rounded-3xl border border-white/10 bg-slate-950/40">
+        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-200 marker:hidden sm:px-6">
+          <span className="mr-2 text-amber-300">＋</span>Explore chart evidence
+          and methods
+          <span className="ml-2 text-xs font-normal text-slate-500">
+            Visualizers, placements, method outcomes, and audit details
+          </span>
+        </summary>
+        <div className="space-y-8 border-t border-white/10 p-4 sm:p-6">
+          <section aria-label="Main Chart Visualizer">
+            {chartViewMode === "diamond" ? (
+              <GuardianDiamondCharts chart={chart} />
+            ) : (
+              <ChartWheel chart={chart} />
+            )}
+          </section>
 
-      {/* Expanded placement evidence */}
-      {interpretBody && (
-        <section className="rounded-2xl border border-violet-400/40 bg-slate-950/90 p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <div>
-              <h2 className="font-serif text-xl font-bold text-violet-100">{interpretBody} — Master Interpretation</h2>
-              <p className="text-xs text-slate-400">Deep esoteric synthesis across both reference frames</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setInterpretBody(null)}
-              className="rounded-lg border border-white/20 px-3 py-1 text-xs text-slate-300 hover:text-white"
-            >
-              Close
-            </button>
-          </div>
-          <FocusedPlacementReading chart={chart} name={interpretBody} />
-        </section>
-      )}
+          <SystematicDeconstruction
+            chart={chart}
+            mode="natal"
+            onInterpretBody={setInterpretBody}
+          />
 
-      <ChartMethodOutcomes chart={chart} mode={readingMode} />
-      <section aria-label="Whole-chart synthesis" className="space-y-4">
-        <h2 className="font-serif text-2xl font-semibold text-white">Your whole-chart synthesis</h2>
-        <p className="text-sm text-slate-300">The individual outcomes above now come together in one connected reading.</p>
-        <MasterSynthesizerPanel chart={chart} mode={readingMode} />
-      </section>
-      <TechniqueAuditDashboard chart={chart} />
-      {/* Fixed Star Intensity Visualizer */}
-      <section aria-label="Fixed Star Visualizer">
-        <FixedStarIntensityVisualizer chart={chart} />
-      </section>
+          {interpretBody && (
+            <section className="space-y-4 rounded-2xl border border-violet-400/40 bg-slate-950/90 p-5">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div>
+                  <h2 className="font-serif text-xl font-bold text-violet-100">
+                    {interpretBody} — Master Interpretation
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Deep esoteric synthesis across both reference frames
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInterpretBody(null)}
+                  className="rounded-lg border border-white/20 px-3 py-1 text-xs text-slate-300 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+              <FocusedPlacementReading chart={chart} name={interpretBody} />
+            </section>
+          )}
+
+          <ChartMethodOutcomes chart={chart} mode={readingMode} />
+          <TechniqueAuditDashboard chart={chart} />
+          <section aria-label="Fixed Star Visualizer">
+            <FixedStarIntensityVisualizer chart={chart} />
+          </section>
+        </div>
+      </details>
     </div>
   );
 }

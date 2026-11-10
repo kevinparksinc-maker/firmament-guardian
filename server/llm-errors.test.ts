@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-vi.mock("./_core/env", () => ({ ENV: { anthropicApiKey: "test-key" } }));
+vi.mock("./_core/env", () => ({
+  ENV: {
+    groqApiKey: "test-key",
+    groqModel: "test-model",
+    geminiApiKey: "",
+    forgeApiKey: "",
+    openaiApiKey: "",
+    openaiApiBase: "",
+  },
+}));
 import { invokeLLM } from "./_core/llm";
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -7,20 +16,18 @@ afterEach(() => {
 });
 describe("AI request error handling", () => {
   it("returns the provider explanation without retrying a rejected 400", async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            error: { message: "Your credit balance is too low" },
-          }),
-          { status: 400, statusText: "Bad Request" }
-        )
-      );
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: { message: "Your credit balance is too low" },
+        }),
+        { status: 400, statusText: "Bad Request" }
+      )
+    );
     vi.stubGlobal("fetch", fetch);
     await expect(
       invokeLLM({ messages: [{ role: "user", content: "Summary" }] })
-    ).rejects.toThrow("Your credit balance is too low");
+    ).rejects.toThrow("GROQ_REQUEST_FAILED: HTTP 400");
     expect(fetch).toHaveBeenCalledTimes(1);
   });
   it("reports the requested timeout and avoids resending the same timed-out generation", async () => {
