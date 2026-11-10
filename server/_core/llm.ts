@@ -227,8 +227,8 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.nvidiaApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
-    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, NVIDIA_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
 
@@ -313,63 +313,6 @@ async function invokeGroq(params: InvokeParams): Promise<InvokeResult> {
   }
   if (!responseContentToText(choice?.message?.content).trim() && !choice?.message?.tool_calls?.length) {
     throw new Error("GROQ_EMPTY_READING: Groq returned no interpretation.");
-  }
-  return result;
-}
-
-async function invokeNvidia(params: InvokeParams): Promise<InvokeResult> {
-  // NVIDIA NIM exposes an OpenAI-compatible chat endpoint. The model name
-  // comes from the user's selected NVIDIA Build example, not a Claude hint.
-  const requestBody = JSON.stringify({
-    model: ENV.nvidiaModel,
-    messages: params.messages.map(normalizeMessage),
-    max_tokens: Math.min(params.max_tokens ?? params.maxTokens ?? 1200, 4096),
-    stream: false,
-  });
-  const requestBytes = Buffer.byteLength(requestBody);
-  const startedAt = Date.now();
-  // Metrics only; never log API credentials, birth data or prompt text.
-  console.info(`NVIDIA synthesis request: inputBytes=${requestBytes} model=${ENV.nvidiaModel}`);
-  let response: Response;
-  try {
-    response = await fetchWithBackoff("https://integrate.api.nvidia.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.nvidiaApiKey}`,
-    },
-    body: requestBody,
-    signal: params.signal,
-    // NVIDIA inference runs in a background placement job, not a held HTTP request.
-    // Configure NVIDIA_TIMEOUT_MS on the host if the model needs a different limit.
-    timeoutMs: Math.min(Math.max(Number(process.env.NVIDIA_TIMEOUT_MS) || 150_000, 10_000), 300_000),
-    });
-  } catch (error) {
-    console.warn(`NVIDIA synthesis transport failed: elapsedMs=${Date.now() - startedAt} inputBytes=${requestBytes} reason=${error instanceof Error && error.message.startsWith("AI_REQUEST_TIMEOUT:") ? "timeout" : "network"}`);
-    throw error;
-  }
-  console.info(`NVIDIA synthesis response: status=${response.status} elapsedMs=${Date.now() - startedAt} inputBytes=${requestBytes}`);
-  if (!response.ok) {
-    const status = response.status;
-    // Never log a response body that may include private chart text.
-    throw new Error(status === 429
-      ? "AI_RATE_LIMITED: NVIDIA's hosted inference limit was reached."
-      : status === 401 || status === 403
-      ? "AI_AUTH_FAILED: Verify NVIDIA_API_KEY in Render."
-      : `NVIDIA_REQUEST_FAILED: HTTP ${status}.`);
-  }
-  const result = await response.json() as ProviderResponse;
-  const choice = result.choices?.[0];
-  if (choice?.finish_reason === "length" || choice?.finish_reason === "max_tokens")
-    throw new Error("NVIDIA_INCOMPLETE_READING: Generation reached the output token limit.");
-  const output = readableAssistantText(result);
-  if (!output.trim()) throw new Error("NVIDIA_EMPTY_READING: The model returned no readable text.");
-  if (!choice?.message?.content) {
-    result.choices = [{
-      index: 0,
-      message: { role: "assistant", content: output },
-      finish_reason: choice?.finish_reason ?? "stop",
-    }];
   }
   return result;
 }
@@ -473,10 +416,9 @@ const RETRY_BASE_DELAY_MS = 500;
 const RETRY_MAX_DELAY_MS = 30_000;
 const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
-function selectedProvider(): "groq" | "nvidia" | "openai-compatible" | "gemini" | "built-in-forge" | "unconfigured" {
+function selectedProvider(): "groq" | "openai-compatible" | "gemini" | "built-in-forge" | "unconfigured" {
   const preference = (process.env.AI_PRIMARY_PROVIDER ?? "").trim().toLowerCase();
   const available = {
-    nvidia: Boolean(ENV.nvidiaApiKey),
     groq: Boolean(ENV.groqApiKey),
     "openai-compatible": Boolean(ENV.openaiApiKey && ENV.openaiApiBase),
     gemini: Boolean(ENV.geminiApiKey),
@@ -489,7 +431,6 @@ function selectedProvider(): "groq" | "nvidia" | "openai-compatible" | "gemini" 
     return provider;
   }
   if (available.groq) return "groq";
-  if (available.nvidia) return "nvidia";
   if (available["openai-compatible"]) return "openai-compatible";
   if (available.gemini) return "gemini";
   if (available["built-in-forge"]) return "built-in-forge";
@@ -666,7 +607,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const provider = selectedProvider();
   console.info(`LLM provider selected: ${provider}`);
   if (provider === "groq") return invokeGroq(params);
-  if (provider === "nvidia") return invokeNvidia(params);
   if (provider === "openai-compatible") return invokeOpenAI(params);
   if (provider === "gemini") return invokeGemini(params);
   if (provider === "unconfigured") throw new Error("AI_PROVIDER_NOT_CONFIGURED");
