@@ -569,11 +569,12 @@ export async function buildUnifiedMasterChart(
     ascendantLongitude: ascendant!.longitude,
     houseCusps: chart.houses,
     placements: [
-      ...basePlanets,
+      ...basePlanets
+        .filter(p => ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"].includes(p.name))
+        .map(p => ({ name: p.name, longitude: p.longitude, house: p.agentHouse ?? p.house })),
       { name: "Rahu", longitude: chart.northNode.longitude, house: chart.northNode.agentHouse ?? chart.northNode.house },
       { name: "Ketu", longitude: chart.southNode.longitude, house: chart.southNode.agentHouse ?? chart.southNode.house },
-    ].filter(p => ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"].includes(p.name))
-      .map(p => ({ name: p.name, longitude: p.longitude, house: p.agentHouse ?? p.house })),
+    ],
   }) : [];
   layers["vedic-planetary-lordship-connections"] = {
     id: "vedic-planetary-lordship-connections",
