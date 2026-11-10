@@ -272,6 +272,38 @@ export function applyMethodRules(
     );
   };
   switch (baseId) {
+    case "vedic-planetary-lordship-connections":
+      requireValue(values.length === 9, "Lordship requires nine planetary records");
+      requireValue(new Set(values.map(raw => record(raw).planet)).size === 9,
+        "Lordship records must have distinct planetary identities");
+      values.forEach((raw, i) => {
+        const v = record(raw);
+        const body = String(v.planet);
+        const occupied = finite(v.occupiedHouse, "occupied house");
+        requireValue(Number.isInteger(occupied) && occupied >= 1 && occupied <= 12,
+          "Invalid Equal House occupancy");
+        const ruled = (v.ruledHouses as number[]) ?? [];
+        const flows = (v.connections as Array<{fromHouse:number;toHouse:number;type:string}>) ?? [];
+        requireValue(Array.isArray(ruled) && Array.isArray(flows), "Invalid lordship edges");
+        requireValue(flows.every(f => f.type === "carry" && ruled.includes(f.fromHouse) &&
+          f.toHouse === occupied && f.fromHouse !== occupied), "Lordship edge mismatch");
+        const parts: string[] = [];
+        for (const f of flows)
+          parts.push(`${houseText(f.fromHouse)} is carried by ${body} into ${houseText(occupied)}`);
+        for (const h of (v.selfPlacedFor as number[]) ?? [])
+          parts.push(`${body} rules and occupies ${houseText(h)} (self-placement)`);
+        if (v.coRuledPair)
+          parts.push(`${houseText(v.coRuledPair[0])} and ${houseText(v.coRuledPair[1])} share ${body} as ruler`);
+        if (v.exchangeWith)
+          parts.push(`${body} and ${v.exchangeWith.partnerPlanet} mutually exchange signs (${v.exchangeWith.myOccupiedSign} / ${v.exchangeWith.partnerOccupiedSign})`);
+        if (!parts.length)
+          parts.push(`${body} has no classical sign lordship; its occupied ${houseText(occupied)} is retained for separate node interpretation`);
+        emit(i, body, parts.join(". ") + ".",
+          `${body}: Equal House ${occupied}; ruled houses [${ruled.join(", ")}]; structural lordship links only`,
+          "planetary-lordship-carry", "Parashari sign rulership and existing house significations",
+          domains[occupied], "neutral", "moderate");
+      });
+      break;
     case "vedic-shadbala":
       requireValue(
         values.length === 7,
