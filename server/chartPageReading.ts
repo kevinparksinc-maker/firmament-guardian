@@ -240,7 +240,12 @@ export function buildPlanetaryCharacteristicMasterList(
         const traits = characteristics(values);
         if (result != null || traits.length) layers.push({ method, result, characteristics: traits, evidenceIds });
       };
-      add("planet-nature", packet.name, [...(canon.planetCore ?? []), ...(canon.planetPsychology ?? [])]);
+      add("planet-nature", packet.name, [
+        ...(canon.planetCore ?? []),
+        ...Object.values(canon.planetPsychology ?? {}).filter(
+          (value): value is string => typeof value === "string"
+        ),
+      ]);
       add("sign", (packet.facts[0].value as { display?: string }).display, [
         ...(canon.signQualities ?? []), canon.signTheme, canon.planetInSign
       ]);
@@ -271,7 +276,7 @@ export function buildPlanetaryCharacteristicMasterList(
         list.push(judgment);
         byMethod.set(judgment.methodId, list);
       }
-      for (const [method, findings] of byMethod) {
+      for (const [method, findings] of Array.from(byMethod.entries())) {
         add(method, findings.map(f => ({ findingId: f.findingId, frame: f.frame })),
           findings.flatMap(f => [f.judgment, f.mechanism]),
           Array.from(new Set(findings.flatMap(f => f.evidenceIds))));
