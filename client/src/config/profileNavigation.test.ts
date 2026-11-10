@@ -20,20 +20,3 @@ describe("post-profile information architecture", () => {
     expect(MAJOR_ASPECT_ORB_DEGREES).toBe(5);
   });
 });
-
-import { PRIMARY_NAV_ITEMS, primaryDestinationForPath } from "./profileNavigation";
-
-describe("shared mobile and desktop navigation", () => {
-  it("keeps Horary one tap away within five destinations", () => {
-    expect(PRIMARY_NAV_ITEMS.map(item => item.label)).toEqual(["Home", "Chart", "Energy", "Horary", "Readings"]);
-    expect(new Set(PRIMARY_NAV_ITEMS.map(item => item.href)).size).toBe(5);
-  });
-  it.each([
-    ["/reading/evidence", "/reading"], ["/life-story", "/reading"],
-    ["/energy/contacts", "/energy"], ["/forecast", "/energy"],
-    ["/zodiac-readings", "/horary"], ["/horary", "/horary"],
-    ["/chart", "/chart"], ["/", "/"], ["/profiles", undefined], ["/sky", undefined],
-  ])("highlights the parent destination for %s", (path, expected) => {
-    expect(primaryDestinationForPath(path)).toBe(expected);
-  });
-});

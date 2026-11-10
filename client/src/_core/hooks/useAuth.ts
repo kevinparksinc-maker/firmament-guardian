@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
@@ -16,7 +15,6 @@ export function useAuth(options?: UseAuthOptions) {
   // desync it from an in-flight login's `state`.
   const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
   const utils = trpc.useUtils();
-  const queryClient = useQueryClient();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
@@ -37,21 +35,26 @@ export function useAuth(options?: UseAuthOptions) {
         error instanceof TRPCClientError &&
         error.data?.code === "UNAUTHORIZED"
       ) {
-        // An already-expired session still clears browser state below.
-      } else throw error;
+        return;
+      }
+      throw error;
+    } finally {
+      // Clear the Preview auto-login token mirrored into sessionStorage, so
+      // header-based sessions (Safari ITP / WebView) are logged out too. The
+      // backend cookie is cleared by the logout mutation.
+      try {
+        sessionStorage.removeItem("manus-cookie");
+      } catch {}
+      utils.auth.me.setData(undefined, null);
+      await utils.auth.me.invalidate();
     }
-    // Clear the Preview auto-login token mirrored into sessionStorage, so
-    // header-based sessions (Safari ITP / WebView) are logged out too. The
-    // backend cookie is cleared by the logout mutation.
-    try {
-      sessionStorage.removeItem("manus-cookie");
-    } catch {}
-    utils.auth.me.setData(undefined, null);
-    queryClient.clear();
-    await utils.auth.me.invalidate();
-  }, [logoutMutation, utils, queryClient]);
+  }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
+    localStorage.setItem(
+      "manus-runtime-user-info",
+      JSON.stringify(meQuery.data)
+    );
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
@@ -69,7 +72,7 @@ export function useAuth(options?: UseAuthOptions) {
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;
     if (meQuery.isLoading || logoutMutation.isPending) return;
-    if (state.user || meQuery.error) return;
+    if (state.user) return;
     if (typeof window === "undefined") return;
     if (redirectPath && window.location.pathname === redirectPath) return;
 
@@ -84,7 +87,6 @@ export function useAuth(options?: UseAuthOptions) {
     redirectPath,
     logoutMutation.isPending,
     meQuery.isLoading,
-    meQuery.error,
     state.user,
   ]);
 

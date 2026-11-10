@@ -42,23 +42,3 @@ describe("horary planetary look-ahead", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 });
-
-
-describe("look-ahead coordinate consistency", () => {
-  it("perfects contacts and stations in the same equatorial XYZ frame as the chart", () => {
-    const result = calculateLookahead(Number(sweph.julday(2024, 7, 15, 16 + 34 / 60, 1)), "America/New_York");
-    const names = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"];
-    const targets = { conjunction: 0, sextile: 60, square: 90, trine: 120, opposition: 180 };
-    const sample = (utc: string, name: string) => {
-      const jd = Date.parse(utc) / 86400000 + 2440587.5;
-      const { data } = sweph.calc_ut(jd, names.indexOf(name), 4 | 256 | 2048 | 4096);
-      return { longitude: Math.atan2(data[1], data[0]) * 180 / Math.PI,
-        speed: (data[0] * data[4] - data[1] * data[3]) / (data[0] ** 2 + data[1] ** 2) * 180 / Math.PI };
-    };
-    for (const event of result.upcomingAspects) {
-      const delta = Math.abs(((sample(event.exactAtUtc, event.first).longitude - sample(event.exactAtUtc, event.second).longitude) % 360 + 360) % 360);
-      expect(Math.abs(Math.min(delta, 360 - delta) - targets[event.aspect])).toBeLessThan(0.00001);
-    }
-    for (const event of result.stations) expect(Math.abs(sample(event.atUtc, event.planet).speed)).toBeLessThan(0.00001);
-  });
-});

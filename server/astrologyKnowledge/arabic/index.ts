@@ -1,3 +1,4 @@
+import { resolveSubdivisions } from "./subdivisions";
 import type { ChartResult, ChartRow } from "../../astronomy";
 import { overlay, MANAZIL, normalizeLongitude } from "../../../shared/hybrid";
 import { calculateArabicLots } from "../../utils/arabicLots";
@@ -51,14 +52,7 @@ export function resolveArabicEvidence(
   for (const row of all) {
     const ov = overlay(row.longitude);
     const m = manzil(row.longitude);
-    if (
-      row.name === "Moon" ||
-      row.name === "Ascendant" ||
-      plan.subjects.some(subject =>
-        row.name.toLowerCase().includes(subject.toLowerCase())
-      )
-    )
-      evidence.push({
+    evidence.push({
         id: `arabic-manzil-${row.name}`,
         tradition: "arabic",
         category: "deterministic-rule",
@@ -103,6 +97,7 @@ export function resolveArabicEvidence(
       ascendant: chart.ascendant.longitude,
       sun: sun.longitude,
       moon: moon.longitude,
+      venus: chart.movingBodies.find(row => row.name === "Venus")?.longitude,
       sect,
     });
     for (const [name, longitude] of Object.entries(lots)) {
@@ -138,25 +133,6 @@ export function resolveArabicEvidence(
       sourceId: "local-arabic-rules",
       sourceTrace: trace("lots", "arabic-lots"),
     });
-  if (plan.includeTiming)
-    evidence.push({
-      id: "arabic-hours-status",
-      tradition: "arabic",
-      category: "uncertainty",
-      technique: "planetary-hours",
-      subject: "timing",
-      statement:
-        "Planetary hours are not calculated without local sunrise and sunset inputs.",
-      concepts: ["planetary-hours", "incomplete"],
-      polarity: "neutral",
-      strength: 0,
-      ruleId: "arabic-planetary-hours",
-      sourceId: "canopy-arabian",
-      sourceTrace: trace(
-        "planetary-hours",
-        "arabic-planetary-hours",
-        "canopy-arabian"
-      ),
-    });
+  evidence.push(...resolveSubdivisions(chart));
   return evidence;
 }

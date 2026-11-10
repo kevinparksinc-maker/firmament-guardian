@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
 vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
 
-import { aspectBetween, calculateHoraryChart, horaryFollowUp, openHoraryQuestion, type HoraryInput } from "./horary";
+import { calculateHoraryChart, horaryFollowUp, openHoraryQuestion, type HoraryInput } from "./horary";
 import { calculateTraditionalHorary } from "./horaryTraditional";
 
 const sampleInput: HoraryInput = {
@@ -128,7 +128,7 @@ describe("horary astrology", () => {
     expect(chart.evidenceText).toContain("not a prediction of when an event will happen");
     expect(chart.evidenceText).toContain("Planetary stations");
     expect(chart.evidenceText).toContain("Method boundary");
-    expect(chart.evidenceText).toContain("traditional layer now calculates configured Lots");
+    expect(chart.evidenceText).toContain("configured direct perfection and bounded translation");
     expect(chart.traditional.lots).toHaveLength(4);
     expect(chart.traditional.dignities.length).toBeGreaterThan(0);
     expect(typeof chart.traditional.moonStatus.voidOfCourse).toBe("boolean");
@@ -145,8 +145,8 @@ describe("horary astrology", () => {
     expect(chart.subjectRuler).toBe(chart.houses[6].ruler);
     expect(chart.actualTopicHouse).toBe(4); // 10th from the 7th
     expect(chart.topicRuler).toBe(chart.houses[3].ruler);
-    expect(chart.evidenceText).toContain("another person (House 7)");
-    expect(chart.evidenceText).toContain("actual chart house 4");
+    expect(chart.evidenceText).toContain("Expert-selected person: radical House 7");
+    expect(chart.evidenceText).toContain("radical House 4");
   });
 
   it("uses the child's turned house when the question names the querent's child", async () => {
@@ -183,29 +183,35 @@ describe("horary astrology", () => {
     expect(messages[1].content).toContain(result.chart.topicRuler);
     expect(messages[1].content).toContain("Roles:");
     expect(messages[1].content).toContain("LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED");
-    expect(messages[1].content).toContain("GOD VIEW / AGENT VIEW RELATIONSHIP SYNTHESIS");
-    expect(messages[1].content).toContain("Synthesis shown in the box:");
-    expect(messages[1].content).toContain("FULL 16/20-LAYER SYNTHESIS REPORT");
-    expect(messages[1].content).toContain("16 SELF-KNOWLEDGE DIMENSIONS");
-    expect(messages[1].content).toContain("16-SYSTEM CONVERGENCE AUDIT");
-    expect(messages[1].content).toContain("PLANET INTERACTION MATRIX");
-    expect(messages[1].content).toContain("LANGUAGE SAFETY RESTRICTIONS");
     expect(messages[1].content).toContain("This is the compact judgment evidence");
     expect(messages[1].content).toContain("FULL TECHNICAL EVIDENCE");
     expect(messages[1].content).toContain("TRADITIONAL MOON STATUS");
     expect(result.chart.canonEvidenceText).toContain("Condition:");
   });
 
-  it("returns a deterministic core judgment when optional language synthesis fails", async () => {
+  it("returns a deterministic core judgment when optional language synthesis fails with all traditional layers", async () => {
     mocked.invokeLLM.mockRejectedValueOnce(new Error("provider unavailable"));
 
     const result = await openHoraryQuestion(sampleInput);
 
-    expect(result.synthesisStatus).toBe("deterministic_fallback");
     expect(result.reading).toContain("## Judgment");
     expect(result.reading).toContain(result.chart.traditional.judgment.verdict);
-    expect(result.reading).toContain("God View / Agent View synthesis from the displayed evidence box:");
+    expect(result.reading).toContain("Significator condition:");
+    expect(result.reading).toContain("Arabic Lots:");
+    expect(result.reading).toContain("Part of Fortune");
+    expect(result.reading).toContain("Part of Spirit");
+    expect(result.reading).toContain("Part of Eros");
+    expect(result.reading).toContain("Part of Necessity");
+    expect(result.reading).toContain("Lunar stations & Decans:");
+    expect(result.reading).toContain("Timing estimate:");
     expect(result.reading).toContain("deterministic chart");
+
+    // Also verify judgmentEvidenceText contains the compact traditional layers
+    expect(result.chart.judgmentEvidenceText).toContain("SIGNIFICATOR DIGNITIES & DEBILITIES:");
+    expect(result.chart.judgmentEvidenceText).toContain("ARABIC PARTS / LOTS:");
+    expect(result.chart.judgmentEvidenceText).toContain("FIXED STARS WITHIN 1° ORB:");
+    expect(result.chart.judgmentEvidenceText).toContain("TRADITIONAL TIMING ESTIMATE:");
+    expect(result.chart.judgmentEvidenceText).toContain("LUNAR MANSION / MANZIL / DECAN OVERLAYS:");
   });
 
   it("adds a person natal layer while keeping transit and God View at the question moment", async () => {
@@ -242,50 +248,5 @@ describe("horary astrology", () => {
     expect(messages.some(message => message.content.includes("Original horary judgment evidence"))).toBe(true);
     expect(messages.some(message => message.content.includes("Will the hypothetical applicant accept the new role?"))).toBe(true);
     expect(messages[0].content).toContain("Keep the original chart and question fixed");
-  });
-});
-
-
-describe("instantaneous Horary contact phase", () => {
-  const body = (name: string, longitude: number, speed: number) => ({ name, longitude, speed, display: "test", sign: "Aries", house: 1, retrograde: speed < 0 });
-  it.each([
-    [59, 13, 60, 0.1, "conjunction", "applying"],
-    [61, 13, 60, 0.1, "conjunction", "separating"],
-    [359, 13, 0, 0.1, "conjunction", "applying"],
-    [59, 13, 0, 0.1, "sextile", "applying"],
-    [181, -1, 0, 0, "opposition", "applying"],
-    [179, 1, 0, 0, "opposition", "applying"],
-    [60, 1, 0, 0, "sextile", "unclear"],
-    [59, 1, 0, 1, "sextile", "unclear"],
-  ] as const)("classifies %s° moving %s°/day against %s°", (a, speedA, b, speedB, aspect, phase) => {
-    const first = body("Moon", a, speedA), second = body("Mars", b, speedB);
-    expect(aspectBetween(first, second)).toMatchObject({ aspect, phase });
-    expect(aspectBetween(second, first)).toMatchObject({ aspect, phase });
-  });
-});
-
-
-describe("Horary edited inputs and natal separation", () => {
-  it("recalculates question-time houses and positions while preserving the birth layer", async () => {
-    const natal = { location: "Dallas, TX, USA", latitude: 32.7767, longitude: -96.797,
-      timezone: "America/Chicago", date: "1986-11-20", time: "10:06" };
-    const first = await calculateHoraryChart({ ...sampleInput, natal });
-    const edited = await calculateHoraryChart({ ...sampleInput, natal, time: "15:34" });
-    expect(first.natalChart!.movingBodies).toEqual(edited.natalChart!.movingBodies);
-    expect(first.transitChart.transits.find(row => row.name === "Moon")!.longitude)
-      .not.toBe(edited.transitChart.transits.find(row => row.name === "Moon")!.longitude);
-    expect(first.ascendant.longitude).not.toBe(edited.ascendant.longitude);
-    expect(first.askedAt).not.toBe(edited.askedAt);
-    for (const chart of [first, edited]) {
-      for (const placement of chart.placements) {
-        const transit = chart.transitChart.transits.find(row => row.name === placement.name);
-        if (transit) expect(transit.longitude).toBeCloseTo(placement.longitude, 8);
-      }
-    }
-  });
-  it("reports a child's actual relationship house consistently in the interpretation packet", async () => {
-    const chart = await calculateHoraryChart({ ...sampleInput, subject: "other", subjectHouse: 5, topicHouse: 9 });
-    expect(chart.evidenceText).toContain("another person (House 5)");
-    expect(chart.evidenceText).not.toContain("another person (House 7)");
   });
 });

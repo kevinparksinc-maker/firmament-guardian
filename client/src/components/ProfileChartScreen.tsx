@@ -1,8 +1,4 @@
-import { SystematicDeconstruction } from "./SystematicDeconstruction";
-import { ChartMethodOutcomes } from "./ChartMethodOutcomes";
-import { MasterSynthesizerPanel } from "./MasterSynthesizerPanel";
 import React, { useState, useMemo } from "react";
-import { TechniqueAuditDashboard } from "./TechniqueAuditDashboard";
 import { Link } from "wouter";
 import {
   BookOpen,
@@ -26,10 +22,13 @@ import {
 } from "lucide-react";
 import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
 import { ChartWheel } from "@/components/ChartWheel";
-import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
+import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { FixedStarIntensityVisualizer } from "@/components/FixedStarIntensityVisualizer";
+import { SystematicDeconstruction } from "@/components/SystematicDeconstruction";
+import { PlanetaryCanonMatrix } from "@/components/PlanetaryCanonMatrix";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
+import { FIXED_STARS } from "../../../shared/hybrid";
 
 export type ProfileChartScreenProps = {
   chart: ChartResult | null;
@@ -116,6 +115,14 @@ export function ProfileChartScreen({
   const [chartViewMode, setChartViewMode] = useState<"diamond" | "wheel">("diamond");
   const [interpretBody, setInterpretBody] = useState<string | null>(null);
 
+  const allBodies = useMemo(() => {
+    if (!chart) return [];
+    return [...chart.movingBodies, chart.ascendant, chart.descendant, chart.northNode, chart.southNode].filter(
+      (b): b is ChartRow => Boolean(b && Number.isFinite(b.longitude))
+    );
+
+  }, [chart]);
+
   const sun = chart?.movingBodies.find(b => b.name === "Sun");
   const moon = chart?.movingBodies.find(b => b.name === "Moon");
   const asc = chart?.ascendant;
@@ -136,6 +143,28 @@ export function ProfileChartScreen({
     return { elements, modalities };
   }, [chart]);
 
+  // Fixed Star contacts within 2.0 degrees
+  const starContacts = useMemo(() => {
+    if (!chart) return [];
+    const contacts: Array<{ star: string; planet: string; orb: number; meaning: string }> = [];
+    allBodies.forEach(b => {
+      FIXED_STARS.forEach(([starName, starLon]) => {
+        const diff = Math.abs(b.longitude - starLon);
+        const dist = Math.min(diff, 360 - diff);
+        if (dist <= 2.0) {
+          contacts.push({
+            star: starName,
+            planet: b.name,
+            orb: dist,
+            meaning: `Galactic fixed star beacon providing high spiritual or leadership charge.`,
+          });
+        }
+      });
+    });
+    return contacts.sort((a, b) => a.orb - b.orb);
+  }, [chart, allBodies]);
+
+
   if (!chart) {
     return (
       <section role="status" className="mx-auto max-w-4xl rounded-2xl border border-amber-300/30 bg-slate-950/80 p-8 text-center text-amber-100">
@@ -149,7 +178,7 @@ export function ProfileChartScreen({
   }
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-8 pb-20 pt-2 text-slate-100">
+    <div className="mx-auto max-w-5xl space-y-8 pb-20 pt-2 text-slate-100">
       {/* Header & Controls */}
       <section aria-label="Chart Controls" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
@@ -161,7 +190,7 @@ export function ProfileChartScreen({
               </span>
             </div>
             <h1 className="font-serif text-3xl font-semibold text-white sm:text-4xl">
-              My Chart · Natal Blueprint
+              Natal Chart Workspace
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               Precise 360° celestial geometry anchored to your birth moment
@@ -254,9 +283,7 @@ export function ProfileChartScreen({
         )}
       </section>
 
-      <SystematicDeconstruction chart={chart} mode="natal" onInterpretBody={setInterpretBody} />
-
-      {/* Expanded placement evidence */}
+      {/* Esoteric Placement Interpretation Modal/Section */}
       {interpretBody && (
         <section className="rounded-2xl border border-violet-400/40 bg-slate-950/90 p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -272,17 +299,22 @@ export function ProfileChartScreen({
               Close
             </button>
           </div>
-          <FocusedPlacementReading chart={chart} name={interpretBody} />
+          <InterpretationPanel
+            chart={chart}
+            initialMode={readingMode}
+            initialQuestion={`Provide a comprehensive esoteric interpretation of ${interpretBody} in my chart: exact degrees, dispositors, sacred geometry, Nakshatra, decan, and real-life manifestations.`}
+          />
         </section>
       )}
 
-      <ChartMethodOutcomes chart={chart} mode={readingMode} />
-      <section aria-label="Whole-chart synthesis" className="space-y-4">
-        <h2 className="font-serif text-2xl font-semibold text-white">Your whole-chart synthesis</h2>
-        <p className="text-sm text-slate-300">The individual outcomes above now come together in one connected reading.</p>
-        <MasterSynthesizerPanel chart={chart} mode={readingMode} />
-      </section>
-      <TechniqueAuditDashboard chart={chart} />
+      {/* PROMINENT FEATURE: CANONICAL PLANETARY METHOD MATRIX (144 VEDIC & ESOTERIC PLACEMENTS) */}
+      {chart && (
+        <PlanetaryCanonMatrix chart={chart} onInterpretBody={setInterpretBody} />
+      )}
+
+      {/* 25 EXPANDABLE SYSTEMATIC DECONSTRUCTION DRAWERS */}
+      <SystematicDeconstruction chart={chart} onInterpretBody={setInterpretBody} />
+
       {/* Fixed Star Intensity Visualizer */}
       <section aria-label="Fixed Star Visualizer">
         <FixedStarIntensityVisualizer chart={chart} />

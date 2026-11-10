@@ -167,11 +167,3 @@
 .fg-nav-card.active .text-white {
   color: #D9B66F;
 }
-
-@media (max-width: 480px) {
-  .guardian-global-nav-inner { gap: 8px; padding-inline: 12px; }
-  .guardian-global-brand { gap: 7px; }
-  .guardian-global-brand small { display: none; }
-  .guardian-global-brand strong { font-size: 11px; letter-spacing: .09em; }
-  .guardian-global-brand > svg { width: 30px; height: 30px; padding: 6px; }
-}

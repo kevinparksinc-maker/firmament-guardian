@@ -1,12 +1,7 @@
-# Consolidated Stitch Integration Handoffs
+<!-- === BRANCH: feature/stitch-home-dashboard === -->
+# Stitch integration handoff: Home dashboard + desktop observatory
 
-These sections preserve the original branch handoff specifications. The branches provide implementation guidance; they do not themselves contain installed Stitch UI code.
-
-## Home Dashboard (`feature/stitch-home-dashboard`)
-
-### Stitch integration handoff: Home dashboard + desktop observatory
-
-#### Source
+## Source
 Use the user-provided archive `stitch_the_absolute_astrology_redesign.zip` (attached in the ChatGPT conversation). This branch contains a handoff specification, **not** the exported HTML or installed UI. Do not infer that a design is implemented.
 
 Stitch source files:
@@ -14,12 +9,12 @@ Stitch source files:
 - `stitch_the_absolute_astrology_redesign/home_observatory_desktop_the_absolute_1/code.html`
 - `stitch_the_absolute_astrology_redesign/home_observatory_desktop_the_absolute_2/code.html`
 
-#### React integration targets
+## React integration targets
 - `client/src/components/ProfileHomeScreen.tsx`
 - `client/src/pages/Home.tsx`
 - `client/src/components/CelestialCommandShell.css`
 
-#### Implementation contract
+## Implementation contract
 - Adapt HTML/Tailwind layouts into existing React components; retain props, hooks, routes, event handlers, state, backend API calls, profile context, and loading/error states.
 - Do not modify `server/`, astronomy/ephemeris modules, calculation engines, scoring formulas, or API contracts.
 - Use real bound chart and energy values, not Stitch sample numbers, fake user data, or placeholder calculations.
@@ -27,7 +22,7 @@ Stitch source files:
 - Keep responsive mobile and desktop layouts, readable text, keyboard focus, semantic labels, and accessible contrast.
 - Scope changes to this branch's target and shared UI components; coordinate shared styles with the shared-design-system branch to avoid conflicting edits.
 
-#### Acceptance checklist
+## Acceptance checklist
 - Existing app routes and navigation still work.
 - No astrology logic, engine files, or API signatures changed.
 - No static Stitch example scores or birth details appear as live user data.
@@ -35,23 +30,23 @@ Stitch source files:
 - `pnpm check`, `pnpm test`, and `pnpm build` pass (or failures documented).
 - Open a PR to `main` for review; **do not auto-merge or deploy** until approved.
 
+
 ---
 
-## Natal Chart (`feature/stitch-natal-chart`)
+<!-- === BRANCH: feature/stitch-natal-chart === -->
+# Stitch integration handoff: Natal diamond chart
 
-### Stitch integration handoff: Natal diamond chart
-
-#### Source
+## Source
 Use the user-provided archive `stitch_the_absolute_astrology_redesign.zip` (attached in the ChatGPT conversation). This branch contains a handoff specification, **not** the exported HTML or installed UI. Do not infer that a design is implemented.
 
 Stitch source files:
 - `stitch_the_absolute_astrology_redesign/natal_chart_the_absolute/code.html`
 
-#### React integration targets
+## React integration targets
 - `client/src/components/ProfileChartScreen.tsx`
 - `client/src/components/DiamondChart.tsx`
 
-#### Implementation contract
+## Implementation contract
 - Adapt HTML/Tailwind layouts into existing React components; retain props, hooks, routes, event handlers, state, backend API calls, profile context, and loading/error states.
 - Do not modify `server/`, astronomy/ephemeris modules, calculation engines, scoring formulas, or API contracts.
 - Use real bound chart and energy values, not Stitch sample numbers, fake user data, or placeholder calculations.
@@ -59,7 +54,7 @@ Stitch source files:
 - Keep responsive mobile and desktop layouts, readable text, keyboard focus, semantic labels, and accessible contrast.
 - Scope changes to this branch's target and shared UI components; coordinate shared styles with the shared-design-system branch to avoid conflicting edits.
 
-#### Acceptance checklist
+## Acceptance checklist
 - Existing app routes and navigation still work.
 - No astrology logic, engine files, or API signatures changed.
 - No static Stitch example scores or birth details appear as live user data.
@@ -67,24 +62,24 @@ Stitch source files:
 - `pnpm check`, `pnpm test`, and `pnpm build` pass (or failures documented).
 - Open a PR to `main` for review; **do not auto-merge or deploy** until approved.
 
+
 ---
 
-## Energy Read (`feature/stitch-energy-read`)
+<!-- === BRANCH: feature/stitch-energy-read === -->
+# Stitch integration handoff: Energy Read mobile + desktop
 
-### Stitch integration handoff: Energy Read mobile + desktop
-
-#### Source
+## Source
 Use the user-provided archive `stitch_the_absolute_astrology_redesign.zip` (attached in the ChatGPT conversation). This branch contains a handoff specification, **not** the exported HTML or installed UI. Do not infer that a design is implemented.
 
 Stitch source files:
 - `stitch_the_absolute_astrology_redesign/energy_read_the_absolute/code.html`
 - `stitch_the_absolute_astrology_redesign/energy_read_desktop_the_absolute/code.html`
 
-#### React integration targets
+## React integration targets
 - `client/src/pages/EnergyPage.tsx`
 - `client/src/components/ProfileHomeScreen.tsx`
 
-#### Implementation contract
+## Implementation contract
 - Adapt HTML/Tailwind layouts into existing React components; retain props, hooks, routes, event handlers, state, backend API calls, profile context, and loading/error states.
 - Do not modify `server/`, astronomy/ephemeris modules, calculation engines, scoring formulas, or API contracts.
 - Use real bound chart and energy values, not Stitch sample numbers, fake user data, or placeholder calculations.
@@ -92,7 +87,7 @@ Stitch source files:
 - Keep responsive mobile and desktop layouts, readable text, keyboard focus, semantic labels, and accessible contrast.
 - Scope changes to this branch's target and shared UI components; coordinate shared styles with the shared-design-system branch to avoid conflicting edits.
 
-#### Acceptance checklist
+## Acceptance checklist
 - Existing app routes and navigation still work.
 - No astrology logic, engine files, or API signatures changed.
 - No static Stitch example scores or birth details appear as live user data.
@@ -100,24 +95,24 @@ Stitch source files:
 - `pnpm check`, `pnpm test`, and `pnpm build` pass (or failures documented).
 - Open a PR to `main` for review; **do not auto-merge or deploy** until approved.
 
+
 ---
 
-## Shared Design System (`feature/stitch-shared-design-system`)
+<!-- === BRANCH: feature/stitch-shared-design-system === -->
+# Stitch integration handoff: Shared premium theme and responsive shell
 
-### Stitch integration handoff: Shared premium theme and responsive shell
-
-#### Source
+## Source
 Use the user-provided archive `stitch_the_absolute_astrology_redesign.zip` (attached in the ChatGPT conversation). This branch contains a handoff specification, **not** the exported HTML or installed UI. Do not infer that a design is implemented.
 
 Stitch source files:
 - `stitch_the_absolute_astrology_redesign/celestial_observatory/DESIGN.md`
 
-#### React integration targets
+## React integration targets
 - `client/src/index.css`
 - `client/src/components/CelestialCommandShell.css`
 - `client/src/components/CelestialCommandShell.tsx`
 
-#### Implementation contract
+## Implementation contract
 - Adapt HTML/Tailwind layouts into existing React components; retain props, hooks, routes, event handlers, state, backend API calls, profile context, and loading/error states.
 - Do not modify `server/`, astronomy/ephemeris modules, calculation engines, scoring formulas, or API contracts.
 - Use real bound chart and energy values, not Stitch sample numbers, fake user data, or placeholder calculations.
@@ -125,7 +120,7 @@ Stitch source files:
 - Keep responsive mobile and desktop layouts, readable text, keyboard focus, semantic labels, and accessible contrast.
 - Scope changes to this branch's target and shared UI components; coordinate shared styles with the shared-design-system branch to avoid conflicting edits.
 
-#### Acceptance checklist
+## Acceptance checklist
 - Existing app routes and navigation still work.
 - No astrology logic, engine files, or API signatures changed.
 - No static Stitch example scores or birth details appear as live user data.
@@ -133,24 +128,24 @@ Stitch source files:
 - `pnpm check`, `pnpm test`, and `pnpm build` pass (or failures documented).
 - Open a PR to `main` for review; **do not auto-merge or deploy** until approved.
 
+
 ---
 
-## Transit Readings (`feature/stitch-transit-readings`)
+<!-- === BRANCH: feature/stitch-transit-readings === -->
+# Stitch premium layout integration — Transit Readings
 
-### Stitch premium layout integration — Transit Readings
-
-#### Source asset
+## Source asset
 Use the user-provided updated Stitch archive `stitch_the_absolute_astrology_redesign (1).zip`.
 - `stitch_the_absolute_astrology_redesign/transit_readings_the_absolute/code.html`
 - `stitch_the_absolute_astrology_redesign/transit_readings_the_absolute/screen.png`
 
 This branch contains **handoff instructions only**, not the actual Stitch export or completed implementation. Obtain the ZIP from the user before implementing.
 
-#### Integration targets
+## Integration targets
 - `client/src/components/ProfileReadingScreen.tsx`
 - `client/src/pages/Home.tsx`
 
-#### Required work
+## Required work
 1. Inspect the current route and component hierarchy and map the Stitch layout to existing React components.
 2. Transfer only visual structure, typography, styling, responsive behavior and reading presentation. Retain state, hooks, handlers, props, API calls, error/loading states and navigation.
 3. Preserve natal/transit/combined reading mode, live transit chart data, timing, house meanings, evidence and interpreter calls. No static Stitch placements or invented dates.
@@ -158,31 +153,31 @@ This branch contains **handoff instructions only**, not the actual Stitch export
 5. Avoid copying Stitch's demonstration chart numbers, personal details or scores into live UI.
 6. Use the shared premium design tokens from `feature/stitch-shared-design-system` where compatible; resolve conflicts before merge.
 
-#### Acceptance
+## Acceptance
 - Current workflows remain functional with real data and no missing controls.
 - Layout matches Stitch preview at phone and desktop widths.
 - `pnpm check`, `pnpm test`, `pnpm build` run successfully or failures are documented.
 - Show before/after screenshots and list modified files.
 - Open a PR; do not merge to main without review.
 
+
 ---
 
-## Horary Chamber (`feature/stitch-horary-chamber`)
+<!-- === BRANCH: feature/stitch-horary-chamber === -->
+# Stitch premium layout integration — Horary Chamber
 
-### Stitch premium layout integration — Horary Chamber
-
-#### Source asset
+## Source asset
 Use the user-provided updated Stitch archive `stitch_the_absolute_astrology_redesign (1).zip`.
 - `stitch_the_absolute_astrology_redesign/horary_chamber_the_absolute/code.html`
 - `stitch_the_absolute_astrology_redesign/horary_chamber_the_absolute/screen.png`
 
 This branch contains **handoff instructions only**, not the actual Stitch export or completed implementation. Obtain the ZIP from the user before implementing.
 
-#### Integration targets
+## Integration targets
 - `client/src/pages/HoraryPage.tsx`
 - `client/src/components/HoraryChamber2050.css`
 
-#### Required work
+## Required work
 1. Inspect the current route and component hierarchy and map the Stitch layout to existing React components.
 2. Transfer only visual structure, typography, styling, responsive behavior and reading presentation. Retain state, hooks, handlers, props, API calls, error/loading states and navigation.
 3. Preserve question state, significators, verdict derivation, receptions, Moon status, aspect evidence, backend/API calls and current question chart logic. Never replace calculated yes/no verdict with mock text.
@@ -190,30 +185,30 @@ This branch contains **handoff instructions only**, not the actual Stitch export
 5. Avoid copying Stitch's demonstration chart numbers, personal details or scores into live UI.
 6. Use the shared premium design tokens from `feature/stitch-shared-design-system` where compatible; resolve conflicts before merge.
 
-#### Acceptance
+## Acceptance
 - Current workflows remain functional with real data and no missing controls.
 - Layout matches Stitch preview at phone and desktop widths.
 - `pnpm check`, `pnpm test`, `pnpm build` run successfully or failures are documented.
 - Show before/after screenshots and list modified files.
 - Open a PR; do not merge to main without review.
 
+
 ---
 
-## Synastry Studio (`feature/stitch-synastry-studio`)
+<!-- === BRANCH: feature/stitch-synastry-studio === -->
+# Stitch integration handoff — Synastry Studio
 
-### Stitch integration handoff — Synastry Studio
-
-#### Source files
+## Source files
 User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 - `stitch_the_absolute_astrology_redesign/synastry_studio_the_absolute/code.html`
 - `stitch_the_absolute_astrology_redesign/synastry_studio_the_absolute/screen.png`
 
 **This branch contains instructions only, not imported HTML or completed frontend changes.** Manus / Studio must receive the ZIP separately.
 
-#### Existing React integration targets
+## Existing React integration targets
 - `client/src/pages/SynastryPage.tsx`
 
-#### Implementation requirements
+## Implementation requirements
 1. Compare Stitch's HTML layout and screenshot to the existing screen, then adapt the design into existing React/TypeScript components. Preserve props, hooks, routing, user actions, accessibility, loading/error states and mobile responsiveness.
 2. Retain both profiles, comparison calculations, dual chart data, relationship aspects, and interpretations.
 3. Do **not** change `server/`, ephemeris, Babylonian fixed-star frame, God/Agent calculations, Equal Houses, lunar mansion methods, scoring algorithms, or API contracts.
@@ -222,29 +217,29 @@ User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 6. Run `pnpm check`, `pnpm test`, and `pnpm build`. Document any failures, and provide mobile/desktop before-after screenshots.
 7. Create a PR for review; do not merge or deploy without approval.
 
-#### Acceptance
+## Acceptance
 - Every existing feature and control on this page still works.
 - Real calculations and profile data remain connected.
 - Visual output matches the supplied Stitch preview.
 - No engine or backend source files are modified.
 
+
 ---
 
-## Guide & Patterns (`feature/stitch-guide-patterns`)
+<!-- === BRANCH: feature/stitch-guide-patterns === -->
+# Stitch integration handoff — Guide & Patterns
 
-### Stitch integration handoff — Guide & Patterns
-
-#### Source files
+## Source files
 User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 - `stitch_the_absolute_astrology_redesign/guide_patterns_the_absolute/code.html`
 - `stitch_the_absolute_astrology_redesign/guide_patterns_the_absolute/screen.png`
 
 **This branch contains instructions only, not imported HTML or completed frontend changes.** Manus / Studio must receive the ZIP separately.
 
-#### Existing React integration targets
+## Existing React integration targets
 - `client/src/components/ProfileGuideScreen.tsx`
 
-#### Implementation requirements
+## Implementation requirements
 1. Compare Stitch's HTML layout and screenshot to the existing screen, then adapt the design into existing React/TypeScript components. Preserve props, hooks, routing, user actions, accessibility, loading/error states and mobile responsiveness.
 2. Retain guide tabs, interpreter evidence, saved profile context, and actual generated readings.
 3. Do **not** change `server/`, ephemeris, Babylonian fixed-star frame, God/Agent calculations, Equal Houses, lunar mansion methods, scoring algorithms, or API contracts.
@@ -253,30 +248,30 @@ User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 6. Run `pnpm check`, `pnpm test`, and `pnpm build`. Document any failures, and provide mobile/desktop before-after screenshots.
 7. Create a PR for review; do not merge or deploy without approval.
 
-#### Acceptance
+## Acceptance
 - Every existing feature and control on this page still works.
 - Real calculations and profile data remain connected.
 - Visual output matches the supplied Stitch preview.
 - No engine or backend source files are modified.
 
+
 ---
 
-## Explore / Sky Map (`feature/stitch-explore-sky-map`)
+<!-- === BRANCH: feature/stitch-explore-sky-map === -->
+# Stitch integration handoff — Explore / Sky Map
 
-### Stitch integration handoff — Explore / Sky Map
-
-#### Source files
+## Source files
 User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 - `stitch_the_absolute_astrology_redesign/explore_sky_map_the_absolute/code.html`
 - `stitch_the_absolute_astrology_redesign/explore_sky_map_the_absolute/screen.png`
 
 **This branch contains instructions only, not imported HTML or completed frontend changes.** Manus / Studio must receive the ZIP separately.
 
-#### Existing React integration targets
+## Existing React integration targets
 - `client/src/pages/ExplorePage.tsx`
 - `client/src/pages/SkyHomePrototype.tsx`
 
-#### Implementation requirements
+## Implementation requirements
 1. Compare Stitch's HTML layout and screenshot to the existing screen, then adapt the design into existing React/TypeScript components. Preserve props, hooks, routing, user actions, accessibility, loading/error states and mobile responsiveness.
 2. Preserve celestial rendering, God/Agent frame switching, mansion overlays, coordinate engine and all map controls.
 3. Do **not** change `server/`, ephemeris, Babylonian fixed-star frame, God/Agent calculations, Equal Houses, lunar mansion methods, scoring algorithms, or API contracts.
@@ -285,29 +280,29 @@ User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 6. Run `pnpm check`, `pnpm test`, and `pnpm build`. Document any failures, and provide mobile/desktop before-after screenshots.
 7. Create a PR for review; do not merge or deploy without approval.
 
-#### Acceptance
+## Acceptance
 - Every existing feature and control on this page still works.
 - Real calculations and profile data remain connected.
 - Visual output matches the supplied Stitch preview.
 - No engine or backend source files are modified.
 
+
 ---
 
-## Life Story (`feature/stitch-life-story`)
+<!-- === BRANCH: feature/stitch-life-story === -->
+# Stitch integration handoff — Life Story Timeline
 
-### Stitch integration handoff — Life Story Timeline
-
-#### Source files
+## Source files
 User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 - `stitch_the_absolute_astrology_redesign/life_story_timeline_the_absolute/code.html`
 - `stitch_the_absolute_astrology_redesign/life_story_timeline_the_absolute/screen.png`
 
 **This branch contains instructions only, not imported HTML or completed frontend changes.** Manus / Studio must receive the ZIP separately.
 
-#### Existing React integration targets
+## Existing React integration targets
 - `client/src/pages/LifeStoryPage.tsx`
 
-#### Implementation requirements
+## Implementation requirements
 1. Compare Stitch's HTML layout and screenshot to the existing screen, then adapt the design into existing React/TypeScript components. Preserve props, hooks, routing, user actions, accessibility, loading/error states and mobile responsiveness.
 2. Preserve timeline chronology, profile data, event calculation references and interpretation generation.
 3. Do **not** change `server/`, ephemeris, Babylonian fixed-star frame, God/Agent calculations, Equal Houses, lunar mansion methods, scoring algorithms, or API contracts.
@@ -316,30 +311,30 @@ User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 6. Run `pnpm check`, `pnpm test`, and `pnpm build`. Document any failures, and provide mobile/desktop before-after screenshots.
 7. Create a PR for review; do not merge or deploy without approval.
 
-#### Acceptance
+## Acceptance
 - Every existing feature and control on this page still works.
 - Real calculations and profile data remain connected.
 - Visual output matches the supplied Stitch preview.
 - No engine or backend source files are modified.
 
+
 ---
 
-## Zodiac Horary (`feature/stitch-zodiac-horary`)
+<!-- === BRANCH: feature/stitch-zodiac-horary === -->
+# Stitch integration handoff — Zodiac Horary
 
-### Stitch integration handoff — Zodiac Horary
-
-#### Source files
+## Source files
 User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 - `stitch_the_absolute_astrology_redesign/zodiac_horary_the_absolute/code.html`
 - `stitch_the_absolute_astrology_redesign/zodiac_horary_the_absolute/screen.png`
 
 **This branch contains instructions only, not imported HTML or completed frontend changes.** Manus / Studio must receive the ZIP separately.
 
-#### Existing React integration targets
+## Existing React integration targets
 - `client/src/pages/ZodiacHoraryPage.tsx`
 - `client/src/pages/ZodiacHoraryPage.css`
 
-#### Implementation requirements
+## Implementation requirements
 1. Compare Stitch's HTML layout and screenshot to the existing screen, then adapt the design into existing React/TypeScript components. Preserve props, hooks, routing, user actions, accessibility, loading/error states and mobile responsiveness.
 2. Retain zodiac-sign-as-first-house logic, question entry, verdict computation and evidence.
 3. Do **not** change `server/`, ephemeris, Babylonian fixed-star frame, God/Agent calculations, Equal Houses, lunar mansion methods, scoring algorithms, or API contracts.
@@ -348,30 +343,30 @@ User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 6. Run `pnpm check`, `pnpm test`, and `pnpm build`. Document any failures, and provide mobile/desktop before-after screenshots.
 7. Create a PR for review; do not merge or deploy without approval.
 
-#### Acceptance
+## Acceptance
 - Every existing feature and control on this page still works.
 - Real calculations and profile data remain connected.
 - Visual output matches the supplied Stitch preview.
 - No engine or backend source files are modified.
 
+
 ---
 
-## Saved Profiles (`feature/stitch-saved-profiles`)
+<!-- === BRANCH: feature/stitch-saved-profiles === -->
+# Stitch integration handoff — Saved Profiles
 
-### Stitch integration handoff — Saved Profiles
-
-#### Source files
+## Source files
 User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 - `stitch_the_absolute_astrology_redesign/saved_profiles_the_absolute/code.html`
 - `stitch_the_absolute_astrology_redesign/saved_profiles_the_absolute/screen.png`
 
 **This branch contains instructions only, not imported HTML or completed frontend changes.** Manus / Studio must receive the ZIP separately.
 
-#### Existing React integration targets
+## Existing React integration targets
 - `client/src/components/SavedProfilePicker.tsx`
 - `client/src/components/ProfileHomeScreen.tsx`
 
-#### Implementation requirements
+## Implementation requirements
 1. Compare Stitch's HTML layout and screenshot to the existing screen, then adapt the design into existing React/TypeScript components. Preserve props, hooks, routing, user actions, accessibility, loading/error states and mobile responsiveness.
 2. Preserve persisted profiles, birth fields, load/edit/switch actions, and active session state.
 3. Do **not** change `server/`, ephemeris, Babylonian fixed-star frame, God/Agent calculations, Equal Houses, lunar mansion methods, scoring algorithms, or API contracts.
@@ -380,10 +375,8 @@ User-provided `stitch_the_absolute_astrology_redesign (3).zip` contains:
 6. Run `pnpm check`, `pnpm test`, and `pnpm build`. Document any failures, and provide mobile/desktop before-after screenshots.
 7. Create a PR for review; do not merge or deploy without approval.
 
-#### Acceptance
+## Acceptance
 - Every existing feature and control on this page still works.
 - Real calculations and profile data remain connected.
 - Visual output matches the supplied Stitch preview.
 - No engine or backend source files are modified.
-
----

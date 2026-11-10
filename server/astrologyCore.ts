@@ -142,16 +142,40 @@ function godThemesSentence(themes: string[]) {
   return `${themes.slice(0, -1).join(", ")}, and ${themes[themes.length - 1]}`;
 }
 
+/**
+ * Guardian natal/Agent Equal Houses follow zodiac-forward numbering.
+ * A planet's astronomical longitude never changes because the chart is rotated.
+ * Screen-space clockwise/counterclockwise direction is a rendering concern.
+ */
+export const GUARDIAN_HOUSE_SEQUENCE = "forward-equal-30" as const;
+export const SIMULATION_LAB_HOUSE_SEQUENCE = "reverse-equal-30" as const;
+export const EQUAL_HOUSE_SIZE_DEGREES = 30;
+export function guardianHouseCusp(house: number, ascendant: number): number {
+  if (!Number.isInteger(house) || house < 1 || house > 12)
+    throw new RangeError("House must be an integer from 1 to 12");
+  if (!Number.isFinite(ascendant)) throw new RangeError("Ascendant must be finite");
+  return normalizeLongitude(ascendant + (house - 1) * 30);
+}
+export function guardianHouseAt(longitude: number, ascendant: number): number {
+  if (!Number.isFinite(longitude) || !Number.isFinite(ascendant))
+    throw new RangeError("Longitude and Ascendant must be finite");
+  return Math.floor(normalizeLongitude(longitude - ascendant) / 30) + 1;
+}
+/** Only for explicit inter-app conversion, never change a natal house implicitly. */
+export function translateHouseLabelBetweenFrameworks(house: number): number {
+  if (!Number.isInteger(house) || house < 1 || house > 12)
+    throw new RangeError("House must be an integer from 1 to 12");
+  return house === 1 ? 1 : 14 - house;
+}
 export function godHouseFor(longitude: number) {
   return Math.floor(normalizeLongitude(longitude) / 30) + 1;
 }
-
 export function agentHouseFor(longitude: number, ascendant: number) {
-  return Math.floor(normalizeLongitude(longitude - ascendant) / 30) + 1;
+  return guardianHouseAt(longitude, ascendant);
 }
-
 export function equalHouseCusps(ascendant: number) {
-  return Array.from({ length: 12 }, (_, index) => Number(normalizeLongitude(ascendant + index * 30).toFixed(6)));
+  return Array.from({ length: 12 }, (_, index) =>
+    Number(guardianHouseCusp(index + 1, ascendant).toFixed(6)));
 }
 
 export function angularDistance(a: number, b: number) {

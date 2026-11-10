@@ -862,16 +862,14 @@ export function analyzePatterns(
   const transitToNatalAspects = detectAspects(transit, natal, config, true);
   const allAspects = [...natalAspects, ...transitToNatalAspects];
 
-  // A natal-only analysis evaluates natal strength/geometry directly.
-  // It never creates transit-to-natal contacts by copying the natal sky.
-  const primary = Object.keys(transit).length ? transit : natal;
-  const planetaryStrength = calculatePlanetaryStrength(primary, config);
+  // 2. Calculate planetary strength (using transit as primary)
+  const planetaryStrength = calculatePlanetaryStrength(transit, config);
 
   // 3. Analyze house emphasis
-  const houseEmphasis = analyzeHouseEmphasis(primary, planetaryStrength);
+  const houseEmphasis = analyzeHouseEmphasis(transit, planetaryStrength);
 
   // 4. Detect patterns
-  const patterns = detectAllPatterns(allAspects, primary, config);
+  const patterns = detectAllPatterns(allAspects, transit, config);
 
   // 5. Map archetypes
   const partialAnalysis = {

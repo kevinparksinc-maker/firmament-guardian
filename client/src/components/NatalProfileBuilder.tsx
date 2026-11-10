@@ -1,6 +1,4 @@
-import { prepareBirthStep } from "@shared/profileOnboarding";
-import { KNOWN_CITIES } from "@shared/profileLocations";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Sparkles,
   Calendar,
@@ -35,7 +33,6 @@ import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
 
 export interface UserProfileData {
-  id?: string;
   name: string;
   date: string;
   time: string;
@@ -52,7 +49,7 @@ export interface UserProfileData {
 }
 
 export const CITY_PRESETS = [
-  ...KNOWN_CITIES.map(city => ({ label: city.shortLabel, full: city.label, lat: city.latitude, lng: city.longitude, tz: city.timezone })),
+  { label: "Dallas, TX", full: "Dallas, Texas, USA", lat: 32.7767, lng: -96.797, tz: "America/Chicago" },
   { label: "Los Angeles, CA", full: "Los Angeles, California, USA", lat: 34.0522, lng: -118.2437, tz: "America/Los_Angeles" },
   { label: "New York, NY", full: "New York, New York, USA", lat: 40.7128, lng: -74.006, tz: "America/New_York" },
   { label: "Atlanta, GA", full: "Atlanta, Georgia, USA", lat: 33.749, lng: -84.388, tz: "America/New_York" },
@@ -130,10 +127,6 @@ export function NatalProfileBuilder({
   const [isSearchingCity, setIsSearchingCity] = useState(false);
   const [citySearchError, setCitySearchError] = useState("");
   const [currentCitySame, setCurrentCitySame] = useState(true);
-  const [verifiedTransitCity, setVerifiedTransitCity] = useState<string | null>(currentProfile?.transitLocation && Number.isFinite(currentProfile.transitLatitude) && Number.isFinite(currentProfile.transitLongitude) && currentProfile.transitTimezone ? currentProfile.transitLocation : null);
-  const [transitCityError, setTransitCityError] = useState("");
-  const [resolvingTransitCity, setResolvingTransitCity] = useState(false);
-  const trpcUtils = trpc.useUtils();
   const [formError, setFormError] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -146,8 +139,6 @@ export function NatalProfileBuilder({
     if (currentProfile) {
       setFormData(currentProfile);
       setCitySearch(currentProfile.location);
-      setVerifiedTransitCity(currentProfile.transitLocation && Number.isFinite(currentProfile.transitLatitude) && Number.isFinite(currentProfile.transitLongitude) && currentProfile.transitTimezone ? currentProfile.transitLocation : null);
-      setCurrentCitySame(!currentProfile.transitLocation || currentProfile.transitLocation === currentProfile.location);
     }
   }, [currentProfile]);
 
@@ -204,55 +195,6 @@ export function NatalProfileBuilder({
     }));
   };
 
-  const handleResolveTransitCity = async () => {
-    const query = (formData.transitLocation || "").trim();
-    if (query.length < 2) {
-      setTransitCityError("Enter your current city first.");
-      return;
-    }
-    setResolvingTransitCity(true);
-    setTransitCityError("");
-    try {
-      const result = await trpcUtils.hybrid.geocode.fetch({ query });
-      if (!result) {
-        setTransitCityError("Location not found. Try a more specific city.");
-        return;
-      }
-      setFormData(prev => ({
-        ...prev,
-        transitLocation: result.label,
-        transitLatitude: result.latitude,
-        transitLongitude: result.longitude,
-        transitTimezone: result.timezone,
-      }));
-      setVerifiedTransitCity(result.label);
-    } catch {
-      setTransitCityError("Unable to verify this location. Try again.");
-    } finally {
-      setResolvingTransitCity(false);
-    }
-  };
-
-  const birthDraft = useRef("");
-  birthDraft.current = JSON.stringify([formData.name,formData.date,formData.time,formData.birthTimeUnknown,citySearch]);
-  const handleNext = async () => {
-    const draft = birthDraft.current;
-    setFormError("");
-    setCitySearchError("");
-    setIsSearchingCity(true);
-    try {
-      const next = await prepareBirthStep(formData,citySearch,query=>trpcUtils.hybrid.geocode.fetch({query}));
-      if(draft !== birthDraft.current) {setFormError("Your details changed while resolving the city. Click Next again.");return;}
-      setFormData(prev=>({...prev,location:next.location,latitude:next.latitude,longitude:next.longitude,timezone:next.timezone,
-        ...(currentCitySame?{transitLocation:next.location,transitLatitude:next.latitude,transitLongitude:next.longitude,transitTimezone:next.timezone}:{}),
-      }));
-      setCitySearch(next.location);
-      setStep(2);
-    } catch(error) {
-      setFormError(error instanceof Error ? error.message : "Could not resolve your birth city. Try a quick preset.");
-    } finally {setIsSearchingCity(false);}
-  };
-
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setFormError("");
@@ -265,31 +207,22 @@ export function NatalProfileBuilder({
       setFormError("Please enter your birth date.");
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.date) || !Number.isFinite(Date.parse(`${formData.date}T00:00:00.000Z`)) || new Date(`${formData.date}T00:00:00.000Z`).toISOString().slice(0, 10) !== formData.date) {
-      setFormError("Please enter a valid birth date in YYYY-MM-DD format.");
-      return;
-    }
     if (!formData.birthTimeUnknown && !formData.time) {
       setFormError("Please provide your birth time or check 'Exact birth time unknown'.");
       return;
     }
-    if (!Number.isFinite(formData.latitude) || !Number.isFinite(formData.longitude) || Math.abs(formData.latitude) > 90 || Math.abs(formData.longitude) > 180 || !formData.timezone || !formData.location.trim()) {
+    if (!formData.latitude || !formData.longitude || !formData.timezone) {
       setFormError("Please resolve your birth city to lock exact coordinates and timezone.");
-      return;
-    }
-
-    if (!currentCitySame && (!verifiedTransitCity || verifiedTransitCity !== formData.transitLocation)) {
-      setFormError("Resolve your current city to verify its coordinates and timezone before continuing.");
       return;
     }
 
     const payload: UserProfileData = {
       ...formData,
       time: formData.birthTimeUnknown ? "12:00" : formData.time,
-      transitLocation: currentCitySame ? formData.location : formData.transitLocation,
-      transitLatitude: currentCitySame ? formData.latitude : formData.transitLatitude,
-      transitLongitude: currentCitySame ? formData.longitude : formData.transitLongitude,
-      transitTimezone: currentCitySame ? formData.timezone : formData.transitTimezone,
+      transitLocation: formData.transitLocation || formData.location,
+      transitLatitude: formData.transitLatitude || formData.latitude,
+      transitLongitude: formData.transitLongitude || formData.longitude,
+      transitTimezone: formData.transitTimezone || formData.timezone,
     };
 
     onSaveProfile(payload);
@@ -336,8 +269,6 @@ export function NatalProfileBuilder({
           </div>
         </div>
       </div>
-
-      {formError && <div role="alert" aria-live="assertive" className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{formError}</div>}
 
       {step === 1 && (
         <div className="space-y-5 animate-in fade-in duration-200">
@@ -430,12 +361,7 @@ export function NatalProfileBuilder({
                   id="profile-city"
                   placeholder="Enter city (e.g., Dallas, TX, London, Tokyo)"
                   value={citySearch}
-                  onChange={e => {
-                    setCitySearch(e.target.value);
-                    setFormError("");
-                    setCitySearchError("");
-                    setFormData(prev=>({...prev,location:"",latitude:0,longitude:0,timezone:""}));
-                  }}
+                  onChange={e => setCitySearch(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -464,7 +390,7 @@ export function NatalProfileBuilder({
             </div>
 
             {/* Resolved Status or Error */}
-            {formData.location && formData.timezone && (
+            {formData.latitude !== 0 && formData.timezone && (
               <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
                 <span>
@@ -511,11 +437,16 @@ export function NatalProfileBuilder({
 
             <Button
               type="button"
-              onClick={() => void handleNext()}
-              disabled={isSearchingCity}
+              onClick={() => {
+                if (!formData.name.trim() || !formData.date || (!formData.birthTimeUnknown && !formData.time) || !formData.latitude) {
+                  handleSubmit();
+                  return;
+                }
+                setStep(2);
+              }}
               className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:from-cyan-400 hover:to-blue-500"
             >
-              <span>{isSearchingCity ? "Verifying birth city…" : "Next: Cosmic Focus"}</span>
+              <span>Next: Cosmic Focus</span>
               <ArrowRight className="h-4 w-4 ml-1.5" />
             </Button>
           </div>
@@ -585,17 +516,18 @@ export function NatalProfileBuilder({
                 <Input
                   placeholder="Enter current city (e.g. New York, London, Miami)"
                   value={formData.transitLocation || ""}
-                  onChange={e => { setVerifiedTransitCity(null); setTransitCityError(""); setFormData(prev => ({ ...prev, transitLocation: e.target.value, transitLatitude: undefined, transitLongitude: undefined, transitTimezone: undefined })); }}
+                  onChange={e => setFormData(prev => ({ ...prev, transitLocation: e.target.value }))}
                   className="border-white/10 bg-black/40 text-slate-100 text-xs"
                 />
-                <Button type="button" variant="outline" disabled={resolvingTransitCity} onClick={() => void handleResolveTransitCity()}>{resolvingTransitCity ? "Resolving…" : "Verify current city coordinates"}</Button>
-                {verifiedTransitCity === formData.transitLocation && <p className="text-xs text-emerald-300">Verified: {formData.transitLatitude?.toFixed(4)}, {formData.transitLongitude?.toFixed(4)} · {formData.transitTimezone}</p>}
-                {transitCityError && <p className="text-xs text-rose-300">{transitCityError}</p>}
               </div>
             )}
           </div>
 
-
+          {formError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+              {formError}
+            </div>
+          )}
 
           {/* Action Row */}
           <div className="flex items-center justify-between pt-2">
@@ -645,7 +577,7 @@ export function NatalProfileBuilder({
               {currentProfile?.name ? `Update Profile: ${currentProfile.name}` : "Build Your Celestial Natal Profile"}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-400">
-              Anchor the complete astronomical method engine to your exact moment of birth.
+              Anchor the 16-system astronomical engine to your exact moment of birth.
             </DialogDescription>
           </DialogHeader>
 
@@ -673,7 +605,7 @@ export function NatalProfileBuilder({
               Create Your Celestial Natal Profile First
             </h2>
             <p className="mt-1 max-w-xl text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Before the algorithms reveal your layered Celestial Blueprint, Synastry chemistry, or AI Master Interpreter readings, the engine must anchor to your unique birth coordinates.
+              Before the algorithms reveal your 16-system Celestial Blueprint, Synastry chemistry, or AI Master Interpreter readings, the engine must anchor to your unique birth coordinates.
             </p>
           </div>
 

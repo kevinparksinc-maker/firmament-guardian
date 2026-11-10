@@ -1,5 +1,4 @@
-import { PlacementMiniReading } from "./PlacementMiniReading";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Sparkles, Compass, Orbit, ShieldCheck } from "lucide-react";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 
@@ -87,7 +86,6 @@ export function DiamondChart({
     ...(showTransits ? transitRows.map((row, i) => ({ row, kind: "transit" as const, i })) : []),
   ];
 
-  useEffect(() => { setSelectedPoint(null); setSelectedHouse(null); }, [chart]);
   const currentHouse = selectedHouse == null ? null : houses[selectedHouse - 1];
 
   return (
@@ -376,12 +374,15 @@ export function DiamondChart({
                     <span className="text-emerald-300">
                       {selectedPoint.row.name === "North Node" || selectedPoint.row.name === "South Node"
                         ? "Retrograde (Mean)"
-                        : selectedPoint.row.retrograde ? "Retrograde" : selectedPoint.row.speed != null ? "Direct" : "Direction not supplied"}
+                        : "Direct Celestial Arc"}
                     </span>
                   </div>
                 </div>
 
-                <PlacementMiniReading chart={chart} name={selectedPoint.row.name} layer={selectedPoint.kind}/>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Calculated against the Aldebaran star anchor with zero axial tilt. Equal house cusps
+                  anchor exactly 30° divisions relative to the true Ascendant.
+                </p>
               </div>
             ) : selectedHouse != null ? (
               <div className="mt-4 space-y-3 animate-in fade-in duration-200">

@@ -5,10 +5,8 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { Router as WouterRouter } from "wouter";
 import { startLogin } from "./const";
 import "./index.css";
-import { chartQueryTransport } from "@shared/trpcTransport";
 
 const queryClient = new QueryClient();
 
@@ -55,7 +53,6 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      ...chartQueryTransport,
       url: "/api/trpc",
       transformer: superjson,
       headers() {
@@ -88,18 +85,15 @@ const trpcClient = trpc.createClient({
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <WouterRouter base={window.location.hostname.endsWith("github.io") ? "/firmament-guardian" : ""}>
-        <App />
-      </WouterRouter>
+      <App />
     </QueryClientProvider>
   </trpc.Provider>
 );
 
-
 // Allow Android browsers to offer a home-screen install. No API or user data is cached.
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(error => {
+    navigator.serviceWorker.register("/sw.js").catch(error => {
       console.warn("Firmament Guardian install support unavailable:", error);
     });
   });
