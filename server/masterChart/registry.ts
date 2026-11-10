@@ -13,6 +13,7 @@ export const MASTER_METHOD_IDS = [
   "vedic-nakshatras-and-padas",
   "vedic-vargas-divisional",
   "vedic-dasha-and-ashtakavarga",
+  "vedic-planetary-lordship-connections",
   "vedic-graha-drishti",
   "vedic-shadbala",
   "vedic-bhava-bala",
