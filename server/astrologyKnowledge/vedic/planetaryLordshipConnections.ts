@@ -65,7 +65,7 @@ export function buildPlanetaryLordshipConnections(input: {
         p.house < 1 || p.house > 12)
       throw new Error(`LORDSHIP_INVALID_PLACEMENT_${planet}`);
     const occupiedHouse = p.house; // existing Agent Equal House; never recompute from the sign
-    const ruledHouses = [...new Set((lordSigns[planet] ?? []).flatMap(houseOfRuledSign))]
+    const ruledHouses = Array.from(new Set((lordSigns[planet] ?? []).flatMap(houseOfRuledSign)))
       .sort((a, b) => a - b);
     const selfPlacedFor = ruledHouses.filter(h => h === occupiedHouse);
     const connections = ruledHouses
