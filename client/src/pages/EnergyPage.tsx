@@ -1,4 +1,7 @@
-import React, { useState, useMemo } from "react";
+import { readingCacheIdentity } from "@shared/readingIdentity";
+import { trpc } from "@/lib/trpc";
+import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Activity,
@@ -20,30 +23,24 @@ import {
   Zap,
 } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
+import { EnergyScoringKey } from "@/components/EnergyScoringKey";
 import { TransitLocationBar } from "@/components/TransitLocationBar";
+import { HarmonicFlowTimeline } from "@/components/HarmonicFlowTimeline";
 import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
-import type { ChartResult, TransitContact } from "../../../server/astronomy";
+import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
+import { ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
 
-const MAX_ORB = 5;
-const aspectFlow: Record<TransitContact["aspect"], number> = {
-  trine: 1,
-  sextile: 1,
-  square: -1,
-  opposition: -1,
-  conjunction: 0,
-};
-
-const ASPECT_SYMBOLS: Record<TransitContact["aspect"], string> = {
+const ASPECT_SYMBOLS: Record<TransitContact["aspect"] | MinorTransitContact["aspect"], string> = {
   conjunction: "☌",
+  semisextile: "⚺",
+  semisquare: "∠",
+  quincunx: "⚻",
   sextile: "⚹",
   square: "□",
   trine: "△",
   opposition: "☍",
 };
-
-const percentWeight = (orb: number) =>
-  orb > MAX_ORB ? 0 : orb <= 1.25 ? 100 : orb <= 2.5 ? 80 : orb <= 3.75 ? 60 : 40;
 
 const PLANET_GLYPHS: Record<string, string> = {
   Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀", Mars: "♂",
@@ -51,28 +48,10 @@ const PLANET_GLYPHS: Record<string, string> = {
   "North Node": "☊", "South Node": "☋", Ascendant: "AC",
 };
 
-const ASPECT_INTERPRETATIONS: Record<string, { theme: string; advice: string }> = {
-  "Sun-trine": { theme: "Vital alignment and effortless creative expression", advice: "Step into visibility; your natural gifts are received warmly." },
-  "Sun-sextile": { theme: "Productive opportunities to lead or innovate", advice: "Engage collaborative projects and reach out to mentors." },
-  "Sun-square": { theme: "Ego friction and constructive friction with authority", advice: "Channel restless tension into disciplined craftsmanship." },
-  "Sun-opposition": { theme: "Relational mirror; awareness of external counter-forces", advice: "Seek balance between personal desire and partnership obligations." },
-  "Sun-conjunction": { theme: "Major annual cosmic reset; illuminated vitality", advice: "Plant seeds of long-term intent; your core identity is highlighted." },
-  "Moon-trine": { theme: "Emotional resonance, intuitive clarity, and peaceful rhythm", advice: "Trust your gut feelings; intimate conversations flourish." },
-  "Moon-sextile": { theme: "Harmonious domestic or social exchanges", advice: "Connect with loved ones and create nourishing surroundings." },
-  "Moon-square": { theme: "Emotional turbulence or reactive sensitivities", advice: "Pause before reacting; give yourself space to digest feelings." },
-  "Moon-opposition": { theme: "Tug between emotional comfort and external demands", advice: "Acknowledge conflicting needs without self-judgment." },
-  "Moon-conjunction": { theme: "Intense emotional magnification and psychic impressionability", advice: "Protect your energetic boundaries; practice grounding meditation." },
-  "Jupiter-trine": { theme: "Auspicious growth, optimism, and serendipitous openings", advice: "Say yes to opportunities for education, travel, or expansion." },
-  "Jupiter-conjunction": { theme: "Bountiful revitalization and expansive luck", advice: "Take bold, honorable leaps into larger spheres of influence." },
-  "Saturn-trine": { theme: "Solid foundational endurance and sustained progress", advice: "Build systems that outlast the moment; patience pays off." },
-  "Saturn-square": { theme: "Structural tests, boundary setting, and reality checks", advice: "Embrace discipline; cut excess commitments and simplify." },
-  "Mars-conjunction": { theme: "Surge of physical drive, initiative, and courage", advice: "Direct this sharp fire into focused workouts or decisive tasks." },
-  "Venus-trine": { theme: "Magnetic allure, financial harmony, and artistic grace", advice: "Ideal for romance, creative projects, and renegotiating agreements." },
-};
-
-export default function EnergyPage() {
-  const { chart, profile } = useProfileSession();
-  const [isRefreshing, setIsRefreshing] = useState(false);
+export default function EnergyPage({ onRefresh, calculating = false, error = "" }: { onRefresh?: () => void; calculating?: boolean; error?: string }) {
+  const [path, navigate] = useLocation();
+  const page = path === "/forecast" ? "forecast" : path.endsWith("/contacts") ? "contacts" : path.endsWith("/consultation") ? "consultation" : "summary";
+  const { energyChart: chart, profile } = useProfileSession();
   const [selectedPlanetFilter, setSelectedPlanetFilter] = useState<string | null>(null);
   const [aspectCategory, setAspectCategory] = useState<"all" | "harmonious" | "challenging" | "dynamic">("all");
   const [expandedContactId, setExpandedContactId] = useState<string | null>(null);
@@ -80,54 +59,31 @@ export default function EnergyPage() {
   const [activeInterpreterQuestion, setActiveInterpreterQuestion] = useState<string | null>(null);
 
   const handleRefreshTransits = () => {
-    setIsRefreshing(true);
-    window.dispatchEvent(new Event("fg:transit-location-updated"));
-    setTimeout(() => setIsRefreshing(false), 700);
+    onRefresh?.();
   };
 
-  const energyData = useMemo(() => {
-    if (!chart || chart.readingScope === "natal") return null;
-    const contacts = (chart.transits || []).flatMap((body) =>
-      (body?.natalContacts || [])
-        .filter((contact) => Number.isFinite(contact.orb) && contact.orb <= MAX_ORB)
-        .map((contact) => ({
-          ...contact,
-          transit: body.name,
-          natal: contact.natalName,
-          strength: percentWeight(contact.orb),
-          id: `${body.name}-${contact.aspect}-${contact.natalName}`,
-        }))
-    );
-
-    const harmonious = contacts.filter((c) => aspectFlow[c.aspect] === 1);
-    const challenging = contacts.filter((c) => aspectFlow[c.aspect] === -1);
-    const dynamic = contacts.filter((c) => aspectFlow[c.aspect] === 0);
-
-    const flowWeight = harmonious.reduce((sum, c) => sum + c.strength, 0);
-    const frictionWeight = challenging.reduce((sum, c) => sum + c.strength, 0);
-    const totalWeight = flowWeight + frictionWeight || 1;
-    const flowPct = Math.round((flowWeight / totalWeight) * 100);
-    const frictionPct = 100 - flowPct;
-
-    const signal: "Effortless Flow" | "Dynamic Synthesis" | "Growth Crucible" =
-      flowWeight > frictionWeight * 1.3
-        ? "Effortless Flow"
-        : frictionWeight > flowWeight * 1.3
-        ? "Growth Crucible"
-        : "Dynamic Synthesis";
-
-    return {
-      contacts,
-      harmonious,
-      challenging,
-      dynamic,
-      flowWeight,
-      frictionWeight,
-      flowPct,
-      frictionPct,
-      signal,
-    };
-  }, [chart]);
+  const synthesisRequest = trpc.interpretation.energyReading.useMutation();
+  type Reading = NonNullable<typeof synthesisRequest.data>;
+  const [resolved, setResolved] = useState<{ key: string; reading: Reading } | null>(null);
+  const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
+  const [retry, setRetry] = useState(0);
+  const readingKey = chart ? readingCacheIdentity(chart, "combined", "energy-overview-v1") : "";
+  useEffect(() => {
+    let active = true;
+    setResolved(null);
+    setFailure(null);
+    if (chart && !calculating) {
+      synthesisRequest.mutateAsync({ chart }).then(reading => {
+        if (active) setResolved({ key: readingKey, reading });
+      }).catch(error => {
+        if (active) setFailure({ key: readingKey, message: error instanceof Error ? error.message : "Energy synthesis failed." });
+      });
+    }
+    return () => { active = false; };
+  }, [readingKey, retry, calculating]);
+  const reading = !calculating && resolved?.key === readingKey ? resolved.reading : null;
+  const synthesisError = failure?.key === readingKey ? failure.message : null;
+  const energyData = reading?.score;
 
   const filteredContacts = useMemo(() => {
     if (!energyData) return [];
@@ -136,11 +92,11 @@ export default function EnergyPage() {
       list = list.filter((c) => c.transit === selectedPlanetFilter || c.natal === selectedPlanetFilter);
     }
     if (aspectCategory === "harmonious") {
-      list = list.filter((c) => aspectFlow[c.aspect] === 1);
+      list = list.filter((c) => ENERGY_ASPECT_FLOW[c.aspect] === 1);
     } else if (aspectCategory === "challenging") {
-      list = list.filter((c) => aspectFlow[c.aspect] === -1);
+      list = list.filter((c) => ENERGY_ASPECT_FLOW[c.aspect] === -1);
     } else if (aspectCategory === "dynamic") {
-      list = list.filter((c) => aspectFlow[c.aspect] === 0);
+      list = list.filter((c) => ENERGY_ASPECT_FLOW[c.aspect] === 0);
     }
     return list.sort((a, b) => a.orb - b.orb);
   }, [energyData, selectedPlanetFilter, aspectCategory]);
@@ -149,10 +105,11 @@ export default function EnergyPage() {
     const questionToAsk = q || customQuestion;
     if (!questionToAsk.trim()) return;
     setActiveInterpreterQuestion(questionToAsk);
+    if (page !== "consultation") { navigate(`/energy/consultation?question=${encodeURIComponent(questionToAsk)}`); return; }
     document.getElementById("energy-master-interpreter")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const currentTimeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const currentTimeStr = chart ? new Date(chart.transitDate).toLocaleString([], { timeZone: chart.input.transitTimezone || chart.input.timezone, hour: "2-digit", minute: "2-digit", month: "short", day: "numeric", timeZoneName: "short" }) : "Awaiting calculation";
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-24 pt-2 text-[#E8EDF7]">
@@ -170,22 +127,22 @@ export default function EnergyPage() {
               </span>
             </div>
             <h1 className="mt-1 font-serif text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Signature Cosmic Energy Read
+              {page === "summary" ? "Your Current Energy" : page === "contacts" ? "Energy Contact Ledger" : page === "forecast" ? "Personal Harmonic Flow Clock" : "Transit Interpretation"}
             </h1>
             <p className="mt-1 text-xs text-slate-300">
-              Separating natal birth coordinates from real-time GPS transit horizons.
+              Read the current sky in relation to your birth chart.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               type="button"
-              disabled={isRefreshing}
+              disabled={calculating || !onRefresh}
               onClick={handleRefreshTransits}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D9B66F]/40 bg-[#D9B66F]/10 px-4 text-xs font-semibold text-[#D9B66F] transition-all hover:bg-[#D9B66F]/20 active:scale-95 disabled:opacity-50"
             >
-              <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
-              <span>{isRefreshing ? "Recalculating..." : "Refresh Sky"}</span>
+              <RefreshCw size={14} className={calculating ? "animate-spin" : ""} />
+              <span>{calculating ? "Recalculating..." : "Refresh Sky"}</span>
             </button>
           </div>
         </div>
@@ -199,7 +156,8 @@ export default function EnergyPage() {
             <p className="mt-1 font-semibold text-white">
               {profile?.location || "Birth Location"} · {profile?.date} {profile?.time}
             </p>
-            <p className="text-[11px] text-slate-400">Zero axial tilt · Aldebaran Framework</p>
+            <p className="text-[11px] text-slate-400">{profile?.timezone}</p>
+            <Link href="/profile" className="mt-2 inline-block text-cyan-200 underline">Verify or edit birth date, time and place →</Link>
           </div>
 
           <div className="rounded-xl border border-cyan-400/30 bg-cyan-950/20 p-3 text-xs">
@@ -216,8 +174,30 @@ export default function EnergyPage() {
         </div>
       </section>
 
+      {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
+      {!chart && <p role="status">{calculating ? "Calculating current transit contacts…" : "Refresh Sky to calculate your current energy."}</p>}
+      <nav aria-label="Energy pages" className="flex flex-wrap gap-3 text-sm text-cyan-200">{[{href:"/energy",label:"Overview"},{href:"/energy/contacts",label:"Contact ledger"},{href:"/forecast",label:"30-minute forecast"},{href:"/energy/consultation",label:"Interpretation"}].map(item=><Link key={item.href} href={item.href} aria-current={path===item.href?"page":undefined} className={`rounded-xl border px-4 py-3 ${path===item.href?"border-amber-200/50 bg-amber-200/10 text-amber-100":"border-white/15"}`}>{item.label}</Link>)}</nav>
+      <p className="text-sm leading-6 text-slate-400">Personal contacts compare current transit bodies with your natal placements and angles. Independent Sky counts pairs within one event sky. The totals can differ even at the same place and time.</p>
+      {chart && !reading && !synthesisError && <p role="status" className="rounded-2xl border border-cyan-300/30 p-6 text-cyan-100">Synthesizing your natal chart, current contacts and Canon before presenting your energy…</p>}
+      {synthesisError && <div role="alert" className="space-y-3 rounded-2xl border border-rose-300/30 p-6 text-rose-200">
+        <p>Energy synthesis could not be completed: {synthesisError}</p>
+        <button type="button" onClick={() => setRetry(value => value + 1)} className="underline">Retry synthesis</button>
+      </div>}
+      {reading && <section aria-label="Synthesized Current Energy" className="space-y-4 rounded-3xl border border-amber-200/30 bg-[#080B14]/90 p-6 sm:p-8">
+        <h2 className="font-serif text-2xl text-amber-100">{reading.headline}</h2>
+        <p className="text-xs text-slate-400">Calculated sky: {currentTimeStr}</p>
+        {reading.paragraphs.map((paragraph, index) => <p key={index} className="text-sm leading-7 text-slate-200">{paragraph.text}</p>)}
+        {!reading.score.contactsCount && <p className="text-sm text-slate-200">No personal contacts fall within the configured 5° orb at this calculated moment.</p>}
+        <details className="text-xs text-slate-400">
+          <summary className="cursor-pointer text-cyan-200">Synthesis evidence</summary>
+          <p className="mt-3 break-all">Snapshot: {reading.snapshotId}</p>
+          <p className="mt-2">Methods reviewed: {reading.methodsReviewed.join(", ")}</p>
+          {reading.paragraphs.map((paragraph, index) => <p key={index} className="mt-2">Paragraph {index + 1}: {paragraph.contactIds.join(", ")} · {paragraph.methodIds.join(", ")} · {paragraph.evidenceIds.join(", ")}</p>)}
+        </details>
+      </section>}
+      {reading && <EnergyScoringKey />}
       {/* SECTION 2: MAIN ENERGY GAUGE — RESPONSIVE SEMICIRCULAR GAUGE */}
-      {energyData && (
+      {energyData && page === "summary" && (
         <section
           aria-label="Main Cosmic Energy Gauge"
           className="relative overflow-hidden rounded-3xl border border-cyan-400/30 bg-[linear-gradient(135deg,#080B14_0%,#101628_60%,#092138_100%)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.6)] sm:p-8"
@@ -270,9 +250,9 @@ export default function EnergyPage() {
               <div className="mt-2 text-center">
                 <span
                   className={`rounded-full px-4 py-1 text-xs font-bold ${
-                    energyData.signal === "Effortless Flow"
+                    energyData.signal === "Harmonious Flow"
                       ? "bg-teal-950/70 text-[#2DD4BF] border border-teal-400/40 shadow-[0_0_12px_rgba(45,212,191,0.3)]"
-                      : energyData.signal === "Growth Crucible"
+                      : energyData.signal === "Dynamic Friction"
                       ? "bg-rose-950/70 text-[#FB7185] border border-rose-400/40 shadow-[0_0_12px_rgba(251,113,133,0.3)]"
                       : "bg-cyan-950/70 text-cyan-300 border border-cyan-400/40 shadow-[0_0_12px_rgba(34,211,238,0.3)]"
                   }`}
@@ -280,7 +260,7 @@ export default function EnergyPage() {
                   {energyData.signal}
                 </span>
                 <p className="mt-1 font-mono text-[11px] text-slate-400 tabular-nums">
-                  Current Telemetry Time: {currentTimeStr}
+                  Calculated sky: {currentTimeStr}
                 </p>
               </div>
             </div>
@@ -301,7 +281,7 @@ export default function EnergyPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-[11px] text-slate-300">
-                    Trines & sextiles lubricating creative execution and smooth diplomacy.
+                    Conjunctions, trines, sextiles and harmonious minor contacts.
                   </p>
                 </div>
 
@@ -318,28 +298,18 @@ export default function EnergyPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-[11px] text-slate-300">
-                    Squares & oppositions building structural discipline and grit.
+                    Squares, oppositions, semisquares and quincunxes.
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-4 space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9B66F]">
-                  Transit Climate Assessment
-                </span>
-                <p className="text-xs text-slate-200 leading-relaxed">
-                  {energyData.signal === "Effortless Flow"
-                    ? "Cosmic weather is highly supportive. Favorable alignments invite confident outreach, relationship cultivation, and strategic launches."
-                    : energyData.signal === "Growth Crucible"
-                    ? "Dynamic tension dominates the skies. Conserve your energy, resist hasty confrontation, and redirect internal pressure into meticulous craftsmanship."
-                    : "The heavens strike an exact equilibrium between creative flow and evolutionary tension. Balance bold initiative with calculated patience."}
-                </p>
-              </div>
+
             </div>
           </div>
         </section>
       )}
 
+      {reading && page === "contacts" && <>
       {/* SECTION 3: PLANETARY ASPECT LEDGER */}
       <section aria-label="Active Planetary Aspects Ledger" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -348,7 +318,7 @@ export default function EnergyPage() {
               Precise Celestial Geometry
             </span>
             <h2 className="font-serif text-2xl font-bold text-white">
-              Planetary Contact Ledger ({filteredContacts.length})
+              Personal Transit-to-Natal Contacts {calculating ? "· Updating…" : energyData ? `(${filteredContacts.length} of ${energyData.contactsCount})` : "· Awaiting calculation"}
             </h2>
           </div>
 
@@ -371,17 +341,15 @@ export default function EnergyPage() {
           </div>
         </div>
 
+        {calculating && <p role="status" className="text-sm text-cyan-200">Calculating contacts for the selected transit time and location…</p>}
+        {!calculating && energyData && filteredContacts.length === 0 && <p role="status" className="rounded-xl border border-white/10 p-4 text-sm text-slate-300">{energyData.contactsCount ? "No contacts match this filter. Select All to see the complete ledger." : "No personal transit-to-natal contacts fall within the 5° orb at this calculated moment."}</p>}
         {/* Aspects Grid */}
         <div className="grid gap-3 sm:grid-cols-2">
           {filteredContacts.map((c) => {
-            const isFlow = aspectFlow[c.aspect] === 1;
-            const isFriction = aspectFlow[c.aspect] === -1;
+            const isFlow = ENERGY_ASPECT_FLOW[c.aspect] === 1;
+            const isFriction = ENERGY_ASPECT_FLOW[c.aspect] === -1;
             const symbol = ASPECT_SYMBOLS[c.aspect] || c.aspect;
-            const interpKey = `${c.transit}-${c.aspect}`;
-            const interpretation = ASPECT_INTERPRETATIONS[interpKey] || {
-              theme: `${c.transit} ${c.aspect} natal ${c.natal}`,
-              advice: "Reflect on how this planetary resonance activates your evolutionary path.",
-            };
+
             const isExpanded = expandedContactId === c.id;
 
             return (
@@ -422,13 +390,14 @@ export default function EnergyPage() {
 
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-400 font-mono">
                   <span>Exact Orb: {c.orb.toFixed(2)}°</span>
-                  <span>Strength: {c.strength}%</span>
+                  <span>Intensity: {c.intensity}/5 · Weight: {c.strength}</span>
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-3 border-t border-white/10 pt-3 space-y-2 animate-in fade-in duration-200">
-                    <p className="text-xs font-semibold text-[#D9B66F]">{interpretation.theme}</p>
-                    <p className="text-xs text-slate-300 leading-relaxed">{interpretation.advice}</p>
+                  <div onClick={event => event.stopPropagation()} className="mt-3 border-t border-white/10 pt-3 space-y-2 animate-in fade-in duration-200">
+                    <p className="text-xs font-semibold text-[#D9B66F]">{`${c.transit} ${c.aspect} natal ${c.natal} · ${c.orb.toFixed(2)}° orb`}</p>
+                    <p className="text-xs text-cyan-200">{c.intensity} intensity × {c.stars} transit stars × {c.natalStars} natal stars × {c.majorFactor} aspect weight = {c.strength} points</p>
+                    {chart && <FocusedPlacementReading chart={chart} name={c.transit} otherName={c.natal} kind="contact" layer="transit"/>}
                     <div className="flex justify-end pt-1">
                       <button
                         type="button"
@@ -449,8 +418,12 @@ export default function EnergyPage() {
         </div>
       </section>
 
+      </>}
+      {reading && page === "forecast" && chart && <HarmonicFlowTimeline chart={chart} />}
+
       {/* SECTION 4: FORECAST TIMELINE */}
-      <section aria-label="Transit Weather Timeline" className="space-y-4">
+      <div className="flex justify-end"><Link href="/transit-sky" className="rounded-xl border border-cyan-300/40 bg-cyan-950/30 px-4 py-2 text-sm font-semibold text-cyan-200">Open Independent Transit Chart →</Link></div>
+      {reading && page === "forecast" && <section aria-label="Transit Weather Timeline" className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">
@@ -465,6 +438,8 @@ export default function EnergyPage() {
         {chart && <TransitWeatherTimeline chart={chart} />}
       </section>
 
+      }
+      {reading && page === "consultation" && <>
       {/* SECTION 5: MASTER INTERPRETER DEEP QUERY */}
       <section
         id="energy-master-interpreter"
@@ -489,12 +464,13 @@ export default function EnergyPage() {
             chart={chart}
             initialMode="transit"
             initialQuestion={
-              activeInterpreterQuestion ||
+              new URLSearchParams(window.location.search).get("question") || activeInterpreterQuestion ||
               "What is the single most important planetary transit active for me right now, and how should I align my actions today?"
             }
           />
         )}
       </section>
+      </>}
     </div>
   );
 }

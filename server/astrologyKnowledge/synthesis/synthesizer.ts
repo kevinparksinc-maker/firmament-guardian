@@ -3,8 +3,9 @@ import type {
   SynthesisInput,
   SynthesisResult,
 } from "./types";
-import { extractPropositionsFromSnapshot } from "./normalizer";
+import { extractPropositionsFromMethodOutcomes } from "./normalizer";
 import { clusterPropositionsIntoThemes } from "./clustering";
+import { buildMethodOutcomes } from "./methodOutcomes";
 
 function getSign(longitude: number): string {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
@@ -16,82 +17,88 @@ export async function synthesizeMasterReading(
   const { snapshot, readingMode } = input;
 
   // 1. Extract normalized propositions across all available traditions and methods
-  const propositions = extractPropositionsFromSnapshot(snapshot);
+  const suppliedCanon = input.canonApplications ?? [];
+  const methodOutcomes = buildMethodOutcomes(snapshot, suppliedCanon);
+  const canonApplications = Array.from(new Map([...suppliedCanon, ...methodOutcomes.flatMap(outcome=>outcome.canonApplications)].map(rule=>[rule.canonEvidenceId,rule])).values());
+  const propositions = extractPropositionsFromMethodOutcomes(methodOutcomes);
 
   // 2. Cluster into human domain themes and reconcile tensions
   const { themes, tensions } = clusterPropositionsIntoThemes(propositions);
 
-  // 3. Formulate the Dominant Conclusion (Executive Core Synthesis)
-  const sun = snapshot.baseCelestialState.planets.find(p => p.name === "Sun");
-  const asc = snapshot.baseCelestialState.ascendant;
-  const saturn = snapshot.baseCelestialState.planets.find(p => p.name === "Saturn");
-  const mars = snapshot.baseCelestialState.planets.find(p => p.name === "Mars");
-
-  const ascSign = asc ? getSign(asc.longitude) : "the rising horizon";
-  const sunSign = sun ? getSign(sun.longitude) : "its solar placement";
-  const marsSign = mars ? getSign(mars.longitude) : "its martial sign";
-  const saturnSign = saturn ? getSign(saturn.longitude) : "its sector";
-
-  const dominantConclusion = `Your celestial configuration reveals a foundational architecture anchored by ${ascSign} and activated by the conscious drive of the Sun in ${sunSign} (House ${
-    sun?.house ?? 1
-  }). Rather than isolated personality traits, the convergent evidence across Hellenistic, Vedic, and Babylonian fixed-star layers demonstrates a life calling built on disciplined mastery, ethical integrity, and deliberate stewardship. Where lesser paths offer superficial quickness, your chart rewards rigorous patience, deep craftsmanship, and the willingness to stand firm under pressure.`;
-
-  // 4. Build Integrated Narrative Paragraphs (weaving traditions together)
-  const integratedNarrative: string[] = [];
-
-  // Paragraph 1: Foundational Identity & Psychological Architecture
-  const identityTheme = themes.find(t => t.domain === "identity");
-  if (identityTheme) {
-    integratedNarrative.push(
-      `At the foundational level, your life direction emerges from ${
-        asc?.display ?? "the rising degree"
-      }. In the Hellenistic frame, this establishes an orientation of direct responsibility and perceptive discernment, while the Vedic lunar asterism and Arabic Manzil layers reveal a deep instinctual equilibrium. You do not move through circumstances passively; your inner temperament seeks tangible truth, emotional clarity, and self-respect before committing your forces.`
-    );
-  }
-
-  // Paragraph 2: Calling, Conscious Vocation & Purposeful Work
-  const purposeTheme = themes.find(t => t.domain === "purpose_work");
-  if (purposeTheme) {
-    integratedNarrative.push(
-      `In the domain of public contribution and calling, the solar center operates alongside the Hermetic Lot of Spirit and the Parashari divisional harmonic frames. This is not an abstract ambition, but a demand to create work of enduring substance. The chart indicates that your greatest influence arises when you align personal competence with selfless contribution, ensuring that every project or leadership position is backed by uncompromising moral credibility.`
-    );
-  }
-
-  // Paragraph 3: Executive Agency, Courage & Sovereign Boundaries
-  const powerTheme = themes.find(t => t.domain === "autonomy_power");
-  if (powerTheme) {
-    integratedNarrative.push(
-      `Executive agency and decisive boundary setting are governed by Mars in ${marsSign}${
-        snapshot.agentView.frameRelationships.length > 0
-          ? ` within the calculated frame relationship of the God/Agent axis`
-          : ""
-      }. In traditional Graha Drishti, martial force casts its gaze across critical life sectors, providing the courage to confront obstacles directly without becoming tyrannical. True authority in your chart comes from composed self-control and principled defense of what is sacred.`
-    );
-  }
-
-  // Paragraph 4: Reality Limits, Saturnian Accountability & Maturation
-  const choicesTheme = themes.find(t => t.domain === "choices_obstacles");
-  if (choicesTheme) {
-    integratedNarrative.push(
-      `The chart's primary discipline is anchored by Saturn in ${saturnSign} (House ${saturn?.house ?? 1}) and reinforced by the Lot of Nemesis. This is the sacred boundary of your life: delays are not denials, but structural tests designed to burn away trivial distractions. The Sefer Yetzirah contrary pairs remind us that true power is born through humble submission to higher reality and patient perseverance over time.`
-    );
-  }
-
-  // Paragraph 5: Synthesized Conclusion & Actionable Next Step
-  integratedNarrative.push(
-    `In summary, the Master Chart proves that your power lies not in avoiding friction, but in using structural resistance as the whetstone for character. Move through this chapter of your life with steady cadence: tell the truth, honor your commitments, protect your inner peace, and build with the quiet confidence of someone whose foundations are anchored in ancient cosmic order.`
+  // 3. Evidence-led synthesis. Never substitute generic personality prose for findings.
+  const question = input.userQuestion?.trim() || "the chart's overall configuration";
+  const relevantDomains: Record<string, string[]> = {
+    relationships: ["relationship", "marriage", "partner", "love"],
+    resources_wealth: ["money", "wealth", "finance", "income", "career pay"],
+    purpose_work: ["career", "work", "purpose", "job", "business"],
+    family_home: ["family", "home", "parent", "child"],
+    timing: ["when", "timing", "today", "transit", "future"],
+    energy_wellbeing: ["energy", "health", "wellbeing"],
+    autonomy_power: ["power", "conflict", "control", "courage"],
+  };
+  const query = question.toLowerCase();
+  const prioritized = Object.entries(relevantDomains)
+    .filter(([, terms]) => terms.some(term => query.includes(term)))
+    .map(([domain]) => domain);
+  const strengthWeight={dominant:4,strong:3,moderate:2,subtle:1};
+  const signal=(theme:typeof themes[number])=>Math.max(0,...propositions.filter(p=>theme.linkedPropositionIds.includes(p.id)).map(p=>strengthWeight[p.strength]));
+  const orderedThemes = [...themes].sort((a, b) =>
+    (prioritized.includes(b.domain) ? 1 : 0) - (prioritized.includes(a.domain) ? 1 : 0) || signal(b)-signal(a)
   );
+  const methodFindings = snapshot.methodExecutionLedger.map(layer => {
+    const raw = layer.results;
+    const entries = Array.isArray(raw)
+      ? raw.map((value, index) => [String(index + 1), value] as const)
+      : raw && typeof raw === "object"
+        ? Object.entries(raw)
+        : raw == null ? [] : [["result", raw] as const];
+    const findings = entries.map(([label, value]) => ({
+      label,
+      details: typeof value === "string" ? value : JSON.stringify(value) ?? String(value),
+    }));
+    return {
+      id: layer.id,
+      name: layer.name,
+      tradition: layer.tradition,
+      status: layer.status,
+      frame: layer.frame,
+      evidenceIds: layer.evidenceIds,
+      sourceIds: layer.sourceIds,
+      resultCount: findings.length,
+      findings,
+      ...(layer.notes ? { notes: layer.notes } : {}),
+    };
+  });
+  const methodCounts = snapshot.methodExecutionLedger
+    .map(layer => `${layer.name}: ${layer.status}${Array.isArray(layer.results) ? ` (${layer.results.length} results)` : ""}`);
+  const dominantConclusion = orderedThemes.length
+    ? `Question: ${question}. The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. ${orderedThemes.map(theme=>theme.primaryConclusion).join(" ")}`
+    : `Question: ${question}. No successfully interpreted method outcomes are available.`;
+
+  // The complete recorded results remain in the propositions and snapshot.
+  // Emit each computed finding so no doctrine disappears behind a generic summary.
+  const integratedNarrative: string[] = [
+    `Method inventory (every recorded layer): ${methodCounts.join("; ")}.`,
+    ...methodOutcomes.map(outcome =>
+      `METHOD OUTCOME [${outcome.methodId}] scope=${outcome.chartScope} frame=${outcome.frame} status=${outcome.status}. Interpretation: ${outcome.interpretation} Judgment: ${outcome.judgment} Contribution: ${outcome.contribution} Evidence: ${outcome.evidenceIds.join(", ") || "none"}. Limitations: ${outcome.strengthAndLimitations.join(" | ") || "none"}.`
+    ),
+    ...canonApplications.map(application =>
+      `Canon rule applied to ${application.subject}: [${application.ruleId}] ${application.statement} Source: ${application.sourceTitle}. Matched calculation evidence: ${application.calculationEvidenceIds.join(", ")}.`
+    ),
+    ...orderedThemes.map(theme =>
+      `${theme.humanTheme}. WHAT: ${theme.primaryConclusion} WHY/HOW: ${theme.whyHow} CONSEQUENCE: ${theme.consequences} MEANING: ${theme.deeperMeaning} Evidence: ${theme.evidenceIds.join(", ")}.`
+    ),
+    ...propositions.filter(p => p.id.startsWith("prop-method-")).map(p =>
+      `[${p.tradition} / ${p.causalMechanism}] ${p.plainLanguageMeaning} [Evidence: ${p.supportingEvidenceIds.join(", ")}]`
+    ),
+  ];
 
   // 5. Build Evidence Trace Map (mapping every theme to its underlying evidence IDs)
   const evidenceTraceMap: Record<string, string[]> = {};
   for (const theme of themes) {
     evidenceTraceMap[theme.id] = theme.evidenceIds;
   }
-  evidenceTraceMap["dominant-conclusion"] = [
-    "angle-ascendant",
-    "planet-sun",
-    "planet-saturn",
-  ];
+  evidenceTraceMap["dominant-conclusion"] = orderedThemes[0]?.evidenceIds ?? [];
 
   // 6. Summarize Method Ledger
   const ledger = snapshot.methodExecutionLedger;
@@ -103,47 +110,77 @@ export async function synthesizeMasterReading(
     failed: ledger.filter(l => l.status === "failed").length,
   };
 
-  // 7. Method findings ledger mapping
-  const methodFindings = ledger.map(l => ({
-    id: l.id,
-    name: l.name,
-    tradition: l.tradition,
-    status: l.status,
-    frame: l.frame,
-    evidenceIds: l.evidenceIds || [],
-    sourceIds: l.sourceIds || [],
-    resultCount: Array.isArray(l.results) ? l.results.length : l.results ? 1 : 0,
-    findings: [],
-    notes: l.notes,
-  }));
-
-  // 8. Quality Audit (Guarantees all claims trace to evidence IDs)
+  // 7. Evidence coverage audit. Do not claim a perfect score without checking.
+  const expectedEvidenceIds = new Set(
+    ledger.filter(l => l.status === "computed-with-result").flatMap(l => l.evidenceIds)
+  );
+  // Only evidence actually incorporated into a synthesized theme counts as interpreted.
+  // Inventory-only ledger entries cannot inflate the interpretation coverage score.
+  const tracedEvidenceIds = new Set(themes.flatMap(theme => theme.evidenceIds));
+  const missingEvidenceIds = Array.from(expectedEvidenceIds).filter(id => !tracedEvidenceIds.has(id));
+  const computedLayers = ledger.filter(l => l.status === "computed-with-result");
+  const interpretedMethodIds = new Set(methodOutcomes.filter(outcome=>outcome.status==="interpreted" && outcome.findingJudgments.every(finding=>themes.some(theme=>theme.linkedPropositionIds.includes(finding.id)))).map(outcome=>outcome.methodId));
+  const uninterpretedMethods = computedLayers.filter(layer => !interpretedMethodIds.has(layer.id));
+  const linkedPropositionIds = new Set(themes.flatMap(theme => theme.linkedPropositionIds));
+  const interpretedCanonEvidenceIds = new Set(
+    propositions
+      .filter(proposition => linkedPropositionIds.has(proposition.id))
+      .flatMap(proposition => (proposition.canonApplications ?? []).map(application => application.canonEvidenceId))
+  );
+  const missingCanonApplications = canonApplications.filter(application =>
+    application.confidence !== "reference-only" && !interpretedCanonEvidenceIds.has(application.canonEvidenceId)
+  );
+  const incompleteMethodOutcomes = methodOutcomes.filter(outcome => outcome.status === "failed");
+  const groundedRatio = expectedEvidenceIds.size === 0
+    ? 1
+    : (expectedEvidenceIds.size - missingEvidenceIds.length) / expectedEvidenceIds.size;
   const qualityAudit = {
-    groundedRatio: 1.0,
-    unsupportedClaims: [],
-    passed: true,
+    groundedRatio,
+    unsupportedClaims: [
+      ...incompleteMethodOutcomes.map(outcome=>`Method judgment failed: ${outcome.methodId}: ${outcome.interpretation}`),
+      ...missingEvidenceIds.map(id => `Not incorporated into interpreted themes: ${id}`),
+      ...uninterpretedMethods.map(layer => `Computed method missing from interpreted themes: ${layer.id}`),
+      ...missingCanonApplications.map(application => `Canon rule not applied to an interpreted proposition: ${application.ruleId} (${application.canonEvidenceId})`),
+    ],
+    passed: missingEvidenceIds.length === 0 && uninterpretedMethods.length === 0 && missingCanonApplications.length === 0 && incompleteMethodOutcomes.length === 0,
   };
+  // Report method coverage explicitly; reference-only or unavailable layers are never
+  // described as calculated. The raw evidence remains available in the snapshot.
+  integratedNarrative.push(
+    `Calculation coverage: ${ledger.filter(l => l.status === "computed-with-result").length} methods returned results, ${methodLedgerSummary.referenceOnly} are reference-only, ${methodLedgerSummary.notApplicable} are not applicable, and ${methodLedgerSummary.failed} failed. ${missingEvidenceIds.length === 0 ? "All recorded computed evidence IDs are incorporated into interpreted themes." : `${missingEvidenceIds.length} computed evidence IDs are not incorporated into interpreted themes.`}`
+  );
+  integratedNarrative.push(
+    missingCanonApplications.length === 0
+      ? `Canon coverage: ${canonApplications.length} retrieved rule applications are linked to interpreted chart propositions.`
+      : `Canon coverage incomplete: ${missingCanonApplications.length} retrieved rule applications are not linked to interpreted chart propositions.`
+  );
 
   return {
+    sourceSnapshot: snapshot,
     snapshotId: snapshot.snapshotId,
     mode: readingMode,
     dominantConclusion,
     integratedNarrative,
     methodFindings,
+    methodOutcomes,
+    methodOutcomeAudit: {
+      complete: incompleteMethodOutcomes.length === 0,
+      incompleteMethodIds: incompleteMethodOutcomes.map(outcome => outcome.methodId),
+    },
     themes,
     contradictionsAndTensions: tensions,
     timingOverview:
       readingMode === "transit" || readingMode === "combined"
         ? {
-            activeWindow: "Current Transit Season",
-            turningPoints: [
-              "Exact planetary transit peak activation",
-              "Subsequent easing window into harmonic equilibrium",
-            ],
+            activeWindow: snapshot.transit?.transitInstantUtc ?? "Transit moment not supplied",
+            turningPoints: snapshot.transit?.aspectsToNatal?.length
+              ? snapshot.transit.aspectsToNatal.map(contact => `${contact.transitBody} ${contact.aspect} natal ${contact.natalBody} (orb ${contact.orb}°)`)
+              : ["No calculated natal transit contacts available; peak and easing times are not established."],
           }
         : undefined,
     methodLedgerSummary,
     evidenceTraceMap,
+    canonApplications,
     qualityAudit,
   };
 }

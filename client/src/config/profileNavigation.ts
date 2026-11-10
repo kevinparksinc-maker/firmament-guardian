@@ -13,3 +13,21 @@ export function isProfileRoute(path: string): boolean {
   return PROFILE_TABS.some(tab => tab.href === path) || path === "/guide" || path === "/profile";
 }
 
+
+/** Shared desktop and thumb navigation. Explore stays in the header directory. */
+export const PRIMARY_NAV_ITEMS = [
+  { href: "/", label: "Home", icon: "House" },
+  { href: "/chart", label: "Chart", icon: "Diamond" },
+  { href: "/energy", label: "Energy", icon: "Zap" },
+  { href: "/horary", label: "Horary", icon: "MessageCircleQuestion" },
+  { href: "/reading", label: "Readings", icon: "BookOpen" },
+] as const;
+
+export function primaryDestinationForPath(path: string): string | undefined {
+  if (path === "/") return "/";
+  if (path === "/chart") return "/chart";
+  if (path.startsWith("/energy") || path === "/forecast" || path === "/transit-sky") return "/energy";
+  if (path === "/horary" || path === "/zodiac-readings") return "/horary";
+  if (path.startsWith("/reading") || path === "/life-story" || path === "/guide") return "/reading";
+  return undefined;
+}

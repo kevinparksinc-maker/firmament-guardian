@@ -4,8 +4,8 @@ import {
   formatEvidencePacket,
 } from "./evidencePacket";
 import { planKnowledge } from "./planner";
-import { canonDossierToEvidenceItems, retrieveChartCanonDossier } from "./canon";
-import { PLANET_IN_HOUSE, getPlanetInHouseKnowledge } from "./canon/planetInHouseInterpretations";
+import { canonDossierToEvidenceItems, retrieveChartCanonDossier } from "./calculations";
+import { PLANET_IN_HOUSE, getPlanetInHouseKnowledge } from "./calculations/planetInHouseInterpretations";
 import { ASTROLOGY_RULES, ASTROLOGY_SOURCES } from "./registry";
 import { resolveRelationships } from "./resolver";
 import type { ChartResult } from "../astronomy";
@@ -135,7 +135,7 @@ describe("astrology knowledge gateway", () => {
     expect(packet.arabicEvidence.length).toBeGreaterThan(0);
     expect(packet.sourceTrace.every(trace => trace.sourceId)).toBe(true);
     expect(packet.doctrine.western.relationshipOrb).toBe(5);
-    expect(packet.vedicEvidence.some(item => item.technique === "varga")).toBe(
+    expect(packet.uncertainties.some(item => item.technique === "varga")).toBe(
       true
     );
     expect(formatEvidencePacket(packet)).toContain("ASTROLOGY EVIDENCE PACKET");

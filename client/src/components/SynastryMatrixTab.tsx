@@ -42,7 +42,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useSovereignTier, SovereignTeaserLock } from "./SovereignTierModal";
 import type { ChartResult } from "../../../server/astronomy";
-import { computeSynastry, type SynastryAspect } from "@/lib/synastry-engine";
+import { computeSynastry, computeRelationshipCompatibility, computeExpressionReception, computeParentChildDynamic, type ParentChildDynamic, type SynastryAspect } from "@/lib/synastry-engine";
 import { SynastryDualOrrery } from "./SynastryDualOrrery";
 import type { LovedOneRecord, RelationshipRole } from "../../../shared/social";
 
@@ -284,6 +284,21 @@ export function SynastryMatrixTab({
     [userChart, partnerChart, isSwapped]
   );
 
+  const relationshipCompatibility = useMemo(
+    () => computeRelationshipCompatibility(aspects, partnerDetails.relationship as RelationshipRole),
+    [aspects, partnerDetails.relationship]
+  );
+
+  // Explicit choice avoids guessing family identities from birth charts.
+  const [familyPair, setFamilyPair] = useState<ParentChildDynamic>("father-son");
+  const isParentChild = partnerDetails.relationship === "parent" || partnerDetails.relationship === "child";
+  const familyDynamic = useMemo(
+    () => isParentChild ? computeParentChildDynamic(aspects, familyPair) : null,
+    [aspects, familyPair, isParentChild]
+  );
+
+  const expressionReception = useMemo(() => computeExpressionReception(aspects), [aspects]);
+
   // Filtered aspects
   const filteredAspects = useMemo(() => {
     if (aspectFilter === "all") return aspects;
@@ -292,7 +307,7 @@ export function SynastryMatrixTab({
 
   const handleAskAboutBond = () => {
     if (!onAskMasterInterpreter || !userChart || !partnerChart) return;
-    const query = `Please provide an in-depth synastry and relationship analysis between me (${userChart?.input.location || "my birth chart"}) and ${partnerDetails.name} (${partnerDetails.date} in ${partnerDetails.location}). The charts contain ${aspects.length} major cross-aspects within 5°. Key calculated aspects: ${aspects.slice(0,16).map(a=>`${a.planetA} ${a.aspect} ${a.planetB} (${a.orb}°)`).join("; ")}. Explain the mutual patterns, both people’s house placements, any tensions and practical ways to communicate, distinguishing symbolic possibility from established human facts.`;
+    const query = `Please provide an in-depth synastry and relationship analysis between me (${userChart?.input.location || "my birth chart"}) and ${partnerDetails.name} (${partnerDetails.date} in ${partnerDetails.location}). The charts contain ${aspects.length} cross-aspects across eight configured aspect types within 5°. Key calculated aspects: ${aspects.slice(0,16).map(a=>`${a.planetA} ${a.aspect} ${a.planetB} (${a.orb}°)`).join("; ")}. Explain the mutual patterns, both people’s house placements, any tensions and practical ways to communicate, distinguishing symbolic possibility from established human facts.`;
     onAskMasterInterpreter(query);
   };
 
@@ -430,11 +445,11 @@ export function SynastryMatrixTab({
       <div className="fg-module-banner">
         <div className="fg-module-eyebrow">02 / THE CELESTIAL INTERSECTION · TWO CALCULATED NATAL SKIES</div>
         <h3 className="fg-module-title">Two lives. One shared sky.</h3>
-        <p className="fg-module-desc">All available planets compared across both natal charts with the same five-degree orb. House overlays are calculated in both directions using actual Ascendants. The relationship indices describe the observed aspect mix, not emotional certainty or compatibility probabilities.</p>
+        <p className="fg-module-desc">All available planets compared across both natal charts using eight aspects and a five-degree orb. House overlays are calculated in both directions using actual Ascendants. The relationship indices describe the observed aspect mix, not emotional certainty or compatibility probabilities.</p>
         {!userChart && <p className="mt-3 text-amber-200 text-sm" role="status">Calculate your natal chart first to activate the synastry evidence.</p>}
         {calculatePartnerMutation.isPending && <p className="mt-3 text-cyan-200 text-sm" role="status">Calculating the second natal chart…</p>}
         {calculatePartnerMutation.isError && <p className="mt-3 text-rose-200 text-sm" role="alert">Could not calculate the second chart: {calculatePartnerMutation.error.message}</p>}
-        {userChart && partnerChart && aspects.length === 0 && <p className="mt-3 text-slate-300 text-sm">No major cross-chart contacts were found within 5°. A zero index here means no testimony in scope, not an incompatible partnership.</p>}
+        {userChart && partnerChart && aspects.length === 0 && <p className="mt-3 text-slate-300 text-sm">No configured cross-chart contacts were found within 5°. A zero index here means no testimony in scope, not an incompatible partnership.</p>}
       </div>
 
       {userChart && partnerChart && <SynastryDualOrrery
@@ -443,6 +458,91 @@ export function SynastryMatrixTab({
         firstName={isSwapped ? partnerDetails.name : "Your birth chart"}
         secondName={isSwapped ? "Your birth chart" : partnerDetails.name}
       />}
+
+      {/* Relationship-specific compatibility is grounded in cross-chart evidence. */}
+      <Card className="border-cyan-300/20 bg-slate-950/70 text-slate-100">
+        <CardHeader>
+          <CardTitle className="text-lg text-cyan-200">{relationshipCompatibility.label} · Compatibility dynamics</CardTitle>
+          <p className="text-xs text-slate-300">{relationshipCompatibility.summary}</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {relationshipCompatibility.dimensions.map(d => (
+              <div key={d.label} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="flex justify-between gap-2 text-sm"><span>{d.label}</span>
+                  <span className="font-semibold">{d.score === null ? "No evidence" : d.score + "% flow"}</span></div>
+                <div className="mt-2 h-1.5 rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-cyan-400" style={{width: (d.score ?? 0) + "%"}} />
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{d.contacts} supporting cross-chart contacts</p>
+              </div>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 text-xs leading-relaxed">
+            <div><strong className="text-emerald-300">Where you flow</strong>
+              <p className="mt-1 text-slate-300">{relationshipCompatibility.strengths.map(a => a.planetA+" "+a.aspect+" "+a.planetB+" ("+a.orb+"°)").join("; ") || "No close harmonious contacts in scope."}</p>
+            </div>
+            <div><strong className="text-amber-300">Where to work together</strong>
+              <p className="mt-1 text-slate-300">{relationshipCompatibility.challenges.map(a => a.planetA+" "+a.aspect+" "+a.planetB+" ("+a.orb+"°)").join("; ") || "No close friction contacts in scope."}</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400">These scores describe weighted astrological aspect balance in this relationship, not a measurement of feelings, safety, or real-world relationship success.</p>
+        </CardContent>
+      </Card>
+
+      <Card className="border-violet-300/20 bg-slate-950/70 text-slate-100">
+        <CardHeader>
+          <CardTitle className="text-lg text-violet-200">Expression vs. Reception · Both Directions</CardTitle>
+          <p className="text-xs text-slate-300">How one person's communication and self-expression symbolically meet the other's emotional and mental reception. The direction matters.</p>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          {expressionReception.map(d => (
+            <div key={d.direction} className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-2">
+              <h4 className="font-semibold text-violet-200">{d.sender} expresses → {d.receiver} receives</h4>
+              <p className="text-sm">{d.flowPercent === null ? "Insufficient close contacts" : d.flowPercent + "% weighted harmony"}</p>
+              <p className="text-xs text-slate-300">{d.reading}</p>
+              <p className="text-xs text-slate-400">{d.expression.length} relevant cross-chart contacts</p>
+              {d.expression.slice(0,5).map(a => (
+                <p key={a.planetA+"-"+a.planetB+"-"+a.aspect} className="text-xs text-slate-300">
+                  {a.planetA} {a.aspect} {a.planetB} · {a.orb}° · {a.type === "harmony" ? "flow" : "friction"}
+                </p>
+              ))}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {isParentChild && familyDynamic && (
+        <Card className="border-amber-300/20 bg-slate-950/70 text-slate-100">
+          <CardHeader>
+            <CardTitle className="text-lg text-amber-200">Parent–Child Relationship Patterns</CardTitle>
+            <p className="text-xs text-slate-300">Select the family pairing explicitly. Charts do not determine a person's family role or identity.</p>
+            <select aria-label="Family relationship pairing" value={familyPair}
+              onChange={e => setFamilyPair(e.target.value as ParentChildDynamic)}
+              className="mt-2 w-full rounded-lg border border-white/20 bg-slate-900 p-2 text-sm text-white">
+              <option value="father-son">Father ↔ Son</option>
+              <option value="mother-son">Mother ↔ Son</option>
+              <option value="mother-daughter">Mother ↔ Daughter</option>
+              <option value="father-daughter">Father ↔ Daughter</option>
+            </select>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-300">{familyDynamic.summary}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {familyDynamic.dimensions.map(d => (
+                <div key={d.label} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex justify-between gap-2 text-sm">
+                    <span>{d.label}</span>
+                    <span>{d.score === null ? "No evidence" : d.score + "% flow"}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">{d.contacts} cross-chart contacts</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400">The expression–reception panel below compares both directions. Neither panel diagnoses competition, jealousy, or anyone's intentions.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Symbolic cross-aspect balance — never a measure of human compatibility. */}
       <div className="grid gap-6 lg:grid-cols-12">
@@ -707,7 +807,7 @@ export function SynastryMatrixTab({
                 Planetary Aspect Cross-Grid
               </CardTitle>
               <p className="text-xs text-slate-400 mt-1">
-                Deterministic aspect geometry calculated within rigorous 5°–6° orbs.
+                Eight cross-chart aspect types calculated within a 5° orb; minor aspects carry half weight.
               </p>
             </div>
 

@@ -208,7 +208,7 @@ export function resolveHoraryQuestion(question: string, houses: HouseInput, over
     assignments,
     primaryPersonId: primaryPerson.id,
     primaryMatterId: primaryMatter.id,
-    significators: [...planetRoles.entries()].map(([planet, roles]) => ({ planet, roles })),
+    significators: Array.from(planetRoles.entries()).map(([planet, roles]) => ({ planet, roles })),
     questionIntent: buildQuestionIntent(text, assignments),
   };
 }

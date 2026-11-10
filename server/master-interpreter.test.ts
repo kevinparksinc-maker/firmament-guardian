@@ -1,28 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
 vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
 
 import { askHost } from "./host";
 import { followUp, generateChapter } from "./interpretation";
-import type { ChartResult } from "./astronomy";
-import { ASTROLOGY_INTERPRETATION_ADAPTER, MASTER_INTERPRETER_PROMPT, buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { calculateChart, type ChartResult } from "./astronomy";
+import { MASTER_INTERPRETER_PROMPT, buildAstrologyInterpreterSystem } from "./master-interpreter";
 
-const chart = {
-  input: { location: "Synthetic Test City", date: "1990-01-01", time: "12:00", timezone: "UTC" },
-  utc: "1990-01-01T12:00:00.000Z",
-  julianDay: 2447893,
-  ascendant: { display: "Libra 12°00′" },
-  descendant: { display: "Aries 12°00′" },
-  northNode: { display: "Aquarius 4°00′", house: 5 },
-  southNode: { display: "Leo 4°00′", house: 11 },
-  houses: [],
-  movingBodies: [],
-  frozenStars: [],
-  transitDate: "2025-01-01T12:00:00.000Z",
-  transits: [],
-  validation: [],
-} as unknown as ChartResult;
+let chart: ChartResult;
+beforeAll(async () => {
+  chart = await calculateChart({
+    location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797,
+    timezone: "America/Chicago", date: "1986-11-20", time: "10:06",
+    worldview: "agent", readingScope: "combined",
+    transitLocation: "Las Vegas, Nevada, USA", transitLatitude: 36.1699,
+    transitLongitude: -115.1398, transitTimezone: "America/Los_Angeles",
+    transitDate: "2026-11-06", transitTime: "11:06",
+  });
+});
 
 function systemPromptFromLastCall() {
   const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };
@@ -32,25 +28,19 @@ function systemPromptFromLastCall() {
 beforeEach(() => {
   mocked.invokeLLM.mockReset();
   mocked.invokeLLM.mockResolvedValue({
-    choices: [{ message: { role: "assistant", content: "A concise synthetic interpretation response." } }],
+    choices: [{ message: { role: "assistant", content: "A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. " } }],
   });
 });
 
 describe("Master Interpreter prompt coverage", () => {
-  it("keeps the full supplied operating instructions and astrology-only source-of-truth adapter", () => {
-    expect(MASTER_INTERPRETER_PROMPT.split(/\s+/).length).toBeGreaterThan(3000);
-    expect(MASTER_INTERPRETER_PROMPT).toContain("KNOWLEDGE IS THE MATERIAL.");
-    expect(MASTER_INTERPRETER_PROMPT).toContain("UNDERSTANDING IS THE RESULT.");
-    expect(MASTER_INTERPRETER_PROMPT).not.toContain("The next thing I'd build");
-    expect(ASTROLOGY_INTERPRETATION_ADAPTER).toContain("calculation engine and the supplied chart evidence are the sole source of chart facts");
-    expect(buildAstrologyInterpreterSystem()).toContain("VEDIC Dasha & Ashtakavarga Evidence Contract");
-    expect(buildAstrologyInterpreterSystem()).toContain("BOLD CLAIM → WHY");
-    expect(buildAstrologyInterpreterSystem()).toContain("GUARDIAN POWER PRINCIPLE");
-    expect(buildAstrologyInterpreterSystem()).toContain("POWER ORIGIN → POWER BASE → POWER CHANNEL → HUMAN INFLUENCE");
-    expect(buildAstrologyInterpreterSystem()).toContain("SOURCE OF POWER → POSITION OF POWER → ROUTE OF INFLUENCE");
-    expect(buildAstrologyInterpreterSystem()).toContain("POWER → SAFETY → COMFORT → AUTHENTICITY");
-    expect(buildAstrologyInterpreterSystem()).toContain("UNIVERSAL THREE-LAYER DIVINATION ARCHITECTURE");
-    expect(buildAstrologyInterpreterSystem()).toContain("Never imply Trikona Sodhana or Ekadhipatya Sodhana was applied");
+  it("keeps the current replacement interpretation contract and domain instructions", () => {
+    expect(MASTER_INTERPRETER_PROMPT).toContain("THE ABSOLUTE — INTERPRETATION ENGINE");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("do not recalculate or invent data");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("every applicable supplied method");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("reconcile reinforcing or conflicting testimony");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("what, why, how, consequence and meaning");
+    expect(buildAstrologyInterpreterSystem("fixture domain instruction")).toContain("fixture domain instruction");
+
   });
 
   it("writes chapters from a distilled prompt, the evidence sheet, and the reading plan", async () => {
@@ -63,15 +53,9 @@ describe("Master Interpreter prompt coverage", () => {
     const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };
     const system = systemPromptFromLastCall();
     const user = request.messages.find(message => message.role === "user")?.content ?? "";
-    expect(system).toContain("THE QUESTION BEHIND THE QUESTION");
-    expect(system).toContain("VISIBLE INTERPRETATION FORMAT — REQUIRED");
-    expect(system).toContain("What I hear beneath your question");
+    expect(system).toContain(MASTER_INTERPRETER_PROMPT);
     expect(system).toContain("What this means for you");
-    expect(system).toContain("FACTS");
-    expect(system).toContain("VOICE");
-    expect(system).toContain("Every consequential declarative judgment");
-    expect(system).toContain("POWER BASE / POSITION");
-    expect(system.indexOf("VOICE")).toBeGreaterThan(system.indexOf("METHOD"));
+    expect(system).toContain("Follow the reading plan");
     expect(user).toContain("CHART EVIDENCE SHEET");
     expect(user).toContain("READING PLAN");
     expect(user).toContain("Test thread");
@@ -79,17 +63,12 @@ describe("Master Interpreter prompt coverage", () => {
 
   it("attaches the Master Interpreter to chart-anchored interpretive follow-ups", async () => {
     await followUp(chart, { intelligence: "synthetic", reading: "synthetic" }, [], "What does this pattern mean?", "combined");
-    expect(systemPromptFromLastCall()).toContain("THE QUESTION BEHIND THE QUESTION");
-    expect(systemPromptFromLastCall()).toContain(ASTROLOGY_INTERPRETATION_ADAPTER);
-    expect(systemPromptFromLastCall()).toContain("BOLD CLAIM → WHY");
-    expect(systemPromptFromLastCall()).toContain("POWER CHANNEL");
+    expect(systemPromptFromLastCall()).toContain(MASTER_INTERPRETER_PROMPT);
   });
 
   it("attaches the Master Interpreter to model-backed Host responses", async () => {
     await askHost([], "What might a supplied Saturn placement mean in relationships?");
-    expect(systemPromptFromLastCall()).toContain("THE QUESTION BEHIND THE QUESTION");
-    expect(systemPromptFromLastCall()).toContain(ASTROLOGY_INTERPRETATION_ADAPTER);
-    expect(systemPromptFromLastCall()).toContain("product host for this exact engine");
-    expect(systemPromptFromLastCall()).toContain("POWER ORIGIN");
+    expect(systemPromptFromLastCall()).toContain(MASTER_INTERPRETER_PROMPT);
+    expect(systemPromptFromLastCall()).toContain("The Absolute's Host Interpreter");
   });
 });

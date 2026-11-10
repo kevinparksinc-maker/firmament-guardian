@@ -20,7 +20,7 @@ export function CelestialDomeChart({chart}:{chart:ChartResult}){
  const nodes=layer==="natal"?[chart.northNode,chart.southNode]:[];
  const entries=[...bodies,...nodes];
  const frameworkPosition=(name:string,longitude:number,ring:number)=>{
-   const projected=(entries.find(body => body.name === name) as { xyz?: { x: number; y: number } } | undefined)?.xyz;
+   const projected=entries.find(body => body.name === name)?.xyz;
    if(!projected || !Number.isFinite(projected.x) || !Number.isFinite(projected.y)) return position(longitude,ring,rotate);
    const angle=(Math.atan2(projected.y,projected.x)-rotate*Math.PI/180);
    const distance=Math.min(210,Math.max(28,Math.hypot(projected.x,projected.y)*2.7));

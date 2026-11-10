@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { notifyOwner } from "./notification";
+import { getLLMProviderStatus } from "./llm";
 import { adminProcedure, publicProcedure, router } from "./trpc";
 
 export const systemRouter = router({
@@ -12,6 +13,8 @@ export const systemRouter = router({
     .query(() => ({
       ok: true,
     })),
+
+  providerStatus: publicProcedure.query(() => getLLMProviderStatus()),
 
   notifyOwner: adminProcedure
     .input(

@@ -25,7 +25,7 @@ export function Guardian2050Welcome() {
     <nav className="fg2050-topbar" aria-label="Guardian primary navigation">
       <a href="/" className="fg2050-brand"><span className="fg2050-brandmark"><Orbit size={21}/></span><span><b>FIRMAMENT</b><small>GUARDIAN · CELESTIAL WISDOM</small></span></a>
       <div className="fg2050-toplinks"><a href="#chart-setup">Natal</a><a href="/horary">Horary</a><a href="/zodiac-readings">12 Signs</a><a href="/sky">Celestial Map</a><a href="/history">Library</a></div>
-      <span className="fg2050-model-tag"><i/> FIXED STELLAR FRAME</span>
+      <span className="fg2050-model-tag"><i/> POLARIS-CENTERED FIRMAMENT</span>
     </nav>
     <div className="fg2050-lead">
       <div className="fg2050-intro">

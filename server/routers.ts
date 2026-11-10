@@ -1,33 +1,25 @@
+import { buildChartMethodOutcomes } from "./chartMethodOutcomes";
+import { synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
+import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
+import { calculateMasterChart as calculateChart } from "./masterChart/entry";
+import { buildEnergyReading } from "./energyReading";
+import { buildChartPageReading, startPlacementReadingJob, getPlacementReadingJob } from "./chartPageReading";
+import { buildChartBriefing } from "./chartBriefing";
+import { buildFocusedReading } from "./focusedReading";
+import { calculateHarmonicForecast } from "./harmonicForecast";
+import { buildVimshottariTimeline, getAshtakavargaVisual } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
+import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
+import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { z } from "zod";
+import { checkAccountRateLimit, getAccountAvailability, loginAccount, registerAccount } from "./accountAuth";
+import { sessionConfiguration } from "./_core/env";
+import { sdk } from "./_core/sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { calculateChart, geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
-import {
-  followUp,
-  generateChapter,
-  generateInterpretation,
-  READING_CHAPTERS,
-} from "./interpretation";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
-import { buildUnifiedMasterChart } from "./masterChart";
-import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
-import { askHost } from "./host";
-import { horaryFollowUp, openHoraryQuestion, type HoraryChart } from "./horary";
-import { getZodiacSignReading } from "./zodiacHorary";
-import { ZODIAC_SIGNS } from "../shared/hybrid";
-import { horaryFollowUpHistorySchema } from "./horary-input";
-import {
-  diagnoseAstrologyEvidence,
-  buildAstrologyEvidencePacket,
-  formatEvidencePacket,
-  evaluateBehavioralIntelligence,
-} from "./astrologyKnowledge";
-import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
-import { invokeLLM } from "./_core/llm";
-import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
+import { geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
 import {
   calculatePersonAge,
   calculateAnnualProfection,
@@ -36,6 +28,32 @@ import {
   runAstrologyEngineAudit,
   generateLifeStoryChapter,
 } from "./lifeStoryEngine";
+import {
+  followUp,
+  generateChapter,
+  generateInterpretation,
+  READING_CHAPTERS,
+} from "./interpretation";
+import { askHost } from "./host";
+import { horaryFollowUp, openHoraryQuestion, type HoraryChart } from "./horary";
+import { getZodiacSignReading } from "./zodiacHorary";
+import { ZODIAC_SIGNS } from "../shared/hybrid";
+import { horaryFollowUpHistorySchema } from "./horary-input";
+import {
+  diagnoseAstrologyEvidence,
+  evaluateBehavioralIntelligence,
+} from "./astrologyKnowledge";
+import { synthesizePlacement } from "./placement-synthesis";
+import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
+import { invokeLLM } from "./_core/llm";
+import { buildAstrologyInterpreterSystem, FULL_SYNTHESIS_STYLE } from "./master-interpreter";
+import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
+import { buildUnifiedMasterChart, getMasterNatalChart } from "./masterChart/builder";
+import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
+import { buildMasterPipeline } from "./master-pipeline";
+import { buildMasterGameChart } from "./simulationLab/masterGameChart";
+import { evaluatePlanetaryTeamHouses, predictSportsGame } from "./simulationLab/sportsPredictor";
+import { evaluateGameMethods } from "../shared/simulationLab/registry";
 
 
 const chartInput = z.object({
@@ -51,10 +69,17 @@ const chartInput = z.object({
   transitTimezone: z.string().optional(),
   transitDate: z.string().optional(),
   transitTime: z.string().optional(),
+  transitInstantUtc: z.string().datetime({ offset: true }).optional(),
+  instantUtc: z.string().datetime({ offset: true }).optional(),
   worldview: z.enum(["god", "agent", "agent-vs-god"]).default("agent"),
   readingScope: z.enum(["natal", "transit", "combined"]).default("combined"),
   birthTimeKnown: z.boolean().optional(),
+  chartRole: z.enum(["natal", "event"]).optional(),
   elevation: z.number().optional(),
+  sunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),
+  transitSunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),
+  xyzPositions: z.record(z.string(), z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() })).optional(),
+  transitXYZPositions: z.record(z.string(), z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() })).optional(),
 });
 const chartRowPayload = z.object({
   name: z.string().min(1).max(100),
@@ -92,16 +117,38 @@ const placeInput = z.object({
 });
 const horaryQuestionInput = placeInput.extend({
   question: z.string().trim().min(10).max(1000),
-  subject: z.enum(["querent", "other"]).optional(),
-  topicHouse: z.number().int().min(1).max(12).optional(),
+  subject: z.enum(["querent", "other"]),
+  topicHouse: z.number().int().min(1).max(12),
   subjectHouse: z.number().int().min(1).max(12).optional(),
-  manualOverrides: z.boolean().optional(),
   natal: placeInput.optional(),
 });
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    availability: publicProcedure.query(() => getAccountAvailability()),
+    me: publicProcedure.query(({ ctx }) => {
+      if (ctx.authError) throw ctx.authError;
+      return ctx.user;
+    }),
+    register: publicProcedure.input(z.object({ name: z.string().trim().min(1).max(100), email: z.string().trim().email().max(320), password: z.string().min(12).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        checkAccountRateLimit(`register:${ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown"}`);
+        sessionConfiguration();
+        const user = await registerAccount(input);
+        const duration = 30 * 24 * 60 * 60 * 1000;
+        const token = await sdk.createSessionToken(user.openId, { name: user.name, expiresInMs: duration });
+        ctx.res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(ctx.req), maxAge: duration });
+        return { success: true };
+      }),
+    login: publicProcedure.input(z.object({ email: z.string().trim().email().max(320), password: z.string().min(1).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        checkAccountRateLimit(`login:${ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown"}`);
+        const user = await loginAccount(input);
+        const duration = 30 * 24 * 60 * 60 * 1000;
+        const token = await sdk.createSessionToken(user.openId, { name: user.name, expiresInMs: duration });
+        ctx.res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(ctx.req), maxAge: duration });
+        return { success: true };
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -140,6 +187,36 @@ export const appRouter = router({
         db.createSavedReading({ openId: ctx.user.openId, ...input })
       ),
   }),
+  simulationLab: router({
+    predict: publicProcedure
+      .input(z.object({
+        id: z.string().trim().min(1).max(120),
+        league: z.enum(["NFL", "NBA", "NHL"]),
+        scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        scheduledTime: z.string().regex(/^\d{2}:\d{2}$/),
+        venue: z.object({
+          name: z.string().trim().min(1).max(240),
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+          timezone: z.string().min(2).max(100),
+        }),
+        ascTeam: z.string().trim().min(1).max(120),
+        descTeam: z.string().trim().min(1).max(120),
+      }))
+      .mutation(async ({ input }) => {
+        const { snapshot, chart } = await buildMasterGameChart({
+          ...input,
+          chartVersion: "sports-master-2026.1",
+        });
+        const methods = evaluateGameMethods(snapshot, [{
+          id: "sports-team-house-occupancy",
+          name: "God/Agent event-chart team-house occupancy baseline",
+          evaluate: () => evaluatePlanetaryTeamHouses(chart),
+        }]);
+        const prediction = await predictSportsGame(snapshot, methods);
+        return { snapshot, methods, prediction };
+      }),
+  }),
   hybrid: router({
     geocode: publicProcedure
       .input(z.object({ query: z.string().min(2) }))
@@ -150,15 +227,111 @@ export const appRouter = router({
     calculate: publicProcedure
       .input(chartInput)
       .mutation(({ input }) => calculateChart(input)),
+    harmonicForecast: publicProcedure
+      .input(z.object({ chart: chartInput, start: z.string().datetime(), steps: z.number().int().min(1).max(48).default(48) }))
+      .mutation(({ input }) => calculateHarmonicForecast(input.chart, input.start, input.steps)),
     masterChart: publicProcedure
       .input(
         chartInput.extend({
           mode: z.enum(["natal", "transit", "combined"]).default("natal"),
         })
       )
-      .mutation(({ input }) => buildUnifiedMasterChart(input)),
+      .mutation(async ({ input }) => {
+        const snapshot = await (input.mode === "natal" && input.worldview === "agent-vs-god"
+          ? getMasterNatalChart : buildUnifiedMasterChart)({ ...input, mode: input.mode });
+        await synthesizeMasterSnapshot(snapshot, input.mode, "Evaluate the chart's complete method formation before output.");
+        return snapshot;
+      }),
+  }),
+  techniqueAudit: router({
+    natal: publicProcedure
+      .input(chartInput)
+      .query(async ({ input }) => {
+        const snapshot = await getMasterNatalChart({
+          ...input,
+          mode: "natal",
+          worldview: "agent-vs-god",
+        });
+        return {
+          snapshotId: snapshot.snapshotId,
+          validation: snapshot.validation,
+          layers: snapshot.methodExecutionLedger.map(layer => ({
+            id: layer.id,
+            name: layer.name,
+            tradition: layer.tradition,
+            technique: layer.technique,
+            status: layer.status,
+            frame: layer.frame,
+            evidenceIds: layer.evidenceIds,
+            results: layer.results ?? null,
+            errorCode: layer.errorCode ?? null,
+            notes: layer.notes ?? null,
+          })),
+        };
+      }),
+  }),
+  vedic: router({
+    ashtakavargaVisual: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => getAshtakavargaVisual(input.chart)),
+    dashaTimeline: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => buildVimshottariTimeline(input.chart)),
+
+    // Read a chart already saved to the signed-in account. Never recalculate
+    // natal astronomy from a birth date, and never trust another user's ID.
+    savedDivisionalCharts: protectedProcedure
+      .input(z.object({ chartId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => {
+        const saved = (await db.listSavedCharts(ctx.user.openId))
+          .find(row => row.id === input.chartId);
+        if (!saved) throw new Error("Saved natal chart not found for this account.");
+        const validated = chartPayloadShape.safeParse(saved.chart);
+        if (!validated.success) throw new Error("Saved chart does not contain a complete natal chart.");
+        const natal = validated.data as ChartResult;
+        if (!natal.ascendant || !Number.isFinite(natal.ascendant.longitude))
+          throw new Error("Saved natal chart is missing a valid Ascendant.");
+        if (!natal.northNode || !natal.southNode || !Number.isFinite(natal.northNode.longitude) || !Number.isFinite(natal.southNode.longitude))
+          throw new Error("Saved natal chart is missing its lunar nodes.");
+        return buildDivisionalCharts({
+          ascendantLongitude: natal.ascendant.longitude,
+          planets: [
+            ...natal.movingBodies.map(p => ({ name: p.name, longitude: p.longitude })),
+            { name: natal.northNode.name, longitude: natal.northNode.longitude },
+            { name: natal.southNode.name, longitude: natal.southNode.longitude },
+          ],
+          d1HouseCusps: natal.houses,
+        });
+      }),
+
+    // Reuses the active profile's existing natal chart; no calculateChart call.
+    // The caller must supply the same chart already shown in the profile UI.
+    divisionalCharts: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => {
+        const natal = input.chart;
+        if (!natal.ascendant || !Number.isFinite(natal.ascendant.longitude))
+          throw new Error("A calculated natal Ascendant is required for Vargas.");
+        return buildDivisionalCharts({
+          ascendantLongitude: natal.ascendant.longitude,
+          planets: [
+            ...natal.movingBodies.map(p => ({ name: p.name, longitude: p.longitude })),
+            { name: natal.northNode.name, longitude: natal.northNode.longitude },
+            { name: natal.southNode.name, longitude: natal.southNode.longitude },
+          ],
+          d1HouseCusps: natal.houses,
+        });
+      }),
   }),
   astrologyKnowledge: router({
+    placementSynthesis: publicProcedure
+      .input(
+        chartResultInput.extend({
+          body: z.string().trim().min(1).max(40),
+          question: z.string().trim().max(2000).default(""),
+        })
+      )
+      .mutation(({ input }) => synthesizePlacement(input.chart, input.body, input.question)),
     behavioralReport: publicProcedure
       .input(
         chartResultInput.extend({
@@ -166,9 +339,15 @@ export const appRouter = router({
           mode: z.enum(["natal", "transit", "combined"]).default("combined"),
         })
       )
-      .query(({ input }) =>
-        evaluateBehavioralIntelligence(input.chart, input.question, input.mode)
-      ),
+      .query(async ({ input }) => {
+        const master = await buildMasterPipeline(input.chart, input.mode, input.question);
+        const report = evaluateBehavioralIntelligence(input.chart, input.question, input.mode);
+        return {
+          ...report,
+          masterSnapshot: master.snapshot,
+          masterSynthesis: master.synthesis,
+        };
+      }),
     diagnose: publicProcedure
       .input(
         chartResultInput.extend({
@@ -189,6 +368,21 @@ export const appRouter = router({
       }),
   }),
   interpretation: router({
+    methodOutcomes: publicProcedure
+      .input(chartResultInput.extend({ mode: z.enum(["natal", "transit", "combined"]).default("natal") }))
+      .query(({ input }) => buildChartMethodOutcomes(input.chart, input.mode)),
+    energyReading: publicProcedure.input(chartResultInput).mutation(({ input }) => buildEnergyReading(input.chart)),
+    chartPage: publicProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]), names: z.array(z.string().min(1).max(80)).min(1).max(2).default(["Sun", "Moon"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode, input.names)),
+    chartPageStart: publicProcedure
+      .input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]), names: z.array(z.string().min(1).max(80)).min(1).max(2) }))
+      .mutation(({ input }) => startPlacementReadingJob(input.chart, input.mode, input.names)),
+    chartPageStatus: publicProcedure
+      .input(z.object({ jobId: z.string().length(48) }))
+      .query(({ input }) => getPlacementReadingJob(input.jobId)),
+    chartBriefing: publicProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
+    focusedPlacement: publicProcedure
+      .input(z.object({ chart: chartPayload, target: z.object({ kind: z.enum(["placement", "star", "contact"]), name: z.string().min(1).max(80), otherName: z.string().min(1).max(80).optional(), layer: z.enum(["natal", "transit"]) }) }))
+      .mutation(({ input }) => buildFocusedReading(input.chart, input.target, true)),
     host: publicProcedure
       .input(
         z.object({
@@ -206,9 +400,9 @@ export const appRouter = router({
           mode: z.enum(["natal", "transit", "combined"]).optional(),
         })
       )
-      .mutation(({ input }) =>
-        askHost(input.history, input.question, input.chart, input.mode)
-      ),
+      .mutation(async ({ input }) => {
+        return askHost(input.history, input.question, input.chart, input.mode);
+      }),
     generate: publicProcedure
       .input(
         chartResultInput.extend({
@@ -221,12 +415,14 @@ export const appRouter = router({
             .default("What should I understand from this chart?"),
         })
       )
-      .mutation(({ input }) =>
-        generateInterpretation(input.chart, input.mode, input.question)
-      ),
+      .mutation(async ({ input }) => {
+        const interpretation = await generateInterpretation(input.chart, input.mode, input.question);
+        return { ...interpretation, synthesis: interpretation.masterSynthesis };
+      }),
     masterSynthesize: publicProcedure
       .input(
         chartInput.extend({
+          chart: chartPayload.optional(),
           mode: z.enum(["natal", "transit", "combined"]).default("natal"),
           question: z
             .string()
@@ -236,12 +432,13 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const snapshot = await buildUnifiedMasterChart(input);
-        return synthesizeMasterReading({
-          snapshot,
-          readingMode: input.mode,
-          userQuestion: input.question,
-        });
+        if (input.chart) {
+          const { synthesis } = await synthesizeChartForReading(input.chart, input.mode, input.question);
+          return narrateMasterSynthesis(synthesis, input.question);
+        }
+        const snapshot = await buildUnifiedMasterChart({ ...input, mode: input.mode });
+        const { synthesis } = await synthesizeMasterSnapshot(snapshot, input.mode, input.question);
+        return narrateMasterSynthesis(synthesis, input.question);
       }),
     chapter: publicProcedure
       .input(
@@ -257,17 +454,17 @@ export const appRouter = router({
           question: z.string().trim().max(2000).default(""),
         })
       )
-      .mutation(({ input }) =>
-        generateChapter(
-          input.chart,
+      .mutation(async ({ input }) => {
+        return generateChapter(
+          input.chart as ChartResult,
           input.mode,
           input.intelligence,
           input.chapterId as any,
           input.completedChapters,
           input.analysis,
           input.question
-        )
-      ),
+        );
+      }),
     followUp: publicProcedure
       .input(
         z.object({
@@ -286,15 +483,15 @@ export const appRouter = router({
           mode: z.enum(["natal", "transit", "combined"]).default("combined"),
         })
       )
-      .mutation(({ input }) =>
-        followUp(
-          input.chart,
+      .mutation(async ({ input }) => {
+        return followUp(
+          input.chart as ChartResult,
           input.interpretation,
           input.history,
           input.question,
           input.mode
-        )
-      ),
+        );
+      }),
   }),
   horary: router({
     open: publicProcedure
@@ -401,8 +598,23 @@ export const appRouter = router({
           targetChart: chartPayload,
         })
       )
-      .mutation(({ input }) => {
-        return analyzeSystemIntersect(input.userChart, input.targetChart);
+      .mutation(async ({ input }) => {
+        // Each person's complete calculated doctrine ledger is independent;
+        // the existing cross-chart synastry calculation is preserved separately.
+        const [user, target] = await Promise.all([
+          synthesizeChartForReading(input.userChart as ChartResult, "natal", "Synastry: first person's natal evidence"),
+          synthesizeChartForReading(input.targetChart as ChartResult, "natal", "Synastry: second person's natal evidence"),
+        ]);
+        return {
+          ...analyzeSystemIntersect(input.userChart as ChartResult, input.targetChart as ChartResult),
+          unifiedSynthesis: {
+            scope: "two-natal-ledgers-plus-existing-cross-chart-synastry" as const,
+            user: user.synthesis,
+            target: target.synthesis,
+            // Keep cross-chart aspects and scores from analyzeSystemIntersect;
+            // never label either natal ledger as a computed cross-chart doctrine.
+          },
+        };
       }),
   }),
   ai: router({
@@ -417,7 +629,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `You are the Master Interpreter in LIFE STORYTELLING MODE for 12 Gates of the Firmament.
+        const prompt = `You are the Master Interpreter in LIFE STORYTELLING MODE for Bible Believers Astrology.
 The user is asking: "${input.question}".
 Natal context: ${input.natalPlacements || "Calculated Natal Horizon"}
 Transit context: ${input.transitPlacements || "Current transit moment"}
@@ -448,6 +660,8 @@ CRITICAL RULES:
           transitPlacements: z.string(),
           transitDate: z.string().optional(),
           transitTime: z.string().optional(),
+  transitInstantUtc: z.string().datetime({ offset: true }).optional(),
+  instantUtc: z.string().datetime({ offset: true }).optional(),
           transitLocation: z.string().optional(),
           conversationHistory: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(12000) })).max(40).optional(),
         })
@@ -482,7 +696,7 @@ Speak in a generous, flowing narrative connecting this present celestial moment 
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `You are the Master Interpreter evaluating synastry and soulmate connection.
+        const prompt = `${FULL_SYNTHESIS_STYLE}\n\nThis is a natal relationship-potential reading, not actual two-person synastry. Never claim to know an unprovided future partner or meeting event. You are the Master Interpreter evaluating relationship symbolism.
 Placements: ${input.natalPlacements}
 Gender: ${input.gender || "other"}
 Analyze their 7th house, Venus, Moon, and descendant aspects to describe their cosmic soulmate connection in deep, evocative 2026 relational terms. Return a JSON with:
@@ -493,23 +707,17 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
-          messages: [{ role: "system", content: buildAstrologyInterpreterSystem(prompt) }, { role: "user", content: "Generate soulmate prediction." }],
+          messages: [{ role: "system", content: prompt }, { role: "user", content: "Generate soulmate prediction." }],
           maxTokens: 2000,
           responseFormat: { type: "json_object" },
         });
-        try {
-          const content = String(response.choices[0]?.message?.content ?? "{}");
-          const parsed = JSON.parse(content);
-          return {
-            soulmatePrediction: parsed.soulmatePrediction || "A profound partner who mirrors your deep loyalty, integrity, and quiet strength.",
-            descriptors: Array.isArray(parsed.descriptors) ? parsed.descriptors : ["Grounding", "Loyal", "Intuitive", "Sovereign"],
-          };
-        } catch {
-          return {
-            soulmatePrediction: "Your cosmic soulmate is someone whose steady presence offers complete psychological safety—matching your fierce loyalty and honoring your need for sacred space.",
-            descriptors: ["Loyal", "Grounded", "Perceptive", "Steadfast"],
-          };
+        const content = String(response.choices[0]?.message?.content ?? "");
+        let parsed: any;
+        try { parsed = JSON.parse(content); } catch { throw new Error("SOULMATE_AI_INVALID_JSON: AI returned invalid JSON."); }
+        if (typeof parsed.soulmatePrediction !== "string" || parsed.soulmatePrediction.trim().length < 100 || !Array.isArray(parsed.descriptors) || parsed.descriptors.length === 0) {
+          throw new Error("SOULMATE_AI_INVALID_RESPONSE: AI reading failed validation.");
         }
+        return { soulmatePrediction: parsed.soulmatePrediction, descriptors: parsed.descriptors };
       }),
 
     generateSynastryBreakdown: publicProcedure
@@ -520,23 +728,23 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
         })
       )
       .mutation(async ({ input }) => {
-        const prompt = `Analyze synastry between:
+        const prompt = `${FULL_SYNTHESIS_STYLE}\n\nAnalyze synastry between:
 Person 1: ${input.natalPlacements}
 Person 2: ${input.soulmatePlacements}
-Generate a rich, deeply insightful relationship compatibility breakdown in JSON format with:
+Do not invent cross-chart aspects, orbs or compatibility scores. If the inputs contain placements but no verified cross-aspect calculations, return an empty aspects array and explain only the relationship themes that those natal placements can actually support. Generate a grounded relationship interpretation in JSON format with:
 {
   "interpretation": "A flowing, comprehensive synthesis of this relationship's potential and spiritual purpose",
   "aspectGroups": [
     {
       "type": "harmonious",
       "aspects": [
-        { "planet1": "Sun", "planet2": "Moon", "aspect": "Trine", "orb": 1.5, "interpretation": "Deep natural understanding and intuitive emotional harmony." }
+        
       ]
     },
     {
       "type": "challenging",
       "aspects": [
-        { "planet1": "Mars", "planet2": "Saturn", "aspect": "Square", "orb": 2.1, "interpretation": "Patience and timing require conscious communication." }
+        
       ]
     }
   ]
@@ -544,30 +752,17 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         const model = process.env.GEMINI_API_KEY ? "gemini-3.8-flash" : "claude-sonnet-4-6";
         const response = await invokeLLM({
           model,
-          messages: [{ role: "system", content: buildAstrologyInterpreterSystem(prompt) }, { role: "user", content: "Analyze synastry." }],
+          messages: [{ role: "system", content: prompt }, { role: "user", content: "Analyze synastry." }],
           maxTokens: 2500,
           responseFormat: { type: "json_object" },
         });
-        try {
-          const content = String(response.choices[0]?.message?.content ?? "{}");
-          const parsed = JSON.parse(content);
-          return {
-            interpretation: parsed.interpretation || "A powerful synastry dynamic rooted in complementary strengths and mutual growth.",
-            aspectGroups: Array.isArray(parsed.aspectGroups) ? parsed.aspectGroups : [],
-          };
-        } catch {
-          return {
-            interpretation: "This celestial pairing unites complementary strengths, balancing individual sovereignty with unshakeable mutual dedication.",
-            aspectGroups: [
-              {
-                type: "harmonious",
-                aspects: [
-                  { planet1: "Sun", planet2: "Moon", aspect: "Trine", orb: 1.8, interpretation: "Mutual intuitive ease and natural respect for each other's emotional rhythms." }
-                ]
-              }
-            ],
-          };
+        const content = String(response.choices[0]?.message?.content ?? "");
+        let parsed: any;
+        try { parsed = JSON.parse(content); } catch { throw new Error("SYNASTRY_AI_INVALID_JSON: AI returned invalid JSON."); }
+        if (typeof parsed.interpretation !== "string" || parsed.interpretation.trim().length < 100 || !Array.isArray(parsed.aspectGroups)) {
+          throw new Error("SYNASTRY_AI_INVALID_RESPONSE: AI reading failed validation.");
         }
+        return { interpretation: parsed.interpretation, aspectGroups: parsed.aspectGroups };
       }),
 
     genesisReading: publicProcedure
@@ -578,12 +773,8 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         })
       )
       .mutation(({ input }) => {
-        const evidence = buildAstrologyEvidencePacket(input.chart, input.question || input.focusArea, input.chart.readingScope ?? "combined");
-        if (!evidence.canonDossier || !evidence.canonEvidence.length) {
-          throw new Error("Genesis requires evaluated Firmament Canon evidence.");
-        }
         const pipeline = runGenesisPatternPipeline(input.chart);
-        const reading = generateReading(
+        return generateReading(
           pipeline.analysis,
           {
             question: input.question,
@@ -594,7 +785,6 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
           input.chart.input?.time || "12:00",
           input.chart.input?.date || new Date().toISOString().split("T")[0]
         );
-        return { ...reading, formattedReading: reading.formattedReading + "\n\n## Firmament Canon — Chart Evidence\n\n" + formatEvidencePacket(evidence) };
       }),
   }),
   lifeStory: router({
@@ -640,10 +830,12 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
         })
       )
       .mutation(async ({ input }) => {
+        const { context } = await synthesizeChartForReading(input.chart as ChartResult, "natal", `Life story chapter: ${input.chapterKey}`);
         return generateLifeStoryChapter(
-          input.chart,
+          input.chart as ChartResult,
           input.chapterKey,
-          input.selectedAge
+          input.selectedAge,
+          context
         );
       }),
 
