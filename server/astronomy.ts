@@ -199,7 +199,7 @@ const DEG = Math.PI / 180;
  * from the no-tilt symbolic longitude. No local sidereal time is used.
  */
 export function sunriseUtcForDate(localDate: string, latitude: number, longitude: number, timezone: string): Date {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(localDate) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
     throw new RangeError("Invalid sunrise date or coordinates");
   }
   const midnight = Date.parse(localDate + "T00:00:00.000Z");
