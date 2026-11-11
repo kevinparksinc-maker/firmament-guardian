@@ -530,7 +530,7 @@ export async function openHoraryQuestion(input: HoraryInput) {
   const reading = await answer([
     { role: "system", content: HORARY_SYSTEM },
     { role: "user", content: `Question: ${chart.question}\n\nCalculated horary judgment packet:\n${chart.judgmentEvidenceText}\n\nUse the evidence to answer this specific question. Translate the testimony into practical real-life meaning and next steps. The full technical chart is kept separately, NOT to be printed in the user-facing answer.` },
-  ], 3200).catch(() => coreReading);
+  ], 1400).catch(() => coreReading);
   return { chart, reading };
 }
 
