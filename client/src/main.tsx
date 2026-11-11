@@ -11,16 +11,29 @@ import "./index.css";
 const queryClient = new QueryClient();
 
 async function fetchApiResponse(input: RequestInfo | URL, init?: RequestInit) {
-  const response = await globalThis.fetch(input, {
-    ...(init ?? {}),
-    credentials: "include",
-  });
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) {
-    const preview = (await response.clone().text()).slice(0, 240).replace(/\s+/g, " ");
+  // Render can respond with its temporary HTTP 200 "Starting Server" HTML
+  // while waking a service. That is not an API success and must never be parsed
+  // as chart/synthesis JSON. Retry only that known startup page, not other errors.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const response = await globalThis.fetch(input, {
+      ...(init ?? {}),
+      credentials: "include",
+    });
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) return response;
+
+    const preview = (await response.clone().text()).slice(0, 300).replace(/\\s+/g, " ");
+    const starting = response.status === 200 && /starting server/i.test(preview);
+    if (starting && attempt < 3) {
+      await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
+      continue;
+    }
+    if (starting) {
+      throw new Error("The app server is starting up and has not returned a reading yet. Your chart has not been replaced. Retry when the server is ready.");
+    }
     throw new Error(`API request failed: HTTP ${response.status} ${response.statusText}. Non-JSON response (${contentType || "no content-type"}): ${preview}`);
   }
-  return response;
+  throw new Error("The API did not become ready.");
 }
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
