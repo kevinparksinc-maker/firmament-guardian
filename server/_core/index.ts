@@ -8,6 +8,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
+import { calculateChart } from "../astronomy";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -129,6 +130,20 @@ async function startServer() {
 
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);
+    // Internal smoke test: verifies actual Swiss XYZ vectors and sunrise-derived houses.
+    // The synthetic reference date is not a user's private birth chart.
+    void calculateChart({
+      location: "Dallas, Texas", latitude: 32.7767, longitude: -96.7970,
+      date: "2000-01-01", time: "12:00", timezone: "America/Chicago",
+      worldview: "agent", readingScope: "natal",
+    }).then(chart => {
+      const sun = chart.movingBodies.find(body => body.name === "Sun");
+      if (!sun?.xyz || !Number.isFinite(sun.xyz.x) || !Number.isFinite(sun.rawXyzLongitude)
+        || !Number.isFinite(chart.ascendant?.longitude)) {
+        throw new Error("XYZ smoke check did not return vectors and sunrise Ascendant.");
+      }
+      console.info("[XYZ verify] PASS: J2000 Cartesian vectors, projected longitudes and sunrise houses");
+    }).catch(error => console.error("[XYZ verify] FAIL:", error instanceof Error ? error.message : String(error)));
   });
 }
 
