@@ -419,8 +419,24 @@ export async function calculateHoraryChart(input: HoraryInput): Promise<HoraryCh
   };
 }
 
-const HORARY_SYSTEM = `${CHART_POWER_BASE_INFLUENCE_PROTOCOL}\n\n${GUARDIAN_POWER_WITHOUT_JUDGMENT}\n\n${BOLD_CLAIM_EVIDENCE_RULE}\n\n${FIRMAMENT_SOVEREIGN_VOICE_STANDARD}\n\n${UNIVERSAL_THREE_LAYER_DIVINATION_ARCHITECTURE}\n\n${UNIVERSAL_READING_CONTRACT}\n\n${KABBALAH_SYNTHESIS_STANDARD}\n\n${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\nFor the first answer to a horary question, render these exact sections before technical details, in this order:\n\n## What I hear beneath your question\nName the human concern supported by the wording. For a relationship question, acknowledge the uncertainty, hope, longing, or need for protection that is actually present without inventing feelings.\n\n## What this means for you\nGive the empathetic synthesis: distinguish what the user is hoping for from what the chart can responsibly say, and explain what the situation may mean for their choices and emotional reality.\n\n## Judgment\nAnswer the horary question directly with an evidence-calibrated category.\n\n## The astrological picture\nExplain the strongest testimony and immediately translate each factor into this person’s situation.\n\n## What complicates it\nName contradictions, delays, limits, and uncertainty.\n\n## What to do with this\nOffer a grounded next step that preserves the user’s agency. Never state that another person will definitely contact, return, change, or feel a particular way.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
+const HORARY_SYSTEM = `You are The Absolute's expert horary interpreter. All astronomy, chart positions, house rulerships, receptions, timing and Canon evidence have already been calculated. You interpret and synthesize; you do not invent calculations or unseen circumstances.
 
+OUTPUT CONTRACT — USER EXPERIENCE ABOVE ASTROLOGY VOCABULARY:
+Answer the person's exact question immediately, in plain present-day language. Your first paragraph must state the direction of the reading and its actual implications for the topic. Do not lead with planets, houses, placements, disclaimers, or a restatement of the question.
+Treat the horary testimony as an interpretive framework, not a demonstrated forecast or proof of real-world facts. Be confident and decisive in explaining the symbolic pattern, but do not claim certainty beyond the evidence.
+
+Write only these four concise sections, each with useful nonrepetitive paragraphs:
+## The answer
+Direct response in 2–4 sentences, including relevant conditions or delays.
+## What this means in real life
+Decode the chart into the concrete human issue: likely patterns of behavior, choices, obstacles, relationships, responsibilities, or practical conditions pertinent to the question. State possibilities, not fabricated observations.
+## What to do next
+Give 2–3 specific, feasible actions tied to the user's actual question, presented as advice, not as planetary facts. For an app/public launch question, consider user testing, clear interpretation, quality control, and feedback only where relevant.
+## Why the reading points there
+Briefly explain the TWO or THREE strongest chart testimonies, translating each into real-world significance; note the strongest counter-testimony if there is disagreement. Keep astrology names and technical terms here only.
+
+INTERNAL EVIDENCE HANDLING: Evaluate the major relevant factors, especially the question, significators, current and future aspects/perfection, reception, dignity, Moon, house ownership and ruled-house placements, counter-testimony and timing. Assess secondary Canon methods when they materially change the interpretation. Don't dump calculations or Canon prose into the visible reading. Do not fabricate the rest of the chart. If the calculated verdict conflicts with the strongest testimonies, name the uncertainty instead of masking it or reversing the verdict without support. Preserve the existing chart object and technical ledger in the application for optional inspection.
+Do not provide internal reasoning traces, raw degree tables, every planetary placement, boilerplate, or repetitive conclusions. Do not diagnose health, claim private motives as facts, or give guaranteed investment or gambling outcomes.`;
 function responseText(content: string | Array<{ type: string; text?: string }> | undefined) {
   return typeof content === "string"
     ? content
@@ -449,106 +465,71 @@ async function answer(messages: Message[], maxTokens = 6000) {
 }
 
 function deterministicHoraryReading(chart: HoraryChart) {
-  const primaryRuler = chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler;
-  const directAspect = chart.relevantAspects.find(
-    aspect =>
-      (aspect.first === primaryRuler && aspect.second === chart.topicRuler) ||
-      (aspect.first === chart.topicRuler && aspect.second === primaryRuler)
+  // This is a short, clearly labeled non-AI fallback. Full evidence is kept
+  // on chart; never paste the Canon dossier or the entire testimony ledger.
+  const verdict = chart.traditional.judgment.verdict;
+  const primary = chart.subject === "querent" ? chart.querentRuler : chart.subjectRuler;
+  const matter = chart.topicRuler;
+  const intent = chart.houseSelection.questionIntent;
+  const topic = chart.topicLabel;
+  const terms = (chart.question + " " + topic).toLowerCase();
+  const isApp = /\\b(app|application|software|website|platform|public|publish|launch|release|users?)\\b/.test(terms);
+  const isWork = /\\b(job|work|career|business|promotion|employment|company)\\b/.test(terms);
+  const isRelation = /\\b(relationship|partner|dating|marriage|reconcile|romance)\\b/.test(terms);
+
+  const direction = verdict === "YES" || verdict === "LEANING YES"
+    ? "The reading favors progress, provided the practical conditions support it."
+    : verdict === "NO" || verdict === "LEANING NO"
+      ? "The reading points to obstacles in the current approach, not proof that the goal is impossible."
+      : verdict === "DELAYED"
+        ? "The reading suggests development may take longer than expected."
+        : "The reading is mixed or unresolved; it does not support an unconditional prediction.";
+  const actions = isApp
+    ? ["Put the app in front of a small group of real users before a broad launch.",
+       "Make each answer clear and actionable; keep calculations in an optional evidence view.",
+       "Fix the confusing or unreliable outputs users actually encounter, then gather feedback again."]
+    : isWork
+      ? ["Identify the most important practical obstacle to the outcome you're pursuing.",
+         "Clarify what decision, agreement, or resource must change next.",
+         "Set a realistic checkpoint to measure progress instead of relying on the reading alone."]
+      : isRelation
+        ? ["Focus on observable actions rather than guessing another person's intentions.",
+           "Communicate clearly about what you need and what is actually possible.",
+           "Allow their response and behavior—not the chart alone—to guide your next decision."]
+        : ["Identify the one real-world condition you can influence right now.",
+           "Gather direct evidence before making a major decision.",
+           "Choose a next action and review what actually changes."];
+  const primaryAspect = chart.traditional.perfection.find(item =>
+    item.description?.includes(primary) && item.description?.includes(matter)
   );
-  const judgment = chart.traditional.judgment.verdict;
-  const aspectSentence = directAspect
-    ? `${directAspect.first} ${directAspect.aspect} ${directAspect.second} with a ${directAspect.orb}° orb (${directAspect.phase}).`
-    : "The supplied significators do not form a configured major aspect within the 5° orb.";
-  const traditionalSummary = chart.traditional.judgment.testimonies.join(" ");
-
-  // Significator Dignities
-  const querentDignity = chart.traditional.dignities.find(d => d.planet === primaryRuler);
-  const topicDignity = chart.traditional.dignities.find(d => d.planet === chart.topicRuler);
-  const dignitySentence = `Significator condition: ${primaryRuler} (inquirant) is in ${querentDignity?.sign ?? ""}, house ${querentDignity?.house ?? ""}, essential dignity: ${querentDignity?.essential.length ? querentDignity.essential.join(", ") : "peregrine"} (${querentDignity?.essentialScore ?? 0} pts), accidental: ${querentDignity?.accidental.join(", ") ?? "neutral"}${querentDignity?.debilities.length ? `; debilities: ${querentDignity.debilities.join(", ")}` : ""}; ${chart.topicRuler} (matter) is in ${topicDignity?.sign ?? ""}, house ${topicDignity?.house ?? ""}, essential: ${topicDignity?.essential.length ? topicDignity.essential.join(", ") : "peregrine"} (${topicDignity?.essentialScore ?? 0} pts), accidental: ${topicDignity?.accidental.join(", ") ?? "neutral"}${topicDignity?.debilities.length ? `; debilities: ${topicDignity.debilities.join(", ")}` : ""}.`;
-
-  // Arabic Lots
-  const fortuneLot = chart.traditional.lots.find(l => l.name === "Fortune");
-  const spiritLot = chart.traditional.lots.find(l => l.name === "Spirit");
-  const erosLot = chart.traditional.lots.find(l => l.name === "Eros");
-  const necessityLot = chart.traditional.lots.find(l => l.name === "Necessity");
-  const lotsSentence = `Arabic Lots: Part of Fortune is in ${fortuneLot?.display ?? ""} (House ${fortuneLot?.house ?? ""}), indicating material conditions; Part of Spirit is in ${spiritLot?.display ?? ""} (House ${spiritLot?.house ?? ""}), indicating deliberate agency; Part of Eros is in ${erosLot?.display ?? ""} (House ${erosLot?.house ?? ""}); Part of Necessity is in ${necessityLot?.display ?? ""} (House ${necessityLot?.house ?? ""}).`;
-
-  // Receptions
-  const keyReceptions = chart.traditional.receptions.filter(r => [primaryRuler, chart.topicRuler].includes(r.from) && [primaryRuler, chart.topicRuler].includes(r.to));
-  const receptionSentence = keyReceptions.length
-    ? `Significator reception: ${keyReceptions.map(r => r.description).join("; ")}.`
-    : "No mutual or direct reception between primary significators was calculated.";
-
-  // Fixed Stars (< 1°)
-  const starSentence = chart.traditional.fixedStars.length
-    ? `Fixed Star contacts (within 1°): ${chart.traditional.fixedStars.map(s => `${s.planet} conjunct ${s.star} (${s.orb}° orb, nature ${s.nature}) — ${s.meaning}`).join("; ")}.`
-    : "No classical planet or Ascendant is conjunct a major fixed star within 1°.";
-
-  // Traditional Timing Aid
-  const timingSentence = chart.traditional.timing.length
-    ? `Timing estimate: ${chart.traditional.timing.map(t => `${t.from} ${t.aspect} ${t.to}: ${t.degreesToPerfection}° to perfection (${t.estimatedUnits})`).join("; ")}.`
-    : "Timing estimate: No direct key-significator perfection timing estimate was computed.";
-
-  // Lunar divisions
-  const querentOverlay = chart.traditional.overlays.find(o => o.body === primaryRuler);
-  const topicOverlay = chart.traditional.overlays.find(o => o.body === chart.topicRuler);
-  const overlaySentence = `Lunar stations & Decans: ${primaryRuler} resides in Nakshatra ${querentOverlay?.nakshatra ?? "unassigned"} (Manzil ${querentOverlay?.manzil ?? ""}, ${querentOverlay?.decan ?? ""}); ${chart.topicRuler} resides in Nakshatra ${topicOverlay?.nakshatra ?? "unassigned"} (Manzil ${topicOverlay?.manzil ?? ""}, ${topicOverlay?.decan ?? ""}).`;
-
-  const complication = chart.traditional.radicality.considerations.length
-    ? chart.traditional.radicality.considerations.join(" ")
-    : directAspect?.phase === "separating"
-      ? "The contact is separating, so the chart describes something already moving away or completing rather than a clean future application."
-      : "No additional radicality caution was triggered by the configured traditional checks.";
-  const natalSummary = chart.natalChart
-    ? `The querent’s natal layer is present: Sun ${chart.natalChart.movingBodies.find(row => row.name === "Sun")?.display ?? "unavailable"}, Moon ${chart.natalChart.movingBodies.find(row => row.name === "Moon")?.display ?? "unavailable"}, Ascendant ${chart.natalChart.ascendant?.display ?? "unavailable"}.`
-    : "No complete querent natal profile was supplied, so the reading does not infer natal background.";
-  const transitSummary = chart.natalChart
-    ? chart.transitChart.transits
-      .flatMap(row => row.natalContacts.map(contact => `${row.name} ${contact.aspect} natal ${contact.natalName} (${contact.orb}°)`))
-      .slice(0, 4)
-    : [];
-
+  const briefWhy = [
+    `The matter is assigned to ${topic}; its ruler is ${matter}, while ${primary} represents the person concerned.`,
+    primaryAspect ? primaryAspect.description : chart.traditional.judgment.testimonies[0],
+    chart.traditional.moonStatus.explanation,
+  ].filter(Boolean).map(text => String(text).replace(/\\s+/g," ").slice(0,300));
   return [
-    "## What I hear beneath your question",
-    `You are asking: “${chart.question}” The chart is being used to examine that specific matter at the place and moment you supplied.`,
+    "## The answer", direction,
     "",
-    "## What this means for you",
-    `The question is assigned to ${chart.topicLabel}, with ${chart.querentRuler} representing the querent, ${chart.subjectRuler} representing the person in question, and ${chart.topicRuler} representing the matter. The traditional judgment compares ${primaryRuler} with the matter ruler; the other layers refine, rather than replace, that judgment.`,
+    "## What this means in real life",
+    isApp
+      ? "This is a prompt to examine launch readiness: what people understand, what they trust, and whether your product delivers useful answers consistently. The chart cannot tell us actual adoption, but those are the practical questions to test."
+      : `In terms of ${topic.toLowerCase()}, this reading is about the conditions surrounding the decision, not a guarantee about the outcome. What matters next is what you can observe, verify, and change.`,
     "",
-    "## Judgment",
-    `**${judgment}** — this is the calibrated category supported by the configured horary testimony.`,
+    "## What to do next",
+    ...actions.map(action => `- ${action}`),
     "",
-    "## The astrological picture",
-    aspectSentence,
-    `Traditional testimony: ${traditionalSummary}`,
-    dignitySentence,
-    receptionSentence,
-    lotsSentence,
-    starSentence,
-    overlaySentence,
-    timingSentence,
-    `The Moon is ${chart.moon.display}, ${chart.moon.sign}, in House ${chart.moon.house}. ${chart.canonEvidenceText.split("\n").slice(0, 6).join(" ")}`,
-    natalSummary,
-    transitSummary.length
-      ? `Question-moment transit contacts to the natal chart: ${transitSummary.join("; ")}.`
-      : "No configured question-moment transit contact to the querent’s natal chart is within the active orb.",
+    "## Why the reading points there",
+    briefWhy.join(" ") || "The engine returned a traditional judgment, but its supporting evidence is not available in this summary.",
     "",
-    "## What complicates it",
-    complication,
-    "",
-    "## What to do with this",
-    "Use this as a structured reflection on the question rather than a guarantee about another person or future event. If the matter is consequential, pair the reading with direct information, practical judgment, and appropriate professional advice.",
-    "",
-    "_This core judgment was produced from Firmament’s deterministic chart, traditional, and local canon layers because the optional language-synthesis service did not return within its time budget._",
-  ].join("\n");
+    "_AI interpretation was unavailable. This concise fallback uses the calculated verdict and question category; inspect the technical evidence for the full chart._",
+  ].join("\\n");
 }
-
 export async function openHoraryQuestion(input: HoraryInput) {
   const chart = await calculateHoraryChart(input);
   const coreReading = deterministicHoraryReading(chart);
   const reading = await answer([
     { role: "system", content: HORARY_SYSTEM },
-    { role: "user", content: `Use the compact deterministic judgment packet below as the source of truth. The complete technical appendix remains available in the chart object. Do not recalculate or invent missing factors. Do not expose private chain-of-thought; provide the judgment and concise supporting evidence. The first visible sections must be exactly: “What I hear beneath your question,” “What this means for you,” then “Judgment,” before “The astrological picture.”\n\n${chart.judgmentEvidenceText}\n\nFULL TECHNICAL EVIDENCE (all configured layers):\n${chart.evidenceText}\n\nGive the complete, human-centered horary judgment now.` },
+    { role: "user", content: `Question: ${chart.question}\n\nCalculated horary judgment packet:\n${chart.judgmentEvidenceText}\n\nUse the evidence to answer this specific question. Translate the testimony into practical real-life meaning and next steps. The full technical chart is kept separately, NOT to be printed in the user-facing answer.` },
   ], 3200).catch(() => coreReading);
   return { chart, reading };
 }
