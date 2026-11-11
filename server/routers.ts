@@ -13,6 +13,7 @@ import {
 } from "./interpretation";
 import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import { buildUnifiedMasterChart } from "./masterChart";
+import { buildChartMethodOutcomes } from "./chartMethodOutcomes";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
 import { askHost } from "./host";
 import { horaryFollowUp, openHoraryQuestion, type HoraryChart } from "./horary";
@@ -189,6 +190,10 @@ export const appRouter = router({
       }),
   }),
   interpretation: router({
+    // Large calculated charts must be sent in a POST body, not a query URL.
+    methodOutcomes: publicProcedure
+      .input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]) }))
+      .mutation(({ input }) => buildChartMethodOutcomes(input.chart, input.mode)),
     host: publicProcedure
       .input(
         z.object({
