@@ -77,6 +77,7 @@ export type ChartResult = {
   /** Eight-aspect weighted natal-to-transit energy calculation from the canonical chart positions. */
   energyReadV2: ReturnType<typeof calculateEnergyRead>;
   validation: { passed: boolean; notes: string[] };
+  sunriseProvenance?: { utc: string; elapsedHours: number; solarDeclination: number; sunXyz: { x: number; y: number; z: number } };
   /** Every longitude exposed by this result uses the same fixed reference frame. */
   referenceFrame: CoordinateFrame;
   /** Canonical dome/lots geometry derived from the same longitudes. */
@@ -327,7 +328,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   );
   const natalGeometry = calculateDomeFramework(domeInput([...movingBodies, northNode, southNode], asc));
   const transitGeometry = calculateDomeFramework(domeInput(transitRows, transitAsc ?? asc));
-  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: transitRows, energyReadV2, validation, referenceFrame: REFERENCE_FRAME, firmament: { model: "zero-obliquity-visual-convention", horizonModel: hasAgentLocation ? "sunrise-anchored-xyz" : "not-available", natal: natalGeometry, transit: transitGeometry } };
+  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: transitRows, energyReadV2, validation, sunriseProvenance: natalAngles ? { utc: natalAngles.sunriseUtc, elapsedHours: natalAngles.elapsedHours, solarDeclination: natalAngles.solarDeclination, sunXyz: natalAngles.sunriseSunXyz } : undefined, referenceFrame: REFERENCE_FRAME, firmament: { model: "zero-obliquity-visual-convention", horizonModel: hasAgentLocation ? "sunrise-anchored-xyz" : "not-available", natal: natalGeometry, transit: transitGeometry } };
 }
 
 export async function geocodeLocation(query: string) {
