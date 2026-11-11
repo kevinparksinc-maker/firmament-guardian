@@ -134,11 +134,13 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
 // No SEFLG_SIDEREAL, time-dependent ayanamsha or precession of the J2000 axes.
 const XYZ_FLAGS = 4 | 32 | 256 | 4096;
 const EQUATORIAL_XYZ_FLAGS = XYZ_FLAGS | 2048;
-const J2000_ALDEBARAN_ECLIPTIC_LONGITUDE = 69.8; // fixed catalog-epoch calibration, degrees
-const FIXED_ANCHOR_DELTA = 45 - J2000_ALDEBARAN_ECLIPTIC_LONGITUDE;
+// Fixed-star symbolism is defined in shared/hybrid.ts and remains frozen
+// (Aldebaran 45°, Antares 225°, Hamal ~12°). Do NOT subtract an ayanamsha
+// or rotate planetary XYZ bearings to those symbolic star labels: doing so
+// recreates the deprecated Scorpio 03° result in place of the raw XYZ Sun.
 export function setCanonicalReferenceFrame() {
   // Intentionally no global Swiss sidereal mode. All planet coordinates use
-  // the same fixed J2000 axes, rotated only by the fixed Aldebaran calibration.
+  // the same fixed J2000 axes with no age-dependent correction or zodiac offset.
 }
 
 type CartesianEphemeris = {
@@ -156,7 +158,7 @@ function rawCartesian(jd: number, planet: number, flags = XYZ_FLAGS): CartesianE
     throw new Error("XYZ_EPHEMERIS_INVALID: expected six finite Cartesian ephemeris components.");
   }
   const rawXyzLongitude = normalizeLongitude(Math.atan2(y, x) * 180 / Math.PI);
-  const projectedLongitude = normalizeLongitude(rawXyzLongitude + FIXED_ANCHOR_DELTA);
+  const projectedLongitude = rawXyzLongitude; // zero-tilt fixed-axis God View; symbolic star anchors are separate.
   const speed = (x * dy - y * dx) / (x * x + y * y) * 180 / Math.PI;
   return { longitude: projectedLongitude, rawXyzLongitude, speed, xyz: { x, y, z, dx, dy, dz } };
 }
@@ -305,7 +307,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   // Source calculation success is distinct from an optional historical reference fixture.
   // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
   const validation = { passed: true, notes: [
-    "Planet positions: Swiss Ephemeris Moshier geocentric J2000 XYZ (AU), atan2(y,x), fixed Aldebaran epoch offset to Taurus 15; no mode-14 sidereal or time-dependent ayanamsha. Agent View Ascendant: Sun XYZ longitude at NOAA sunrise + 15 degrees per elapsed hour; Equal Houses.",
+    "Planet positions: Swiss Ephemeris Moshier geocentric J2000 XYZ (AU), atan2(y,x), fixed J2000 axis with zero ecliptic offset; symbolic fixed stars remain frozen at historical custom anchors; no mode-14 sidereal or time-dependent ayanamsha. Agent View Ascendant: Sun XYZ longitude at NOAA sunrise + 15 degrees per elapsed hour; Equal Houses.",
     "Fixed-star archive retains defined symbolic positions; stars not historically calibrated are not claimed as catalog-verified.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
