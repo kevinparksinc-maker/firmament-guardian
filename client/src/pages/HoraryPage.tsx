@@ -52,7 +52,7 @@ export default function HoraryPage() {
   const cast = trpc.horary.open.useMutation({
     onSuccess: result => {
       setHorary(result);
-      setMessages([]);
+      setMessages([{ role: "user", content: result.chart.question }, { role: "assistant", content: result.reading }]);
     },
   });
   const followUp = trpc.horary.followUp.useMutation({
@@ -144,7 +144,7 @@ export default function HoraryPage() {
       history: [
         { role: "user", content: horary.chart.question },
         { role: "assistant", content: horary.reading },
-        ...next.filter((message): message is Extract<Message, { role: "user" | "assistant" }> => message.role !== "system"),
+        ...next.slice(2).filter((message): message is Extract<Message, { role: "user" | "assistant" }> => message.role !== "system"),
       ],
       question: content.trim(),
     });
@@ -233,16 +233,14 @@ export default function HoraryPage() {
 
           <div><FrameRelationshipPanel rows={horary.chart.placements as unknown as import("../../../server/astronomy").ChartRow[]} title="God's View of the Horary Agent" intro="The horary testimony remains primary. This panel adds the broader fixed zodiac frame and explains how the same question-time positions are translated through the local horary houses." /></div>
 
-          <div className="order-1"><HoraryChamber2050 chart={horary.chart} reading={horary.reading}/></div>
-
 
               </div>
             </details>
           </div>
 
-          <div className="order-1"><HoraryChamber2050 chart={horary.chart} reading={horary.reading}/></div>
+          <div className="order-3"><details className="rounded-2xl border border-white/10 bg-white/[0.025] p-4"><summary className="cursor-pointer text-sm font-medium text-slate-300">Explore the reading and chart views</summary><div className="mt-4"><HoraryChamber2050 chart={horary.chart} reading={horary.reading}/></div></details></div>
 
-          <Card className="order-2 overflow-hidden border-violet-200/15 bg-white/[0.035] text-slate-100"><CardHeader className="border-b border-white/10"><CardTitle className="flex items-center gap-2 font-serif text-2xl"><MessageCircle className="h-5 w-5 text-violet-200"/>Continue with this chart</CardTitle><p className="text-sm leading-6 text-slate-400">Ask what a specific testimony means or challenge the reading. Follow-ups use this same question chart, not a new or silently recalculated chart.</p></CardHeader><CardContent className="space-y-3 p-4 sm:p-6"><AIChatBox messages={messages} onSendMessage={sendFollowUp} isLoading={followUp.isPending} height="540px" placeholder="Ask a follow-up about this horary judgment…" emptyStateMessage="Your horary chart is ready for follow-up questions." suggestedPrompts={["Which chart factor most strongly supports that conclusion?", "What is the main uncertainty or counter-testimony?", "What practical next step follows from this judgment?"]}/>{followUp.error && <p role="alert" className="text-sm text-rose-300">{followUp.error.message}</p>}</CardContent></Card>
+          <Card className="order-1 overflow-hidden border-violet-200/15 bg-white/[0.035] text-slate-100"><CardHeader className="border-b border-white/10"><CardTitle className="flex items-center gap-2 font-serif text-2xl"><MessageCircle className="h-5 w-5 text-violet-200"/>Your AI Astrologer · Live Consultation</CardTitle><p className="text-sm leading-6 text-slate-400">Your reading begins this conversation. Ask why, challenge the interpretation, share new context, or explore what to do next. Your original question chart stays fixed.</p></CardHeader><CardContent className="space-y-3 p-4 sm:p-6"><AIChatBox messages={messages} onSendMessage={sendFollowUp} isLoading={followUp.isPending} height="680px" placeholder="Talk to your astrologer about what matters to you…" emptyStateMessage="Your consultation starts with your reading." suggestedPrompts={["What am I really being asked to understand here?", "I disagree with part of this reading. Can we explore it?", "What practical choices could change this situation?"]}/>{followUp.error && <p role="alert" className="text-sm text-rose-300">{followUp.error.message}</p>}</CardContent></Card>
           <details className="order-4 rounded-xl border border-white/10 bg-white/[0.025] p-4"><summary className="cursor-pointer text-sm text-slate-300">Advanced chart visualization</summary><div className="mt-4"><HoraryOrrery natal={horary.chart.natalChart} transit={horary.chart.transitChart} god={horary.chart.godChart}/></div></details>
         </section>}
 
