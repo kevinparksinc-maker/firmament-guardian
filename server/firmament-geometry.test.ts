@@ -26,11 +26,12 @@ describe("Fixed Firmament map geometry", () => {
     expect(result.positions.Lot_Of_Fortune.bearing).toBeCloseTo(142.35);
     expect(result.houseCusps).toHaveLength(12);
   });
-  it("selects the eastern zero-tilt horizon and never reverses ASC/DSC", () => {
-    expect(calculateZeroTiltAscendant(0)).toMatchObject({ ascendant: 90, descendant: 270, midheaven: 0, obliquity: 0 });
-    expect(calculateZeroTiltAscendant(359.999).ascendant).toBeCloseTo(89.999, 6);
-    for (const theta of [0, 45, 180, 359.999]) {
-      const angles = calculateZeroTiltAscendant(theta);
+  it("uses sunrise Sun bearing and elapsed rotation, without a +90 offset", () => {
+    expect(calculateZeroTiltAscendant(0, 0)).toMatchObject({ ascendant: 0, descendant: 180, midheaven: 270, obliquity: 0 });
+    expect(calculateZeroTiltAscendant(235, 3)).toMatchObject({ ascendant: 280, descendant: 100 });
+    expect(calculateZeroTiltAscendant(359.999, 0).ascendant).toBeCloseTo(359.999, 6);
+    for (const sunBearing of [0, 45, 180, 359.999]) {
+      const angles = calculateZeroTiltAscendant(sunBearing, 3);
       expect((angles.descendant - angles.ascendant + 360) % 360).toBeCloseTo(180, 8);
     }
   });
