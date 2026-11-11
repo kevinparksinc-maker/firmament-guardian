@@ -9,17 +9,25 @@ export const normalize = (angle: number): number => {
 export const normalize360 = normalize;
 
 /**
- * Zero-obliquity horizon convention. thetaCanonical is local sidereal angle
- * already expressed in the Aldebaran-anchored zodiac frame. The eastern
- * horizon is the +90° intersection; the western intersection is its opposite.
+ * Sunrise-anchored zero-tilt Agent View.
+ * The Sun is at the eastern horizon at sunrise. Rotate that bearing by
+ * 15 degrees per elapsed hour; never insert a meridian +90 degree offset.
+ * These angles describe the user's custom symbolic projection, not
+ * conventional astronomical rising signs.
  */
-export function calculateZeroTiltAscendant(thetaCanonical: number) {
-  const ascendant = normalize360(thetaCanonical + 90);
+export function calculateZeroTiltAscendant(
+  sunriseSunLongitude: number,
+  elapsedHoursSinceSunrise: number,
+) {
+  if (!Number.isFinite(sunriseSunLongitude) || !Number.isFinite(elapsedHoursSinceSunrise)) {
+    throw new RangeError("Sunrise horizon geometry must be finite");
+  }
+  const ascendant = normalize360(sunriseSunLongitude + elapsedHoursSinceSunrise * 15);
   const descendant = normalize360(ascendant + 180);
   return {
     ascendant,
     descendant,
-    midheaven: normalize360(thetaCanonical),
+    midheaven: normalize360(ascendant + 270),
     obliquity: ZERO_OBLIQUITY_MODEL,
     referenceFrame: FIRMAMENT_FRAME,
   } as const;
@@ -27,7 +35,7 @@ export function calculateZeroTiltAscendant(thetaCanonical: number) {
 export function aldebaranDelta(rawAldebaranLongitude: number): number {
   return normalize(ALDEBARAN_ANCHOR - rawAldebaranLongitude);
 }
-/** For TROPICAL raw longitudes only. Never apply to Swiss sidereal mode 14 output. */
+/** For XYZ-derived J2000 longitudes only; never apply sidereal mode/ayanamsha. */
 export function anchorRawLongitude(rawTropicalLongitude: number, delta: number): number {
   return normalize(rawTropicalLongitude + delta);
 }
@@ -50,7 +58,7 @@ export function arabicLots(ascendant: number, sun: number, moon: number) {
   };
 }
 export type DomeInput = {
-  /** Canonical Aldebaran-anchored longitudes, already in mode 14. */
+  /** Canonical Aldebaran-anchored longitudes projected from J2000 XYZ vectors. */
   planetLongitudes: Record<string, number>;
   /** Horizon point must be supplied by the Agent View calculation. */
   ascendant: number;
