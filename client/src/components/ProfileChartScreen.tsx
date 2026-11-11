@@ -283,6 +283,43 @@ export function ProfileChartScreen({
         )}
       </section>
 
+      {/* Source-first XYZ audit: original vectors are distinct from projected bearings. */}
+      <section aria-label="Astronomical XYZ ephemeris ledger" className="rounded-2xl border border-cyan-400/25 bg-slate-950/80 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-serif text-xl font-semibold text-cyan-100">Astronomical Ephemeris · XYZ Ledger</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-400">Swiss Ephemeris Moshier · geocentric J2000 Cartesian XYZ (AU) → atan2(Y, X) → fixed Aldebaran epoch calibration. No sidereal mode or local sidereal Ascendant.</p>
+          </div>
+          <span className="rounded-lg border border-cyan-300/25 px-2 py-1 text-[10px] font-mono text-cyan-200">SOURCE: XYZ VECTORS</span>
+        </div>
+        <p className="mt-3 text-xs text-slate-300">Julian day: {chart.julianDay.toFixed(6)} · UTC: {chart.utc}</p>
+        {chart.sunriseProvenance && (
+          <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs leading-6 text-amber-100">
+            Sunrise at birth location: {chart.sunriseProvenance.utc} · Rotation since sunrise: {chart.sunriseProvenance.elapsedHours.toFixed(3)} hours × 15°/hour · Sun declination: {chart.sunriseProvenance.solarDeclination.toFixed(3)}°.
+            <span className="block">Ascendant: {chart.ascendant?.display ?? "Unavailable"} · Equal houses in 30° steps · No +90° term.</span>
+          </div>
+        )}
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-[11px] font-mono">
+            <thead className="border-b border-white/15 text-cyan-200">
+              <tr><th className="p-2">Body</th><th className="p-2 text-right">X (AU)</th><th className="p-2 text-right">Y (AU)</th><th className="p-2 text-right">Z (AU)</th><th className="p-2 text-right">Raw XYZ</th><th className="p-2 text-right">Fixed projection</th></tr>
+            </thead>
+            <tbody>
+              {chart.movingBodies.map(body => (
+                <tr key={body.name} className="border-b border-white/5 text-slate-200">
+                  <td className="p-2 font-semibold text-amber-100">{body.name}</td>
+                  <td className="p-2 text-right">{body.xyz?.x.toFixed(6) ?? "—"}</td>
+                  <td className="p-2 text-right">{body.xyz?.y.toFixed(6) ?? "—"}</td>
+                  <td className="p-2 text-right">{body.xyz?.z.toFixed(6) ?? "—"}</td>
+                  <td className="p-2 text-right">{body.rawXyzLongitude?.toFixed(3) ?? "—"}°</td>
+                  <td className="p-2 text-right text-cyan-100">{body.display}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       {/* Esoteric Placement Interpretation Modal/Section */}
       {interpretBody && (
         <section className="rounded-2xl border border-violet-400/40 bg-slate-950/90 p-5 space-y-4">
