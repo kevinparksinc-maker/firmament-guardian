@@ -288,7 +288,7 @@ export function ProfileChartScreen({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-serif text-xl font-semibold text-cyan-100">Astronomical Ephemeris · XYZ Ledger</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-400">Swiss Ephemeris Moshier · geocentric J2000 Cartesian XYZ (AU) → atan2(Y, X) → fixed Aldebaran epoch calibration. No sidereal mode or local sidereal Ascendant.</p>
+            <p className="mt-1 text-xs leading-5 text-slate-400">Swiss Ephemeris Moshier · geocentric J2000 Cartesian XYZ (AU) → atan2(Y, X), with no zodiac offset or precession adjustment. Fixed-star symbolic anchors are stored separately. No local sidereal Ascendant.</p>
           </div>
           <span className="rounded-lg border border-cyan-300/25 px-2 py-1 text-[10px] font-mono text-cyan-200">SOURCE: XYZ VECTORS</span>
         </div>
@@ -302,7 +302,7 @@ export function ProfileChartScreen({
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-[11px] font-mono">
             <thead className="border-b border-white/15 text-cyan-200">
-              <tr><th className="p-2">Body</th><th className="p-2 text-right">X (AU)</th><th className="p-2 text-right">Y (AU)</th><th className="p-2 text-right">Z (AU)</th><th className="p-2 text-right">Raw XYZ</th><th className="p-2 text-right">Fixed projection</th></tr>
+              <tr><th className="p-2">Body</th><th className="p-2 text-right">X (AU)</th><th className="p-2 text-right">Y (AU)</th><th className="p-2 text-right">Z (AU)</th><th className="p-2 text-right">Raw XYZ</th><th className="p-2 text-right">Zero-tilt projection</th></tr>
             </thead>
             <tbody>
               {chart.movingBodies.map(body => (
