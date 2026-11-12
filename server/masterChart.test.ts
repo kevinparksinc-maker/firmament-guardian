@@ -1,3 +1,4 @@
+import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { describe, it, expect } from "vitest";
 import { buildUnifiedMasterChart, getLayer, getEvidence, getModeView } from "./masterChart";
 
@@ -18,9 +19,10 @@ describe("Unified Master Chart Architecture", () => {
     expect(snapshot).toBeDefined();
     expect(snapshot.snapshotId).toMatch(/^umc-[a-f0-9]{16}$/);
     expect(snapshot.schemaVersion).toBe("1.0.0");
-    expect(snapshot.validation.complete).toBe(true);
+    expect(snapshot.validation.complete).toBe(false);
+    expect(snapshot.validation.warnings).toEqual([expect.stringContaining("Historical")]);
     expect(snapshot.validation.errors).toHaveLength(0);
-    expect(snapshot.validation.totalMethods).toBe(16);
+    expect(snapshot.validation.totalMethods).toBe(MASTER_METHOD_IDS.length);
     expect(snapshot.validation.computedWithResultCount).toBeGreaterThanOrEqual(10);
   });
 

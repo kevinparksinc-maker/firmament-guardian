@@ -22,6 +22,7 @@ export interface LayerRecord<T = unknown> {
     | "hellenistic"
     | "vedic"
     | "babylonian"
+    | "sumerian"
     | "arabic-persian"
     | "chinese"
     | "kabbalah"
@@ -47,8 +48,18 @@ export interface MasterChartInput {
   timezone: string;
   date: string;
   time: string;
+  transitLocation?: string;
+  transitLatitude?: number;
+  transitLongitude?: number;
+  transitTimezone?: string;
+  birthTimeKnown?: boolean;
+  chartRole?: "natal" | "event";
+  worldview?: import("../astronomy").ChartInput["worldview"];
+  elevation?: number;
   transitDate?: string;
   transitTime?: string;
+  instantUtc?: string;
+  transitInstantUtc?: string;
   mode?: "natal" | "transit" | "combined";
 }
 
@@ -66,10 +77,11 @@ export interface UnifiedMasterChartSnapshot {
       longitude: number;
     };
     mode: "natal" | "transit" | "combined";
+    chartRole?: "natal" | "event";
   };
   frameConfig: {
-    zodiacMode: "hybrid-fixed-star-tropical";
-    firmamentAnchorVersion: "polaris-spica-fixed-frame-v2";
+    zodiacMode: "fixed-cartesian-xyz";
+    firmamentAnchorVersion: "sunrise-xyz-15deg-hour-v1";
     obliquityMode: "zero-tilt-equatorial-aligned";
     precessionMode: "none-fixed-firmament";
     houseSystem: "equal-house-ascendant";
@@ -78,7 +90,7 @@ export interface UnifiedMasterChartSnapshot {
   baseCelestialState: {
     julianDay: number;
     utc: string;
-    ascendant: ChartRow;
+    ascendant: ChartRow | null;
     midheaven?: ChartRow | null;
     descendant?: ChartRow | null;
     northNode: ChartRow;
@@ -121,6 +133,7 @@ export interface UnifiedMasterChartSnapshot {
   natal?: ChartResult;
   transit?: {
     transitInstantUtc: string;
+    framework?: UnifiedMasterChartSnapshot;
     planets: ChartRow[];
     aspectsToNatal: Array<{
       transitBody: string;
@@ -164,4 +177,11 @@ export function getModeView(
   if (mode === "god") return snapshot.godView;
   if (mode === "agent") return snapshot.agentView;
   return { godView: snapshot.godView, agentView: snapshot.agentView };
+}
+/** Calculated results travel with every published chart; no recursive ChartResult copies. */
+export interface MasterMethodBindings {
+  snapshotId: string;
+  base: LayerRecord[];
+  transit: LayerRecord[];
+  synthesisAudit: { passed: boolean; groundedRatio: number; canonApplicationCount: number };
 }

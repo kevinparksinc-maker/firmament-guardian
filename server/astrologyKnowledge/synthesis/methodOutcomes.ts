@@ -7,6 +7,7 @@ import type {
   MethodOutcome,
   MethodOutcomeFinding,
 } from "./types";
+import { bindCanonMethod, canonReferencesForLayer } from "../canon/methodCatalog";
 import { applyMethodRules } from "./methodRules";
 
 const frameOf = (layer: LayerRecord): MethodOutcome["frame"] =>
@@ -36,6 +37,7 @@ function outcome(
     snapshot.inputs.chartRole === "event";
   const base = {
     methodId: layer.id,
+    canonBinding: canonReferencesForLayer(layer.id) ? bindCanonMethod(layer) : undefined,
     methodName: layer.name,
     tradition: layer.tradition,
     chartScope: event ? ("event" as const) : ("natal" as const),

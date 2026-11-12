@@ -1,5 +1,18 @@
 import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
 
+export interface CanonRuleApplication {
+  canonEvidenceId: string;
+  ruleId: string;
+  sourceId: string;
+  sourceTitle: string;
+  technique: string;
+  subject: string;
+  statement: string;
+  calculationEvidenceIds: string[];
+  confidence: "high" | "moderate" | "low" | "reference-only";
+  implementationStatus?: "implemented" | "incomplete";
+}
+
 export type HumanDomain =
   | "identity"
   | "purpose_work"
@@ -15,6 +28,53 @@ export interface SynthesisInput {
   snapshot: UnifiedMasterChartSnapshot;
   readingMode: "natal" | "transit" | "combined";
   userQuestion?: string;
+  canonApplications?: CanonRuleApplication[];
+}
+
+export type MethodOutcomeStatus =
+  | "interpreted"
+  | "reference-only"
+  | "not-applicable"
+  | "failed"
+  | "no-result";
+
+export interface MethodOutcomeFinding {
+  evidenceId: string;
+  label: string;
+  calculatedValue: string;
+}
+
+export interface FindingJudgment {
+  frame?: "god" | "agent" | "shared" | "transit";
+  id: string;
+  subject: string;
+  domain: HumanDomain;
+  judgment: string;
+  mechanism: string;
+  valence: InterpretedProposition["valence"];
+  strength: InterpretedProposition["strength"];
+  evidenceIds: string[];
+  rules: CanonRuleApplication[];
+  limitation?: string;
+}
+
+export interface MethodOutcome {
+  methodId: string;
+  canonBinding?: ReturnType<typeof import("../canon/methodCatalog").bindCanonMethod>;
+  methodName: string;
+  tradition: string;
+  chartScope: "natal" | "event";
+  frame: "god" | "agent" | "shared" | "transit";
+  status: MethodOutcomeStatus;
+  calculatedFindings: MethodOutcomeFinding[];
+  findingJudgments: FindingJudgment[];
+  canonApplications: CanonRuleApplication[];
+  interpretation: string;
+  judgment: string;
+  contribution: string;
+  evidenceIds: string[];
+  strengthAndLimitations: string[];
+  missingCanon: boolean;
 }
 
 export interface InterpretedProposition {
@@ -30,6 +90,8 @@ export interface InterpretedProposition {
   supportingEvidenceIds: string[];
   opposingEvidenceIds: string[];
   sourceDoctrineIds: string[];
+  canonRuleIds?: string[];
+  canonApplications?: Array<Pick<CanonRuleApplication, "canonEvidenceId" | "ruleId" | "sourceTitle" | "statement">>;
 }
 
 export interface SynthesizedTheme {
@@ -62,22 +124,14 @@ export interface SynthesizedTheme {
 }
 
 export interface SynthesisResult {
+  /** Complete calculation snapshot for the AI evidence packet. */
+  sourceSnapshot: UnifiedMasterChartSnapshot;
   snapshotId: string;
   mode: "natal" | "transit" | "combined";
   dominantConclusion: string;
   integratedNarrative: string[];
-  methodFindings: Array<{
-    id: string;
-    name: string;
-    tradition: string;
-    status: string;
-    frame: string;
-    evidenceIds: string[];
-    sourceIds: string[];
-    resultCount: number;
-    findings: Array<{ label: string; details: string }>;
-    notes?: string;
-  }>;
+  methodFindings: Array<{ id: string; name: string; tradition: string; status: string; frame: string; evidenceIds: string[]; sourceIds: string[]; resultCount: number; findings: Array<{ label: string; details: string }>; notes?: string }>;
+  methodOutcomes: MethodOutcome[];
   themes: SynthesizedTheme[];
   contradictionsAndTensions: Array<{
     polarities: string;
@@ -96,6 +150,11 @@ export interface SynthesisResult {
     failed: number;
   };
   evidenceTraceMap: Record<string, string[]>;
+  canonApplications: CanonRuleApplication[];
+  methodOutcomeAudit: {
+    complete: boolean;
+    incompleteMethodIds: string[];
+  };
   qualityAudit: {
     groundedRatio: number; // 1.0 (100% of claims grounded in evidence IDs)
     unsupportedClaims: string[];

@@ -1,6 +1,13 @@
-import { DECANS, ELEMENTAL_DECAN_SIGNS, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+import { DECANS, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import { PLANET_CANON_RECORDS, SIGN_CANON_RECORDS } from "./planetsAndSigns";
 import type { DecanCanonRecord } from "../canon/types";
+import { DECAN_CANON_RECORDS as ELEMENTAL_RECORDS } from "../canon/decans36";
+export { getDecanCanonByLongitude } from "../canon/decans36";
+
+type HistoricalDecanRecord = DecanCanonRecord & {
+  chaldeanFaceRuler: string;
+  triplicitySubRuler: string;
+};
 
 const TRIPLICITY_SUB_RULERS: Record<string, [string, string, string]> = {
   Aries: ["Mars", "Sun", "Jupiter"],
@@ -72,7 +79,7 @@ const DECAN_DOCTRINE: Array<{
   { title: "The Crossing of the Threshold", themes: ["courageous closure", "decisive renewal", "spiritual fire in water"], nuance: "Mars face of Pisces (containing the 27° Exaltation of Venus): completes the zodiacal circle with the courage to release and begin anew." },
 ];
 
-export const DECAN_CANON_RECORDS: DecanCanonRecord[] = DECANS.map((label, idx) => {
+export const DECAN_CANON_RECORDS: HistoricalDecanRecord[] = DECANS.map((label, idx) => {
   const signIndex = Math.floor(idx / 3);
   const sign = ZODIAC_SIGNS[signIndex];
   const decanNumber = ((idx % 3) + 1) as 1 | 2 | 3;
@@ -88,6 +95,8 @@ export const DECAN_CANON_RECORDS: DecanCanonRecord[] = DECANS.map((label, idx) =
     decanNumber,
     degreeRange: [startDeg, endDeg],
     label,
+    elementalFamilySign: ELEMENTAL_RECORDS[idx].elementalFamilySign,
+    elementalFamilyRuler: ELEMENTAL_RECORDS[idx].elementalFamilyRuler,
     chaldeanFaceRuler,
     triplicitySubRuler,
     traditionalTitle: doc.title,
@@ -103,20 +112,15 @@ export const DECAN_CANON_RECORDS: DecanCanonRecord[] = DECANS.map((label, idx) =
   };
 });
 
-export function getDecanCanonByLongitude(longitude: number): DecanCanonRecord {
-  const index = Math.floor(normalizeLongitude(longitude) / 10) % 36;
-  return DECAN_CANON_RECORDS[index];
-}
-
 /** The Absolute uses elemental-family decans; Chaldean faces remain a separate catalog. */
 export function elementalDecanTeaching(record: DecanCanonRecord) {
-  const subSign = ELEMENTAL_DECAN_SIGNS[Math.floor((record.index - 1) / 3)][record.decanNumber - 1];
+  const subSign = record.elementalFamilySign;
   const sign = SIGN_CANON_RECORDS[subSign];
-  const ruler = PLANET_CANON_RECORDS[record.triplicitySubRuler];
+  const ruler = PLANET_CANON_RECORDS[record.elementalFamilyRuler];
   return {
     subSign,
-    label: `${record.sign} decan ${record.decanNumber}: ${subSign} / ${record.triplicitySubRuler}`,
-    statement: `The ${record.decanNumber === 1 ? "first" : record.decanNumber === 2 ? "second" : "third"} ten-degree sector of ${record.sign} takes the ${subSign} member of its elemental family. ${sign.psychologicalTheme} Its ruler ${record.triplicitySubRuler} brings ${ruler.coreMeanings[0]}.`,
+    label: `${record.sign} decan ${record.decanNumber}: ${subSign} / ${record.elementalFamilyRuler}`,
+    statement: `The ${record.decanNumber === 1 ? "first" : record.decanNumber === 2 ? "second" : "third"} ten-degree sector of ${record.sign} takes the ${subSign} member of its elemental family. ${sign.psychologicalTheme} Its ruler ${record.elementalFamilyRuler} brings ${ruler.coreMeanings[0]}.`,
     sourceTitle: "The Absolute elemental-family decan policy; local planetary and sign Canon",
   };
 }

@@ -138,7 +138,7 @@ export function buildPlacementPackets(
         decan: dossier.decanRecord
           ? {
               number: dossier.decanRecord.decanNumber,
-              elementalFamilyRuler: dossier.decanRecord.triplicitySubRuler,
+              elementalFamilyRuler: dossier.decanRecord.elementalFamilyRuler,
               teaching: elementalDecanTeaching(dossier.decanRecord),
             }
           : null,

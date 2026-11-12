@@ -20,6 +20,11 @@ describe("My Chart method outcomes",()=>{
       expect(method.findingJudgments).toEqual(actual.findingJudgments);
       expect(method.calculatedFindings).toEqual(actual.calculatedFindings);
       expect(method.formula.length).toBeGreaterThan(0);
+      expect(method.canonBinding?.methodId).toBe(method.methodId);
+      expect(method.canonBinding?.references.meanings.length).toBeGreaterThan(0);
+      expect(method.canonBinding?.references.rules.length).toBeGreaterThan(0);
+      expect(method.canonBinding?.references.calculations.length).toBeGreaterThan(0);
+      expect(method.canonBinding?.output.evidenceIds).toEqual(method.evidenceIds);
       const packed=packet.methodOutcomes.find(o=>o.methodId===method.methodId)!;
       if(method.status==="interpreted") expect(packed.findingJudgments.map(row=>row[8])).toEqual(method.findingJudgments.map(f=>f.id));
     }
@@ -35,6 +40,7 @@ describe("My Chart method outcomes",()=>{
       const event=result.methods.find(m=>m.methodId===`transit:${id}`)!;
       expect(base).toBeDefined();expect(event).toBeDefined();
       expect(event.chartScope).toBe("event");
+      expect(event.canonBinding?.output.evidenceIds).toEqual(event.evidenceIds);
       expect(event.findingJudgments.flatMap(f=>f.evidenceIds).every(id=>id.startsWith("transit:"))).toBe(true);
     }
   });
