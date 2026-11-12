@@ -72,7 +72,12 @@ function subperiods(start:number,end:number,lord:(typeof ORDER)[number]){
  return ORDER.map((_,offset)=>{const child=ORDER[(index+offset)%9];const next=cursor+years*YEARS[child]/120*365.25;const item={lord:child,start:cursor,end:next};cursor=next;return item;});
 }
 function activePeriod<T extends {start:number;end:number}>(items:T[],now:number){return items.find(item=>now>=item.start&&now<item.end);}
-function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number):EvidenceItem[]{
+type TimingEvidence = EvidenceItem & {
+ calculation?:
+  | { available: true; asOf: string; activeLords: Array<{ level: string; lord: string; start: string; end: string }> }
+  | { available: true; total: number; sav: Array<{ sign: string; score: number }>; bav: Array<{ planet: string; scores: number[] }> };
+};
+function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number):TimingEvidence[]{
  if(chart.input.birthTimeKnown===false||!chart.input.time||!chart.input.timezone) return [{
   id:"vedic-dasha-time-uncertain",tradition:"vedic",category:"uncertainty",technique:"dasha",subject:"Vimshottari Dasha",
   statement:"Vimshottari periods were not asserted because birth time is date-only or marked unknown. The Moon's fixed-Firmament position and Dasha balance can change within the day; provide a verified birth time for an exact timeline.",
@@ -82,22 +87,28 @@ function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number):Evidenc
  const firstLord=ORDER[starIndex%9]; const balance=(size-progressed)/size*YEARS[firstLord]; const elapsed=YEARS[firstLord]-balance;
  let cursor=birth-elapsed*365.25; const timeline:Array<{lord:(typeof ORDER)[number];start:number;end:number}>=[];
  for(let i=0;i<18;i++){const lord=ORDER[(ORDER.indexOf(firstLord)+i)%9];const end=cursor+YEARS[lord]*365.25;timeline.push({lord,start:cursor,end});cursor=end;}
- const now=dayNumber(new Date()); const active=activePeriod(timeline,now); const details=[
+ const asOf = new Date();
+ const now=dayNumber(asOf);
+ const activeLords: Array<{ level: string; lord: string; start: string; end: string }> = [];
+ const active=activePeriod(timeline,now); const details=[
   "Firmament fixed Moon "+moon.toFixed(4)+"°; fixed stellar reference offset 0°.",
   "Birth Nakshatra "+NAKSHATRAS[starIndex]+"; starting Mahadasha "+firstLord+".",
   "Balance at birth "+balance.toFixed(3)+" years using a 365.25-day year."
  ];
  if(active){
   const ads=subperiods(active.start,active.end,active.lord);const ad=activePeriod(ads,now);const pds=ad?subperiods(ad.start,ad.end,ad.lord):[];const pd=activePeriod(pds,now);
+  for (const [level, period] of [["Mahadasha", active], ["Antardasha", ad], ["Pratyantardasha", pd]] as const) {
+   if (period) activeLords.push({ level, lord: period.lord, start: dateLabel(period.start), end: dateLabel(period.end) });
+  }
   details.push("Current Mahadasha: "+active.lord+" ("+dateLabel(active.start)+"–"+dateLabel(active.end)+").");
   details.push(interpretDashaLord(active.lord,"major"));
   if(ad) {details.push("Current Antardasha: "+active.lord+"/"+ad.lord+" ("+dateLabel(ad.start)+"–"+dateLabel(ad.end)+").");details.push(interpretDashaLord(ad.lord,"sub"));}
   if(ad&&pd) {details.push("Current Pratyantardasha: "+active.lord+"/"+ad.lord+"/"+pd.lord+" ("+dateLabel(pd.start)+"–"+dateLabel(pd.end)+").");details.push(interpretDashaLord(pd.lord,"micro"));}
   const next=timeline.find(item=>item.start>now);if(next)details.push("Next Mahadasha: "+next.lord+", beginning "+dateLabel(next.start)+".");
  } else details.push("Current date falls outside the two full 120-year Vimshottari cycles generated; no current period is claimed.");
- return [{id:"vedic-vimshottari-dasha",tradition:"vedic",category:"calculated-fact",technique:"dasha",subject:"Vimshottari Dasha",statement:details.join(" "),concepts:["dasha","vimshottari",NAKSHATRAS[starIndex].toLowerCase(),firstLord.toLowerCase()],polarity:"neutral",strength:1,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("dasha","vedic-dasha-architecture"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,firmamentMoonDegrees:Number(moon.toFixed(6)),birthNakshatra:NAKSHATRAS[starIndex],yearLengthDays:365.25,subperiods:"proportional 120-year Vimshottari cycle"}}}];
+ return [{calculation:{available:true,asOf:asOf.toISOString(),activeLords},id:"vedic-vimshottari-dasha",tradition:"vedic",category:"calculated-fact",technique:"dasha",subject:"Vimshottari Dasha",statement:details.join(" "),concepts:["dasha","vimshottari",NAKSHATRAS[starIndex].toLowerCase(),firstLord.toLowerCase()],polarity:"neutral",strength:1,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("dasha","vedic-dasha-architecture"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,firmamentMoonDegrees:Number(moon.toFixed(6)),birthNakshatra:NAKSHATRAS[starIndex],yearLengthDays:365.25,subperiods:"proportional 120-year Vimshottari cycle"}}}];
 }
-function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,frameOffset:number):EvidenceItem[]{
+function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,frameOffset:number):TimingEvidence[]{
  const contributorSigns:Record<Contributor,number>={Lagna:signIndex(asc),...Object.fromEntries(CLASSICAL.map(p=>[p,signIndex(positions[p])])) as Record<Classical,number>};
  const bav={} as Record<Classical,number[]>;
  for(const target of CLASSICAL){
@@ -121,9 +132,9 @@ function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,fram
   parts.push(`${planet} BAV explained: ${interpretBindus(score,"BAV",ZODIAC_SIGNS[i])} This gauges ${planet}'s traditional contribution in that sign; it does not mean that ${planet} is physically located in that sign.`);
  }
  parts.push("HOW TO USE THIS: Contrast the highest and lowest SAV signs with the relevant activated house, that house's lord, the current Dasha lords, and real circumstances. A score describes relative support or friction; it is not a prediction that a specific event must occur.");
- return [{id:"vedic-ashtakavarga-bav-sav",tradition:"vedic",category:"calculated-fact",technique:"ashtakavarga",subject:"Bhinnashtakavarga and Sarvashtakavarga",statement:parts.join(" "),concepts:["ashtakavarga","bhinnashtakavarga","sarvashtakavarga","bindu-scores"],polarity:"neutral",strength:1,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("ashtakavarga","vedic-ashtakavarga-classical"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,system:"Parashari unreduced BAV/SAV",excludedContributors:["Rahu","Ketu"],checksums:{Sun:48,Moon:49,Mars:39,Mercury:54,Jupiter:56,Venus:52,Saturn:39,SAV:337}}}}];
+ return [{calculation:{available:true,total:337,sav:ranked,bav:CLASSICAL.map(planet=>({planet,scores:bav[planet]}))},id:"vedic-ashtakavarga-bav-sav",tradition:"vedic",category:"calculated-fact",technique:"ashtakavarga",subject:"Bhinnashtakavarga and Sarvashtakavarga",statement:parts.join(" "),concepts:["ashtakavarga","bhinnashtakavarga","sarvashtakavarga","bindu-scores"],polarity:"neutral",strength:1,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("ashtakavarga","vedic-ashtakavarga-classical"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,system:"Parashari unreduced BAV/SAV",excludedContributors:["Rahu","Ketu"],checksums:{Sun:48,Moon:49,Mars:39,Mercury:54,Jupiter:56,Venus:52,Saturn:39,SAV:337}}}}];
 }
-export function resolveVedicTimingAndAshtakavarga(chart:ChartResult):EvidenceItem[]{
+export function resolveVedicTimingAndAshtakavarga(chart:ChartResult):TimingEvidence[]{
  if(!Number.isFinite(chart.julianDay)||!chart.utc) return [{id:"vedic-advanced-no-epoch",tradition:"vedic",category:"uncertainty",technique:"dasha-ashtakavarga",subject:"Dasha and Ashtakavarga",statement:"Dasha and Ashtakavarga were not calculated because the chart has no valid birth epoch.",concepts:["dasha","ashtakavarga","unavailable"],polarity:"neutral",strength:0,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:TRACE("dasha-ashtakavarga","vedic-dasha-architecture")}];
  let dasha:EvidenceItem[]=[];
  let moonSidereal:{longitude:number;frameOffset:number};

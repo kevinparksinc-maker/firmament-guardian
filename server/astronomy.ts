@@ -22,9 +22,12 @@ export type ChartInput = {
   transitTimezone?: string;
   transitDate?: string;
   transitTime?: string;
+  instantUtc?: string;
+  transitInstantUtc?: string;
   worldview?: Worldview;
   readingScope?: ReadingScope;
   birthTimeKnown?: boolean;
+  chartRole?: "natal" | "event";
   elevation?: number;
 };
 
@@ -56,6 +59,7 @@ export type TransitContact = { natalName: string; aspect: "conjunction" | "sexti
 export type TransitRow = ChartRow & { natalContacts: TransitContact[] };
 export type ChartResult = {
   input: ChartInput;
+  methodBindings?: import("./masterChart/types").MasterMethodBindings;
   worldview: Worldview;
   readingScope: ReadingScope;
   agentViewAvailable: boolean;
@@ -162,6 +166,12 @@ function rawCartesian(jd: number, planet: number, flags = XYZ_FLAGS): CartesianE
   const speed = (x * dy - y * dx) / (x * x + y * y) * 180 / Math.PI;
   return { longitude: projectedLongitude, rawXyzLongitude, speed, xyz: { x, y, z, dx, dy, dz } };
 }
+/** Equatorial-of-date vectors for the existing Vedic mean-orbit diagnostic. */
+export function ephemerisXYZ(jd: number, planet: number, extraFlags = 0) {
+  const result = rawCartesian(jd, planet, (EQUATORIAL_XYZ_FLAGS & ~32) | extraFlags);
+  const { x, y, z, dx, dy, dz } = result.xyz;
+  return { xyz: { x, y, z }, longitude: result.longitude, speed: result.speed, velocity: [dx, dy, dz] };
+}
 function safeCalc(jd: number, planet: number) { return rawCartesian(jd, planet); }
 /** All consumers (including other astrology methods) receive the XYZ-derived longitude. */
 export function canonicalPositionAt(jd: number, planet: number) { return safeCalc(jd, planet); }
@@ -184,9 +194,15 @@ export function aspectBetween(a: number, b: number): { aspect: TransitContact["a
   const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= MAJOR_ASPECT_ORB_DEGREES ? best : null;
 }
 function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope, transit = false) {
+  const exact = transit ? input.transitInstantUtc : input.instantUtc;
+  if (exact) {
+    const date = new Date(exact);
+    if (!Number.isFinite(date.getTime())) throw new Error("Invalid exact chart instant.");
+    return { date, precision: "exact" as const };
+  }
   const date = transit ? input.transitDate : input.date;
   const time = transit ? input.transitTime : input.time;
-  const timezone = transit ? input.transitTimezone : input.timezone;
+  const timezone = transit ? input.transitTimezone ?? input.timezone : input.timezone;
   if (!date) return { date: new Date(), precision: "exact" as const };
   if (worldview === "god" && (!time || (!transit && input.birthTimeKnown === false))) return { date: new Date(`${date}T12:00:00.000Z`), precision: "date-only-reference" as const };
   if (!time || !timezone) throw new Error("An exact date, time, and timezone are required for Agent View.");
@@ -196,6 +212,40 @@ function julianDay(date: Date) {
   return Number((sweph as any).julday(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours() + date.getUTCMinutes() / 60, 1));
 }
 
+/** Calendar rise/set times used by the existing Vedic strength calculator. */
+// NOAA solar-calculator equations: apparent sunrise at solar zenith 90.833 degrees.
+// Inputs are the LOCAL civil date and signed geographic coordinates (east positive).
+// A missing sunrise (polar day/night) is an error, never a substituted angle.
+export function noaaSunriseUtc(localDate: string, latitude: number, longitude: number, setting = false): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate) || !Number.isFinite(latitude) || Math.abs(latitude) > 90 || !Number.isFinite(longitude) || Math.abs(longitude) > 180)
+    throw new Error("Valid local date and coordinates required for NOAA sunrise.");
+  const midnight = Date.parse(localDate + "T00:00:00.000Z");
+  if (!Number.isFinite(midnight)) throw new Error("Invalid local sunrise date.");
+  const rad = Math.PI / 180;
+  const jd0 = midnight / 86400000 + 2440587.5;
+  const solar = (jd: number) => {
+    const t = (jd - 2451545) / 36525;
+    const l0 = ((280.46646 + t * (36000.76983 + t * 0.0003032)) % 360 + 360) % 360;
+    const m = (357.52911 + t * (35999.05029 - 0.0001537 * t)) * rad;
+    const ecc = 0.016708634 - t * (0.000042037 + 0.0000001267 * t);
+    const c = Math.sin(m) * (1.914602 - t * (0.004817 + 0.000014 * t)) + Math.sin(2 * m) * (0.019993 - 0.000101 * t) + Math.sin(3 * m) * 0.000289;
+    const trueLong = l0 + c;
+    const omega = (125.04 - 1934.136 * t) * rad;
+    const lambda = (trueLong - 0.00569 - 0.00478 * Math.sin(omega)) * rad;
+    const obliq0 = 23 + (26 + (21.448 - t * (46.815 + t * (0.00059 - t * 0.001813))) / 60) / 60;
+    const obliq = (obliq0 + 0.00256 * Math.cos(omega)) * rad;
+    const decl = Math.asin(Math.sin(obliq) * Math.sin(lambda));
+    const y = Math.tan(obliq / 2) ** 2;
+    const l = l0 * rad;
+    const eqtime = 4 * (180 / Math.PI) * (y * Math.sin(2 * l) - 2 * ecc * Math.sin(m) + 4 * ecc * y * Math.sin(m) * Math.cos(2 * l) - 0.5 * y * y * Math.sin(4 * l) - 1.25 * ecc * ecc * Math.sin(2 * m));
+    const cosH = (Math.cos(90.833 * rad) - Math.sin(latitude * rad) * Math.sin(decl)) / (Math.cos(latitude * rad) * Math.cos(decl));
+    if (!Number.isFinite(cosH) || cosH < -1 || cosH > 1) throw new Error("NOAA sunrise undefined for this location/date; no fallback.");
+    return 720 - 4 * (longitude + (setting ? -1 : 1) * Math.acos(cosH) / rad) - eqtime;
+  };
+  let minutes = solar(jd0 + 0.5);
+  minutes = solar(jd0 + minutes / 1440);
+  return new Date(midnight + minutes * 60000);
+}
 const DEG = Math.PI / 180;
 /** NOAA sunrise approximation, using the local civil date and geographic coordinates.
  * Solar declination is derived from the Sun's equatorial XYZ vector independently
@@ -283,7 +333,7 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const worldview: Worldview = rawInput.worldview ?? "agent"; const readingScope: ReadingScope = rawInput.readingScope ?? "combined";
   // Natal-only readings never use transit fields, so stale or half-filled form values are ignored.
   const input: ChartInput = readingScope === "natal"
-    ? { ...rawInput, transitLocation: undefined, transitLatitude: undefined, transitLongitude: undefined, transitTimezone: undefined, transitDate: undefined, transitTime: undefined }
+    ? { ...rawInput, transitLocation: undefined, transitLatitude: undefined, transitLongitude: undefined, transitTimezone: undefined, transitDate: undefined, transitTime: undefined, transitInstantUtc: undefined }
     : rawInput;
   const agentViewAvailable = worldview !== "god" && Boolean(input.time && input.timezone && input.location);
   if (worldview !== "god" && !agentViewAvailable) throw new Error("Agent View requires birth location, date, time, and timezone.");
@@ -311,16 +361,19 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
     "Fixed-star archive retains defined symbolic positions; stars not historically calibrated are not claimed as catalog-verified.",
   ] };
   const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value) && value !== 0);
-  const transitInputsPresent = Boolean(input.transitDate?.trim() || input.transitTime?.trim() || input.transitTimezone?.trim() || input.transitLocation?.trim() || transitCoordinatesPresent);
+  const transitInputsPresent = Boolean(input.transitTimezone?.trim() || input.transitLocation?.trim() || transitCoordinatesPresent);
   const transitLocationResolved = worldview !== "god" && Boolean(input.transitLocation?.trim() && input.transitTimezone?.trim() && Number.isFinite(input.transitLatitude) && Number.isFinite(input.transitLongitude));
   if (worldview !== "god" && transitInputsPresent && !transitLocationResolved) throw new Error("Transit location must be resolved before calculating transit houses.");
   const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
-  const transitHasLocation = worldview !== "god" && transitLocationResolved;
-  const transitAngles = transitHasLocation ? sunriseAnchoredAngles(transitDate, localDateAt(transitDate, input.transitTimezone as string), input.transitLatitude as number, input.transitLongitude as number, input.transitTimezone as string) : null;
+  const transitHasLocation = transitLocationResolved || (readingScope !== "natal" && hasAgentLocation);
+  const transitTimezone = input.transitTimezone ?? input.timezone;
+  const transitLatitude = input.transitLatitude ?? input.latitude;
+  const transitLongitude = input.transitLongitude ?? input.longitude;
+  const transitAngles = transitHasLocation ? sunriseAnchoredAngles(transitDate, localDateAt(transitDate, transitTimezone), transitLatitude, transitLongitude, transitTimezone) : null;
   const transitAsc = transitAngles?.ascendant ?? null;
-  const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitHasLocation ? "transit-location" : "natal-location";
+  const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitLocationResolved ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
-  const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, input.transitLongitude as number, input.transitLatitude as number, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts }; });
+  const transits: TransitRow[] = planetNames.map((name, i) => { const p = safeCalc(transitJd, i); const topocentricLongitude = planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, transitLongitude, transitLatitude, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: p.speed < 0, speed: p.speed, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts }; });
   const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
   const transitRows = [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode) }];

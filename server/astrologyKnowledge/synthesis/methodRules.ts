@@ -465,9 +465,18 @@ export function applyMethodRules(
           aspect = String(v.aspect).toLowerCase(),
           orb = finite(v.orb, "orb");
         requireValue(
-          aspect in ENERGY_ASPECT_FLOW && orb >= 0 && orb <= 5,
+          Object.hasOwn(ENERGY_ASPECT_FLOW, aspect) && orb >= 0 && orb <= (transit ? 5 : 8),
           `Unsupported ${aspect} or orb ${orb}`
         );
+        if (orb > 5) {
+          emit(
+            i, `${first} ${aspect} ${second}`,
+            `The Master Chart recorded this ${orb}° contact under its wider aspect rule. It falls outside the configured five-degree interpretation scope.`,
+            `Recorded orb ${orb}°`, "master-chart-wide-orb", "Guardian Master Chart aspect ledger",
+            "choices_obstacles", "neutral", "subtle",
+          );
+          return;
+        }
         const flow =
           ENERGY_ASPECT_FLOW[aspect as keyof typeof ENERGY_ASPECT_FLOW];
         const doctrine =
@@ -658,7 +667,7 @@ export function applyMethodRules(
           `Decan differs from ${body}'s longitude`
         );
         const teaching = elementalDecanTeaching(d);
-        const ruler = point(snapshot, d.triplicitySubRuler),
+        const ruler = point(snapshot, d.elementalFamilyRuler),
           c = condition(ruler.name, signAt(ruler.longitude));
         emit(
           i,
@@ -1047,11 +1056,19 @@ export function applyMethodRules(
         );
         requireValue(yogaId, "Missing Yoga evidence lineage");
         if (v.yogas.length)
-          for (const yoga of v.yogas) {
+          for (const [yogaIndex, yoga] of v.yogas.entries()) {
             requireValue(
-              yoga.detected === true && yoga.name === "Hamsa Yoga",
+              yoga.detected === true && typeof yoga.name === "string" && typeof yoga.message === "string",
               "Unsupported Yoga rule result"
             );
+            if (yoga.name !== "Hamsa Yoga" || signAt(point(snapshot, "Jupiter").longitude) === "Cancer") {
+              emit(
+                i, yoga.name, yoga.message, "Recorded detection condition",
+                `genesis-yoga-${yogaIndex}`, "Local vedicYogaDetector",
+                "choices_obstacles", "neutral", "subtle", [yogaId],
+              );
+              continue;
+            }
             const jupiter = point(snapshot, "Jupiter"),
               sign = signAt(jupiter.longitude),
               house = jupiter.agentHouse ?? jupiter.house;
