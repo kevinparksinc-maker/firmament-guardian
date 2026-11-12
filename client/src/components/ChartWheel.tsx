@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { ChartResult, ChartRow, TransitContact } from "../../../server/astronomy";
+import type { ChartResult, ChartRow, TransitContact, MinorTransitContact } from "../../../server/astronomy";
 
 const colors: Record<string, string> = { Sun: "#e4b83f", Moon: "#f4f1e8", Mercury: "#55b9bd", Venus: "#e78eb4", Mars: "#de5f58", Jupiter: "#b7a2dc", Saturn: "#9299a6", Uranus: "#58bda7", Neptune: "#8997dc", Pluto: "#c68bc9", "North Node": "#63b890", "South Node": "#d38b52" };
 const aspectColors: Record<string, string> = { conjunction: "#dcae3f", sextile: "#57b981", semisquare: "#c76b62", square: "#d95b58", trine: "#4eaf79", opposition: "#dc6960" };
@@ -17,7 +17,7 @@ export function ChartWheel({ chart }: { chart: ChartResult }) {
   const natalRows = useMemo(() => [...chart.movingBodies, chart.ascendant, chart.descendant, chart.northNode, chart.southNode].filter((row): row is ChartRow => Boolean(row)), [chart]);
   const transitRows = useMemo(() => chart.transits.filter(row => ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "North Node", "South Node"].includes(row.name)), [chart]);
   const natalByName = useMemo(() => new Map(natalRows.map(row => [row.name, row])), [natalRows]);
-  const aspects = useMemo(() => transitRows.flatMap(transit => transit.natalContacts.map(contact => { const natal = natalByName.get(contact.natalName); return natal ? { transit, natal, contact } : null; }).filter(Boolean) as Array<{ transit: ChartRow; natal: ChartRow; contact: TransitContact }>), [transitRows, natalByName]);
+  const aspects = useMemo(() => transitRows.flatMap(transit => [...transit.natalContacts, ...transit.minorNatalContacts].map(contact => { const natal = natalByName.get(contact.natalName); return natal ? { transit, natal, contact } : null; }).filter(Boolean) as Array<{ transit: ChartRow; natal: ChartRow; contact: TransitContact | MinorTransitContact }>), [transitRows, natalByName]);
   const activeHouse = selectedHouse ? houses[selectedHouse - 1] : null;
   const activeRows = selectedHouse ? natalRows.filter(row => row.house === selectedHouse) : [];
   const focusTitle = selectedPoint ? `${selectedPoint.kind === "transit" ? "Transit" : "Natal"} ${selectedPoint.row.name}` : selectedHouse ? `House ${selectedHouse}` : "Chart focus";

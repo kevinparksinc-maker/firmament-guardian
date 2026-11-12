@@ -377,13 +377,12 @@ export function buildRelationalHouseChains(
       ? Math.floor(normalizeLongitude(chart.ascendant.longitude) / 30)
       : 0;
 
-  const keyHouses = [1, 4, 7, 10];
+  // Every equal house has a ruler and a house-to-house delivery path.
+  // Annual profection affects timing/priority, never whether a house is calculated.
+  const keyHouses = Array.from({ length: 12 }, (_, index) => index + 1);
   const profection = timingRecords.find(
     t => t.techniqueId === "annual-profection" && t.calculatedOrDoctrineStatus === "calculated-active"
   );
-  if (profection?.activatedHouse && !keyHouses.includes(profection.activatedHouse)) {
-    keyHouses.push(profection.activatedHouse);
-  }
 
   const MEAN_SPEED: Record<string, number> = {
     Moon: 13.176,
