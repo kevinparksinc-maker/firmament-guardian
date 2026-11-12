@@ -403,11 +403,11 @@ export function SynastryMatrixTab({
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full max-w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
             <Button
               type="button"
               onClick={handleAskAboutBond}
-              className="h-9 rounded-xl bg-gradient-to-r from-rose-500 to-purple-600 px-3.5 text-xs font-semibold text-white shadow-md shadow-rose-950/30 hover:from-rose-400 hover:to-purple-500 gap-1.5"
+              className="h-9 min-h-11 max-w-full rounded-xl bg-gradient-to-r from-rose-500 to-purple-600 px-3.5 text-xs font-semibold text-white shadow-md shadow-rose-950/30 hover:from-rose-400 hover:to-purple-500 gap-1.5"
             >
               <Sparkles className="h-3.5 w-3.5" />
               <span>Ask Master Interpreter About Us</span>
@@ -417,7 +417,7 @@ export function SynastryMatrixTab({
                 type="button"
                 variant="outline"
                 onClick={onOpenShareModal}
-                className="h-9 rounded-xl border-white/15 bg-white/5 px-3 text-xs text-slate-200 hover:bg-white/10 gap-1.5"
+                className="h-9 min-h-11 max-w-full rounded-xl border-white/15 bg-white/5 px-3 text-xs text-slate-200 hover:bg-white/10 gap-1.5"
               >
                 <Share2 className="h-3.5 w-3.5 text-rose-300" />
                 <span>Export Duo Card</span>

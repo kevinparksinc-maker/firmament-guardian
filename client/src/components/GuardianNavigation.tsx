@@ -88,7 +88,7 @@ export function GuardianNavigation() {
   };
 
   return (
-    <header className="guardian-global-nav sticky top-0 z-50">
+    <header className="guardian-global-nav">
       <nav className="guardian-global-nav-inner" aria-label="The Absolute main navigation">
         <Link href="/" className="guardian-global-brand" aria-label="The Absolute home">
           <Stars size={22} className="text-amber-300" aria-hidden="true" />
@@ -99,13 +99,13 @@ export function GuardianNavigation() {
         </Link>
 
         {/* GPS Transit Location Pill directly in the top bar */}
-        <div className="hidden sm:flex items-center">
+        <div className="guardian-global-transit-location">
           <TransitLocationBar variant="pill" />
         </div>
 
         {/* Desktop Navigation Links */}
         <div className="guardian-global-desktop-links">
-          {PRIMARY_LINKS.map(({ href, label, Icon, matchPrefix, matchExact }) => {
+          {PRIMARY_LINKS.slice(0, 5).map(({ href, label, Icon, matchPrefix, matchExact }) => {
             const active = isActive(href, matchPrefix, matchExact);
             return (
               <Link
@@ -122,23 +122,24 @@ export function GuardianNavigation() {
           })}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="guardian-global-nav-actions">
           {profile && (
             <button
               type="button"
               onClick={() => setIsSwitcherOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-[#D9B66F]/40 bg-[#D9B66F]/10 px-2.5 py-1 text-xs font-semibold text-[#D9B66F] hover:bg-[#D9B66F]/20 transition-all active:scale-95 shadow-[0_0_12px_rgba(217,182,111,0.15)]"
+              className="guardian-profile-switcher flex items-center gap-1.5 rounded-full border border-[#D9B66F]/40 bg-[#D9B66F]/10 px-2.5 py-1 text-xs font-semibold text-[#D9B66F] hover:bg-[#D9B66F]/20 transition-all active:scale-95 shadow-[0_0_12px_rgba(217,182,111,0.15)]"
+              aria-label={`Switch or load saved seeker profile. Current profile: ${profile.name}. ${savedProfiles.length} saved.`}
               title="Switch or load saved seeker profile"
             >
-              <UserRound className="h-3.5 w-3.5 text-[#D9B66F]" />
-              <span className="max-w-[75px] sm:max-w-[110px] truncate">{profile.name}</span>
-              <span className="rounded-full bg-[#D9B66F]/25 px-1.5 py-0.2 text-[10px] font-bold text-amber-200">
+              <UserRound className="h-3.5 w-3.5 text-[#D9B66F]" aria-hidden="true" />
+              <span className="guardian-profile-switcher-name max-w-[75px] sm:max-w-[110px] truncate">{profile.name}</span>
+              <span className="guardian-profile-switcher-count rounded-full bg-[#D9B66F]/25 px-1.5 py-0.2 text-[10px] font-bold text-amber-200">
                 {savedProfiles.length}
               </span>
             </button>
           )}
 
-          <div className="hidden md:block">
+          <div className="guardian-account-control hidden md:block">
             <AccountControl />
           </div>
 
@@ -152,14 +153,14 @@ export function GuardianNavigation() {
             onClick={() => setOpen((value) => !value)}
           >
             {open ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
-            <span className="hidden sm:inline">Menu</span>
+            <span className="sr-only">Menu</span>
           </button>
         </div>
       </nav>
 
       {/* Mobile / Full Navigation Drawer */}
       {open && (
-        <div
+        <nav
           id="guardian-global-mobile-links"
           className="guardian-global-mobile-links animate-in fade-in slide-in-from-top-3 duration-200"
           aria-label="The Absolute directory navigation"
@@ -186,11 +187,11 @@ export function GuardianNavigation() {
           )}
 
           {/* Active GPS Sky Banner inside mobile menu */}
-          <div className="px-3 pt-2 pb-3 border-b border-white/10 sm:hidden">
+          <div className="guardian-menu-transit px-3 pt-2 pb-3 border-b border-white/10">
             <TransitLocationBar variant="compact" />
           </div>
 
-          <div className="grid gap-6 p-4 max-w-4xl mx-auto md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 p-4 max-w-4xl mx-auto sm:grid-cols-2 xl:grid-cols-3">
             {/* Group 1: 5 Primary Destinations */}
             <div className="space-y-1.5">
               <span className="text-[10px] font-bold uppercase tracking-widest text-amber-300 block mb-2 px-2">
@@ -318,7 +319,7 @@ export function GuardianNavigation() {
             </div>
           </div>
 
-          <div className="p-4 border-t border-white/10 flex justify-between items-center text-xs text-slate-400 max-w-4xl mx-auto">
+          <div className="guardian-global-menu-footer p-4 border-t border-white/10 flex justify-between items-center text-xs text-slate-400 max-w-4xl mx-auto">
             <span className="flex items-center gap-1.5">
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
               <span>Two Skies · One Moment · Absolute Canon</span>
@@ -331,7 +332,7 @@ export function GuardianNavigation() {
               Close Menu
             </button>
           </div>
-        </div>
+        </nav>
       )}
 
       <ProfileSwitcherModal
@@ -341,4 +342,3 @@ export function GuardianNavigation() {
     </header>
   );
 }
-

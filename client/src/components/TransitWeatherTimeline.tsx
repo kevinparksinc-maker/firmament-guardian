@@ -253,7 +253,7 @@ export function TransitWeatherTimeline({
 
         {/* Filter Pills */}
         <div className="mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5">
+          <div className="flex max-w-full min-w-0 flex-wrap items-center gap-1.5">
             <span className="text-xs font-semibold text-slate-400 mr-2 flex items-center gap-1">
               <Filter className="h-3.5 w-3.5" /> Filter Lens:
             </span>
@@ -295,7 +295,7 @@ export function TransitWeatherTimeline({
             </button>
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-slate-400">
+          <div className="flex max-w-full flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400">
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-emerald-400" /> High Flow (80+)
             </span>

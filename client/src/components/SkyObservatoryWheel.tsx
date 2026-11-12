@@ -596,7 +596,7 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
   };
 
   return (
-    <section className="rounded-2xl border border-cyan-300/20 bg-[#070b14] p-4 shadow-2xl shadow-cyan-950/30 sm:p-6">
+    <section className="w-full min-w-0 max-w-full rounded-2xl border border-cyan-300/20 bg-[#070b14] p-4 shadow-2xl shadow-cyan-950/30 sm:p-6">
       {/* Header & Aspect Layer Controls */}
       <div className="mb-5 flex flex-col gap-4 border-b border-slate-800/90 pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -634,7 +634,7 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
         <div className="flex flex-wrap items-center gap-2">
           {/* Aspect Layer Filter Buttons */}
           <div
-            className="flex gap-1 rounded-xl border border-slate-800 bg-[#0b101b] p-1"
+            className="flex max-w-full min-w-0 flex-wrap gap-1 rounded-xl border border-slate-800 bg-[#0b101b] p-1"
             role="tablist"
             aria-label="Aspect layer filter"
           >
@@ -661,7 +661,7 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
                 role="tab"
                 aria-selected={aspectFilter === tab.key}
                 onClick={() => setAspectFilter(tab.key)}
-                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                className={`min-h-11 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                   aspectFilter === tab.key
                     ? "bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
                     : "text-slate-400 hover:text-white"
@@ -677,7 +677,7 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
             aria-label="Select Horary Topic House"
             value={topicHouse}
             onChange={e => setTopicHouse(Number(e.target.value))}
-            className="rounded-xl border border-violet-400/30 bg-[#0b101b] px-3 py-2 text-xs font-medium text-violet-200 outline-none focus:border-cyan-400"
+            className="w-full max-w-full min-w-0 rounded-xl border border-violet-400/30 bg-[#0b101b] px-3 py-2 text-xs font-medium text-violet-200 outline-none focus:border-cyan-400 sm:w-auto"
           >
             {TOPIC_HOUSES.map(h => (
               <option key={h.house} value={h.house} className="bg-[#0b101b]">
@@ -689,9 +689,9 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
       </div>
 
       {/* Main Split Grid: High-Fidelity SVG Wheel + Traditional Rule Inspector */}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid w-full min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         {/* Left: SVG Wheel */}
-        <div className="relative mx-auto w-full max-w-[740px] overflow-hidden rounded-2xl border border-cyan-300/15 bg-[#050811] p-2 sm:p-4">
+        <div className="relative mx-auto w-full min-w-0 max-w-[740px] overflow-hidden rounded-2xl border border-cyan-300/15 bg-[#050811] p-2 sm:p-4">
           {/* Interactive Floating Rule Tooltip Banner */}
           <div className="mb-3 flex min-h-[54px] flex-col justify-center rounded-xl border border-cyan-300/20 bg-gradient-to-r from-cyan-950/45 via-violet-950/35 to-[#070b14] px-4 py-2.5">
             {hoveredTooltip ? (
@@ -1271,13 +1271,13 @@ export function SkyObservatoryWheel({ chart }: SkyObservatoryWheelProps) {
         </div>
 
         {/* Right Column: Traditional Astrological Rule & Testimony Inspector */}
-        <aside className="space-y-4 rounded-2xl border border-slate-800 bg-[#0b101b] p-5">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div>
+        <aside className="w-full min-w-0 max-w-full space-y-4 rounded-2xl border border-slate-800 bg-[#0b101b] p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-800 pb-3">
+            <div className="min-w-0">
               <div className="text-xs font-semibold uppercase tracking-wider text-cyan-300">
                 Traditional Rule Inspector
               </div>
-              <h3 className="mt-0.5 font-serif text-xl text-white">
+              <h3 className="mt-0.5 break-words font-serif text-xl text-white">
                 {selectedAspect
                   ? `${selectedAspect.fromName} ↔ ${selectedAspect.toName}`
                   : selectedHouse

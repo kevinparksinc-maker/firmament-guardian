@@ -337,7 +337,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
         <div className="absolute right-[-12rem] top-1/3 h-[30rem] w-[30rem] rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)] [background-size:64px_64px]" />
       </div>
-      <main className="guardian-home-main relative z-10 mx-auto max-w-[1480px] px-5 py-6 md:px-10 md:py-10">
+      <main className="guardian-home-main relative z-10 mx-auto w-full min-w-0 max-w-[1480px] py-6 md:py-10">
         <Suspense fallback={<p role="status" className="rounded-xl border border-cyan-200/20 bg-slate-950/70 p-5 text-sm text-cyan-100">Opening your celestial workspace…</p>}>
         {activeProfile && section === "chart" && (
           <ProfileChartScreen

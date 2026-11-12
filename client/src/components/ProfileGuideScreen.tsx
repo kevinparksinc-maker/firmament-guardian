@@ -308,8 +308,8 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                       {result.input.location}
                     </h2>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-slate-500">
-                    <span>
+                  <div className="flex max-w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-500">
+                    <span className="min-w-0 flex-1">
                       {result.worldview === "god"
                         ? "God View · fixed Aries–Pisces frame"
                         : result.worldview === "agent-vs-god"
@@ -321,7 +321,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                       type="button"
                       variant="outline"
                       onClick={() => setShowShareModal(true)}
-                      className="h-9 border-cyan-300/40 bg-gradient-to-r from-cyan-400/15 to-violet-400/15 px-3 text-cyan-200 hover:bg-cyan-400/25 gap-1.5"
+                      className="h-9 min-h-11 border-cyan-300/40 bg-gradient-to-r from-cyan-400/15 to-violet-400/15 px-3 text-cyan-200 hover:bg-cyan-400/25 gap-1.5"
                     >
                       <Share2 className="h-3.5 w-3.5 text-cyan-300" />
                       <span>Export Share Card</span>
@@ -331,7 +331,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                       variant="outline"
                       onClick={saveCurrentChart}
                       disabled={savingChart}
-                      className="h-9 border-cyan-200/25 bg-cyan-100/10 px-3 text-cyan-100 hover:bg-cyan-100/20"
+                      className="h-9 min-h-11 border-cyan-200/25 bg-cyan-100/10 px-3 text-cyan-100 hover:bg-cyan-100/20"
                     >
                       {savingChart ? (
                         <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
@@ -420,7 +420,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                     </span>
                   </summary>
                   <div className="mt-4 grid gap-6 2xl:grid-cols-2">
-                    <Card className="overflow-hidden border-white/10 bg-white/[0.04] text-slate-100">
+                    <Card className="min-w-0 max-w-full overflow-hidden border-white/10 bg-white/[0.04] text-slate-100">
                       <CardHeader className="border-b border-white/10">
                         <CardTitle className="flex items-center gap-2 text-base">
                           <Sun className="h-4 w-4 text-violet-300" /> Moving
@@ -433,7 +433,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                           </span>
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="overflow-x-auto p-0">
+                      <CardContent className="min-w-0 max-w-full overflow-x-auto p-0">
                         <table className="w-full min-w-[760px] text-left text-sm">
                           <thead className="bg-white/[0.035] text-[10px] uppercase tracking-[0.18em] text-slate-500">
                             <tr>
@@ -481,7 +481,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                         </table>
                       </CardContent>
                     </Card>
-                    <Card className="overflow-hidden border-amber-200/10 bg-amber-100/[0.035] text-slate-100">
+                    <Card className="min-w-0 max-w-full overflow-hidden border-amber-200/10 bg-amber-100/[0.035] text-slate-100">
                       <CardHeader className="border-b border-amber-200/10">
                         <CardTitle className="flex items-center gap-2 text-base">
                           <Star className="h-4 w-4 text-amber-300" /> Frozen
@@ -494,7 +494,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                           </span>
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="overflow-x-auto p-0">
+                      <CardContent className="min-w-0 max-w-full overflow-x-auto p-0">
                         <table className="w-full min-w-[700px] text-left text-sm">
                           <thead className="bg-white/[0.035] text-[10px] uppercase tracking-[0.18em] text-slate-500">
                             <tr>
@@ -570,7 +570,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
               </div>
             )}
             {result && (
-              <Card className="overflow-hidden border-cyan-200/10 bg-cyan-100/[0.035] text-slate-100">
+              <Card className="min-w-0 max-w-full overflow-hidden border-cyan-200/10 bg-cyan-100/[0.035] text-slate-100">
                 <CardHeader className="border-b border-cyan-200/10">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Compass className="h-4 w-4 text-cyan-300" /> Transit layer{" "}
@@ -612,7 +612,7 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="overflow-x-auto p-0">
+                <CardContent className="min-w-0 max-w-full overflow-x-auto p-0">
                   <table className="w-full min-w-[860px] text-left text-sm">
                     <thead className="bg-white/[0.035] text-[10px] uppercase tracking-[0.18em] text-slate-500">
                       <tr>
