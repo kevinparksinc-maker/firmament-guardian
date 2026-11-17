@@ -228,7 +228,7 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.openrouterApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
     throw new Error("GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
@@ -349,13 +349,13 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
   return { id: result.id, created: Math.floor(Date.now() / 1000), model: result.model, choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: result.stop_reason ?? null }] };
 }
 
-async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
-  const url = `${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`;
-  const headers = { "content-type": "application/json", authorization: `Bearer ${ENV.openaiApiKey}` };
+async function invokeOpenAI(params: InvokeParams, freeRouter = false): Promise<InvokeResult> {
+  const url = freeRouter ? "https://openrouter.ai/api/v1/chat/completions" : `${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`;
+  const headers = { "content-type": "application/json", authorization: `Bearer ${freeRouter ? ENV.openrouterApiKey : ENV.openaiApiKey}` };
   const messages = params.messages.map(normalizeMessage);
   const max_tokens = params.max_tokens ?? params.maxTokens ?? 4096;
   const requestedModel = params.model && !params.model.startsWith("claude") ? params.model : undefined;
-  const models = requestedModel ? [requestedModel] : ["gpt-5-mini", "gpt-5-nano"];
+  const models = freeRouter ? [ENV.openrouterModel] : requestedModel ? [requestedModel] : ["gpt-5-mini", "gpt-5-nano"];
   let lastFailure = "no readable message";
 
   for (const model of models) {
@@ -445,24 +445,17 @@ const RETRY_BASE_DELAY_MS = 500;
 const RETRY_MAX_DELAY_MS = 30_000;
 const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
+type FreeProvider = "gemini" | "groq" | "openrouter";
+function freeProviderOrder(): FreeProvider[] {
+  const providers: FreeProvider[] = [];
+  if (ENV.geminiApiKey) providers.push("gemini");
+  if (ENV.groqApiKey) providers.push("groq");
+  if (ENV.openrouterApiKey) providers.push("openrouter");
+  return providers;
+}
 export function getLLMProviderStatus() {
-  const provider = ENV.groqApiKey
-    ? "groq"
-    : ENV.anthropicApiKey
-    ? "anthropic"
-    : ENV.openaiApiKey && ENV.openaiApiBase
-      ? "openai-compatible"
-      : ENV.geminiApiKey
-        ? "gemini"
-        : ENV.forgeApiKey
-          ? "built-in-forge"
-          : "unconfigured";
-  return {
-    configured: provider !== "unconfigured",
-    provider,
-    requestTimeoutMs: LLM_REQUEST_TIMEOUT_MS,
-    maxRetries: RETRY_MAX_RETRIES,
-  } as const;
+  const ordered = freeProviderOrder();
+  return { configured: ordered.length > 0, provider: ordered[0] ?? "unconfigured", fallbackProviders: ordered.slice(1), requestTimeoutMs: LLM_REQUEST_TIMEOUT_MS, maxRetries: RETRY_MAX_RETRIES };
 }
 
 type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
@@ -734,15 +727,20 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
 }
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  if (params.provider === "gemini") {
-    if (!ENV.geminiApiKey) throw new Error("GEMINI_API_KEY is required for Precision Placement Synthesis.");
-    return invokeGemini(params);
+  const providers = freeProviderOrder();
+  if (!providers.length) throw new Error("AI_FREE_PROVIDER_UNCONFIGURED: Configure GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY.");
+  let lastError: unknown;
+  for (const provider of providers) {
+    try {
+      if (provider === "gemini") return await invokeGemini(params);
+      if (provider === "groq") return await invokeGroq(params);
+      return await invokeOpenAI(params, true);
+    } catch (error) {
+      lastError = error;
+      console.warn("[invokeLLM] Free provider failed:", provider, error instanceof Error ? error.message.slice(0, 180) : "unknown");
+    }
   }
-  assertApiKey();
-  if (ENV.groqApiKey) return invokeGroq(params);
-  if (ENV.anthropicApiKey) return invokeAnthropic(params);
-  if (ENV.openaiApiKey && ENV.openaiApiBase) return invokeOpenAI(params);
-  if (ENV.geminiApiKey && !ENV.forgeApiKey) return invokeGemini(params);
+  throw lastError instanceof Error ? lastError : new Error("AI_FREE_PROVIDERS_EXHAUSTED");
 
   const {
     messages,
