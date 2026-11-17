@@ -1,3 +1,14 @@
-import { familyContribution } from "./method-context";
-import type { PlacementAdapter } from "./types";
-export const kabbalah: PlacementAdapter = context => familyContribution(context, "kabbalah", "Sefer Yetzirah / Kabbalah / Four Worlds", ["kabbalah", "sefer-yetzirah-doubles", "sefer-yetzirah-simples", "sefer-yetzirah-mothers", "sefer-yetzirah-framework", "four-worlds"]);
+import { contributionFromEvidence, type PlacementAdapter } from "./types";
+
+export const kabbalah: PlacementAdapter = context => {
+  const evidence = context.packet.canonEvidence.filter(item => item.sourceId === "sefer-yetzirah-canon");
+  const placement = evidence.filter(item => item.subject.toLowerCase() === context.body.toLowerCase());
+  const framework = evidence.filter(item => [
+    "sefer-yetzirah-framework",
+    "sefer-yetzirah-mothers",
+    "sefer-yetzirah-contraries",
+    "four-worlds",
+  ].includes(item.technique));
+  return contributionFromEvidence(context, "kabbalah", "Sefer Yetzirah / Kabbalah / Four Worlds",
+    placement.length ? [...placement, ...framework] : []);
+};

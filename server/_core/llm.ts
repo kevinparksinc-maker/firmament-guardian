@@ -68,6 +68,7 @@ export type InvokeParams = {
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
   model?: string;
+  provider?: "gemini";
   signal?: AbortSignal;
   /** Per-request timeout for provider response headers. */
   timeoutMs?: number;
@@ -567,6 +568,7 @@ const fetchWithBackoff = async (
 };
 
 async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
+  const model = params.provider === "gemini" ? "gemini-3.8-flash" : "gemini-4-hydrogen";
   const timeoutMs = params.timeoutMs ?? LLM_REQUEST_TIMEOUT_MS;
   const ai = new GoogleGenAI({
     apiKey: ENV.geminiApiKey,
@@ -604,7 +606,7 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
     try {
       return await Promise.race([
         ai.models.generateContent({
-          model: "gemini-4-hydrogen",
+          model,
           contents: contents.length > 0 ? contents : "Hello",
           config: {
             ...(params.signal ? { abortSignal: params.signal } : {}),
@@ -720,7 +722,7 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
   return {
     id: `gemini-${Date.now()}`,
     created: Math.floor(Date.now() / 1000),
-    model: "gemini-4-hydrogen",
+    model,
     choices: [
       {
         index: 0,
@@ -732,6 +734,10 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
 }
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+  if (params.provider === "gemini") {
+    if (!ENV.geminiApiKey) throw new Error("GEMINI_API_KEY is required for Precision Placement Synthesis.");
+    return invokeGemini(params);
+  }
   assertApiKey();
   if (ENV.groqApiKey) return invokeGroq(params);
   if (ENV.anthropicApiKey) return invokeAnthropic(params);

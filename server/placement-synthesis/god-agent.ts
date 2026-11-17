@@ -10,6 +10,7 @@ export const godAgent: PlacementAdapter = context => {
     status: "included",
     relation: "contextual",
     result,
+    evidenceIds: result.map((_, index) => `placement-frame-${context.body.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${index}`),
     sourceTrace: items.map(item => `${item.sourceTrace.sourceTitle} · ${item.technique}`),
   };
   return contributionFromEvidence(context, "godAgent", "God View / Agent View", items, { reason: "The chart row did not return a dual-frame relationship object." });

@@ -259,6 +259,7 @@ export type RetrievedPlacementDossier = {
   activePada?: NakshatraPadaRecord;
   fixedStarContacts: Array<{
     star: FixedStarCanonRecord;
+    aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition";
     orbDeg: number;
   }>;
 };

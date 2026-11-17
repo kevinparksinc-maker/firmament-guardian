@@ -23,6 +23,8 @@ import {
 } from "../../shared/hybrid";
 import {
   calculateChartHermeticLots,
+  FIXED_STAR_CANON_RECORDS,
+  majorLongitudeContact,
 } from "../astrologyKnowledge/canon/fixedStarsAndLots";
 import { getNakshatraCanonByLongitude } from "../astrologyKnowledge/canon/nakshatras27";
 import { getManzilCanonByLongitude } from "../astrologyKnowledge/canon/manazil28";
@@ -362,24 +364,27 @@ export async function buildUnifiedMasterChart(
   };
 
   // Layer 5: Fixed Stars & Royal Watchers
-  const royalStarContacts = chart.frozenStars.map(fs => ({
-    name: fs.name,
-    fixedLongitude: fs.longitude,
-    display: fs.display,
-    contacts: frameworkPlacements
-      .map(p => {
-        const diff = Math.abs(normalizeLongitude(p.longitude) - normalizeLongitude(fs.longitude));
-        const orb = diff > 180 ? 360 - diff : diff;
-        return {
-          body: p.name,
-          orb: Math.round(orb * 100) / 100,
-          isConjunction: orb <= 5,
-        };
-      })
-      .filter(c => c.isConjunction),
-    activationOrbDegrees: 5,
-    reading: `${fs.name} is a permanent stellar anchor at ${fs.display}. ${frameworkPlacements.filter(p => { const d = Math.abs(normalizeLongitude(p.longitude) - normalizeLongitude(fs.longitude)); return Math.min(d, 360 - d) <= 5; }).map(p => `${p.name} activates it by conjunction`).join("; ") || "No natal planet activates this star within 5°"}. Historical symbolic interpretation requires an attested star-specific doctrine.`,
-  }));
+  const royalStarContacts = chart.frozenStars.map(fs => {
+    const activationOrbDegrees = FIXED_STAR_CANON_RECORDS.find(star => star.name === fs.name)?.isRoyalStar ? 5 : 2;
+    const contacts = frameworkPlacements.flatMap(placement => {
+      const contact = majorLongitudeContact(placement.longitude, fs.longitude, activationOrbDegrees);
+      return contact ? [{
+        body: placement.name,
+        aspect: contact.aspect,
+        orb: contact.orbDeg,
+        isConjunction: contact.aspect === "conjunction",
+      }] : [];
+    });
+    const activations = contacts.map(contact => `${contact.body} activates it by ${contact.aspect}`);
+    return {
+      name: fs.name,
+      fixedLongitude: fs.longitude,
+      display: fs.display,
+      contacts,
+      activationOrbDegrees,
+      reading: `${fs.name} is a permanent stellar anchor at ${fs.display}. ${activations.join("; ") || "No natal planet activates this star within its configured orb"}. Historical symbolic interpretation requires an attested star-specific doctrine.`,
+    };
+  });
 
   layers["fixed-stars-royal-watchers"] = {
     id: "fixed-stars-royal-watchers",

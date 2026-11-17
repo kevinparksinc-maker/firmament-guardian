@@ -574,20 +574,29 @@ export const LOT_CANON_RECORDS: Record<string, LotCanonRecord> = {
   },
 };
 
-export function findFixedStarContactsForLongitude(
-  longitude: number
-): Array<{ star: FixedStarCanonRecord; orbDeg: number }> {
-  const L = normalizeLongitude(longitude);
-  const contacts: Array<{ star: FixedStarCanonRecord; orbDeg: number }> = [];
-  for (const star of FIXED_STAR_CANON_RECORDS) {
-    const raw = Math.abs(L - normalizeLongitude(star.firmamentLockedLongitude));
-    const dist = Number(Math.min(raw, 360 - raw).toFixed(2));
-    const maxOrb = star.isRoyalStar ? 5.0 : 2.0;
-    if (dist <= maxOrb) {
-      contacts.push({ star, orbDeg: dist });
-    }
+const MAJOR_ASPECTS = [
+  ["conjunction", 0],
+  ["sextile", 60],
+  ["square", 90],
+  ["trine", 120],
+  ["opposition", 180],
+] as const;
+
+export function majorLongitudeContact(first: number, second: number, maxOrb: number) {
+  const distance = Math.abs(normalizeLongitude(first) - normalizeLongitude(second));
+  const separation = Math.min(distance, 360 - distance);
+  for (const [aspect, angle] of MAJOR_ASPECTS) {
+    const orb = Math.abs(separation - angle);
+    if (orb <= maxOrb) return { aspect, orbDeg: Number(orb.toFixed(2)) };
   }
-  return contacts.sort((a, b) => a.orbDeg - b.orbDeg);
+  return undefined;
+}
+
+export function findFixedStarContactsForLongitude(longitude: number) {
+  return FIXED_STAR_CANON_RECORDS.flatMap(star => {
+    const contact = majorLongitudeContact(longitude, star.firmamentLockedLongitude, star.isRoyalStar ? 5 : 2);
+    return contact ? [{ star, ...contact }] : [];
+  }).sort((a, b) => a.orbDeg - b.orbDeg);
 }
 
 export function calculateChartHermeticLots(

@@ -11,6 +11,7 @@ export type PlacementContribution = {
   relation: PlacementRelation;
   result: string[];
   sourceTrace: string[];
+  evidenceIds?: string[];
   reason?: string;
 };
 
@@ -27,6 +28,8 @@ export type PlacementPacket = {
   unresolvedMethods: string[];
   convergences: string[];
   contradictions: string[];
+  activationUtc?: string;
+  timingEvidenceIds: string[];
   prompt: string;
 };
 
@@ -79,6 +82,7 @@ export function contributionFromEvidence(
     label,
     status: "included",
     relation: options.relation ?? "contextual",
+    evidenceIds: items.map(item => item.id),
     result: items.map(item => item.statement),
     sourceTrace: items.map(item => `${item.sourceTrace.sourceTitle} · ${item.technique}`),
     reason: options.reason,

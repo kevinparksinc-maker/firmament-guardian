@@ -19,6 +19,7 @@ import {
   retrieveChartCanonDossier,
 } from "./canon";
 import type { AstrologyEvidencePacket, EvidenceItem } from "./types";
+import { seferYetzirahEvidence } from "./canon/seferYetzirah";
 import { overlay as canonicalOverlay } from "../../shared/hybrid";
 
 function genesisEvidence(
@@ -350,7 +351,7 @@ export function buildAstrologyEvidencePacket(
               category: "calculated-fact" as const,
               technique: "transits",
               subject: transit.name,
-              statement: `Transit ${transit.name} makes a ${contact.aspect} to natal ${contact.natalName} at ${contact.orb.toFixed(2)}°.`,
+              statement: `At ${chart.transitDate}, transit ${transit.name} makes a ${contact.aspect} to natal ${contact.natalName} at ${contact.orb.toFixed(2)}°.`,
               concepts: [
                 "transit",
                 contact.aspect,
@@ -366,6 +367,7 @@ export function buildAstrologyEvidencePacket(
                 sourceId: "firmament-ephemeris",
                 tradition: "firmament" as const,
                 technique: "transits",
+                calculationSettings: { activationUtc: chart.transitDate, natalBody: contact.natalName },
                 sourceTitle: "Firmament local ephemeris",
                 retrievedAt: new Date().toISOString(),
                 confidence: "high" as const,
@@ -383,7 +385,10 @@ export function buildAstrologyEvidencePacket(
   const { behavioralEvidence, lifeEventEvidence } =
     behavioralReportToEvidenceItems(behavioralReport);
   const canonDossier = retrieveChartCanonDossier(chart);
-  const canonEvidence = canonDossierToEvidenceItems(canonDossier);
+  const canonEvidence = [
+    ...canonDossierToEvidenceItems(canonDossier),
+    ...seferYetzirahEvidence(chart, "natal"),
+  ];
   const all = [
     ...westernEvidence,
     ...astroEvidence,

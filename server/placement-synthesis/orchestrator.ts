@@ -23,7 +23,7 @@ function promptFor(packet: PlacementPacket) {
     `STATUS: ${item.status}`,
     `RELATION: ${item.relation}`,
     item.reason ? `REASON: ${item.reason}` : "",
-    item.result.length ? item.result.map(result => `RESULT: ${result}`).join("\n") : "RESULT: none returned",
+    item.result.length ? item.result.map((result, index) => `RESULT [${item.evidenceIds?.[index]}]: ${result}`).join("\n") : "RESULT: none returned",
     item.sourceTrace.length ? `SOURCE TRACE: ${item.sourceTrace.join(" | ")}` : "",
   ].filter(Boolean).join("\n")).join("\n\n");
   return `You are the Firmament precision placement synthesizer. Interpret one exact placement, not a generic horoscope.
@@ -31,6 +31,11 @@ function promptFor(packet: PlacementPacket) {
 PLACEMENT: ${packet.body} at ${packet.display}; ${packet.sign}, ${packet.degree.toFixed(4)}°; House ${packet.house}; reading scope ${packet.mode}.
 
 Every configured method below was executed and has an explicit status. Use every included result that is relevant. Do not invent a result for no-result, not-applicable, incomplete, reference-only, or failed methods. Do not merely name methods: explain how their actual results reinforce, qualify, or contradict one another. Preserve distinct traditions and coordinate systems. The final meaning must be specific to this placement and chart, not a generic Sun/sign/house paragraph.
+
+Use only the evidence IDs printed on the RESULT lines to support placement claims.
+${packet.activationUtc
+    ? `The calculated activation instant is ${packet.activationUtc}. Only discuss time-specific changes at that instant, and cite one or more of these IDs: ${packet.timingEvidenceIds.join(", ")}. Refer to the actual date if it differs from the current date.`
+    : "There is no calculated placement activation. Use enduring language and omit claims about the current period."}
 
 ${methodText}
 
@@ -40,7 +45,7 @@ ${packet.convergences.length ? packet.convergences.join("\n") : "None returned."
 CROSS-METHOD CONTRADICTIONS:
 ${packet.contradictions.length ? packet.contradictions.join("\n") : "None returned."}
 
-Write two flowing second-person paragraphs in plainspoken, recognizable everyday language. Translate converging layers into one coherent insight and show how conflicting pulls take turns in ordinary life: what you do, what you are protecting or trying to get, what comes naturally that others rely on you for, and what that pattern costs you. Keep ALL astrology terminology out of the two paragraphs—never name planets, zodiac signs, houses, degrees, aspects, lunar mansions, bounds, faces, or Lots. Do not output bullet lists, headings, method inventories, or invented events/diagnoses/motives.`;
+Write two flowing second-person paragraphs in plainspoken, recognizable everyday language. Translate converging layers into one coherent insight and show how conflicting pulls take turns in ordinary life: what you do, what you are protecting or trying to get, what comes naturally that others rely on you for, and what that pattern costs you. Keep ALL astrology terminology out of the two paragraphs—never name planets, zodiac signs, houses, degrees, aspects, lunar mansions, bounds, faces, or Lots. Do not output bullet lists, headings, method inventories, or invented events/diagnoses/motives. Return one claim per line with a suffix [evidence: id1, id2]. For every time-specific claim use [timing: activation-id, other-id] and include a calculated placement activation ID. Use a single blank line between the two groups of claims. These suffixes are private annotations stripped before display.`;
 }
 
 export function buildPlacementPacket(chart: ChartResult, body: string, question = "") : PlacementPacket {
@@ -52,12 +57,12 @@ export function buildPlacementPacket(chart: ChartResult, body: string, question 
     try { return adapter(context); }
     catch (error) { return { method, label, status: "failed", relation: "unavailable", result: [], sourceTrace: [], reason: error instanceof Error ? error.message : String(error) }; }
   });
-  const convergences = packet.convergences
-    .filter(item => item.evidenceIds.some(id => contributions.some(contribution => contribution.sourceTrace.some(trace => trace.includes(id)))))
-    .map(item => item.explanation);
-  const contradictions = packet.contradictions
-    .filter(item => item.evidenceIds.some(id => contributions.some(contribution => contribution.sourceTrace.some(trace => trace.includes(id)))))
-    .map(item => item.explanation);
+  const evidenceIds = new Set(contributions.flatMap(contribution => contribution.evidenceIds ?? []));
+  const relatesToPlacement = (item: { evidenceIds: string[] }) =>
+    item.evidenceIds.length > 0 && item.evidenceIds.every(id => evidenceIds.has(id));
+  const convergences = packet.convergences.filter(relatesToPlacement).map(item => item.explanation);
+  const contradictions = packet.contradictions.filter(relatesToPlacement).map(item => item.explanation);
+  const timingEvidenceIds = contributions.find(item => item.method === "transits")?.evidenceIds ?? [];
   const result: PlacementPacket = {
     body,
     display: row.display,
@@ -71,6 +76,8 @@ export function buildPlacementPacket(chart: ChartResult, body: string, question 
     unresolvedMethods: contributions.filter(item => ["no-result", "incomplete", "failed"].includes(item.status)).map(item => item.method),
     convergences,
     contradictions,
+    activationUtc: timingEvidenceIds.length ? chart.transitDate : undefined,
+    timingEvidenceIds,
     prompt: "",
   };
   result.prompt = promptFor(result);
@@ -81,6 +88,7 @@ export async function synthesizePlacement(chart: ChartResult, body: string, ques
   const packet = buildPlacementPacket(chart, body, question);
   const { synthesis: fullSynthesis } = await synthesizeChartForReading(chart, chart.readingScope, question || `Interpret ${body}`);
   const response = await runInterpretation("PLACEMENT_SYNTHESIS", fullSynthesis, {
+    provider: "gemini",
     timeoutMs: 60_000,
     messages: [
       { role: "system", content: `${MINI_SYNTHESIS_STYLE}\nWrite two flowing second-person paragraphs translating the supplied dossier silently into candid everyday human prose with zero astrology terminology.` },
@@ -90,10 +98,20 @@ export async function synthesizePlacement(chart: ChartResult, body: string, ques
   }, "placement-reference");
   const content = response.choices[0]?.message?.content;
   const rawSynthesis = typeof content === "string" ? content.trim() : "";
-  const synthesis = scrubNonHoraryAstrologyJargon(rawSynthesis);
-  if (["length", "max_tokens"].includes(response.choices[0]?.finish_reason ?? ""))
-    throw new Error("PLACEMENT_SYNTHESIS_INCOMPLETE: AI response was truncated.");
-  if (synthesis.split(/\n\s*\n/).filter(paragraph => paragraph.trim()).length !== 2)
+  const groups = rawSynthesis.split(/\r?\n[ \t]*\r?\n/);
+  if (groups.length !== 2)
     throw new Error("PLACEMENT_SYNTHESIS_INCOMPLETE: The provider did not return both paragraphs.");
-  return { packet: { ...packet, prompt: undefined }, synthesis };
+  const allowedIds = new Set(packet.contributions.flatMap(item => item.evidenceIds ?? []));
+  const timingIds = new Set(packet.timingEvidenceIds);
+  const claims = groups.map(group => group.split(/\r?\n/).map(line => {
+    const match = line.match(/^(.+?)\s+\[(evidence|timing):\s*([^\]]+)\]\s*$/);
+    if (!match) throw new Error("PLACEMENT_SYNTHESIS_TRACE: A claim is missing its evidence IDs.");
+    const evidenceIds = [...new Set(match[3].split(",").map(id => id.trim()))];
+    const usesActivation = evidenceIds.some(id => timingIds.has(id));
+    if (evidenceIds.some(id => !allowedIds.has(id)) || (match[2] === "timing") !== usesActivation)
+      throw new Error("PLACEMENT_SYNTHESIS_TRACE: A claim cites unsupported placement or timing evidence.");
+    return { text: scrubNonHoraryAstrologyJargon(match[1]), evidenceIds, timing: usesActivation };
+  }));
+  const synthesis = claims.map(group => group.map(claim => claim.text).join(" ")).join("\n\n");
+  return { packet: { ...packet, prompt: undefined }, synthesis, claimTrace: claims.flat() };
 }
