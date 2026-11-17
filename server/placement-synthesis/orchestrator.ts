@@ -106,7 +106,7 @@ export async function synthesizePlacement(chart: ChartResult, body: string, ques
   const claims = groups.map(group => group.split(/\r?\n/).map(line => {
     const match = line.match(/^(.+?)\s+\[(evidence|timing):\s*([^\]]+)\]\s*$/);
     if (!match) throw new Error("PLACEMENT_SYNTHESIS_TRACE: A claim is missing its evidence IDs.");
-    const evidenceIds = [...new Set(match[3].split(",").map(id => id.trim()))];
+    const evidenceIds = Array.from(new Set(match[3].split(",").map(id => id.trim())));
     const usesActivation = evidenceIds.some(id => timingIds.has(id));
     if (evidenceIds.some(id => !allowedIds.has(id)) || (match[2] === "timing") !== usesActivation)
       throw new Error("PLACEMENT_SYNTHESIS_TRACE: A claim cites unsupported placement or timing evidence.");
