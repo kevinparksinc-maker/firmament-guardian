@@ -375,14 +375,13 @@ export async function buildUnifiedMasterChart(
         isConjunction: contact.aspect === "conjunction",
       }] : [];
     });
-    const activations = contacts.map(contact => `${contact.body} activates it by ${contact.aspect}`);
     return {
       name: fs.name,
       fixedLongitude: fs.longitude,
       display: fs.display,
       contacts,
       activationOrbDegrees,
-      reading: `${fs.name} is a permanent stellar anchor at ${fs.display}. ${activations.join("; ") || "No natal planet activates this star within its configured orb"}. Historical symbolic interpretation requires an attested star-specific doctrine.`,
+      reading: `Permanent stellar anchor. Historical interpretation follows the star-specific Canon.`,
     };
   });
 
