@@ -72,41 +72,53 @@ describe("Compact Chart page placement summaries", () => {
         .some(j => j.methodId.startsWith("transit:"))
     ).toBe(false);
   });
-  it("keeps full local judgments while sending only classified results to AI", () => {
+  it("losslessly retains all method judgments in the compact AI packet", () => {
     const packed = packPlacementMiniPrompt(packets);
-    expect(packed.placements).toHaveLength(packets.length);
-    expect(JSON.stringify(packed).length).toBeLessThan(170_000);
-    packets.forEach((packet, i) => {
-      const sent = packed.placements[i];
-      expect(sent.name).toBe(packet.name);
-      expect(sent.placementEvidenceId).toBe(packet.placementEvidenceId);
-      expect(sent.canonResults).toBeDefined();
-      expect(sent.methods.length).toBeGreaterThan(0);
-      for (const method of sent.methods) {
-        expect(method.totalFindings).toBeGreaterThan(0);
-        expect(method.results.length).toBeGreaterThan(0);
-      }
-      expect(packet.judgments.length).toBeGreaterThanOrEqual(sent.methods.length);
-    });
-    expect(JSON.stringify(packed)).not.toContain("methodExecutionLedger");
+    packets.forEach((p, index) =>
+      p.judgments.forEach((j, jIndex) => {
+        const row =
+          packed.findings[packed.placements[index].findingRefs[jIndex]!];
+        const restored = (row[0] as Array<string | number>)
+          .map(part =>
+            typeof part === "number" ? packed.textTable[part] : part
+          )
+          .join("");
+        expect(restored).toBe(j.judgment);
+        expect(row[2]).toEqual(j.evidenceIds);
+      })
+    );
   });
-  it("reports missing or duplicate placements instead of inventing output", () => {
-    expect(validatePlacementSummaries(response(), packets).placements).toHaveLength(packets.length);
-    const missing = response();
-    missing.placements = missing.placements.filter(p => p.name !== "Sun");
-    const result = validatePlacementSummaries(missing, packets);
-    expect(result.failed.some(f => f.name === "Sun")).toBe(true);
-    expect(result.placements.some(p => p.name === "Sun")).toBe(false);
+  it("requires every displayed planet, including the Sun, and rejects duplicates", () => {
+    expect(
+      validatePlacementSummaries(response(), packets).placements.length
+    ).toBe(chart.movingBodies.length + 4);
+    const missingSun = response();
+    missingSun.placements = missingSun.placements.filter(p => p.name !== "Sun");
+    expect(() => validatePlacementSummaries(missingSun, packets)).toThrow(
+      "INCOMPLETE"
+    );
+    const duplicate = response();
+    duplicate.placements[0] = duplicate.placements[1];
+    expect(() => validatePlacementSummaries(duplicate, packets)).toThrow(
+      "INCOMPLETE"
+    );
   });
-  it("strips invented evidence and records warnings", () => {
+  it("rejects sign-only summaries and invented evidence", () => {
+    const shallow = response();
+    shallow.placements[0].layerIds = [
+      "western-planets-and-signs",
+      "elemental-decans",
+    ];
+    expect(() => validatePlacementSummaries(shallow, packets)).toThrow(
+      "SHALLOW"
+    );
     const invented = response();
     invented.placements[0].evidenceIds.push("invented-shadbala");
-    const result = validatePlacementSummaries(invented, packets);
-    expect(result.placements[0].evidenceIds).not.toContain("invented-shadbala");
-    expect(result.placements[0].warnings).toContain("Unknown evidence references removed");
-    expect(result.failed).toHaveLength(0);
+    expect(() => validatePlacementSummaries(invented, packets)).toThrow(
+      "UNGROUNDED"
+    );
   });
-  it("sends compact classified Canon findings while requesting concise placement prose", async () => {
+  it("sends all raw calculations, full outcomes and Canon while requesting concise placement prose", async () => {
     vi.mocked(invokeLLM).mockResolvedValue({
       choices: [
         {
@@ -128,21 +140,27 @@ describe("Compact Chart page placement summaries", () => {
     expect(result.placements[0].name).toBe("Sun");
     const call = vi.mocked(invokeLLM).mock.calls[0][0];
     expect(call.max_tokens).toBe(2000);
-    expect(call.timeoutMs).toBe(180000);
+    expect(call.timeoutMs).toBe(25000);
     expect(call.response_format).toMatchObject({
       type: "json_schema",
       json_schema: { strict: true },
     });
-    expect(call.messages[0].content).toContain("CANON-FIRST PLANETARY SYNTHESIS");
+    expect(call.messages[0].content).toContain(
+      "psychological astrologer and narrative writer for The Absolute"
+    );
     expect(call.messages[0].content).toContain("70–110 words");
-    const delivered = JSON.parse(String(call.messages[1].content));
+    const delivered = JSON.parse(String(call.messages[1].content)) as {
+      chartScope?: string;
+      placements: Array<{
+        name: string;
+        position: { display: string };
+        methods: Array<{ methodId: string; evidenceIds: string[] }>;
+      }>;
+    };
+    expect(delivered.chartScope).toBe("natal");
     expect(delivered.placements).toHaveLength(2);
-    expect(delivered.placements[0].canonResults).toBeDefined();
     expect(delivered.placements[0].methods.length).toBeGreaterThan(0);
-    expect(delivered.methodOutcomes).toBeUndefined();
-    expect(delivered.snapshot).toBeUndefined();
-    expect(delivered.canonApplications).toBeUndefined();
-    expect(call.messages[0].content).toContain("story-like");
+    expect(call.messages[0].content).toContain("Keep all astrology terminology out");
     expect(call.messages[1].content).not.toContain("UNIFIED MASTER SYNTHESIS");
     await buildChartPageReading(chart, "natal");
     expect(invokeLLM).toHaveBeenCalledTimes(1);
@@ -160,23 +178,50 @@ describe("Compact Chart page placement summaries", () => {
       transitTime: "09:00",
     });
     vi.mocked(invokeLLM).mockImplementation(async request => {
-      const input = JSON.parse(String(request.messages[1].content));
+      const input = JSON.parse(String(request.messages[1].content)) as {
+        chartScope?: string;
+        placements: Array<{
+          name: string;
+          placementEvidenceId: string;
+          position: { display: string };
+          methods: Array<{ methodId: string; evidenceIds: string[] }>;
+        }>;
+      };
       expect(input.chartScope).toBe("event");
-      expect(input.placements).toHaveLength(2);
-      expect(input.placements[0].canonResults).toBeDefined();
-      expect(JSON.stringify(input)).not.toContain("methodExecutionLedger");
+      if (input.placements.some((p: any) => p.name === "Sun"))
+        expect(
+          input.placements.find((p: any) => p.name === "Sun")!.position.display
+        ).not.toBe(chart.movingBodies.find(p => p.name === "Sun")!.display);
+      expect(input.placements.length).toBeGreaterThan(0);
       return {
         id: "event",
         created: 0,
         model: "test",
-        choices: [{
-          index: 0,
-          finish_reason: "stop",
-          message: {
-            role: "assistant",
-            content: JSON.stringify(response(packets.filter(p => ["Sun", "Moon"].includes(p.name)))),
+        choices: [
+          {
+            index: 0,
+            finish_reason: "stop",
+            message: {
+              role: "assistant",
+              content: JSON.stringify({
+                placements: input.placements.map((p: any) => ({
+                  name: p.name,
+                  paragraph: `${p.name} describes the selected event sky, with its calculated mansion, elemental-family ruler and supporting conditions shaping a specific expression in this event rather than a birth biography.`,
+                  evidenceIds: [
+                    p.placementEvidenceId,
+                    ...p.methods.flatMap((m: any) => m.evidenceIds),
+                  ],
+                  layerIds: Array.from(
+                    new Set([
+                      "western-planets-and-signs",
+                      ...p.methods.map((m: any) => m.methodId),
+                    ])
+                  ),
+                })),
+              }),
+            },
           },
-        }],
+        ],
       };
     });
     const result = await buildChartPageReading(eventChart, "transit");

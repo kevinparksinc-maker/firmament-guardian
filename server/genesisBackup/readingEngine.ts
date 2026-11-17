@@ -87,6 +87,7 @@ export interface SynthesisRule {
   conditions: (analysis: PatternAnalysis, context: UserContext) => boolean;
   output: (analysis: PatternAnalysis, context: UserContext) => Partial<ReadingOutput>;
   priority: number;
+  confidenceOverride?: number;
 }
 
 // ============================================================================
@@ -248,12 +249,12 @@ const synthesisRules: SynthesisRule[] = [
       return stellium.houses.some(h => areaData.houses.includes(h));
     },
     priority: 80,
+    confidenceOverride: 0.92,
     output: (analysis, context) => {
       return {
         plain: `Your inquiry concerning ${context.focusArea} aligns with the densest planetary concentration in your entire chart. A Stellium acts like a concentrated laser beam in your life story: energy does not scatter across twelve mild interests, but converges into intense, high-stakes focus within this sector. In modern 2026 reality, this is where you possess extraordinary leverage, deep instinct, and the power to redefine your trajectory.`,
         guidance: `Double down on ${context.focusArea} with unshakeable dedication. Clear away competing secondary distractions and protect deep, uninterrupted time blocks. When you focus your full concentration on this domain, progress compounds exponentially.`,
         deep: `Because your energy is so tightly concentrated here, your biggest hazard is all-or-nothing obsession. Build healthy grounding habits so that your identity remains sovereign even as you excel within this domain.`,
-        confidence: 0.92
       };
     }
   },
@@ -640,6 +641,22 @@ function calculateConfidence(analysis: PatternAnalysis, rulesApplied: number): n
   return Math.min(0.98, Math.max(0.4, confidence));
 }
 
+export function calculateGenesisReadingMetrics(analysis: PatternAnalysis, context: UserContext) {
+  const applicableRules = synthesisRules
+    .filter(rule => rule.conditions(analysis, context))
+    .sort((a, b) => b.priority - a.priority);
+  const intensityValues = { extreme: 0.95, high: 0.8, moderate: 0.6, low: 0.4 };
+  const themeStrengths = new Map(analysis.archetypes.map(archetype => [
+    archetype.archetype,
+    intensityValues[archetype.intensity],
+  ]));
+  return {
+    developmentalPhase: detectDevelopmentalPhase(analysis),
+    confidence: applicableRules.slice(0, 2).find(rule => rule.confidenceOverride !== undefined)?.confidenceOverride ?? calculateConfidence(analysis, applicableRules.length),
+    themeStrengths,
+  };
+}
+
 // ============================================================================
 // MAIN GENERATION FUNCTION
 // ============================================================================
@@ -676,7 +693,7 @@ export function generateReading(
   const childhoodRoots = generateChildhoodRoots(analysis, context);
   const adulthoodArc = generateAdulthoodArc(analysis, context);
   
-  const confidence = synthesized.confidence || calculateConfidence(analysis, applicableRules.length);
+  const confidence = applicableRules.slice(0, 2).find(rule => rule.confidenceOverride !== undefined)?.confidenceOverride ?? calculateConfidence(analysis, applicableRules.length);
   
   const tempOutput: ReadingOutput = {
     plain,

@@ -29,53 +29,26 @@ function loadRuntimeConfig() {
 // configuration keeps the public project ID and OAuth portal out of the static
 // build, so the same artifact works in Preview and production.
 export const startLogin = async (): Promise<void> => {
+  if (window.location.pathname === "/account") return;
+  window.location.assign(`/account?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+};
+
+/** Optional migration sign-in for accounts created through the original provider. */
+export const startLegacyLogin = async (): Promise<void> => {
   try {
-    let config: PublicRuntimeConfig = {};
-    try {
-      config = await loadRuntimeConfig();
-    } catch {
-      // Configuration fetch failed, continue to fallback
-    }
-
-    if (config.appId && config.oauthPortalUrl) {
-      const redirectUri = `${window.location.origin}/api/oauth/callback`;
-      const nonce = crypto.randomUUID();
-      document.cookie = `${OAUTH_STATE_COOKIE}=${nonce}; Path=/; Max-Age=600; SameSite=None; Secure`;
-      const state = encodeOAuthState({ redirectUri, nonce });
-
-      const url = new URL(`${config.oauthPortalUrl.replace(/\/$/, "")}/app-auth`);
-      url.searchParams.set("appId", config.appId);
-      url.searchParams.set("redirectUri", redirectUri);
-      url.searchParams.set("state", state);
-      url.searchParams.set("responseType", "code");
-
-      window.location.assign(url.toString());
-      return;
-    }
-
-    // Fallback: seamless local session for standalone / preview environments
-    const response = await fetch("/api/oauth/demo-login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data.token) {
-        try {
-          sessionStorage.setItem("manus-cookie", `${COOKIE_NAME}=${data.token}`);
-        } catch {
-          // sessionStorage unavailable
-        }
-      }
-      window.location.reload();
-      return;
-    }
-
-    throw new Error("Unable to establish session");
+    const { appId, oauthPortalUrl } = await loadRuntimeConfig();
+    if (!appId || !oauthPortalUrl) throw new Error("The original sign-in provider is not configured on this server. Use your independent account, or contact the app owner to restore original-account access.");
+    const redirectUri = `${window.location.origin}/api/oauth/callback`;
+    const nonce = crypto.randomUUID();
+    document.cookie = `${OAUTH_STATE_COOKIE}=${nonce}; Path=/; Max-Age=600; SameSite=None; Secure`;
+    const url = new URL(`${oauthPortalUrl.replace(/\/$/, "")}/app-auth`);
+    url.searchParams.set("appId", appId);
+    url.searchParams.set("redirectUri", redirectUri);
+    url.searchParams.set("state", encodeOAuthState({ redirectUri, nonce }));
+    url.searchParams.set("responseType", "code");
+    window.location.assign(url.toString());
   } catch (error) {
-    console.error("[OAuth] Unable to begin sign-in", error);
-    const reason = error instanceof Error ? error.message : "Unknown sign-in error";
-    const message = `Unable to start sign-in: ${reason}. Please try again or contact support if this persists.`;
-    window.dispatchEvent(new CustomEvent("fg:auth-error", { detail: { message } }));
+    window.dispatchEvent(new CustomEvent("fg:auth-error", { detail: { message: error instanceof Error ? error.message : "Unable to start sign-in." } }));
+    throw error;
   }
 };

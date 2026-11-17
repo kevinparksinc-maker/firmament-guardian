@@ -1,24 +1,31 @@
 {
   "id": "./",
   "name": "The Absolute",
-  "short_name": "The Absolute",
-  "description": "Your personal celestial observatory, chart and Master Interpreter.",
+  "short_name": "Absolute",
+  "description": "Multi-civilizational celestial observatory synthesizing 16+ ancient astrology doctrines into direct soul-centered blueprint readings.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#05080f",
   "theme_color": "#05080f",
   "orientation": "portrait-primary",
+  "categories": ["lifestyle", "education"],
   "icons": [
     {
       "src": "./firmament-icon.png",
-      "sizes": "any",
+      "sizes": "192x192 512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
+      "src": "./firmament-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "./favicon.png",
-      "sizes": "any",
+      "sizes": "64x64 32x32",
       "type": "image/png",
       "purpose": "any"
     }

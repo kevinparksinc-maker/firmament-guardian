@@ -1,3 +1,4 @@
+import type { ChartResult } from "../../../server/astronomy";
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
@@ -5,10 +6,8 @@ import { Streamdown } from 'streamdown';
 import { Sparkles, Loader2, Send } from 'lucide-react';
 
 interface ChartQAProps {
-  natalPlacements?: string;
-  transitPlacements?: string;
-  context?: string;
-  gender?: 'male' | 'female' | 'other';
+  chart: ChartResult;
+  mode?: "natal" | "transit" | "combined";
   disabled?: boolean;
 }
 
@@ -20,10 +19,8 @@ interface QAPair {
 }
 
 export function ChartQA({
-  natalPlacements = "",
-  transitPlacements,
-  context,
-  gender = 'other',
+  chart,
+  mode = "natal",
   disabled = false,
 }: ChartQAProps) {
   const [question, setQuestion] = useState('');
@@ -43,10 +40,8 @@ export function ChartQA({
     try {
       const answer = await answerMutation.mutateAsync({
         question: question.trim(),
-        natalPlacements: natalPlacements || "Default Natal Horizon",
-        transitPlacements,
-        context,
-        gender: gender as 'male' | 'female' | 'other',
+        chart,
+        mode,
       });
 
       const newQAPair: QAPair = {

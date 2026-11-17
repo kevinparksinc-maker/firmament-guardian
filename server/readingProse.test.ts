@@ -15,4 +15,11 @@ describe("Readable narrative prose", () => {
       readingProse("The window [09:00–09:30] activates House 11.")
     ).toContain("[09:00–09:30]");
   });
+  it("preserves paragraph newlines while converting inline bullets onto their own lines", () => {
+    const formatted = readingProse(
+      "#### Theme One\n\nFirst line here. • Second point • Third point"
+    );
+    expect(formatted).toContain("#### Theme One\n\nFirst line here.");
+    expect(formatted).toContain("\n- Second point\n- Third point");
+  });
 });

@@ -1,3 +1,4 @@
+import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
 import type { ChartResult, ChartRow } from "./astronomy";
 import {
   normalizeLongitude,
@@ -8,13 +9,15 @@ import {
   overlay,
 } from "../shared/hybrid";
 import { calculateArabicLots, calculateLot, LOT_FORMULAS, type Sect } from "./utils/arabicLots";
-import { interpretDashaLord, interpretBindus } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
+
 import { DOUBLE_LETTERS, SIMPLE_LETTERS, MOTHER_LETTERS } from "./astrologyKnowledge/canon/seferYetzirah";
 import { DECAN_CANON_RECORDS } from "./astrologyKnowledge/canon/decans36";
 import { MANZIL_CANON_RECORDS } from "./astrologyKnowledge/canon/manazil28";
 import { CHINESE_MANSIONS } from "./astrologyKnowledge/canon/chineseMansions28";
-import { invokeLLM } from "./_core/llm";
+import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
+import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { buildAstrologyEvidencePacket, formatEvidencePacket } from "./astrologyKnowledge/evidencePacket";
+import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
 
 export type LifeStageKey =
   | "birth_origins"
@@ -125,11 +128,11 @@ const HOUSE_THEMES_HELLENISTIC: Record<number, string[]> = {
   5: ["Creative Passion", "Children", "Pleasure", "Speculation", "Expression"],
   6: ["Daily Work", "Health Habits", "Service", "Discipline Under Strain"],
   7: ["Marriage", "Committed Partnerships", "Open Encounters", "Contracts"],
-  8: ["Shared Finances", "Inheritance", "Metamorphosis", "Psychological Depths"],
-  9: ["Higher Wisdom", "Long Journeys", "Philosophy", "Mentorship & Sacred Study"],
+  8: ["Shared Finances", "Inheritance", "Shared Burdens & Turning Points", "Private Reckonings"],
+  9: ["Higher Wisdom", "Long Journeys", "Philosophy", "Mentorship & Study"],
   10: ["Vocation", "Reputation", "Public Standing", "Action & Authority"],
   11: ["Alliances", "Hopes", "Benefactors", "Patrons & Community Circles"],
-  12: ["Solitude", "Unconscious Patterns", "Hidden Foes", "Spiritual Withdrawal"],
+  12: ["Solitude", "Quiet Habits", "Hidden Foes", "Private Withdrawal"],
 };
 
 /**
@@ -294,9 +297,9 @@ export function generatePlanetaryCycles(chart: ChartResult, currentAge: number):
       age: 27.3,
       planet: "Moon",
       nature: "return",
-      description: "Full emotional cycle completion; deep inner reset regarding what truly brings safety, warmth, and belonging.",
-      constructiveAdvice: "Clear out stale emotional obligations that no longer fit your adult reality.",
-      challenge: "Subconscious melancholy or nostalgia for bygone chapters.",
+      description: "Full 27-year emotional cycle completion; inner reset around home, belonging, and what truly feels stable.",
+      constructiveAdvice: "Clear out stale obligations that no longer fit your adult life.",
+      challenge: "Quiet melancholy or longing for bygone chapters.",
     },
     {
       id: "saturn-ret-1",
@@ -327,7 +330,7 @@ export function generatePlanetaryCycles(chart: ChartResult, currentAge: number):
       age: 37.2,
       planet: "Lunar Nodes",
       nature: "return",
-      description: "Karmic mid-course review; assessing whether your daily work honors your soul's sovereign destiny.",
+      description: "Mid-course life review; weighing whether daily work still matches your deeper convictions and direction.",
       constructiveAdvice: "Align your career power with your deeper humanitarian and spiritual values.",
       challenge: "The temptation to stay in comfortable but deadening ruts.",
     },
@@ -338,9 +341,9 @@ export function generatePlanetaryCycles(chart: ChartResult, currentAge: number):
       age: 38.5,
       planet: "Pluto",
       nature: "square",
-      description: "Confrontation with power dynamics, control, mortality, and subterranean desires; the psychological crucible.",
-      constructiveAdvice: "Surrender what is rotting; trust psychological rebirth and emotional regeneration.",
-      challenge: "Power struggles, manipulation, or clinging to obsolete defenses.",
+      description: "Confrontation with power dynamics, control, mortality, and deep desires; a hard test of what actually endures.",
+      constructiveAdvice: "Let go of decaying arrangements and rebuild on honest footing.",
+      challenge: "Power struggles, manipulation, or clinging to stubborn defenses.",
     },
     {
       id: "neptune-sq",
@@ -349,9 +352,9 @@ export function generatePlanetaryCycles(chart: ChartResult, currentAge: number):
       age: 41.2,
       planet: "Neptune",
       nature: "square",
-      description: "Dissolution of ego-illusions; spiritual hunger awakens, prompting disillusionment with purely material victories.",
-      constructiveAdvice: "Dedicate time to contemplation, music, poetry, and selfless service.",
-      challenge: "Escapism, confusion, or spiritual bypass.",
+      description: "Fading of earlier illusions; deeper questions of faith and meaning surface alongside dissatisfaction with empty wins.",
+      constructiveAdvice: "Make real space for quiet reflection, music, writing, and unselfish service.",
+      challenge: "Escapism, confusion, or drifting away from responsibility.",
     },
     {
       id: "uranus-opp",
@@ -360,20 +363,20 @@ export function generatePlanetaryCycles(chart: ChartResult, currentAge: number):
       age: 41.8,
       planet: "Uranus",
       nature: "opposition",
-      description: "The classic midlife awakening; intense urge to express neglected creative, sexual, or intellectual freedom.",
-      constructiveAdvice: "Reclaim your true, unlived authenticity without recklessly destabilizing your loved ones.",
+      description: "The classic midlife awakening; intense urge to express neglected creative, romantic, or intellectual freedom.",
+      constructiveAdvice: "Reclaim your true, unlived honesty without recklessly uprooting the people who depend on you.",
       challenge: "Sudden impulsive ruptures or crisis-driven rebellions.",
     },
     {
       id: "chiron-opp",
       cycleType: "chiron_opposition",
-      title: "Chiron Opposition (Wounded Healer Integration)",
+      title: "Chiron Opposition (Turning Hardship Into Counsel)",
       age: 43.5,
       planet: "Chiron",
       nature: "opposition",
-      description: "Facing the core life wound and turning personal suffering into empathetic medicine for others.",
-      constructiveAdvice: "Allow your scars to become sources of wisdom and guidance.",
-      challenge: "Bitter identification with victimhood or past betrayals.",
+      description: "Facing long-standing personal hurt and turning hard-won experience into steady guidance for others.",
+      constructiveAdvice: "Let your scars make you steadier and more honest when others struggle.",
+      challenge: "Bitter attachment to old grievances or past betrayals.",
     },
     {
       id: "saturn-opp-2",
@@ -444,13 +447,13 @@ export function generatePlanetaryCycles(chart: ChartResult, currentAge: number):
     {
       id: "uranus-ret",
       cycleType: "uranus_square",
-      title: "Uranus Return (Cosmic Liberation)",
+      title: "Uranus Return (Late-Life Liberation)",
       age: 84.0,
       planet: "Uranus",
       nature: "return",
-      description: "Full revolutionary cycle around the Sun; profound detachment, cosmic humor, and transcendence.",
-      constructiveAdvice: "Impart visionary perspective to the youth; rest in celestial peace.",
-      challenge: "Isolation from rapid technological changes.",
+      description: "Full 84-year cycle around the Sun; clear-eyed detachment, earned humor, and independence from trivial expectations.",
+      constructiveAdvice: "Pass on hard-won perspective to younger generations and live on your own honest terms.",
+      challenge: "Feeling out of step with rapid social or technological changes.",
     },
   ];
 
@@ -492,136 +495,126 @@ export function compileLifeStoryChapters(
   }> = [
     {
       key: "birth_origins",
-      title: "Birth and Origins",
-      periodLabel: "The Cosmic Inception (Ages 0–1)",
+      title: "1. Birth, Core Nature & What You Were Born With",
+      periodLabel: "Core Blueprint, Natural Gifts & Hidden Potential (Ages 0–1)",
       ageRange: [0, 1],
       astrologicalPivots: [
-        "Natal Sun & Moon placements",
-        "Ascendant rising sign & Eastern horizon",
-        "4th House (Nadir/IC) root conditions",
-        "Diurnal/Nocturnal Sect determination",
-        "Hermetic Lot of Fortune & Spirit anchors",
+        "Natal Sun, Moon & Ascendant + Chart Ruler chain",
+        "4th House (home roots) & Diurnal/Nocturnal Sect",
+        "Hermetic Lot of Fortune, Spirit, Eros & Necessity",
+        "Natural Gifts vs. Hidden Potential vs. Early Vulnerabilities",
       ],
       godViewThemes:
-        "The permanent celestial sky: universal cosmic imprint, fixed Aries-zero sector coordinates, and the divine script written into the firmament before temporal embodiment.",
+        "Universal character baseline: core temperament, drives, what you keep private, and raw inborn gifts before outside pressure shapes them.",
       agentViewThemes:
-        "Your temporal dawn on Earth: the exact eastern horizon (Ascendant) at your first breath, grounding celestial law into concrete physical embodiment, parental atmosphere, and family legacy.",
+        "Your real-world starting point: parents' household climate, early physical stamina, and the traits people noticed in you from day one.",
     },
     {
       key: "childhood",
-      title: "Childhood & Early Foundations",
-      periodLabel: "Formative Growth (Ages 1–12)",
+      title: "2. Childhood, Parents, School Years & Early Hobbies",
+      periodLabel: "Home, Upbringing & School Days (Ages 1–12)",
       ageRange: [1, 13],
       astrologicalPivots: [
-        "First Saturn waxing square (Age ~7.4)",
-        "First Jupiter return (Age ~11.86)",
-        "Mercury development & 3rd house schooling",
-        "Moon emotional rhythm & subconscious conditioning",
+        "4th House (home/parents), Moon (mother/care) & Sun/Saturn (father/authority)",
+        "Mercury & 3rd/5th/9th houses (learning style, favored subjects, early hobbies)",
+        "First Saturn waxing square (Age ~7.4) & First Jupiter return (Age ~11.86)",
         "Early Annual Profections (Houses 2 through 12)",
       ],
       godViewThemes:
-        "Universal developmental rhythms: the soul learning the mechanics of cause and effect, language, physical boundary recognition, and moral stewardship under celestial laws.",
+        "How early temperament met rules, schooling, curiosity, and childhood pressures before adult independence began.",
       agentViewThemes:
-        "Your immediate personal environment: early school experiences, sibling dynamics, maternal warmth, initial defense mechanisms, and foundational sense of belonging.",
+        "Everyday life with mother, father, and siblings; inherited family burdens or separation; what kind of student you were; and which hobbies, sports, or crafts pulled your attention naturally.",
     },
     {
       key: "adolescence",
-      title: "Adolescence & Sovereign Awakening",
-      periodLabel: "Identity & Crucible (Ages 13–19)",
+      title: "3. Adolescence, Friendships, Rivals & Early Love",
+      periodLabel: "Peers, Passions & First Heartbreak (Ages 13–19)",
       ageRange: [13, 20],
       astrologicalPivots: [
-        "First Saturn opposition (Age ~14.7)",
-        "First Lunar Nodal return (Age ~18.6)",
-        "Mars & Venus romantic and energetic awakening",
-        "5th House self-expression & 9th House worldviews",
-        "High school graduation & early independence",
+        "11th House friendships vs. 6th/12th jealousy and rivalry",
+        "Venus, Mars & 5th House early attraction, passions & hobbies",
+        "First Saturn opposition (Age ~14.7) & First Lunar Nodal return (Age ~18.6)",
       ],
       godViewThemes:
-        "The soul confronting polarity: testing autonomy against universal authority, navigating moral boundaries, and discovering individual sovereignty.",
+        "Testing pride against peer pressure, loyalty, first attraction, and emerging personal passions.",
       agentViewThemes:
-        "Personal individuation: breaking away from parental comfort zones, establishing unique peer alliances, and choosing initial life trajectories.",
+        "The friends you drew in, why early friendships lasted or broke, first experiences with jealousy or betrayal, concrete interests taking shape, and what you yourself contributed to conflict.",
     },
     {
       key: "early_adulthood",
-      title: "Early Adulthood & Foundation Building",
-      periodLabel: "Ambition, Vocation & First Return (Ages 20–29)",
+      title: "4. Early Adulthood: Money, Career, Love & Independence",
+      periodLabel: "Earning, Debt, Love & First Saturn Return (Ages 20–29)",
       ageRange: [20, 30],
       astrologicalPivots: [
-        "Uranus waxing square (Age ~21.0)",
-        "Saturn waxing square (Age ~22.1)",
-        "Second Jupiter return (Age ~23.7)",
-        "First Progressed Lunar return (Age ~27.3)",
-        "First Saturn Return (Age ~29.5) — Milestone of True Adulthood",
+        "2nd/8th Houses & Lot of Fortune (earning, debt, financial independence)",
+        "10th House & Lot of Spirit (employment vs. business ownership)",
+        "7th House, Descendant & Lot of Eros (intimacy, marriage, heartbreak risks)",
+        "First Saturn Return (Age ~29.5)",
       ],
       godViewThemes:
-        "Cosmic accountability: the end of apprentice years and the demand for personal integrity, structured duty, and realistic stewardship of divine gifts.",
+        "Turning raw potential into developed strengths through real bills, job friction, serious love, and honest mistakes.",
       agentViewThemes:
-        "Concrete worldly establishment: career launches, financial self-sufficiency, foundational romantic commitments, and confronting the gap between expectation and reality.",
+        "Financial struggles vs. steady earning, early romantic choices and heartbreak, poor choices or missed chances, and deciding whether to work for others or build on your own.",
     },
     {
       key: "adult_development",
-      title: "Adult Development & Midlife Alchemy",
-      periodLabel: "The Great Transformation (Ages 30–49)",
+      title: "5. Adult Life: Marriage, Children, Hardship & Power",
+      periodLabel: "Family, Wealth, Setbacks & Rebuilding (Ages 30–49)",
       ageRange: [30, 50],
       astrologicalPivots: [
-        "Third Jupiter return (Age ~35.6)",
-        "Second Nodal return (Age ~37.2)",
-        "Pluto square & Neptune square (Ages ~38–41)",
-        "Uranus Opposition / Midlife Awakening (Ages ~41–42)",
-        "Chiron opposition & Second Saturn opposition (Ages ~43–44)",
+        "5th House & Jupiter (children, parenting, family continuity)",
+        "6th/8th/12th Houses & Lot of Necessity (hardship, betrayal, health/daily habits)",
+        "Midlife cycles: Uranus opposition, Pluto/Neptune squares, Second Saturn opposition",
       ],
       godViewThemes:
-        "Spiritual distillation: the burning away of provisional false egos, stripping illusion, and awakening to authentic soul destiny and transpersonal contribution.",
+        "Carrying real responsibility—marriage, parenting, reputation, financial durability, and surviving hard knocks without bitterness.",
       agentViewThemes:
-        "Peak vocational mastery and relational deepening: navigating parenting, leadership responsibilities, career shifts, and reclaiming unlived creative vitality.",
+        "How marriage and children test your standards, dealing with rivals or injustice, keeping body and daily habits steady under work stress, and rebuilding stronger after losses.",
     },
     {
       key: "later_life",
-      title: "Maturity, Wisdom & Legacy",
-      periodLabel: "Elder Stewardship (Ages 50 onward)",
+      title: "6. Faith, Maturity, Later Years & Legacy",
+      periodLabel: "Beliefs, Purpose & Elder Standing (Ages 50 onward)",
       ageRange: [50, 95],
       astrologicalPivots: [
-        "Chiron return (Age ~50.5) — Sacred healing synthesis",
-        "Third Nodal return (Age ~55.8)",
-        "Second Saturn return (Age ~58.8) — Elder milestone",
-        "Jupiter returns at Ages 60, 72, and 84",
-        "Uranus return (Age ~84.0) — Cosmic liberation",
+        "9th House, Jupiter & North Node (relationship with God/beliefs, morals, purpose)",
+        "Chiron return (~50.5), Third Nodal return (~55.8) & Second Saturn return (~58.8)",
+        "Jupiter returns (Ages 60, 72, 84) & Uranus return (~84.0)",
       ],
       godViewThemes:
-        "The return to the source: integrating lifelong lessons into enduring spiritual wisdom, reconciliation with mortality, and cosmic serenity.",
+        "What lasts when noise drops away: honest faith, settled wisdom, and reconciling lifelong strengths with lifelong faults.",
       agentViewThemes:
-        "Elder authority: mentoring successors, enjoying ancestral family branches, simplifying material burdens, and leaving a clean, inspiring footprint.",
+        "Changing priorities with age, passing hard-earned lessons to children and community, simplifying burdens, and leaving an honest legacy.",
     },
     {
       key: "turning_points",
-      title: "Major Turning Points & Pivotal Cycles",
-      periodLabel: "Comprehensive Planetary Milestone Atlas",
+      title: "7. Turning Points, New Beginnings & Greatest Lessons",
+      periodLabel: "Calculated Timing Milestones & Hard-Won Wisdom",
       ageRange: [0, 95],
       astrologicalPivots: [
-        "Chronological catalog of all exact Saturn, Jupiter, Uranus, Chiron & Nodal cycles",
-        "Exact calendar dates anchored to birth epoch",
-        "Constructive spiritual remedies for critical threshold periods",
+        "Exact calculated Saturn, Jupiter, Uranus, Chiron & Nodal cycles",
+        "Annual Profections & Active Timing Lords",
+        "Where life comes naturally vs. where the hardest recurring lessons sit",
       ],
       godViewThemes:
-        "The cyclical machinery of heaven: planetary wheels turning with mathematical perfection, establishing the universal curriculum for human consciousness.",
+        "How recurring life tests and major openings align with calculated planetary periods rather than random chance.",
       agentViewThemes:
-        "Your lived experiences of destiny: navigating turning points with conscious discernment rather than passive reaction.",
+        "Relocation, new chapters, endings that cleared dead weight, and practical clarity on where to invest effort next.",
     },
     {
       key: "future_chapters",
-      title: "Upcoming Horizons & Emerging Cycles",
-      periodLabel: "The Road Ahead (Next 3, 5 & 10 Years)",
+      title: "8. The Road Ahead: Upcoming Timing & Next Steps",
+      periodLabel: "Next 3, 5 & 10 Years (Calculated Cycles Only)",
       ageRange: [Math.floor(currentAge), Math.min(95, Math.floor(currentAge) + 12)],
       astrologicalPivots: [
-        "Forthcoming Annual Profection years and Lord of the Year shifts",
-        "Upcoming planetary returns, squares, and oppositions",
-        "Active Vimshottari Mahadasha/Antardasha trajectory",
-        "Strategic timing for career, relationship, and spiritual focus",
+        "Calculated Annual Profection years and Lord of the Year shifts",
+        "Upcoming calculated planetary returns, squares, and oppositions",
+        "Active Vimshottari Mahadasha/Antardasha & Firdaria periods",
       ],
       godViewThemes:
-        "The unfolding scroll of heaven: celestial invitations awaiting your conscious partnership and sovereign free will.",
+        "What the next calculated timing chapters demand in responsibility, patience, and honest action.",
       agentViewThemes:
-        "Your upcoming life terrain: practical steps to prepare your vessel, strengthen healthy boundaries, and align with upcoming cosmic weather.",
+        "Concrete focus areas for money, work, health habits, family, and love over the coming years—anchored strictly in calculated cycles.",
     },
   ];
 
@@ -915,6 +908,22 @@ export function runAstrologyEngineAudit(chart: ChartResult): MethodAuditStatus[]
   ];
 }
 
+export const LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS = `You are the psychological astrologer and narrative writer for The Absolute. Turn the engine’s structured chart data into an intimate, candid portrait of how the reader moves through life across time. Write directly to the reader in the second person.
+
+## 1. USE THE FULL CHART SILENTLY
+The backend has already calculated the chart, timing cycles, Profections, Lots, mansions, and life-stage pivots. Read the entire structured brief and use every relevant, populated layer silently—including cross-system findings, rulers, aspects, and links between life areas. Do not recalculate placements, fill in missing data, or invent chart evidence. If a field is missing or unavailable, continue with the available evidence. When several findings describe the same pattern, weave them into one insight; when they pull in different directions, show when each side takes over and what that tension costs the reader.
+
+## 2. WRITE THE LIFE THE READER RECOGNIZES
+Start with the strongest pattern that answers this chapter’s stage and focus. Trace core identity, childhood roots, school years, and the "life-script" development of habits, talents, and repeating patterns across the 12 life areas (who they really are, money and wealth, love and intimacy, family and roots, career and reputation, friendships and betrayal, hardship and rebuilding, children and legacy, physical habits and stamina, convictions and purpose, turning points, and lasting lessons).
+- Show what the reader does when a pattern is active, what they are trying to protect or get, and how their behavior lands with other people. Be specific enough that the reader recognizes an ordinary-life moment rather than a label.
+- Give natural gifts (what comes easily, what they enjoy for its own sake, what others rely on them for) the same weight as difficult patterns (what they struggle to ask for, where loyalty feels uncertain, what they carry alone because they expect others to drop it).
+- Never invent biographical events, medical diagnoses, secrets, or another person's motives, and keep away from clinical therapy jargon or cosmic filler.
+
+## 3. RETURN ONLY THE READING (STRICT ZERO-ASTROLOGY RULE)
+- Use short, bold section titles specific to this reader and this chapter.
+- Write in flowing paragraphs with varied length, rhythm, and openings. Skip boilerplate openings, stock transitions, generic encouragement, and recap endings.
+- Keep ALL astrology terminology out of the reader-facing text, including the titles. Never name planets, zodiac signs, houses, degrees, aspects, lunar mansions or stations, bounds, faces, Lots, Profections, or Dashas. Keep citations and technical metadata in the Evidence tab. Use no bullet-point lists of traits. End with a sentence that belongs to this reader and this chart.`;
+
 /**
  * Generates an in-depth, storytelling Life Story Chapter using the Master Interpreter.
  */
@@ -956,45 +965,48 @@ export async function generateLifeStoryChapter(
   }
 
   const prompt = [
-    `# THE ABSOLUTE — MASTER INTERPRETER: LIFE STORY MODE`,
-    `You are the Master Interpreter for The Absolute. Write an evocative, substantial, continuous narrative chapter for this person's life journey based STRICTLY on their calculated chart evidence.`,
+    `# SILENT ENGINE BRIEF FOR THIS CHAPTER (DO NOT PRINT TECHNICAL TERMS TO THE READER)`,
+    `Center this chapter on core identity, childhood roots, and the life-script development of natural gifts, passions, and repeating patterns for the stage below.`,
     ``,
     `## CHAPTER IDENTITY`,
     `- Stage: ${targetChapter.title}`,
     `- Period: ${targetChapter.periodLabel}`,
     `- Person's Current Age: ${currentAge.toFixed(1)} years`,
-    `- Stage Status: ${targetChapter.status.toUpperCase()} (Past, Current, or Upcoming)`,
+    `- Stage Status: ${targetChapter.status.toUpperCase()}`,
     `- Profected Age Focus: Age ${Math.floor(focusAge)} (Year ${profection.yearNumber} of Life)`,
     `- Lord of the Year (Agent View): ${profection.lordOfTheYearAgent} (activating ${profection.profectedSignAgent}, House ${profection.profectedHouseAgent})`,
     `- Lord of the Year (God View): ${profection.lordOfTheYearGod} (activating ${profection.profectedSignGod}, House ${profection.profectedHouseGod})`,
     `- Profection Themes: ${profection.traditionalThemes.join(", ")}`,
     ``,
-    `## KEY ASTROLOGICAL CYCLES IN THIS CHAPTER`,
+    `## CALCULATED TIMING CYCLES FOR THIS STAGE`,
     ...targetChapter.keyCycles.map(
       c =>
-        `* ${c.title} (Age ~${c.age}, approx ${c.approxDate}): ${c.description}. Constructive: ${c.constructiveAdvice}`
+        `* ${c.title} (Age ~${c.age}, approx ${c.approxDate}): ${c.description}. Practical response: ${c.constructiveAdvice}`
     ),
     ``,
-    `## DUAL CELESTIAL FRAMES`,
-    `- God View Context: ${targetChapter.godViewThemes}`,
-    `- Agent View Context: ${targetChapter.agentViewThemes}`,
+    `## CALCULATED LIFE SETTINGS & LOTS`,
+    `- Universal Baseline: ${targetChapter.godViewThemes}`,
+    `- Everyday Life Setting: ${targetChapter.agentViewThemes}`,
     `- Arabic Lots: ${arabicLotsSummary}`,
     ``,
-    `## INTERPRETIVE MANDATE & FORMULA`,
-    `1. Structure your storytelling around: WHAT → WHY → HOW → CONSEQUENCE → MEANING`,
-    `2. Apply the developmental arc: POWER → SAFETY → COMFORT → AUTHENTICITY → TRUST → SELF-SOVEREIGNTY`,
-    `3. Clearly distinguish calculated astrological symbolism from verified biographical facts. (Do not state unconfirmed personal events, death, or trauma as factual certainties; frame as symbolic developmental curriculum).`,
-    `4. Connect specific planetary placements, degrees, signs, houses, and active planetary returns to real, tangible human experiences.`,
-    `5. Provide deep narrative immersion: this must read as a profound, literary portrait of a human soul discovering its sovereignty across time.`,
-    `6. Conclude with a dedicated section: '### Astrological Blueprint & Sovereign Counsel' summarizing key turning points and constructive practices.`,
+    `## UNIFIED MASTER CHART — ALL COMPUTED METHOD FINDINGS`,
+    ``,
+    `## GENESIS 72-QUESTION INTERNAL HISTORIAN INQUIRY`,
+    buildGenesisInquiryPrompt(targetChapter.title + " — " + targetChapter.periodLabel),
+    ``,
+    `## OUTPUT REQUIREMENTS`,
+    `1. Read all supplied layers silently and start with the strongest active pattern for this life stage.`,
+    `2. Show what the reader does when the pattern is active, what they are trying to protect or get, and how their behavior lands with other people using recognizable everyday moments.`,
+    `3. Give natural gifts and genuine enjoyment the same weight as difficult habits and timing pressures, anchoring any timing statement strictly in the calculated cycles above without inventing biographical events or medical diagnoses.`,
+    `4. Use short, bold section titles specific to this reader and topic, write in flowing paragraphs with no bullet-point lists of traits, keep ALL astrology terminology out of both the titles and prose, and end with a sentence belonging strictly to this reader and this chart.`,
   ].join("\n");
 
-  const response = await invokeLLM({
+  const { synthesis } = await synthesizeChartForReading(chart, "natal", targetChapter.title);
+  const response = await runInterpretation("LIFE_STORY", synthesis, {
     messages: [
       {
         role: "system",
-        content:
-          "You are the Master Interpreter for The Absolute. You provide deep, literary, humanly empathetic biographical interpretations grounded in rigorous mathematical astrology. Never invent degrees or claim supernatural predictive certainty.",
+        content: LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS,
       },
       {
         role: "user",
@@ -1003,14 +1015,8 @@ export async function generateLifeStoryChapter(
     ],
   });
 
-  const rawContent = response.choices[0]?.message?.content;
-  const content =
-    (typeof rawContent === "string"
-      ? rawContent
-      : Array.isArray(rawContent)
-        ? rawContent.map((c: any) => ("text" in c ? c.text : "")).join("\n")
-        : "") ||
-    "The celestial narrative is temporarily unavailable. Please retry.";
+  const content = scrubNonHoraryAstrologyJargon(interpretationText(response));
+  if (!content) throw new Error("LIFE_STORY_EMPTY: The provider returned no chapter.");
 
   return {
     title: targetChapter.title,

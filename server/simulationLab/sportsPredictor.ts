@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { invokeLLM } from "../_core/llm";
+import { runInterpretation } from "../astrologyKnowledge/synthesis/interpretationPipeline";
+import type { SynthesisResult } from "../astrologyKnowledge/synthesis/types";
 import type { GameChartSnapshot, MethodResult } from "../../shared/simulationLab/contracts";
 import { teamSideForHouse } from "../../shared/simulationLab/teamHouses";
 import type { ChartResult } from "../astronomy";
@@ -123,7 +124,8 @@ export function validateSportsPrediction(
  */
 export async function predictSportsGame(
   snapshot: GameChartSnapshot,
-  methods: readonly MethodResult[]
+  methods: readonly MethodResult[],
+  synthesis: SynthesisResult
 ): Promise<SportsPrediction> {
   if (!methods.length) throw new Error("SPORTS_PREDICTION_NO_METHODS");
   const evidence = new Set([...snapshot.chartEvidence, ...snapshot.physicalEvidence].map(e => e.id));
@@ -142,7 +144,7 @@ export async function predictSportsGame(
     }
   }
   const requiredSide = asc === desc ? "no-pick" : asc > desc ? "asc" : "desc";
-  const response = await invokeLLM({
+  const response = await runInterpretation("SPORTS_PREDICTION", synthesis, {
     max_tokens: 1900,
     response_format: { type: "json_object" },
     messages: [

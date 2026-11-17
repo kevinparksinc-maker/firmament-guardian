@@ -1,8 +1,7 @@
-import { stringifyEvidence } from "../astrologyKnowledge/synthesis/evidenceTransport";
 import { synthesizeChartForReading } from "../astrologyKnowledge/synthesis/readingBridge";
-import { buildNarrativePacket } from "../astrologyKnowledge/synthesis/narrativePacket";
-import { invokeLLM } from "../_core/llm";
+import { runInterpretation } from "../astrologyKnowledge/synthesis/interpretationPipeline";
 import { MINI_SYNTHESIS_STYLE } from "../master-interpreter";
+import { scrubNonHoraryAstrologyJargon } from "../astrologyKnowledge/synthesis/narrative";
 import { buildAstrologyEvidencePacket } from "../astrologyKnowledge";
 import type { ChartResult } from "../astronomy";
 import { PLACEMENT_METHODS } from "./registry";
@@ -12,8 +11,10 @@ const SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "
 const signAt = (longitude: number) => SIGNS[Math.floor((((longitude % 360) + 360) % 360) / 30)];
 
 function findRow(chart: ChartResult, body: string) {
-  if (body === "Ascendant") return chart.ascendant;
-  return chart.movingBodies.find(row => row.name.toLowerCase() === body.toLowerCase());
+  return [
+    ...chart.movingBodies, chart.ascendant, chart.descendant, chart.midheaven,
+    chart.northNode, chart.southNode,
+  ].find(row => row?.name.toLowerCase() === body.toLowerCase());
 }
 
 function promptFor(packet: PlacementPacket) {
@@ -39,7 +40,7 @@ ${packet.convergences.length ? packet.convergences.join("\n") : "None returned."
 CROSS-METHOD CONTRADICTIONS:
 ${packet.contradictions.length ? packet.contradictions.join("\n") : "None returned."}
 
-Write exactly two dense paragraphs. Weave the methods into natural prose. Cover observable character, motivations, relationships, group/social expression, gifts, tensions, and developmental direction where supported. Mention meaningful qualifications when methods disagree or inputs are missing. Do not output a list, headings, a method inventory, or vague filler. Do not claim certainty about private mental states, diagnosis, fate, or guaranteed events.`;
+Write two flowing second-person paragraphs in plainspoken, recognizable everyday language. Translate converging layers into one coherent insight and show how conflicting pulls take turns in ordinary life: what you do, what you are protecting or trying to get, what comes naturally that others rely on you for, and what that pattern costs you. Keep ALL astrology terminology out of the two paragraphs—never name planets, zodiac signs, houses, degrees, aspects, lunar mansions, bounds, faces, or Lots. Do not output bullet lists, headings, method inventories, or invented events/diagnoses/motives.`;
 }
 
 export function buildPlacementPacket(chart: ChartResult, body: string, question = "") : PlacementPacket {
@@ -47,9 +48,9 @@ export function buildPlacementPacket(chart: ChartResult, body: string, question 
   if (!row) throw new Error(`Placement ${body} was not found in the calculated chart.`);
   const packet = buildAstrologyEvidencePacket(chart, question || `Interpret ${body} as a precise placement`, chart.readingScope);
   const context: PlacementAdapterContext = { chart, body, row, packet };
-  const contributions: PlacementContribution[] = PLACEMENT_METHODS.map(({ adapter }) => {
+  const contributions: PlacementContribution[] = PLACEMENT_METHODS.map(({ method, label, adapter }) => {
     try { return adapter(context); }
-    catch (error) { return { method: "unknown", label: "Adapter failure", status: "failed", relation: "unavailable", result: [], sourceTrace: [], reason: error instanceof Error ? error.message : String(error) }; }
+    catch (error) { return { method, label, status: "failed", relation: "unavailable", result: [], sourceTrace: [], reason: error instanceof Error ? error.message : String(error) }; }
   });
   const convergences = packet.convergences
     .filter(item => item.evidenceIds.some(id => contributions.some(contribution => contribution.sourceTrace.some(trace => trace.includes(id)))))
@@ -79,17 +80,20 @@ export function buildPlacementPacket(chart: ChartResult, body: string, question 
 export async function synthesizePlacement(chart: ChartResult, body: string, question = "") {
   const packet = buildPlacementPacket(chart, body, question);
   const { synthesis: fullSynthesis } = await synthesizeChartForReading(chart, chart.readingScope, question || `Interpret ${body}`);
-  const response = await invokeLLM({
+  const response = await runInterpretation("PLACEMENT_SYNTHESIS", fullSynthesis, {
+    timeoutMs: 60_000,
     messages: [
-      { role: "system", content: `${MINI_SYNTHESIS_STYLE}\nProduce precise, grounded two-paragraph astrology placement interpretations from the supplied evidence packet.` },
-      { role: "user", content: packet.prompt + "\n\nFULL CALCULATED CHART AND METHOD OUTCOMES:\n" + stringifyEvidence(buildNarrativePacket(fullSynthesis, question).packet) },
+      { role: "system", content: `${MINI_SYNTHESIS_STYLE}\nWrite two flowing second-person paragraphs translating the supplied dossier silently into candid everyday human prose with zero astrology terminology.` },
+      { role: "user", content: packet.prompt },
     ],
     maxTokens: 900,
-  });
+  }, "placement-reference");
   const content = response.choices[0]?.message?.content;
-  const synthesis = typeof content === "string" ? content.trim() : "";
+  const rawSynthesis = typeof content === "string" ? content.trim() : "";
+  const synthesis = scrubNonHoraryAstrologyJargon(rawSynthesis);
   if (["length", "max_tokens"].includes(response.choices[0]?.finish_reason ?? ""))
     throw new Error("PLACEMENT_SYNTHESIS_INCOMPLETE: AI response was truncated.");
-  if (!synthesis) throw new Error("PLACEMENT_SYNTHESIS_EMPTY: AI returned no reading.");
+  if (synthesis.split(/\n\s*\n/).filter(paragraph => paragraph.trim()).length !== 2)
+    throw new Error("PLACEMENT_SYNTHESIS_INCOMPLETE: The provider did not return both paragraphs.");
   return { packet: { ...packet, prompt: undefined }, synthesis };
 }

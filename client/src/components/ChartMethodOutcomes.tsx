@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { readingProse } from "@shared/readingProse";
 import { PlanetStrengthChart, HouseStrengthChart } from "./VedicStrengthCharts";
 import { trpc } from "@/lib/trpc";
@@ -22,12 +21,10 @@ export function ChartMethodOutcomes({
   chart: ChartResult;
   mode: "natal" | "transit" | "combined";
 }) {
-  const query = trpc.interpretation.methodOutcomes.useMutation();
-  useEffect(() => {
-    // A calculated chart can exceed URL/query dispatch limits; send once as POST.
-    query.mutate({ chart, mode });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chart, mode]);
+  const query = trpc.interpretation.methodOutcomes.useQuery(
+    { chart, mode },
+    { retry: false, staleTime: Infinity, refetchOnWindowFocus: false }
+  );
   const renderMethods = (event: boolean) =>
     query.data?.methods
       .filter(m => m.methodId.startsWith("transit:") === event)
@@ -54,6 +51,9 @@ export function ChartMethodOutcomes({
               {STATUS[method.status] ?? method.status}
             </p>
           </header>
+          {method.aiMiniReading && (
+            <p className="whitespace-pre-line text-sm leading-7 text-slate-100">{readingProse(method.aiMiniReading)}</p>
+          )}
           {method.status === "interpreted" && method.planetStrength && (
             <PlanetStrengthChart rows={method.planetStrength} />
           )}
@@ -61,7 +61,8 @@ export function ChartMethodOutcomes({
             <HouseStrengthChart rows={method.houseStrength} />
           )}
           {method.status === "interpreted" ? (
-            <div className="space-y-5">
+            <details className="space-y-5 text-slate-300">
+              <summary className="cursor-pointer text-xs text-cyan-200">Calculated method findings and Canon</summary>
               {method.findingJudgments.map(finding => (
                 <section
                   key={finding.id}
@@ -98,10 +99,10 @@ export function ChartMethodOutcomes({
                   </details>
                 </section>
               ))}
-            </div>
+            </details>
           ) : (
             <p className="whitespace-pre-line text-sm leading-7 text-slate-300">
-              {readingProse(method.interpretation)}
+              {readingProse(method.interpretation)} {readingProse(method.judgment)}
             </p>
           )}
           {!event && method.methodId === "vedic-vargas-divisional" && (
@@ -156,7 +157,7 @@ export function ChartMethodOutcomes({
           and The Absolute’s custom fixed-firmament projection.
         </p>
       </header>
-      {query.isPending && (
+      {query.isLoading && (
         <p role="status" className="text-cyan-200">
           Calculating each method’s outcome…
         </p>
@@ -164,7 +165,7 @@ export function ChartMethodOutcomes({
       {query.error && (
         <div role="alert" className="space-y-2 text-rose-200">
           <p>{query.error.message}</p>
-          <button className="underline" onClick={() => query.mutate({ chart, mode })}>
+          <button className="underline" onClick={() => query.refetch()}>
             Retry method outcomes
           </button>
         </div>

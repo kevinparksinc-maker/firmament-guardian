@@ -6,27 +6,27 @@ import {
   PLANET_CANON_RECORDS,
   SIGN_CANON_RECORDS,
   synthesizePlanetInSign,
-} from "../calculations/planetsAndSigns";
+} from "../canon/planetsAndSigns";
 import {
   HOUSE_CANON_RECORDS,
   synthesizePlanetInHouse,
-} from "../calculations/housesAndFrames";
-import { getManzilCanonByLongitude } from "../calculations/manazil28";
-import { getNakshatraCanonByLongitude } from "../calculations/nakshatras27";
+} from "../canon/housesAndFrames";
+import { getManzilCanonByLongitude } from "../canon/manazil28";
+import { getNakshatraCanonByLongitude } from "../canon/nakshatras27";
 import {
   getDecanCanonByLongitude,
   elementalDecanTeaching,
-} from "../calculations/decans36";
+} from "../canon/decans36";
 import {
   FIXED_STAR_CANON_RECORDS,
   LOT_CANON_RECORDS,
 } from "../canon/fixedStarsAndLots";
-import { TRADITIONAL_ASPECT_DOCTRINE } from "../calculations/dignitiesAndHorary";
+import { TRADITIONAL_ASPECT_DOCTRINE } from "../canon/dignitiesAndHorary";
 import {
   DOUBLE_LETTERS,
   SIMPLE_LETTERS,
   CONTRARY_PAIRS,
-} from "../calculations/seferYetzirah";
+} from "../canon/seferYetzirah";
 import type { ChartRow } from "../../astronomy";
 import type {
   LayerRecord,
@@ -263,7 +263,7 @@ export function applyMethodRules(
       i,
       name,
       `${synthesizePlanetInSign(name, sign)} ${god ? houseText(p.house, true) : synthesizePlanetInHouse(name, p.house, p.godHouse, p.agentHouse).houseSynthesis}`,
-      `${name} at ${lon.toFixed(4)}° in ${sign}; sign lord ${SIGN_CANON_RECORDS[sign].domicileLord}`,
+      `${name} in ${sign} (${lon.toFixed(2)}°), ruled by ${SIGN_CANON_RECORDS[sign].domicileLord}`,
       "planet-sign-condition",
       SIGN_CANON_RECORDS[sign].provenance.sourceTitle,
       domains[p.house],
@@ -272,38 +272,6 @@ export function applyMethodRules(
     );
   };
   switch (baseId) {
-    case "vedic-planetary-lordship-connections":
-      requireValue(values.length === 9, "Lordship requires nine planetary records");
-      requireValue(new Set(values.map(raw => record(raw).planet)).size === 9,
-        "Lordship records must have distinct planetary identities");
-      values.forEach((raw, i) => {
-        const v = record(raw);
-        const body = String(v.planet);
-        const occupied = finite(v.occupiedHouse, "occupied house");
-        requireValue(Number.isInteger(occupied) && occupied >= 1 && occupied <= 12,
-          "Invalid Equal House occupancy");
-        const ruled = (v.ruledHouses as number[]) ?? [];
-        const flows = (v.connections as Array<{fromHouse:number;toHouse:number;type:string}>) ?? [];
-        requireValue(Array.isArray(ruled) && Array.isArray(flows), "Invalid lordship edges");
-        requireValue(flows.every(f => f.type === "carry" && ruled.includes(f.fromHouse) &&
-          f.toHouse === occupied && f.fromHouse !== occupied), "Lordship edge mismatch");
-        const parts: string[] = [];
-        for (const f of flows)
-          parts.push(`${houseText(f.fromHouse)} is carried by ${body} into ${houseText(occupied)}`);
-        for (const h of (v.selfPlacedFor as number[]) ?? [])
-          parts.push(`${body} rules and occupies ${houseText(h)} (self-placement)`);
-        if (v.coRuledPair)
-          parts.push(`${houseText(v.coRuledPair[0])} and ${houseText(v.coRuledPair[1])} share ${body} as ruler`);
-        if (v.exchangeWith)
-          parts.push(`${body} and ${v.exchangeWith.partnerPlanet} mutually exchange signs (${v.exchangeWith.myOccupiedSign} / ${v.exchangeWith.partnerOccupiedSign})`);
-        if (!parts.length)
-          parts.push(`${body} has no classical sign lordship; its occupied ${houseText(occupied)} is retained for separate node interpretation`);
-        emit(i, body, parts.join(". ") + ".",
-          `${body}: Equal House ${occupied}; ruled houses [${ruled.join(", ")}]; structural lordship links only`,
-          "planetary-lordship-carry", "Parashari sign rulership and existing house significations",
-          domains[occupied], "neutral", "moderate");
-      });
-      break;
     case "vedic-shadbala":
       requireValue(
         values.length === 7,
@@ -340,7 +308,7 @@ export function applyMethodRules(
           index,
           `${body} · Shadbala`,
           `${body}'s ${role(body)} has ${total.toFixed(2)} virupas (${(total / 60).toFixed(2)} rupas), against its ${REQUIRED[body]}-virupa traditional requirement: ${(p.adequacyRatio * 100).toFixed(1)}% of the requirement, ${sufficient ? "adequate operational capacity" : "below the requirement"}. Its six components are Sthana ${components.sthana.toFixed(2)}, Dig ${components.dig.toFixed(2)}, Kala ${components.kala.toFixed(2)}, Cheshta ${components.cheshta.toFixed(2)}, Naisargika ${components.naisargika.toFixed(2)}, and signed Drik ${components.drik.toFixed(2)} virupas. It governs ${houses || "no local house cusps"} and delivers these matters through ${houseText(p.house)}. ${sufficient ? "This planet can carry its responsibilities with greater force; its house rulership, condition, and contacts determine what that force serves." : "Its responsibilities may require more sustained effort, support, or cultivation; low capacity does not erase its topics or prove personal failure."} This is capacity, not a probability of success or a verdict that every strong planet is favorable.`,
-          `Sixfold sum; ${total.toFixed(6)} / ${REQUIRED[body]} = ${p.adequacyRatio.toFixed(6)}; ${body} rules houses ${p.ownedHouses.join(", ")} and occupies H${p.house}`,
+          `Six-component strength ${total.toFixed(2)} of ${REQUIRED[body]} required (${Math.round(p.adequacyRatio * 100)}%); ${body} rules houses ${p.ownedHouses.join(", ")} and occupies House ${p.house}`,
           "bphs-shadbala-six-components",
           "BPHS 26–27; The Absolute fixed-XYZ and Equal-House variant",
           p.ownedHouses.includes(5) || p.ownedHouses.includes(10)
@@ -384,7 +352,7 @@ export function applyMethodRules(
           index,
           `House ${h.house} · Bhava Bala`,
           `${houseText(h.house)} scores ${total.toFixed(2)} virupas (${(total / 60).toFixed(2)} rupas), rank ${h.rank} of 12, ${above ? "at or above" : "below"} this chart's ${average.toFixed(2)}-virupa house average. Its lord ${h.lord} supplies ${components.lord.toFixed(2)} virupas and has ${(h.lordAdequacy * 100).toFixed(1)}% of its own Shadbala requirement, delivering the house through ${houseText(h.lordDeliveryHouse)}. Direction contributes ${components.direction.toFixed(2)}, aspects ${components.aspect.toFixed(2)}, occupancy ${components.occupancy.toFixed(2)}, and rising-type timing ${components.risingType.toFixed(2)} virupas. ${example[h.house] ?? (above ? "The house has comparatively greater capacity to carry its matters; its specific lord, occupants, aspects and timing determine the expression." : "This house has less capacity relative to the other houses in this chart; its matters can require more cultivation, resources or cooperation.")} A relative house ranking is not an absolute success/failure threshold.`,
-          `Bhava = lord + direction + aspects + occupancy + rising-type timing; H${h.house} ${total.toFixed(6)}; chart average ${average.toFixed(6)}`,
+          `House ${h.house} capacity ${total.toFixed(2)} vs. chart average ${average.toFixed(2)}`,
           "bphs-bhava-bala-components",
           "BPHS 27.26–31; The Absolute Equal-House cusp-reference variant",
           h.house === 5 ? "purpose_work" : domains[h.house],
@@ -404,7 +372,7 @@ export function applyMethodRules(
         values.findIndex(v => record(v).house === 5),
         "Creative output and network support",
         `House 5 (your creative expression and creations) has ${fifth.totalVirupas.toFixed(2)} virupas; House 11 (friends, networks, patrons and shared gains) has ${eleventh.totalVirupas.toFixed(2)}. ${higher === 5 ? "The calculated comparison gives your own creative output more capacity than support through networks. That can look like having something substantial to create while needing to build its audience and alliances deliberately." : higher === 11 ? "The calculated comparison gives network support more capacity than creative output. Alliances and shared goals can provide resources, while turning ideas into your own finished work needs separate attention." : "These two houses have equal calculated capacity; their lords and timing distinguish how their matters are expressed."} This compares two calculated channels; it does not infer a biography or other people's motives.`,
-        `H5 ${fifth.totalVirupas.toFixed(6)} versus H11 ${eleventh.totalVirupas.toFixed(6)}; difference ${(fifth.totalVirupas - eleventh.totalVirupas).toFixed(6)} virupas`,
+        `House 5 (${fifth.totalVirupas.toFixed(2)}) vs. House 11 (${eleventh.totalVirupas.toFixed(2)}) capacity comparison`,
         "bphs-house5-house11-capacity-comparison",
         "Local comparison of BPHS Bhava Bala results",
         "purpose_work",
@@ -440,7 +408,7 @@ export function applyMethodRules(
           0,
           `House ${house}`,
           `${canon.traditionalTitle} governs ${canon.coreTopics.join(", ")}. Its ${sign} cusp places those matters under ${lord}, whose placement in House ${ruler.agentHouse ?? ruler.house} links them to ${HOUSE_CANON_RECORDS[ruler.agentHouse ?? ruler.house].coreTopics.join(", ")}. ${occupants.length ? occupants.map(p => `${p.name} brings ${role(p.name)}`).join("; ") : "No moving planet occupies this house; its lord remains the delivery route."}`,
-          `Equal House cusp ${house} at ${h.cusp}°; ${sign} ruled by ${lord}`,
+          `House ${house} cusp in ${sign} (${Number(h.cusp).toFixed(2)}°), ruled by ${lord}`,
           "house-lord-delivery",
           canon.agentViewDefinition.provenance.sourceTitle,
           domains[house],
@@ -487,7 +455,7 @@ export function applyMethodRules(
           i,
           `${transit ? "Transit " : ""}${first} ${aspect} ${transit ? "natal " : ""}${second}`,
           `${transit ? "At the selected transit moment, " : ""}${first}'s ${role(first)} ${flow === 1 ? "cooperates with and activates" : "presses against"} ${second}'s ${role(second)}. ${ruleMeaning} ${houseText(moving.house, transit ? root.natal?.worldview === "god" : god)} meets ${houseText(target.house, god)}. At ${orb.toFixed(3)}° orb ${orb < 1 ? "this is a close, high-intensity contact" : "the contact is less concentrated than an exact alignment"}; ${flow === 1 ? "the opening works through the specific cooperation between those fields" : "both demands must be addressed; favoring one alone leaves the other in conflict"}.`,
-          `${first} ${aspect} ${second}, orb ${orb}°; configured flow ${flow}${v.majorFactor === 0.5 ? ", half major weight" : ""}`,
+          `${first} ${aspect} ${second} (${orb.toFixed(2)}° orb, ${flow === 1 ? "supportive flow" : "friction"})`,
           `aspect-${aspect}`,
           doctrine?.provenance ?? "The Absolute configured minor-aspect rule",
           transit ? "timing" : domains[target.house],
@@ -552,7 +520,7 @@ export function applyMethodRules(
             known
               ? `${body}'s ${role(body)} activates ${name} at ${orb.toFixed(2)}°: ${canon.traditionalMeaning} Constructive delivery: ${canon.giftWhenIntegrated} The corresponding test is ${canon.nemesisOrTest}`
               : `${body} is measured ${orb.toFixed(2)}° from ${name}. This catalog entry has no verified star-specific doctrine; the contact is retained as geometry and contributes no traditional stellar prediction.`,
-            `${name} conjunction ${body} at ${orb}°`,
+            `${name} conjunct ${body} (${orb.toFixed(2)}° orb)`,
             known ? "star-contact-doctrine" : "star-contact-reference",
             canon.provenance.sourceTitle,
             "autonomy_power",
@@ -609,7 +577,7 @@ export function applyMethodRules(
           i,
           body,
           `${body}'s ${role(body)} operates through ${m.name} (${m.englishTranslation}), recorded as ${m.traditionalQuality}. ${m.natalAndPsychologicalMeaning} This modifies ${bodyContext(body)}; its traditional operational emphasis is ${m.traditionalElections}.`,
-          `${body} at ${v.longitude}° in Manzil ${m.index}`,
+          `${body} (${Number(v.longitude).toFixed(2)}°) in Manzil ${m.index}`,
           `manzil-${m.index}`,
           m.provenance.sourceTitle,
           domains[point(snapshot, body).house],
@@ -664,7 +632,7 @@ export function applyMethodRules(
           i,
           body,
           `${body}'s ${role(body)} is refined by ${teaching.label}: ${teaching.statement} The elemental-family ruler ${ruler.name} is at ${ruler.display}, ${houseText(localAngle(body) ? (ruler.agentHouse ?? ruler.house) : ruler.house, god && !localAngle(body))}. ${c.text} Its condition modifies how this decan's ${teaching.label} can be delivered.`,
-          `${body} ${v.longitude}°; decan ${d.index}; elemental-family ruler ${ruler.name}`,
+          `${body} (${Number(v.longitude).toFixed(2)}°); decan ${d.index}; elemental-family ruler ${ruler.name}`,
           `elemental-decan-${d.index}`,
           teaching.sourceTitle,
           domains[point(snapshot, body).house],
@@ -692,7 +660,7 @@ export function applyMethodRules(
             i,
             `${v.division} ${body}`,
             `${v.name} addresses ${v.purpose}. ${body}, the significator of ${role(body)}, falls in ${p.sign}, ${houseText(p.house)} within ${v.division}. ${c.text} ${same ? `Its sign repeats D1 ${p.sourceSign}, reinforcing that sign's mode in this particular division` : `D1 ${p.sourceSign} becomes ${p.sign}, so this topic calls for a different mode of expression from its D1 sign`}. The divisional lord ${SIGN_CANON_RECORDS[p.sign].domicileLord} qualifies delivery; this finding modifies this division's topic rather than replacing D1.`,
-            `${v.division}: ${p.formula}; ${body} ${p.longitude}°; source ${p.sourceLongitude}°`,
+            `${v.division} (${p.sign}, House ${p.house}; from ${p.sourceSign})`,
             `${v.division.toLowerCase()}-topic-sign-condition`,
             "Local Parashari divisional definitions and planetary/sign Canon; explicit Firmament coordinate variant",
             v.division === "D2"
@@ -723,7 +691,7 @@ export function applyMethodRules(
             emit(
               i,
               "Dasha window",
-              `The evaluated instant ${data.asOf} lies outside the generated period window. No active period or easing date is inferred.`,
+              `The selected date lies outside the generated period timeline. No active period or easing date is inferred.`,
               "No active period in the supplied timeline",
               "dasha-outside-window",
               "Local Vimshottari period calculation",
@@ -747,8 +715,8 @@ export function applyMethodRules(
             emit(
               i,
               `${period.level} ${lord.name}`,
-              `${period.level} ${lord.name}, ${period.start}–${period.end}, activates ${role(lord.name)} through ${houseText(lord.house, god)}${ruled.length ? `, with rulership over houses ${ruled.join("; ")}` : ""}. ${c.text} ${period.level === "Mahadasha" ? "This is the governing period theme" : "This subperiod channels and modifies the governing period through this lord's specific matters"}.`,
-              `${period.level}: ${period.lord}, ${period.start}–${period.end}; evaluated ${data.asOf}`,
+              `${period.level} ${lord.name} (${period.start}–${period.end}) activates ${role(lord.name)} through ${houseText(lord.house, god)}${ruled.length ? `, with rulership over houses ${ruled.join("; ")}` : ""}. ${c.text} ${period.level === "Mahadasha" ? "This is the governing period theme" : "This subperiod channels and modifies the governing period through this lord's specific matters"}.`,
+              `${period.level} of ${period.lord} (${period.start}–${period.end})`,
               "vimshottari-active-lord-delivery",
               "Local Vimshottari timeline and planetary/house rulership Canon",
               "timing",
@@ -838,7 +806,7 @@ export function applyMethodRules(
                 .join(
                   " "
                 )} This is a relative support comparison, not Shadbala or an event probability.`,
-              `${entry.sign} SAV ${entry.score}; validated total 337; chart-relative comparison`,
+              `${entry.sign} collective support score: ${entry.score} (relative to chart average)`,
               "ashtakavarga-relative-support",
               "Local unreduced Parashari BAV/SAV tables and checksum rule",
               "timing",

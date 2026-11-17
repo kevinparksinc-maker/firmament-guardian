@@ -1,4 +1,4 @@
-import { buildAstrologyEvidencePacket, formatEvidencePacket, UNIVERSAL_READING_CONTRACT } from "./astrologyKnowledge";
+import { calculateMasterChart as calculateChart } from "./masterChart/entry";
 /**
  * Twelve-Sign Celestial Horary — independent from traditional question-time Horary.
  *
@@ -8,11 +8,12 @@ import { buildAstrologyEvidencePacket, formatEvidencePacket, UNIVERSAL_READING_C
  * ruler-centered lens, NOT a local Ascendant, birth chart or traditional
  * horary perfection verdict.
  */
-import { calculateChart, type ChartResult } from "./astronomy";
+import { type ChartResult } from "./astronomy";
+import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { agentHouseFor, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship } from "./astrologyCore";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
 import { SIGN_RULERS, SIGN_SYMBOLS, type ZodiacSign } from "../shared/zodiacSigns";
-import { invokeLLM } from "./_core/llm";
+import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
 import { FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
 
 export type SignReadingInput = { sign: ZodiacSign; date: string; time: string; question?: string };
@@ -47,7 +48,7 @@ export type ZodiacSignEvidence = {
   god: { asc: SideSummary; dsc: SideSummary };
   evidenceText: string;
 };
-export type ZodiacSignReading = { evidence: ZodiacSignEvidence; reading: string; generatedBy: "master-interpreter" | "deterministic" };
+export type ZodiacSignReading = { evidence: ZodiacSignEvidence; reading: string; generatedBy: "master-interpreter" | "deterministic"; masterSynthesis: { snapshotId: string; methodCount: number; qualityPassed: boolean; scope: "god-view-sky"; } };
 
 const SIGN_THEMES: Record<ZodiacSign, string> = {
   Aries: "initiative and courage", Taurus: "resources, values and stability",
@@ -149,26 +150,6 @@ export function createRulerAnchoredEvidence(
   };
 }
 
-function deterministicReading(e: ZodiacSignEvidence) {
-  const ruler = e.placements.find(p => p.name === e.ruler)!;
-  const links = e.aspects.filter(a => a.first === e.ruler || a.second === e.ruler);
-  const contacts = links.length ? links.map(a => `${a.first} ${a.aspect} ${a.second} (${a.orb}°)`).join("; ") : "no configured major aspects to the ruler within 5°";
-  return [
-    `## ${e.sign}: what the sky emphasizes`,
-    `Your sign's classical ruler, ${e.ruler}, stands at ${e.anchorDisplay}. For this sign-centered reading, that exact point becomes the beginning of Agent House 1. This is a symbolic perspective, not a birth Ascendant or a traditional Horary verdict.`,
-    `## The selected sign territory`,
-    `${e.sign} traditionally emphasizes ${e.signTerritory.themes}. Its permanent zodiac sector contains ${e.signTerritory.planets.join(", ") || "no moving planets"} at this moment. This sign-based distinction remains visible even when two signs share a planetary ruler.`,
-    `## How your ruling planet is involved`,
-    `${e.ruler} is in God View House ${ruler.godHouse} and Agent View House 1 by construction. Its current major contacts: ${contacts}. Where these planets meet, their symbolic themes can be considered together; challenging contacts point toward areas needing more effort or negotiation.`,
-    `## Where energy flows, and where it meets resistance`,
-    `Agent View finds ${e.agent.asc.flow} flow and ${e.agent.asc.friction} friction contacts in the 1/2/3/6/10/11 house family; the other 4/5/7/8/9/12 family has ${e.agent.dsc.flow} flow and ${e.agent.dsc.friction} friction contacts. God View independently finds ${e.god.asc.flow}/${e.god.asc.friction} and ${e.god.dsc.flow}/${e.god.dsc.friction}. Each contact is counted once per participating house, not weighed as a proven outcome.`,
-    `## What this can mean in everyday life`,
-    `Use the ruler contacts and occupied houses to examine practical themes such as initiative, finances, communication, relationships, home, work and personal commitments. The same planetary sky is seen from two house perspectives; differences express distinct interpretive reference frames, not a contradiction in the ephemeris.`,
-    `## A grounded next step`,
-    e.question ? `For “${e.question}”, compare the ruler's aspects with the house domains relevant to that subject rather than treating a sign-wide picture as a guaranteed yes/no event.` : "Choose a specific question to focus the interpretation on a life situation rather than claiming a universal outcome for everyone born under this sign.",
-  ].join("\n\n");
-}
-
 export async function getZodiacSignReading(input: SignReadingInput): Promise<ZodiacSignReading> {
   // Use the original deterministic ephemeris; no invented location or local Ascendant.
   const sky = await calculateChart({
@@ -177,21 +158,23 @@ export async function getZodiacSignReading(input: SignReadingInput): Promise<Zod
     readingScope: "transit", birthTimeKnown: true,
   });
   const evidence = createRulerAnchoredEvidence(input.sign, sky, input.date, input.time, input.question);
-  const packet = buildAstrologyEvidencePacket(sky, input.question || `Interpret the ${input.sign} ruler-anchored sky and all supplied celestial methods`, "transit");
-  const completeEvidence = formatEvidencePacket(packet);
-  const fallback = deterministicReading(evidence) + "\n\n## Full multi-method evidence annex\n\n" + completeEvidence;
-  try {
-    const response = await invokeLLM({
-      maxTokens: 5400,
-      messages: [
-        { role: "system", content: `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n${UNIVERSAL_READING_CONTRACT}\nYou are interpreting a sign-centered ruler-anchored celestial reading, NOT a natal chart, local Ascendant or traditional Horary yes/no judgment. Ground each relationship in the supplied evidence. Answer WHAT, WHY, HOW, CONSEQUENCE, MEANING in clear English. Keep flow/friction symbolic and avoid invented facts, certainty or universal outcome claims. Explain God View independently from Agent View. Discuss relevant house themes and supported nakshatras, manazil, decans and fixed star conjunctions only where relevant. Do not invent a 12-sign forecast algorithm beyond the supplied snapshot.` },
-        { role: "user", content: evidence.evidenceText + "\n\nFULL SHARED METHOD EVIDENCE (do not silently omit methods):\n" + completeEvidence + "\n\nProvide a thorough human-facing interpretation of this sign's sky. Start with a direct meaningful answer and explain the ruling planet, all relevant houses, contacts, and God/Agent comparison. Include possible concrete life manifestations, practical reflection, and epistemic boundaries." },
-      ],
-    });
-    const reading = response.choices[0]?.message?.content;
-    if (typeof reading === "string" && reading.trim()) return { evidence, reading: reading + "\n\n## Full multi-method evidence annex\n\n" + completeEvidence, generatedBy: "master-interpreter" };
-  } catch {
-    // A useful, traceable evidence reading remains available without an AI key.
-  }
-  return { evidence, reading: fallback, generatedBy: "deterministic" };
+  // The canonical methods are calculated for the actual God View sky.
+  // They MUST NOT replace the special ruler-anchored Agent houses above.
+  const { synthesis } = await synthesizeChartForReading(
+    sky, "natal", input.question || `Sign-centered reading for ${input.sign}`
+  );
+  const masterSynthesis = {
+    snapshotId: synthesis.snapshotId,
+    methodCount: synthesis.methodLedgerSummary.computedWithResult,
+    qualityPassed: synthesis.qualityAudit.passed,
+    scope: "god-view-sky" as const,
+  };
+  const response = await runInterpretation("ZODIAC_READING", synthesis, {
+    maxTokens: 2400,
+    messages: [
+      { role: "system", content: `${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\nYou are interpreting a sign-centered ruler-anchored celestial reading, NOT a natal chart, local Ascendant or traditional Horary yes/no judgment. Ground each relationship in the supplied evidence. Answer WHAT, WHY, HOW, CONSEQUENCE, MEANING in clear English. Keep flow/friction symbolic and avoid invented facts, certainty or universal outcome claims. Explain God View independently from Agent View. Discuss relevant house themes and supported nakshatras, manazil, decans and fixed star conjunctions only where relevant. Do not invent a 12-sign forecast algorithm beyond the supplied snapshot.` },
+      { role: "user", content: evidence.evidenceText + "\n\nThe shared dossier describes the God View sky. Keep its houses distinct from the ruler-anchored Agent houses in the sign-specific evidence.\n" + "\nProvide a thorough human-facing interpretation of this sign's sky. Start with a direct meaningful answer and explain the ruling planet, all relevant houses, contacts, and God/Agent comparison. Include possible concrete life manifestations, practical reflection, and epistemic boundaries." },
+    ],
+  });
+  return { evidence, reading: interpretationText(response), generatedBy: "master-interpreter", masterSynthesis };
 }

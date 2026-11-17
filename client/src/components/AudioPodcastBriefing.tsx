@@ -1,3 +1,5 @@
+import { trpc } from "@/lib/trpc";
+import type { buildChartBriefing } from "../../../server/chartBriefing";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Headphones,
@@ -46,44 +48,21 @@ export function AudioPodcastBriefing({
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speechChunkIndexRef = useRef(0);
 
-  // Generate the episode briefing script
-  const briefingChapters = useMemo(() => {
-    const location = chart?.input.location || "Earth";
-    const dateStr = chart?.input.date || new Date().toISOString().split("T")[0];
-    const sunBody = chart?.movingBodies?.find(b => b.name === "Sun");
-    const moonBody = chart?.movingBodies?.find(b => b.name === "Moon");
-    const ascendant = chart?.movingBodies?.find(b => b.name === "Ascendant");
-
-    const sunSign = sunBody?.display ? `Sun at ${sunBody.display}` : "the Sun";
-    const moonSign = moonBody?.display ? `Moon at ${moonBody.display}` : "the Moon";
-
-    return [
-      {
-        id: "intro",
-        title: "1. The Morning Celestial Frequency",
-        subtitle: "Atmospheric calibration & opening resonance",
-        text: `Welcome to your celestial frequency briefing for ${dateStr}. You are observing the sky from ${location}. Today the cosmic random code positions your consciousness through ${sunSign}, illuminated by the reflective waters of ${moonSign}. Take a slow breath. Your day is not random luck; it is an ordered geometry.`,
-      },
-      {
-        id: "transits",
-        title: "2. Planetary Activations & Natal Overlay",
-        subtitle: "How today's moving sky triggers your personal chart",
-        text: `Looking at your natal-transit intersection: moving planetary coordinates are making direct geometric contact with your foundation. You have strong active focus in your angular houses. This demands executive clarity rather than passive drifting. When obstacles appear before midday, recognize them as calibration resistance, not defeat.`,
-      },
-      {
-        id: "relationships",
-        title: "3. Social Resonance & Relationship Weather",
-        subtitle: "How to show up with partners, family, and colleagues",
-        text: `Your relationship axis is receiving subtle emotional sensitivity today. Others may be processing subterranean feelings that they cannot articulate directly. Do not interrogate their tone. Offer a grounded presence, acknowledge their emotional experience, and allow them time to find equilibrium.`,
-      },
-      {
-        id: "directive",
-        title: "4. The Sovereign Action Directive",
-        subtitle: "Your actionable protocol to win the day",
-        text: `Your primary assignment today: Guard your attention like sovereign gold. Eliminate shallow multitasking between one and three in the afternoon. Dedicate sixty uninterrupted minutes to your most important creative or strategic initiative. You were designed by the algorithms of the cosmos with complete intentionality. Move through today knowing the math is on your side.`,
-      },
-    ];
-  }, [chart]);
+  const [briefingChapters, setBriefingChapters] = useState<Awaited<ReturnType<typeof buildChartBriefing>>["chapters"]>([]);
+  const [briefingError, setBriefingError] = useState("");
+  const [briefingRetry, setBriefingRetry] = useState(0);
+  const briefing = trpc.interpretation.chartBriefing.useMutation();
+  const briefingVersion = useRef(0);
+  useEffect(() => {
+    const version = ++briefingVersion.current;
+    setBriefingChapters([]); setBriefingError(""); setActiveChapterIndex(0); setIsPlaying(false);
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (chart) briefing.mutate({ chart }, {
+      onSuccess: result => { if (version === briefingVersion.current) setBriefingChapters(result.chapters); },
+      onError: error => { if (version === briefingVersion.current) setBriefingError(error.message); },
+    });
+    return () => { briefingVersion.current++; };
+  }, [chart, briefingRetry]);
 
   const fullScript = useMemo(() => {
     return briefingChapters.map(c => c.text).join(" ");
@@ -105,7 +84,7 @@ export function AudioPodcastBriefing({
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
 
-    if (index >= briefingChapters.length) {
+    if (index < 0 || index >= briefingChapters.length) {
       setIsPlaying(false);
       setActiveChapterIndex(0);
       return;
@@ -187,6 +166,8 @@ export function AudioPodcastBriefing({
 
   return (
     <div className={`space-y-8 ${className}`}>
+      {briefing.isPending && !briefingChapters.length && <p role="status" className="text-sm text-cyan-200">Building your briefing from the calculated chart evidence…</p>}
+      {briefingError && <div role="alert" className="space-y-3 rounded-xl border border-rose-300/30 p-4 text-sm text-rose-200"><p>{briefingError}</p><button type="button" onClick={() => setBriefingRetry(value => value + 1)} className="underline">Retry the audio reading</button></div>}
       {/* Podcast Player Banner */}
       <div className="relative overflow-hidden rounded-3xl border border-violet-300/30 bg-gradient-to-r from-violet-950/50 via-indigo-950/40 to-black/60 p-6 sm:p-8 backdrop-blur-md shadow-2xl shadow-violet-950/30">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -205,10 +186,10 @@ export function AudioPodcastBriefing({
               )}
             </div>
             <h2 className="font-serif text-3xl font-bold text-white tracking-tight">
-              The Celestial Morning Audio Briefing
+              Your Calculated Chart Audio Briefing
             </h2>
             <p className="max-w-2xl text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Listen to your personalized astrological briefing synthesized into an episodic podcast. Ground your day with real-time transit telemetry, relationship guidance, and sovereign focus.
+              Listen to the interpretation of your selected chart. Each chapter uses the same calculated synthesis and evidence as the reading.
             </p>
           </div>
 
@@ -296,6 +277,7 @@ export function AudioPodcastBriefing({
                 type="button"
                 variant="ghost"
                 size="icon"
+                disabled={!briefingChapters.length}
                 onClick={handleSkipBack}
                 className="h-10 w-10 text-slate-300 hover:text-white hover:bg-white/10 rounded-full"
                 title="Previous Chapter"
@@ -305,6 +287,7 @@ export function AudioPodcastBriefing({
 
               <Button
                 type="button"
+                disabled={!briefingChapters.length || !audioSupported}
                 onClick={handleTogglePlay}
                 className="h-13 w-13 rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 text-black font-bold shadow-xl shadow-cyan-400/20 hover:from-violet-400 hover:to-cyan-300"
                 aria-label={isPlaying ? "Pause podcast" : "Play podcast"}
@@ -316,6 +299,7 @@ export function AudioPodcastBriefing({
                 type="button"
                 variant="ghost"
                 size="icon"
+                disabled={!briefingChapters.length}
                 onClick={handleSkipForward}
                 className="h-10 w-10 text-slate-300 hover:text-white hover:bg-white/10 rounded-full"
                 title="Next Chapter"

@@ -59,7 +59,7 @@ export function analyzeSystemIntersect(
   const targetPrimaryElem = ELEMENT_MAP[targetSunSign] || "Fire";
 
   const keyConnections: SystemIntersectAnalysis["keyConnections"] = [];
-  let harmonyPoints = 65; // baseline positive connection
+  let harmonyPoints = 50; // neutral midpoint; only measured contacts change the score
 
   // Check Sun-Moon Synergies
   if (userMoon && targetSun) {
@@ -116,7 +116,7 @@ export function analyzeSystemIntersect(
         type: "support",
         planets: "Mercury ⚹/△ Mercury",
         aspectName: "Harmonious Cognitive Flow",
-        orb: Number(dist.toFixed(1)),
+        orb: Number(Math.min(dist, Math.abs(dist - 60), Math.abs(dist - 120)).toFixed(1)),
         interpretation: "Effortless Mental Synthesis: Similar processing speeds and conversation rhythm; ideas flow without translation barriers.",
       });
       harmonyPoints += 10;
@@ -140,7 +140,7 @@ export function analyzeSystemIntersect(
         type: "friction",
         planets: "User Mars □/☍ Loved One Saturn",
         aspectName: "Brake & Accelerator Paradox",
-        orb: Number(dist.toFixed(1)),
+        orb: Number(Math.min(Math.abs(dist - 90), Math.abs(dist - 180)).toFixed(1)),
         interpretation: "Timing Friction: One initiates swift momentum while the other applies caution and structural brakes.",
       });
       harmonyPoints -= 7;
@@ -165,8 +165,8 @@ export function analyzeSystemIntersect(
     });
   }
 
-  // Clamp harmonyScore between 35 and 98
-  const harmonyScore = Math.max(38, Math.min(96, harmonyPoints));
+  // Neutral midpoint plus measured contacts; no predetermined positive floor.
+  const harmonyScore = Math.max(0, Math.min(100, harmonyPoints));
 
   let dynamicTitle = "Resonant Co-Creators";
   if (harmonyScore >= 85) dynamicTitle = "Architectural Anchor & Soul Synergy";
@@ -184,21 +184,13 @@ export function analyzeSystemIntersect(
         ? `Shared ${userPrimaryElem} Element: Mutual instinctual understanding and identical baseline tempo.`
         : `${userPrimaryElem} meets ${targetPrimaryElem}: Natural complementary polarity—one brings inspiration/drive, the other brings grounding/depth.`,
     },
-    keyConnections: keyConnections.length > 0 ? keyConnections : [
-      {
-        type: "support",
-        planets: "Elemental Matrix Intersection",
-        aspectName: "Sextile Synergy",
-        orb: 2.1,
-        interpretation: "Stable energetic baseline: Natural mutual respect and conversational receptivity.",
-      }
-    ],
+    keyConnections,
     houseOverlays,
     currentTransitIntersect: {
-      mutualPressure: harmonyScore > 75 ? "low" : harmonyScore > 60 ? "moderate" : "high",
-      summary: "Current moving planetary transits indicate stable communication corridors with focus on personal responsibility.",
-      frictionPoints: ["Watch for uncommunicated assumptions during high-tempo workdays."],
-      harmoniousWindows: ["Evenings and unstructured downtime provide immediate conversational restoration."],
+      mutualPressure: "moderate",
+      summary: "No live transit calculation was performed in this natal cross-chart comparison. Transit pressure and timing are unassessed.",
+      frictionPoints: [],
+      harmoniousWindows: [],
     },
   };
 }
@@ -283,11 +275,13 @@ export function evaluateLovedOneCheckIn(
   // Check Jupiter expansive window
   if (jupiterTransit && pressureLevel === "calm") {
     const softAspect = jupiterTransit.natalContacts?.find(
-      c => c.aspect === "trine" || c.aspect === "conjunction" || c.aspect === "sextile"
+      c => c.aspect === "trine" || c.aspect === "conjunction"
     );
-    if (softAspect) {
+    const minorSoftAspect = jupiterTransit.minorNatalContacts?.find(c => c.classification === "flow");
+    const supportiveAspect = softAspect ?? minorSoftAspect;
+    if (supportiveAspect) {
       dominantTransitBody = "Jupiter";
-      activeSignatures.push(`Jupiter ${softAspect.aspect} natal ${softAspect.natalName}`);
+      activeSignatures.push(`Jupiter ${supportiveAspect.aspect} natal ${supportiveAspect.natalName}${supportiveAspect === minorSoftAspect ? " (minor, half weight)" : ""}`);
       mechanicsSummary = `Transit Jupiter is generating an expansive vitality window for ${name}. High receptivity, optimism, and open horizons.`;
       whatTheyAreProcessing = `Fresh inspiration, creative clarity, and appetite for expansion.`;
       howToShowUp = `Celebrate their wins, brainstorm possibilities, and lean into vision-building.`;

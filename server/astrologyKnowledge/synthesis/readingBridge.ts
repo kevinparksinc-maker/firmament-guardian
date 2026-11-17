@@ -9,7 +9,7 @@ import {
 import {
   canonDossierToEvidenceItems,
   retrieveChartCanonDossier,
-} from "../calculations/retriever";
+} from "../canon/retriever";
 import { buildCanonRuleApplications } from "./canonApplications";
 import { synthesizeMasterReading } from "./synthesizer";
 import type { SynthesisResult } from "./types";

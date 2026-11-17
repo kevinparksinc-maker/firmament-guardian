@@ -146,12 +146,24 @@ function outcome(
         "frustration",
         "void-of-course",
       ].includes(rule.technique);
+      const techniqueLabels: Record<string, string> = {
+        "mutual-reception": "two placements actively supporting each other",
+        "unilateral-reception": "one placement hosting and backing another",
+        "translation-of-light": "a faster mover carrying momentum between two placements",
+        "collection-of-light": "a shared planet bringing two separate placements into agreement",
+        "cazimi": "close solar alignment sharpening focus",
+        "combustion": "solar intensity overshadowing and internalizing expression",
+        "besiegement": "pressure closing in from both sides",
+        "prohibition": "an intervening influence interrupting direct follow-through",
+        "frustration": "effort shifting direction before completion",
+        "void-of-course": "a quiet pause before the next decisive push",
+      };
       judgments.push({
         id: `prop-method-${layer.id}-canon-${rule.canonEvidenceId}`,
         subject: rule.subject,
         domain: judgments[0].domain,
         judgment: rule.statement,
-        mechanism: rule.technique,
+        mechanism: techniqueLabels[rule.technique] ?? rule.technique,
         valence: supportive
           ? "supportive"
           : challenging

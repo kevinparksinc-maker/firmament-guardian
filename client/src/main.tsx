@@ -5,35 +5,33 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
+import { Router as WouterRouter } from "wouter";
 import { startLogin } from "./const";
 import "./index.css";
+import { chartQueryTransport } from "@shared/trpcTransport";
 
 const queryClient = new QueryClient();
 
 async function fetchApiResponse(input: RequestInfo | URL, init?: RequestInit) {
-  // Render can respond with its temporary HTTP 200 "Starting Server" HTML
-  // while waking a service. That is not an API success and must never be parsed
-  // as chart/synthesis JSON. Retry only that known startup page, not other errors.
-  for (let attempt = 0; attempt < 4; attempt++) {
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const response = await globalThis.fetch(input, {
       ...(init ?? {}),
       credentials: "include",
     });
     const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) return response;
-
-    const preview = (await response.clone().text()).slice(0, 300).replace(/\\s+/g, " ");
-    const starting = response.status === 200 && /starting server/i.test(preview);
-    if (starting && attempt < 3) {
-      await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
-      continue;
+    if (!contentType.includes("application/json")) {
+      const preview = (await response.clone().text()).slice(0, 240).replace(/\s+/g, " ");
+      const isServerStarting = preview.includes("Starting Server") || preview.includes("Starting Server...") || preview.includes("vite:loading");
+      if (isServerStarting && attempt < maxAttempts - 1) {
+        await new Promise(r => setTimeout(r, 1200));
+        continue;
+      }
+      throw new Error(`API request failed: HTTP ${response.status} ${response.statusText}. Non-JSON response (${contentType || "no content-type"}): ${preview}`);
     }
-    if (starting) {
-      throw new Error("The app server is starting up and has not returned a reading yet. Your chart has not been replaced. Retry when the server is ready.");
-    }
-    throw new Error(`API request failed: HTTP ${response.status} ${response.statusText}. Non-JSON response (${contentType || "no content-type"}): ${preview}`);
+    return response;
   }
-  throw new Error("The API did not become ready.");
+  throw new Error("API request failed: Server starting up, please try again.");
 }
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
@@ -66,6 +64,7 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
+      ...chartQueryTransport,
       url: "/api/trpc",
       transformer: superjson,
       headers() {
@@ -98,15 +97,18 @@ const trpcClient = trpc.createClient({
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <WouterRouter base={window.location.hostname.endsWith("github.io") ? "/firmament-guardian" : ""}>
+        <App />
+      </WouterRouter>
     </QueryClientProvider>
   </trpc.Provider>
 );
 
+
 // Allow Android browsers to offer a home-screen install. No API or user data is cached.
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(error => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(error => {
       console.warn("Firmament Guardian install support unavailable:", error);
     });
   });

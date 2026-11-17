@@ -4,6 +4,18 @@ import { buildChartMethodOutcomes } from "./chartMethodOutcomes";
 import { buildMasterPipeline } from "./master-pipeline";
 import { MASTER_METHOD_IDS } from "./masterChart/registry";
 import { packSynthesis } from "./astrologyKnowledge/synthesis/context";
+import { invokeLLM } from "./_core/llm";
+vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
+beforeEach(() => {
+  vi.mocked(invokeLLM).mockClear().mockImplementation(async request => {
+    const payload = JSON.parse(String(request.messages[1].content));
+    return { choices: [{ message: { content: JSON.stringify(
+      Object.fromEntries(payload.requestedMethodIds.map((id: string, index: number) => [
+        id, `This fixture gives the calculated finding a complete and distinct reading for entry ${index}.`,
+      ]))
+    ) }, finish_reason: "stop" }] } as never;
+  });
+});
 const input={location:"Dallas",latitude:32.7767,longitude:-96.797,timezone:"America/Chicago",date:"1986-11-20",time:"10:06",worldview:"agent" as const,readingScope:"natal" as const,transitLocation:"Las Vegas",transitLatitude:36.1699,transitLongitude:-115.1398,transitTimezone:"America/Los_Angeles",transitDate:"2026-11-06",transitTime:"16:22"};
 beforeEach(()=>{vi.useFakeTimers({toFake:["Date"]});vi.setSystemTime(new Date("2026-11-07T00:22:00Z"));});
 afterEach(()=>vi.useRealTimers());
@@ -37,6 +49,18 @@ describe("My Chart method outcomes",()=>{
       expect(event.chartScope).toBe("event");
       expect(event.findingJudgments.flatMap(f=>f.evidenceIds).every(id=>id.startsWith("transit:"))).toBe(true);
     }
+  });
+  it("rejects a partial method batch and retries the same snapshot", async () => {
+    const chart = await calculateMasterChart({ ...input, time: "10:18" });
+    vi.mocked(invokeLLM).mockResolvedValueOnce({
+      choices: [{ message: { content: "{}" }, finish_reason: "stop" }],
+    } as never);
+    await expect(buildChartMethodOutcomes(chart, "natal")).rejects.toThrow("METHOD_MINIS_INCOMPLETE");
+    const complete = await buildChartMethodOutcomes(chart, "natal");
+    expect(complete.methods.filter(method =>
+      method.calculatedFindings.length || method.findingJudgments.length
+    ).every(method => Boolean(method.aiMiniReading))).toBe(true);
+    expect(invokeLLM).toHaveBeenCalledTimes(2);
   });
   it("refuses to display outcomes for positions that disagree with the calculated chart",async()=>{
     const chart=await calculateMasterChart(input);

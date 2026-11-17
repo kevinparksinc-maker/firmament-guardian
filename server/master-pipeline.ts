@@ -1,5 +1,9 @@
 import type { ChartResult } from "./astronomy";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+import {
+  formatCompactSynthesisContext,
+  type CompactSynthesisOptions,
+} from "./astrologyKnowledge/synthesis/context";
 
 export type MasterReadingMode = "natal" | "transit" | "combined";
 export type MasterPipelineResult = Awaited<
@@ -16,4 +20,10 @@ export function buildMasterPipeline(
 }
 export function formatMasterGateContext(result: MasterPipelineResult): string {
   return result.context;
+}
+export function formatCompactMasterGateContext(
+  result: MasterPipelineResult,
+  options?: CompactSynthesisOptions
+): string {
+  return formatCompactSynthesisContext(result.synthesis, options);
 }

@@ -199,7 +199,9 @@ export function BehavioralIntelligencePanel({
     );
   }
 
-  if (!report) return null;
+  if (!report) return reportQuery.error ? (
+    <p role="alert" className="text-sm text-rose-200">{reportQuery.error.message}</p>
+  ) : null;
 
   const activeBehavior =
     report.dominantBehaviors.find(b => b.id === expandedBehaviorId) ??
@@ -208,6 +210,7 @@ export function BehavioralIntelligencePanel({
   return (
     <Card className="mx-auto max-w-5xl overflow-hidden border-cyan-200/20 bg-gradient-to-br from-slate-950/95 via-cyan-950/20 to-violet-950/25 text-slate-100 shadow-2xl shadow-cyan-950/25">
       <CardHeader className="border-b border-white/10 px-5 py-6 sm:px-7">
+        <div className="whitespace-pre-line text-sm leading-relaxed">{report.interpretation}</div>
         {/* Core Firmament Manifesto Banner */}
         <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl border border-cyan-200/15 bg-black/35 p-3 sm:grid-cols-4">
           <div className="rounded-xl bg-white/[0.03] px-3 py-2">

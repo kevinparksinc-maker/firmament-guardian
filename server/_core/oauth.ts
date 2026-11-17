@@ -64,6 +64,11 @@ export function registerOAuthRoutes(app: Express) {
   });
 
   app.post("/api/oauth/demo-login", async (req: Request, res: Response) => {
+    // Never issue a shared demo session in production or without explicit opt-in.
+    if (process.env.NODE_ENV === "production" || process.env.ENABLE_DEMO_LOGIN !== "true") {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
     try {
       const openId = "local-observatory-user";
       const name = "Observatory Keeper";

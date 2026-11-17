@@ -33,6 +33,29 @@ export default function StandaloneTransitPage() {
   );
   const [result, setResult] = useState<ChartResult | null>(null);
   const [view, setView] = useState<"diamond" | "wheel">("diamond");
+  const synthesis = trpc.interpretation.independentSkyReading.useMutation();
+  const [reading, setReading] = useState<{
+    chart: ChartResult;
+    text: string;
+    error?: boolean;
+  }>();
+  const interpret = async (contactId?: string) => {
+    if (!result) return;
+    setReading(undefined);
+    try {
+      const text = await synthesis.mutateAsync({ chart: result, contactId });
+      setReading({ chart: result, text });
+    } catch (error) {
+      setReading({
+        chart: result,
+        text:
+          error instanceof Error
+            ? error.message
+            : "The reading could not be completed.",
+        error: true,
+      });
+    }
+  };
   const calculate = trpc.hybrid.calculate.useMutation();
   const utils = trpc.useUtils();
   const [resolving, setResolving] = useState(false);
@@ -105,6 +128,7 @@ export default function StandaloneTransitPage() {
         time,
         worldview: "agent",
         readingScope: "natal",
+        chartRole: "event",
       });
       // The event-time moving bodies are the independent sky; suppress natal/transit overlays.
       if (version === request.current) setResult({ ...chart, transits: [] });
@@ -141,108 +165,110 @@ export default function StandaloneTransitPage() {
         </p>
       </header>
       <details className="rounded-2xl border border-white/15 bg-slate-950/70 p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-cyan-200">Edit transit date, time and location</summary>
-      <section className="grid gap-3 rounded-2xl border border-white/15 bg-slate-950/70 p-4 sm:grid-cols-2">
-        <label className="text-xs">
-          Date
-          <input
-            aria-label="Transit date"
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
-          />
-        </label>
-        <label className="text-xs">
-          Local time
-          <input
-            aria-label="Transit local time"
-            type="time"
-            value={time}
-            onChange={e => setTime(e.target.value)}
-            className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
-          />
-        </label>
-        <label className="text-xs">
-          Location
-          <input
-            aria-label="Transit location"
-            value={location}
-            onBlur={() => {
-              if (location.trim().length >= 2 && (!latitude || !longitude))
-                void resolveCity();
-            }}
-            onChange={e => {
-              setLocation(e.target.value);
-              setLatitude("");
-              setLongitude("");
-              setTimezone("");
-            }}
-            className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={resolveCity}
-          disabled={resolving || location.trim().length < 2}
-          className="rounded-xl border border-cyan-300/40 px-4 py-2 text-sm text-cyan-100"
-        >
-          {resolving
-            ? "Resolving city…"
-            : "Resolve city coordinates and timezone"}
-        </button>
-        <label className="text-xs">
-          IANA timezone
-          <input
-            aria-label="Transit timezone"
-            value={timezone}
-            onChange={e => setTimezone(e.target.value)}
-            className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
-          />
-        </label>
-        <label className="text-xs">
-          Latitude
-          <input
-            aria-label="Transit latitude"
-            type="number"
-            step="any"
-            value={latitude}
-            onChange={e => setLatitude(e.target.value)}
-            className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
-          />
-        </label>
-        <label className="text-xs">
-          Longitude
-          <input
-            aria-label="Transit longitude"
-            type="number"
-            step="any"
-            value={longitude}
-            onChange={e => setLongitude(e.target.value)}
-            className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
-          />
-        </label>
-        <button
-          disabled={!valid || calculate.isPending}
-          onClick={run}
-          className="rounded-xl bg-amber-400 px-4 py-3 font-bold text-slate-950 disabled:opacity-50 sm:col-span-2"
-        >
-          {calculate.isPending
-            ? "Calculating sky…"
-            : "Calculate Independent Transit Chart"}
-        </button>
-        {error && (
-          <p role="alert" className="text-sm text-rose-300 sm:col-span-2">
-            {error}
-          </p>
-        )}
-        {!tupleMatches && latitude && longitude && (
-          <p role="status" className="text-sm text-amber-200 sm:col-span-2">
-            The city, coordinates and timezone do not match. Use Resolve city to
-            update them together.
-          </p>
-        )}
-      </section>
+        <summary className="cursor-pointer text-sm font-semibold text-cyan-200">
+          Edit transit date, time and location
+        </summary>
+        <section className="grid gap-3 rounded-2xl border border-white/15 bg-slate-950/70 p-4 sm:grid-cols-2">
+          <label className="text-xs">
+            Date
+            <input
+              aria-label="Transit date"
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
+            />
+          </label>
+          <label className="text-xs">
+            Local time
+            <input
+              aria-label="Transit local time"
+              type="time"
+              value={time}
+              onChange={e => setTime(e.target.value)}
+              className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
+            />
+          </label>
+          <label className="text-xs">
+            Location
+            <input
+              aria-label="Transit location"
+              value={location}
+              onBlur={() => {
+                if (location.trim().length >= 2 && (!latitude || !longitude))
+                  void resolveCity();
+              }}
+              onChange={e => {
+                setLocation(e.target.value);
+                setLatitude("");
+                setLongitude("");
+                setTimezone("");
+              }}
+              className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={resolveCity}
+            disabled={resolving || location.trim().length < 2}
+            className="rounded-xl border border-cyan-300/40 px-4 py-2 text-sm text-cyan-100"
+          >
+            {resolving
+              ? "Resolving city…"
+              : "Resolve city coordinates and timezone"}
+          </button>
+          <label className="text-xs">
+            IANA timezone
+            <input
+              aria-label="Transit timezone"
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+              className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
+            />
+          </label>
+          <label className="text-xs">
+            Latitude
+            <input
+              aria-label="Transit latitude"
+              type="number"
+              step="any"
+              value={latitude}
+              onChange={e => setLatitude(e.target.value)}
+              className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
+            />
+          </label>
+          <label className="text-xs">
+            Longitude
+            <input
+              aria-label="Transit longitude"
+              type="number"
+              step="any"
+              value={longitude}
+              onChange={e => setLongitude(e.target.value)}
+              className="mt-1 w-full rounded-lg bg-slate-900 p-3 text-white"
+            />
+          </label>
+          <button
+            disabled={!valid || calculate.isPending}
+            onClick={run}
+            className="rounded-xl bg-amber-400 px-4 py-3 font-bold text-slate-950 disabled:opacity-50 sm:col-span-2"
+          >
+            {calculate.isPending
+              ? "Calculating sky…"
+              : "Calculate Independent Transit Chart"}
+          </button>
+          {error && (
+            <p role="alert" className="text-sm text-rose-300 sm:col-span-2">
+              {error}
+            </p>
+          )}
+          {!tupleMatches && latitude && longitude && (
+            <p role="status" className="text-sm text-amber-200 sm:col-span-2">
+              The city, coordinates and timezone do not match. Use Resolve city
+              to update them together.
+            </p>
+          )}
+        </section>
       </details>
       {!result && (
         <p
@@ -302,6 +328,24 @@ export default function StandaloneTransitPage() {
                   time.
                 </p>
               )}
+              <button
+                type="button"
+                disabled={synthesis.isPending}
+                onClick={() => void interpret()}
+                className="rounded-lg border border-cyan-300/40 px-3 py-2 text-sm"
+              >
+                Read this sky
+              </button>
+              {(synthesis.isPending || reading?.chart === result) && (
+                <p
+                  className="whitespace-pre-wrap text-sm"
+                  role={reading?.error ? "alert" : "status"}
+                >
+                  {synthesis.isPending
+                    ? "Synthesizing the event sky…"
+                    : reading?.text}
+                </p>
+              )}
               <details>
                 <summary className="cursor-pointer text-cyan-200">
                   Full contact evidence
@@ -314,6 +358,14 @@ export default function StandaloneTransitPage() {
                         {c.transit} {c.aspect} {c.natal} · {c.orb.toFixed(2)}° ·{" "}
                         {c.intensity}/5 · {c.stars} × {c.natalStars} ×{" "}
                         {c.majorFactor} = {c.strength} points
+                        <button
+                          type="button"
+                          disabled={synthesis.isPending}
+                          onClick={() => void interpret(c.id)}
+                          className="ml-2 text-cyan-200 underline"
+                        >
+                          Read contact
+                        </button>
                       </li>
                     ))}
                 </ul>

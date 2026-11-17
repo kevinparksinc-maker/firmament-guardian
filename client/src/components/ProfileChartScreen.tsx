@@ -1,4 +1,8 @@
+import { SystematicDeconstruction } from "./SystematicDeconstruction";
+import { ChartMethodOutcomes } from "./ChartMethodOutcomes";
+import { MasterSynthesizerPanel } from "./MasterSynthesizerPanel";
 import React, { useState, useMemo } from "react";
+import { TechniqueAuditDashboard } from "./TechniqueAuditDashboard";
 import { Link } from "wouter";
 import {
   BookOpen,
@@ -22,13 +26,12 @@ import {
 } from "lucide-react";
 import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
 import { ChartWheel } from "@/components/ChartWheel";
-import { InterpretationPanel } from "@/components/InterpretationPanel";
+import { CompletePlacementsTable } from "@/components/CompletePlacementsTable";
+import { NatalStarsAndLotsLayer } from "@/components/NatalStarsAndLotsLayer";
+import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
 import { FixedStarIntensityVisualizer } from "@/components/FixedStarIntensityVisualizer";
-import { SystematicDeconstruction } from "@/components/SystematicDeconstruction";
-import { PlanetaryCanonMatrix } from "@/components/PlanetaryCanonMatrix";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
-import { FIXED_STARS } from "../../../shared/hybrid";
 
 export type ProfileChartScreenProps = {
   chart: ChartResult | null;
@@ -111,17 +114,9 @@ export function ProfileChartScreen({
   onReadingModeChange,
   error,
 }: ProfileChartScreenProps) {
-  // Toggle between North Indian Diamond (Default) and Circular Wheel
-  const [chartViewMode, setChartViewMode] = useState<"diamond" | "wheel">("diamond");
+  // Toggle between Circular Wheel (Default) and North Indian Diamond
+  const [chartViewMode, setChartViewMode] = useState<"wheel" | "diamond">("wheel");
   const [interpretBody, setInterpretBody] = useState<string | null>(null);
-
-  const allBodies = useMemo(() => {
-    if (!chart) return [];
-    return [...chart.movingBodies, chart.ascendant, chart.descendant, chart.northNode, chart.southNode].filter(
-      (b): b is ChartRow => Boolean(b && Number.isFinite(b.longitude))
-    );
-
-  }, [chart]);
 
   const sun = chart?.movingBodies.find(b => b.name === "Sun");
   const moon = chart?.movingBodies.find(b => b.name === "Moon");
@@ -143,28 +138,6 @@ export function ProfileChartScreen({
     return { elements, modalities };
   }, [chart]);
 
-  // Fixed Star contacts within 2.0 degrees
-  const starContacts = useMemo(() => {
-    if (!chart) return [];
-    const contacts: Array<{ star: string; planet: string; orb: number; meaning: string }> = [];
-    allBodies.forEach(b => {
-      FIXED_STARS.forEach(([starName, starLon]) => {
-        const diff = Math.abs(b.longitude - starLon);
-        const dist = Math.min(diff, 360 - diff);
-        if (dist <= 2.0) {
-          contacts.push({
-            star: starName,
-            planet: b.name,
-            orb: dist,
-            meaning: `Galactic fixed star beacon providing high spiritual or leadership charge.`,
-          });
-        }
-      });
-    });
-    return contacts.sort((a, b) => a.orb - b.orb);
-  }, [chart, allBodies]);
-
-
   if (!chart) {
     return (
       <section role="status" className="mx-auto max-w-4xl rounded-2xl border border-amber-300/30 bg-slate-950/80 p-8 text-center text-amber-100">
@@ -184,16 +157,16 @@ export function ProfileChartScreen({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <Diamond className="h-4 w-4 text-amber-300" />
-              <span className="text-[10px] font-bold uppercase tracking-[.24em] text-amber-300">
+              <Orbit className="h-4 w-4 text-cyan-300" />
+              <span className="text-[10px] font-bold uppercase tracking-[.24em] text-cyan-300">
                 Natal Celestial Observatory
               </span>
             </div>
             <h1 className="font-serif text-3xl font-semibold text-white sm:text-4xl">
-              Natal Chart Workspace
+              Birth Chart & Planetary Map
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Precise 360° celestial geometry anchored to your birth moment
+              Precise 360° celestial geometry anchored to your birth moment with complete planetary placements below.
             </p>
           </div>
 
@@ -206,6 +179,13 @@ export function ProfileChartScreen({
               <span>Edit Birth Data</span>
             </Link>
             <Link
+              href="/energy"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/40 bg-cyan-400/15 px-3.5 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/25"
+            >
+              <Zap size={14} />
+              <span>Live Energy Read</span>
+            </Link>
+            <Link
               href="/reading"
               className="inline-flex items-center gap-1.5 rounded-xl border border-violet-400/40 bg-violet-400/15 px-3.5 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-400/25"
             >
@@ -215,22 +195,10 @@ export function ProfileChartScreen({
           </div>
         </div>
 
-        {/* View Switchers: Diamond vs Wheel & God vs Agent */}
+        {/* View Switchers: Wheel vs Diamond & God vs Agent */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#080B14]/90 p-3 shadow-md">
           {/* Chart Wheel Projection Mode Toggle */}
           <div className="flex items-center gap-1 bg-[#101628] p-1 rounded-xl border border-white/10">
-            <button
-              type="button"
-              onClick={() => setChartViewMode("diamond")}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
-                chartViewMode === "diamond"
-                  ? "bg-[#D9B66F]/20 text-[#D9B66F] border border-[#D9B66F]/40 shadow-[0_0_12px_rgba(217,182,111,0.2)]"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Diamond size={15} />
-              <span>North Indian Diamond (Default)</span>
-            </button>
             <button
               type="button"
               onClick={() => setChartViewMode("wheel")}
@@ -241,7 +209,19 @@ export function ProfileChartScreen({
               }`}
             >
               <Orbit size={15} />
-              <span>Circular Wheel</span>
+              <span>Circular Wheel & Map (Default)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartViewMode("diamond")}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+                chartViewMode === "diamond"
+                  ? "bg-[#D9B66F]/20 text-[#D9B66F] border border-[#D9B66F]/40 shadow-[0_0_12px_rgba(217,182,111,0.2)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Diamond size={15} />
+              <span>North Indian Diamond</span>
             </button>
           </div>
 
@@ -276,51 +256,22 @@ export function ProfileChartScreen({
 
       {/* Main Chart Graphic Display */}
       <section aria-label="Main Chart Visualizer">
-        {chartViewMode === "diamond" ? (
-          <GuardianDiamondCharts chart={chart} />
-        ) : (
+        {chartViewMode === "wheel" ? (
           <ChartWheel chart={chart} />
+        ) : (
+          <GuardianDiamondCharts chart={chart} />
         )}
       </section>
 
-      {/* Source-first XYZ audit: original vectors are distinct from projected bearings. */}
-      <section aria-label="Astronomical XYZ ephemeris ledger" className="rounded-2xl border border-cyan-400/25 bg-slate-950/80 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-serif text-xl font-semibold text-cyan-100">Astronomical Ephemeris · XYZ Ledger</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-400">Swiss Ephemeris Moshier · geocentric J2000 Cartesian XYZ (AU) → atan2(Y, X), with no zodiac offset or precession adjustment. Fixed-star symbolic anchors are stored separately. No local sidereal Ascendant.</p>
-          </div>
-          <span className="rounded-lg border border-cyan-300/25 px-2 py-1 text-[10px] font-mono text-cyan-200">SOURCE: XYZ VECTORS</span>
-        </div>
-        <p className="mt-3 text-xs text-slate-300">Julian day: {chart.julianDay.toFixed(6)} · UTC: {chart.utc}</p>
-        {chart.sunriseProvenance && (
-          <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs leading-6 text-amber-100">
-            Sunrise at birth location: {chart.sunriseProvenance.utc} · Rotation since sunrise: {chart.sunriseProvenance.elapsedHours.toFixed(3)} hours × 15°/hour · Sun declination: {chart.sunriseProvenance.solarDeclination.toFixed(3)}°.
-            <span className="block">Ascendant: {chart.ascendant?.display ?? "Unavailable"} · Equal houses in 30° steps · No +90° term.</span>
-          </div>
-        )}
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-[11px] font-mono">
-            <thead className="border-b border-white/15 text-cyan-200">
-              <tr><th className="p-2">Body</th><th className="p-2 text-right">X (AU)</th><th className="p-2 text-right">Y (AU)</th><th className="p-2 text-right">Z (AU)</th><th className="p-2 text-right">Raw XYZ</th><th className="p-2 text-right">Zero-tilt projection</th></tr>
-            </thead>
-            <tbody>
-              {chart.movingBodies.map(body => (
-                <tr key={body.name} className="border-b border-white/5 text-slate-200">
-                  <td className="p-2 font-semibold text-amber-100">{body.name}</td>
-                  <td className="p-2 text-right">{body.xyz?.x.toFixed(6) ?? "—"}</td>
-                  <td className="p-2 text-right">{body.xyz?.y.toFixed(6) ?? "—"}</td>
-                  <td className="p-2 text-right">{body.xyz?.z.toFixed(6) ?? "—"}</td>
-                  <td className="p-2 text-right">{body.rawXyzLongitude?.toFixed(3) ?? "—"}°</td>
-                  <td className="p-2 text-right text-cyan-100">{body.display}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      {/* Complete Planetary Placements Table Directly Underneath */}
+      <CompletePlacementsTable chart={chart} />
 
-      {/* Esoteric Placement Interpretation Modal/Section */}
+      {/* Standalone Fixed Star & Arabic Lot Position Layer (Works with or without Aspects) */}
+      <NatalStarsAndLotsLayer chart={chart} />
+
+      <SystematicDeconstruction chart={chart} mode="natal" onInterpretBody={setInterpretBody} />
+
+      {/* Expanded placement evidence */}
       {interpretBody && (
         <section className="rounded-2xl border border-violet-400/40 bg-slate-950/90 p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -336,22 +287,17 @@ export function ProfileChartScreen({
               Close
             </button>
           </div>
-          <InterpretationPanel
-            chart={chart}
-            initialMode={readingMode}
-            initialQuestion={`Provide a comprehensive esoteric interpretation of ${interpretBody} in my chart: exact degrees, dispositors, sacred geometry, Nakshatra, decan, and real-life manifestations.`}
-          />
+          <FocusedPlacementReading chart={chart} name={interpretBody} />
         </section>
       )}
 
-      {/* PROMINENT FEATURE: CANONICAL PLANETARY METHOD MATRIX (144 VEDIC & ESOTERIC PLACEMENTS) */}
-      {chart && (
-        <PlanetaryCanonMatrix chart={chart} onInterpretBody={setInterpretBody} />
-      )}
-
-      {/* 25 EXPANDABLE SYSTEMATIC DECONSTRUCTION DRAWERS */}
-      <SystematicDeconstruction chart={chart} onInterpretBody={setInterpretBody} />
-
+      <ChartMethodOutcomes chart={chart} mode={readingMode} />
+      <section aria-label="Whole-chart synthesis" className="space-y-4">
+        <h2 className="font-serif text-2xl font-semibold text-white">Your whole-chart synthesis</h2>
+        <p className="text-sm text-slate-300">The individual outcomes above now come together in one connected reading.</p>
+        <MasterSynthesizerPanel chart={chart} mode={readingMode} />
+      </section>
+      <TechniqueAuditDashboard chart={chart} />
       {/* Fixed Star Intensity Visualizer */}
       <section aria-label="Fixed Star Visualizer">
         <FixedStarIntensityVisualizer chart={chart} />

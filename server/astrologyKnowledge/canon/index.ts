@@ -11,11 +11,3 @@ export * from "./vedicJyotishCanon";
 export * from "./planetInHouseInterpretations";
 export * from "./arabicPersianCanon";
 export * from "./retriever";
-
-export * from "./chineseMansions28";
-export * from "./seferYetzirah";
-export * from "./jyotishHouseGroups";
-export * from "./shaniDoctrine";
-export * from "./civilizationDoctrineInventory";
-export * from "./doctrineResearchIntake";
-export * from "./importedCelestialDoctrineIndex";

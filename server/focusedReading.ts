@@ -1,5 +1,8 @@
+import { createHash } from "node:crypto";
+import { localDateTime } from "../shared/transitTime";
+import { calculateMasterChart } from "./masterChart/entry";
 import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
-import { buildNarrativePacket } from "./astrologyKnowledge/synthesis/narrativePacket";
+import { packCompactSynthesisForLLM } from "./astrologyKnowledge/synthesis/context";
 import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
 import {
   aspectBetween,
@@ -8,21 +11,32 @@ import {
   type ChartRow,
 } from "./astronomy";
 import { synthesizeChartForReading, synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
-import { retrievePlacementDossier } from "./astrologyKnowledge/calculations/retriever";
+import { retrievePlacementDossier } from "./astrologyKnowledge/canon/retriever";
 import { FIXED_STAR_CANON_RECORDS } from "./astrologyKnowledge/canon/fixedStarsAndLots";
 import { describeAspectPair } from "../shared/energyInterpretation";
-import { invokeLLM } from "./_core/llm";
+import { calculateEnergyStarsAndLots } from "../shared/energyStarsAndLots";
+import { runInterpretation } from "./astrologyKnowledge/synthesis/interpretationPipeline";
 import { MINI_SYNTHESIS_STYLE } from "./master-interpreter";
+import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
 
 /** A short AI interpretation for a clicked contact; detailed calculated evidence stays intact. */
-async function narrateFocusedContactMini(reading: FocusedReading, synthesis: SynthesisResult): Promise<string> {
-  const result = await invokeLLM({
+async function narrateFocusedContactMini(reading: FocusedReading, synthesis: SynthesisResult, lens?: FocusTarget["lens"]): Promise<string> {
+  const result = await runInterpretation("FOCUSED_MINI", synthesis, {
     maxTokens: 450,
+    timeoutMs: 60_000,
     messages: [
-      { role: "system", content: MINI_SYNTHESIS_STYLE + "\nReturn only one 90–130-word second-person paragraph about this exact selected placement, star or contact, using the full calculated chart as context. Explain the interaction between both bodies, one human consequence and one specific challenge or opportunity. No headings, lists, invented history or method inventory." },
+      {
+        role: "system",
+        content:
+          MINI_SYNTHESIS_STYLE +
+          "\nReturn only one 90–130-word flowing second-person paragraph translating this exact focus through the full calculated chart silently. Show what you actually do in ordinary life, what you are trying to protect or get, and how it lands on others, balancing natural strength with friction. Keep ALL astrology terminology out of the paragraph (never name planets, signs, houses, degrees, aspects, mansions, bounds, faces, or Lots). No headings, bullet lists, invented history, or recap endings.",
+      },
       { role: "user", content: stringifyEvidence({
-        ...buildNarrativePacket(synthesis, reading.title).packet,
+        synthesis: packCompactSynthesisForLLM(synthesis, {
+          preserveFullMethodRegistry: true,
+        }),
         title: reading.title,
+        lens: lens && lens !== "all" ? { mind: "mood and focus", work: "work and money", love: "relationships and conversation" }[lens] : "everyday life",
         moment: reading.moment,
         evidence: reading.evidence,
         sections: reading.sections,
@@ -33,48 +47,12 @@ async function narrateFocusedContactMini(reading: FocusedReading, synthesis: Syn
   if (["length", "max_tokens"].includes(result.choices[0]?.finish_reason ?? ""))
     throw new Error("FOCUSED_MINI_INCOMPLETE: AI response was truncated.");
   const content = result.choices[0]?.message?.content;
-  const text = typeof content === "string" ? content.trim() :
+  const rawText = typeof content === "string" ? content.trim() :
     Array.isArray(content) ? content.filter(p => p.type === "text").map(p => (p as { text: string }).text).join("").trim() : "";
+  const text = scrubNonHoraryAstrologyJargon(rawText);
   if (text.length < 100 || text.length > 1500)
     throw new Error("FOCUSED_MINI_INVALID: The AI did not return a concise contact interpretation.");
   return text;
-}
-
-/**
- * The mini narrative is an enhancement, not a prerequisite for returning the
- * calculated reading. Provider throttles and gateway timeouts must not turn a
- * valid chart calculation into a failed tRPC request.
- */
-function deterministicFocusedMini(reading: FocusedReading): string {
-  const paragraphs = reading.sections
-    .flatMap(section => section.paragraphs)
-    .filter(Boolean)
-    .slice(0, 3);
-  const evidence = reading.evidence
-    .slice(0, 2)
-    .map(item => `${item.label}: ${item.value}`)
-    .join(" ");
-  const body = paragraphs.join(" ");
-  return [
-    `${reading.title} is read from the calculated chart rather than from a generic profile.`,
-    body,
-    evidence ? `The supporting calculation is ${evidence}` : "The supporting calculation is recorded in the evidence panel below.",
-    "Treat this as a symbolic reflection: the chart describes themes and conditions to consider, not guaranteed events or verified biography.",
-  ].filter(Boolean).join(" ");
-}
-
-async function narrateFocusedContactWithFallback(
-  reading: FocusedReading,
-  synthesis: SynthesisResult
-): Promise<{ text: string; source: "ai_synthesis" | "deterministic_fallback" }> {
-  try {
-    return {
-      text: await narrateFocusedContactMini(reading, synthesis),
-      source: "ai_synthesis",
-    };
-  } catch {
-    return { text: deterministicFocusedMini(reading), source: "deterministic_fallback" };
-  }
 }
 
 
@@ -83,11 +61,12 @@ export type FocusTarget = {
   name: string;
   otherName?: string;
   layer: "natal" | "transit";
+  lens?: "all" | "mind" | "work" | "love";
+  atUtc?: string;
 };
 export type FocusedReading = {
   title: string;
   miniNarrative?: string;
-  source: "calculated" | "ai_synthesis" | "deterministic_fallback";
   snapshotId: string;
   moment: string;
   sections: Array<{
@@ -126,7 +105,6 @@ export async function buildFocusedReading(
   ].filter((row): row is ChartRow => Boolean(row));
   const reading: FocusedReading = {
     title: `${target.layer === "transit" ? "Transit" : "Natal"} ${target.name}`,
-    source: "calculated",
     snapshotId: synthesis.snapshotId,
     moment: canonicalChart.utc,
     sections: [],
@@ -160,15 +138,31 @@ export async function buildFocusedReading(
       star => star.name === target.name
     );
     if (!star) throw new Error(`No catalog record exists for ${target.name}.`);
+    const starLayer = calculateEnergyStarsAndLots(canonicalChart).natalStarPositions.find(
+      pos => pos.starName === star.name
+    );
     reading.title = star.name;
     reading.evidence.push({
       id: `star-${star.name}`,
       label: "Catalog position",
       value: `${star.firmamentLockedLongitude.toFixed(4)}° · ${star.constellation}`,
     });
+    if (starLayer) {
+      reading.evidence.push({
+        id: `star-house-${star.name}`,
+        label: "Your natal placement",
+        value: `${starLayer.starDisplay} · House ${starLayer.house} (${starLayer.houseArena})`,
+      });
+      section(
+        "star-natal-position",
+        `Your natal placement · ${starLayer.sign} · House ${starLayer.house}`,
+        [starLayer.personalHouseReading, starLayer.sabotageOrShadowRisk],
+        ["Calculated natal house frame; fixed-star position layer"]
+      );
+    }
     if (star.ptolemaicPlanetaryNature === "Not yet source-verified")
       reading.gaps.push(
-        `No sourced star-specific interpretation is available for ${star.name}.`
+        `No sourced star-specific classical canon note is recorded for ${star.name}; relying on its calculated house, sign, and planetary nature.`
       );
     else {
       section(
@@ -200,19 +194,23 @@ export async function buildFocusedReading(
           ]
         : [];
     });
-    section("star-contacts", "Contacts in this chart · 5° window", contacts, [
-      "Canonical chart positions; fixed-star catalog",
-    ]);
-    if (!contacts.length)
-      reading.gaps.push(
-        "No selected-chart body is within the displayed 5° contact window. Catalog meaning alone is not a personal activation."
+    if (contacts.length) {
+      section("star-contacts", "Direct planet conjunctions · 5° window", contacts, [
+        "Canonical chart positions; fixed-star catalog",
+      ]);
+    } else if (starLayer) {
+      section(
+        "star-house-solo",
+        "Un-aspected standalone placement",
+        [
+          `No natal planet sits within 5° of ${star.name}. Instead, ${star.name} operates directly through House ${starLayer.house} (${starLayer.houseArena}) in ${starLayer.sign}.`,
+        ],
+        ["Calculated natal house frame; fixed-star catalog"]
       );
-    reading.sourceNotes.push(star.firmamentOrbRule.statement);
-    if (includeMiniNarrative && !reading.miniNarrative) {
-      const mini = await narrateFocusedContactWithFallback(reading, verification.synthesis);
-      reading.miniNarrative = mini.text;
-      reading.source = mini.source;
     }
+    reading.sourceNotes.push(star.firmamentOrbRule.statement);
+    if (includeMiniNarrative && !reading.miniNarrative)
+      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
     return reading;
   }
   const row = bodies.find(row => row.name === target.name);
@@ -372,11 +370,8 @@ export async function buildFocusedReading(
         rootedDossier.planetInHouseKnowledge.sourceCaveat,
         rootedDossier.planetInHouseKnowledge.interpretiveGuardrail
       );
-    if (includeMiniNarrative) {
-      const mini = await narrateFocusedContactWithFallback(reading, verification.synthesis);
-      reading.miniNarrative = mini.text;
-      reading.source = mini.source;
-    }
+    if (includeMiniNarrative)
+      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
     return reading;
   }
   const sun = canonicalChart.movingBodies.find(body => body.name === "Sun");
@@ -597,10 +592,39 @@ export async function buildFocusedReading(
       "This is the selected transit moment. Event-house meanings describe current context; natal personality and life-history claims are not inferred from a temporary transit placement."
     );
   }
-  if (includeMiniNarrative) {
-    const mini = await narrateFocusedContactWithFallback(reading, verification.synthesis);
-    reading.miniNarrative = mini.text;
-    reading.source = mini.source;
-  }
+  if (includeMiniNarrative)
+    reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
   return reading;
+}
+
+const focusedCache = new Map<string, { expiresAt: number; reading: Promise<FocusedReading> }>();
+
+export async function readFocusedPlacement(chart: ChartResult, target: FocusTarget) {
+  const key = createHash("sha256").update(JSON.stringify([chart, target])).digest("hex");
+  const cached = focusedCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.reading;
+  const reading = (async () => {
+    if (!target.atUtc || target.atUtc === chart.transitDate) return buildFocusedReading(chart, target, true);
+    if (target.kind !== "contact" || target.layer !== "transit")
+      throw new Error("FOCUSED_MOMENT_INVALID: A selected time requires a transit contact.");
+    const local = localDateTime(new Date(target.atUtc), chart.input.transitTimezone || chart.input.timezone);
+    const atMoment = await calculateMasterChart({
+      ...chart.input,
+      readingScope: "combined",
+      transitDate: local.date,
+      transitTime: local.time,
+      transitInstantUtc: target.atUtc,
+      transitXYZPositions: undefined,
+      transitSunriseAnchor: undefined,
+    });
+    return buildFocusedReading(atMoment, target, true);
+  })();
+  focusedCache.set(key, { expiresAt: Date.now() + 30 * 60_000, reading });
+  while (focusedCache.size > 32) focusedCache.delete(focusedCache.keys().next().value!);
+  try {
+    return await reading;
+  } catch (error) {
+    if (focusedCache.get(key)?.reading === reading) focusedCache.delete(key);
+    throw error;
+  }
 }

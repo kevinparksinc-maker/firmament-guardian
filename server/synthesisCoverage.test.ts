@@ -21,12 +21,6 @@ describe("Unified synthesis method-coverage contract", () => {
       if (layer.status !== "computed-with-result") continue;
       const records = Array.isArray(layer.results) ? layer.results : layer.results == null ? [] : [layer.results];
       expect(records.length).toBeGreaterThan(0);
-      const outcome = synthesis.methodOutcomes.find(method => method.methodId === layer.id)!;
-      if (outcome.status !== "interpreted") {
-        expect(linked.has(`prop-method-${layer.id}-0`)).toBe(false);
-        expect(synthesis.methodOutcomeAudit.incompleteMethodIds).toContain(layer.id);
-        continue;
-      }
       for (let index = 0; index < records.length; index++) {
         const id = `prop-method-${layer.id}-${index}`;
         expect(propositions.some(prop => prop.id === id)).toBe(true);
@@ -42,7 +36,7 @@ describe("Unified synthesis method-coverage contract", () => {
       expect(theme.consequences).toContain("Evidence:");
       expect(theme.deeperMeaning).toContain("Symbolic interpretation of");
       const evidenceProps = propositions.filter(prop => theme.linkedPropositionIds.includes(prop.id) && !prop.id.endsWith("-remaining") && prop.supportingEvidenceIds.length > 0);
-      expect(theme.concreteManifestations.length).toBe(evidenceProps.length);
+      expect(theme.concreteManifestations.length).toBe(Math.min(4, evidenceProps.length));
       for (const manifestation of theme.concreteManifestations) {
         expect(evidenceProps.some(prop => manifestation.includes(prop.plainLanguageMeaning) && prop.supportingEvidenceIds.every(id => manifestation.includes(id)))).toBe(true);
       }

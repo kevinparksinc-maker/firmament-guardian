@@ -1,5 +1,6 @@
 import { readingProse } from "@shared/readingProse";
 import React, { useState } from "react";
+import { Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
 import {
@@ -14,12 +15,6 @@ type MiniBatch = Awaited<
   >
 >;
 const storagePrefix = "absolute:placement-minis:";
-function connectionError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/502|503|504|bad gateway|unexpected token.*</i.test(message))
-    return "Reading server connection failed (502/503/504). Retry this planet in a moment.";
-  return message;
-}
 
 export function usePlacementMiniReadings(
   chart: ChartResult,
@@ -27,8 +22,7 @@ export function usePlacementMiniReadings(
   names: string[] = ["Sun", "Moon"],
   enabled = true
 ) {
-  const generate = trpc.interpretation.chartPageStart.useMutation();
-  const trpcUtils = trpc.useUtils();
+  const generate = trpc.interpretation.chartPage.useMutation();
   const me = trpc.auth.me.useQuery();
   const identity = placementMiniIdentity(
     chart,
@@ -48,7 +42,7 @@ export function usePlacementMiniReadings(
         ) as MiniBatch | null;
         if (
           cachedBatch?.snapshotId &&
-          !cachedBatch.failed?.length && cachedBatch.placements?.length === names.length &&
+          cachedBatch.placements?.length === names.length &&
           names.every(name => cachedBatch.placements.some(p => p.name === name))
         )
           return cachedBatch;
@@ -76,53 +70,13 @@ export function usePlacementMiniReadings(
         return {
           snapshotId: saved[0]!.snapshotId,
           placements: saved.flatMap(value => value!.placements),
-          failed: [] as MiniBatch["failed"],
         };
-      // Start NVIDIA synthesis in the server and poll short-lived HTTP calls.
-      // Holding a mutation open during generation causes Render HTML 502s.
-      const missing = names.filter((_, i) => !saved[i]);
-      let jobId: string;
+      const result = await generate.mutateAsync({ chart, mode: layer, names });
       try {
-        ({ jobId } = await generate.mutateAsync({ chart, mode: layer, names: missing }));
-      } catch (error) {
-        throw new Error(connectionError(error));
-      }
-      let result: MiniBatch | undefined;
-      for (let poll = 0; poll < 180; poll++) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        let status;
-        try {
-          status = await trpcUtils.interpretation.chartPageStatus.fetch({ jobId });
-        } catch (error) {
-          throw new Error(connectionError(error));
-        }
-        if (status.state === "error")
-          throw new Error(status.error);
-        if (status.state === "done") {
-          result = status.result as MiniBatch;
-          break;
-        }
-      }
-      if (!result)
-        throw new Error("READING_JOB_TIMEOUT: The planet reading exceeded the polling window. Retry it.");
-      result = {
-        ...result,
-        placements: [...saved.filter((v): v is MiniBatch => Boolean(v)).flatMap(v => v.placements), ...result.placements],
-      };
-      try {
-        // The server includes a complete 19-method ledger in every response.
-        // Never persist that huge repeated ledger 14 times: store only the
-        // finished narrative and its exact per-planet evidence.
-        const compact = {
-          snapshotId: result.snapshotId,
-          placements: result.placements,
-          failed: result.failed,
-        };
         const keys = Object.keys(localStorage).filter(k =>
           k.startsWith(storagePrefix)
         );
-        // Purge stale prior-version readings that may contain full ledgers.
-        for (const old of keys.filter(k => !k.startsWith(storagePrefix + identity + ":")))
+        for (const old of keys.slice(0, Math.max(0, keys.length - 55)))
           localStorage.removeItem(old);
         for (const placement of result.placements)
           localStorage.setItem(
@@ -132,10 +86,9 @@ export function usePlacementMiniReadings(
               placements: [placement],
             })
           );
-        if (!result.failed?.length && result.placements.length === names.length)
-          localStorage.setItem(batchKey, JSON.stringify(compact));
+        localStorage.setItem(batchKey, JSON.stringify(result));
       } catch {
-        /* Storage is optional, the completed reading still displays. */
+        /* Storage is optional. */
       }
       return result;
     },
@@ -179,7 +132,7 @@ export function MiniReadingContent({
                   {fact.layerId.replaceAll("-", " ")}
                 </p>
                 <p>
-                  {value.judgment || `${value.display} · House ${value.house}`}
+                  {readingProse(value.judgment || `${value.display} · House ${value.house}`)}
                 </p>
                 {value.mechanism && <p>{value.mechanism}</p>}
                 {value.limitation && (
@@ -219,20 +172,11 @@ export function PlacementMiniReading({
       <button
         type="button"
         onClick={() => setOpened(true)}
-        className="mt-3 rounded-lg border border-cyan-200/25 px-3 py-2 text-sm text-cyan-200"
+        className="mt-3 flex items-center gap-2 rounded-xl border border-amber-400/40 bg-gradient-to-r from-amber-500/15 to-amber-300/10 px-4 py-2 text-xs font-semibold text-amber-200 shadow-sm transition-all duration-200 hover:border-amber-400/60 hover:from-amber-500/25 hover:text-white active:scale-95"
       >
-        Read {name}’s mini reading
+        <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+        <span>Synthesize {name} Reading</span>
       </button>
-    );
-  const failure = result.data?.failed?.find(f => f.name === name);
-  if (failure)
-    return (
-      <div role="alert" className="mt-3 space-y-2 text-sm text-rose-200">
-        <p>{failure.error}</p>
-        <button type="button" onClick={() => result.refetch()} className="underline">
-          Retry {name} reading
-        </button>
-      </div>
     );
   if (result.error)
     return (

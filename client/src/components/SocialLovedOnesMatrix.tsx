@@ -41,7 +41,6 @@ import type {
 
 interface SocialLovedOnesMatrixProps {
   userChart?: ChartResult | null;
-  onAskMasterInterpreter?: (question: string) => void;
   className?: string;
 }
 
@@ -57,7 +56,6 @@ const RELATIONSHIP_LABELS: Record<RelationshipRole, string> = {
 
 export function SocialLovedOnesMatrix({
   userChart,
-  onAskMasterInterpreter,
   className = "",
 }: SocialLovedOnesMatrixProps) {
   const [selectedLovedOne, setSelectedLovedOne] = useState<LovedOneRecord | null>(null);
@@ -106,12 +104,32 @@ export function SocialLovedOnesMatrix({
   const [activeCheckInStatus, setActiveCheckInStatus] = useState<LovedOneCheckInStatus | null>(null);
   const [lovedOneChart, setLovedOneChart] = useState<ChartResult | null>(null);
 
+  const consultation = trpc.interpretation.host.useMutation();
+  const [consultationResult, setConsultationResult] = useState<{ chart: ChartResult; text: string; error?: boolean }>();
+  const consultLovedOne = async () => {
+    if (!lovedOneChart || !selectedLovedOne) return;
+    setConsultationResult(undefined);
+    try {
+      const text = await consultation.mutateAsync({
+        chart: lovedOneChart, mode: "combined",
+        question: `The selected chart belongs to my ${selectedLovedOne.relationship}. What symbolic themes can help me support this person? Avoid claims about their private feelings.`,
+      });
+      setConsultationResult({ chart: lovedOneChart, text });
+    } catch (error) {
+      setConsultationResult({ chart: lovedOneChart, text: error instanceof Error ? error.message : "The reading could not be completed.", error: true });
+    }
+  };
+
   // Query synastry intersect when both charts are available
   const intersectQuery = trpc.social.systemIntersect.useMutation();
-  const [activeIntersect, setActiveIntersect] = useState<SystemIntersectAnalysis | null>(null);
+  const [activeIntersect, setActiveIntersect] = useState<(SystemIntersectAnalysis & { interpretation: string }) | null>(null);
 
   // When selected loved one changes, calculate their check-in status
   useEffect(() => {
+    let active = true;
+    setLovedOneChart(null);
+    setActiveCheckInStatus(null);
+    setActiveIntersect(null);
     if (selectedLovedOne) {
       checkInQuery.mutate(
         {
@@ -126,6 +144,7 @@ export function SocialLovedOnesMatrix({
         },
         {
           onSuccess: data => {
+            if (!active) return;
             setActiveCheckInStatus(data.status);
             setLovedOneChart(data.chart);
 
@@ -138,7 +157,7 @@ export function SocialLovedOnesMatrix({
                 },
                 {
                   onSuccess: intersectData => {
-                    setActiveIntersect(intersectData);
+                    if (active) setActiveIntersect(intersectData);
                   },
                 }
               );
@@ -147,6 +166,7 @@ export function SocialLovedOnesMatrix({
         }
       );
     }
+    return () => { active = false; };
   }, [selectedLovedOne, userChart]);
 
   const handleCopyMessage = (text: string, id: string) => {
@@ -355,24 +375,17 @@ export function SocialLovedOnesMatrix({
                       </p>
                     </div>
 
-                    {/* Ask Master Interpreter Action */}
-                    {onAskMasterInterpreter && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          onAskMasterInterpreter(
-                            `How is today's sky affecting my ${selectedLovedOne.relationship} ${selectedLovedOne.name}, and what are the best ways I can support them through their current planetary transits?`
-                          )
-                        }
-                        className="w-full border-cyan-300/30 bg-cyan-400/10 hover:bg-cyan-400/20 text-cyan-100 text-xs gap-2 py-5"
-                      >
-                        <Sparkles className="h-4 w-4 text-cyan-300" />
-                        <span>Ask AI Master Interpreter Deep Guidance on {selectedLovedOne.name}</span>
-                        <ArrowRight className="h-3.5 w-3.5 ml-auto" />
+                    {lovedOneChart && (
+                      <Button type="button" variant="outline" disabled={consultation.isPending} onClick={() => void consultLovedOne()}>
+                        {consultation.isPending ? "Synthesizing their chart…" : `Read ${selectedLovedOne.name}’s current chart`}
                       </Button>
                     )}
+                    {consultationResult?.chart === lovedOneChart && (
+                      <p className="whitespace-pre-wrap text-sm" role={consultationResult.error ? "alert" : undefined}>{consultationResult.text}</p>
+                    )}
                   </>
+                ) : checkInQuery.error ? (
+                  <p role="alert" className="text-xs text-rose-300">{checkInQuery.error.message}</p>
                 ) : null}
               </CardContent>
             </Card>
@@ -425,11 +438,8 @@ export function SocialLovedOnesMatrix({
                             Alignment
                           </span>
                         </div>
-                        <div className="mt-1 text-xs font-semibold text-violet-200">
-                          {activeIntersect.dynamicTitle}
-                        </div>
-                        <p className="mt-2 text-[11px] text-slate-400 leading-relaxed">
-                          {activeIntersect.elementalBalance.synergyNote}
+                        <p className="mt-2 whitespace-pre-line text-sm text-slate-200 leading-relaxed">
+                          {activeIntersect.interpretation}
                         </p>
                       </div>
 
@@ -438,7 +448,7 @@ export function SocialLovedOnesMatrix({
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                           Core Planetary Intersections
                         </span>
-                        {activeIntersect.keyConnections.slice(0, 3).map((conn, idx) => (
+                        {activeIntersect.keyConnections.map((conn, idx) => (
                           <div
                             key={idx}
                             className="rounded-lg border border-white/5 bg-white/[0.03] p-3 text-xs space-y-1"
@@ -455,9 +465,6 @@ export function SocialLovedOnesMatrix({
                                 {conn.aspectName} (orb {conn.orb}°)
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-300 leading-relaxed">
-                              {conn.interpretation}
-                            </p>
                           </div>
                         ))}
                       </div>
@@ -469,14 +476,14 @@ export function SocialLovedOnesMatrix({
                             Spatial Horizon Overlay
                           </span>
                           <p className="text-[11px] text-slate-300 leading-relaxed">
-                            {activeIntersect.houseOverlays[0].meaning}
+                            {activeIntersect.houseOverlays.map(overlay => `${overlay.planet} · House ${overlay.houseInTarget}`).join(" · ")}
                           </p>
                         </div>
                       )}
                     </>
                   ) : (
                     <div className="p-4 text-center text-xs text-slate-400">
-                      Computing synastry matrices...
+                      {intersectQuery.error?.message || (userChart ? "Waiting for a calculated comparison." : "Calculate your own chart to compare these two charts.")}
                     </div>
                   )}
                 </CardContent>
@@ -604,8 +611,8 @@ export function SocialLovedOnesMatrix({
                 title: "THE ALGORITHMS OF THE COSMOS · SYSTEM INTERSECT",
                 headline: `${selectedLovedOne.name.toUpperCase()} & YOUR CELESTIAL INTERSECT MATRIX`,
                 archetype: `${activeIntersect?.dynamicTitle.toUpperCase() || "SOUL HARMONY MATRIX"}`,
-                quote: `Two distinct celestial algorithms converging in space-time: ${activeIntersect?.elementalBalance.synergyNote || "Mutual recognition and shared growth."}`,
-                harmonyScore: activeIntersect?.harmonyScore ?? 84,
+                quote: activeIntersect?.interpretation.split(/\n\n/)[0] ?? "",
+                harmonyScore: activeIntersect?.harmonyScore ?? 0,
                 partnerName: selectedLovedOne.name,
               }
             : undefined

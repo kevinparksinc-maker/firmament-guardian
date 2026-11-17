@@ -69,6 +69,8 @@ export type InvokeParams = {
   response_format?: ResponseFormat;
   model?: string;
   signal?: AbortSignal;
+  /** Per-request timeout for provider response headers. */
+  timeoutMs?: number;
   thinking?: Record<string, unknown>;
   reasoning?: Record<string, unknown>;
 };
@@ -225,8 +227,8 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
-    throw new Error("GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
 
@@ -249,6 +251,72 @@ const readableAssistantText = (result: ProviderResponse): string => {
   return result.output?.flatMap(item => item.content ?? []).map(item => item.text ?? "").filter(Boolean).join("\n") ?? "";
 };
 
+// All interpretation callers use this adapter, including legacy Claude model hints.
+// A Groq failure stays a Groq failure: never fall through to paid providers.
+async function invokeGroq(params: InvokeParams): Promise<InvokeResult> {
+  const messages = params.messages.map(message => {
+    const { name: _name, ...normalized } = normalizeMessage(message);
+    if (ensureArray(message.content).some(part => typeof part !== "string" && part.type !== "text")) {
+      throw new Error("GROQ_UNSUPPORTED_CONTENT: The configured interpreter accepts text only.");
+    }
+    return normalized;
+  });
+  const payload: Record<string, unknown> = {
+    model: ENV.groqModel,
+    messages,
+    max_completion_tokens: params.max_tokens ?? params.maxTokens ?? 4096,
+  };
+  if (ENV.groqModel.startsWith("openai/gpt-oss-")) {
+    payload.reasoning_effort = "low";
+    payload.include_reasoning = false;
+  }
+  if (params.tools?.length) payload.tools = params.tools;
+  const toolChoice = normalizeToolChoice(params.toolChoice ?? params.tool_choice, params.tools);
+  if (toolChoice) payload.tool_choice = toolChoice;
+  const format = normalizeResponseFormat(params);
+  if (format) payload.response_format = format;
+  let response = await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ENV.groqApiKey}` },
+    body: JSON.stringify(payload),
+    signal: params.signal,
+    timeoutMs: params.timeoutMs,
+  });
+  let safeCode="";
+  if(response.status===400){
+    try { const body=await response.clone().json() as {error?:{code?:unknown}};
+      const code=body.error?.code;
+      if(typeof code==="string" && ["json_validate_failed","invalid_request_error","model_not_found","model_decommissioned","unsupported_parameter"].includes(code)) safeCode=code;
+    } catch { /* Never expose a provider body that might echo the chart. */ }
+    if(safeCode==="json_validate_failed" && format && !params.tools?.length){
+      // Retry only a provider JSON-generation failure, once. The caller's JSON
+      // parser and evidence validation still apply to the returned text.
+      delete payload.response_format;
+      response=await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions",{
+        method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${ENV.groqApiKey}`},body:JSON.stringify(payload),signal:params.signal,timeoutMs:params.timeoutMs,
+      });
+    }
+  }
+  if (!response.ok) {
+    // Provider response bodies can echo private chart prompts; expose only status.
+    const retryAfter = response.headers.get("retry-after");
+    throw new Error(`GROQ_REQUEST_FAILED: HTTP ${response.status}${safeCode ? ` (${safeCode})` : ""}. ${response.status === 429
+      ? `Groq usage limit reached.${retryAfter ? ` Retry after ${retryAfter} seconds.` : " Try again later."}`
+      : response.status === 401 ? "Check GROQ_API_KEY in the server environment."
+      : response.status === 413 ? "This reading exceeds the Groq account request limit."
+      : "Groq could not complete this reading; check account limits and model access."}`);
+  }
+  const result = await response.json() as InvokeResult;
+  const choice = result.choices?.[0];
+  if (choice?.finish_reason === "length") {
+    throw new Error("GROQ_INCOMPLETE_READING: The response reached its token limit. Request a shorter section.");
+  }
+  if (!responseContentToText(choice?.message?.content).trim() && !choice?.message?.tool_calls?.length) {
+    throw new Error("GROQ_EMPTY_READING: Groq returned no interpretation.");
+  }
+  return result;
+}
+
 async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
   const system = params.messages.filter(message => message.role === "system").map(message => contentToText(message.content)).join("\n\n");
   const messages = params.messages.filter(message => message.role !== "system" && (message.role === "user" || message.role === "assistant")).map(message => ({
@@ -269,6 +337,7 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
     headers: { "content-type": "application/json", "x-api-key": ENV.anthropicApiKey, "anthropic-version": "2023-06-01" },
     body: JSON.stringify(body),
     signal: params.signal,
+    timeoutMs: params.timeoutMs,
   });
   if (!response.ok) {
     const errorText = await response.text();
@@ -302,6 +371,7 @@ async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
         headers,
         body: JSON.stringify({ model, messages, ...requestOptions }),
         signal: params.signal,
+        timeoutMs: params.timeoutMs,
       });
       if (!response.ok) {
         const errorText = await response.text();
@@ -374,6 +444,26 @@ const RETRY_BASE_DELAY_MS = 500;
 const RETRY_MAX_DELAY_MS = 30_000;
 const LLM_REQUEST_TIMEOUT_MS = 150_000;
 
+export function getLLMProviderStatus() {
+  const provider = ENV.groqApiKey
+    ? "groq"
+    : ENV.anthropicApiKey
+    ? "anthropic"
+    : ENV.openaiApiKey && ENV.openaiApiBase
+      ? "openai-compatible"
+      : ENV.geminiApiKey
+        ? "gemini"
+        : ENV.forgeApiKey
+          ? "built-in-forge"
+          : "unconfigured";
+  return {
+    configured: provider !== "unconfigured",
+    provider,
+    requestTimeoutMs: LLM_REQUEST_TIMEOUT_MS,
+    maxRetries: RETRY_MAX_RETRIES,
+  } as const;
+}
+
 type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
 
 const sleep = (ms: number, signal?: AbortSignal | null) =>
@@ -415,7 +505,7 @@ const computeBackoffDelay = (
 // returns the final Response so callers keep their existing error handling.
 const fetchWithBackoff = async (
   url: string,
-  init: FetchInit
+  init: FetchInit & { timeoutMs?: number }
 ): Promise<Response> => {
   let lastError: unknown;
 
@@ -425,15 +515,26 @@ const fetchWithBackoff = async (
       const controller = new AbortController();
       const onAbort = () => controller.abort(init.signal?.reason);
       init.signal?.addEventListener("abort", onAbort, { once: true });
-      const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS);
+      const timeoutMs = init.timeoutMs ?? LLM_REQUEST_TIMEOUT_MS;
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
       let response: Response;
       try {
-        response = await fetch(url, { ...init, signal: controller.signal });
+        const { timeoutMs: _timeoutMs, ...requestInit } = init;
+        try {
+          response = await fetch(url, { ...requestInit, signal: controller.signal });
+        } catch (error) {
+          if (controller.signal.aborted && !init.signal?.aborted) {
+            throw new Error(`AI_REQUEST_TIMEOUT: The AI service did not respond within ${Math.round(timeoutMs / 1000)} seconds. Retry this summary.`, { cause: error });
+          }
+          throw error;
+        }
       } finally {
         clearTimeout(timeout);
         init.signal?.removeEventListener("abort", onAbort);
       }
-      if (response.ok || attempt === RETRY_MAX_RETRIES) {
+      // Preserve the original body for billing, invalid-input and auth errors.
+      // Repeating a rejected 400 request hides the useful provider explanation.
+      if (response.ok || ![408, 409, 429, 500, 502, 503, 504, 529].includes(response.status) || attempt === RETRY_MAX_RETRIES) {
         return response;
       }
 
@@ -451,7 +552,8 @@ const fetchWithBackoff = async (
       await sleep(computeBackoffDelay(attempt, retryAfterMs), init.signal);
     } catch (error) {
       lastError = error;
-      if (init.signal?.aborted || attempt === RETRY_MAX_RETRIES) throw error;
+      if (init.signal?.aborted || attempt === RETRY_MAX_RETRIES ||
+          (error instanceof Error && error.message.startsWith("AI_REQUEST_TIMEOUT:"))) throw error;
       console.warn(
         `LLM request retry ${attempt + 1}/${RETRY_MAX_RETRIES} after network error`
       );
@@ -465,9 +567,11 @@ const fetchWithBackoff = async (
 };
 
 async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
+  const timeoutMs = params.timeoutMs ?? LLM_REQUEST_TIMEOUT_MS;
   const ai = new GoogleGenAI({
     apiKey: ENV.geminiApiKey,
     httpOptions: {
+      timeout: timeoutMs,
       headers: {
         "User-Agent": "aistudio-build",
       },
@@ -491,27 +595,137 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
     output_schema: params.output_schema,
   });
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.8-flash",
-    contents: contents.length > 0 ? contents : "Hello",
-    config: {
-      ...(systemInstruction ? { systemInstruction } : {}),
-      ...(normalizedResponseFormat?.type === "json_object" || normalizedResponseFormat?.type === "json_schema"
-        ? { responseMimeType: "application/json" }
-        : {}),
-    },
-  });
+  const generateWithTimeout = async () => {
+    if (params.signal?.aborted) {
+      throw params.signal.reason ?? new Error("LLM request aborted.");
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
+    try {
+      return await Promise.race([
+        ai.models.generateContent({
+          model: "gemini-4-hydrogen",
+          contents: contents.length > 0 ? contents : "Hello",
+          config: {
+            ...(params.signal ? { abortSignal: params.signal } : {}),
+            ...(systemInstruction ? { systemInstruction } : {}),
+            ...(normalizedResponseFormat?.type === "json_object" || normalizedResponseFormat?.type === "json_schema"
+              ? { responseMimeType: "application/json" }
+              : {}),
+          },
+        }),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
+            reject(
+              new Error(
+                `AI_REQUEST_TIMEOUT: The AI service did not respond within ${Math.round(timeoutMs / 1000)} seconds. Retry this summary.`
+              )
+            );
+          }, timeoutMs);
+          if (params.signal) {
+            onAbort = () =>
+              reject(params.signal?.reason ?? new Error("LLM request aborted."));
+            params.signal.addEventListener("abort", onAbort, { once: true });
+          }
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+      if (onAbort && params.signal) params.signal.removeEventListener("abort", onAbort);
+    }
+  };
 
-  const text = response.text ?? "";
+  let response: any;
+  const maxRetries = 3;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      response = await generateWithTimeout();
+      break;
+    } catch (err: any) {
+      const errStr = typeof err?.message === "string" ? err.message : JSON.stringify(err);
+      if (
+        params.signal?.aborted ||
+        errStr.startsWith("AI_REQUEST_TIMEOUT:") ||
+        errStr === "LLM request aborted."
+      ) {
+        throw err instanceof Error ? err : new Error(errStr);
+      }
+      const isRateLimit =
+        err?.status === "RESOURCE_EXHAUSTED" ||
+        err?.status === 429 ||
+        err?.code === 429 ||
+        errStr.includes("429") ||
+        errStr.includes("RESOURCE_EXHAUSTED") ||
+        errStr.includes("Quota exceeded") ||
+        errStr.includes("rate-limits");
+
+      let retryAfterSec: number | undefined;
+      const match =
+        errStr.match(/retry in ([0-9.]+)s/i) ||
+        errStr.match(/"retryDelay":\s*"([0-9.]+)s"/i);
+      if (match && match[1]) {
+        const parsed = parseFloat(match[1]);
+        if (!isNaN(parsed) && parsed > 0) {
+          retryAfterSec = Math.ceil(parsed);
+        }
+      }
+
+      const isTransientDemand =
+        err?.status === "UNAVAILABLE" ||
+        err?.status === 503 ||
+        err?.code === 503 ||
+        errStr.includes("503") ||
+        errStr.includes("UNAVAILABLE") ||
+        /high demand|temporarily unavailable/i.test(errStr);
+
+      // Only auto-retry short bursts (<= 8s) once or twice; longer cooldowns should return fast to the user.
+      if ((isRateLimit || isTransientDemand) && attempt < maxRetries - 1 && (!retryAfterSec || retryAfterSec <= 8)) {
+        const delayMs = retryAfterSec ? retryAfterSec * 1000 + 500 : 1500 * Math.pow(2, attempt);
+        console.warn(
+          `[invokeGemini] ${isRateLimit ? "Rate limit (429)" : "Transient provider load (503)"}, pausing ${delayMs}ms before retry ${attempt + 1}/${maxRetries - 1}...`
+        );
+        await sleep(delayMs, params.signal);
+        continue;
+      }
+
+      if (isRateLimit) {
+        const waitHint = retryAfterSec
+          ? ` Please wait ~${retryAfterSec} seconds and try again.`
+          : " Please wait ~20 seconds and try again.";
+        throw new Error(
+          `AI_RATE_LIMIT: Free-tier token limit (250k input tokens/min) was temporarily reached.${waitHint} No new API key is needed.`
+        );
+      }
+
+      // Extract readable message from any Google GenAI JSON error payload so UI never shows raw JSON dumps.
+      let readable = errStr;
+      try {
+        const jsonStart = errStr.indexOf("{");
+        if (jsonStart >= 0) {
+          const parsedErr = JSON.parse(errStr.slice(jsonStart)) as {
+            error?: { message?: string; status?: string };
+          };
+          if (parsedErr?.error?.message) {
+            readable = parsedErr.error.message.split("\n")[0];
+          }
+        }
+      } catch {
+        // Keep trimmed fallback below.
+      }
+      throw new Error(`AI_REQUEST_FAILED: ${readable.slice(0, 260)}`);
+    }
+  }
+
+  const text = response?.text ?? "";
   return {
     id: `gemini-${Date.now()}`,
     created: Math.floor(Date.now() / 1000),
-    model: "gemini-3.8-flash",
+    model: "gemini-4-hydrogen",
     choices: [
       {
         index: 0,
         message: { role: "assistant", content: text },
-        finish_reason: "stop",
+        finish_reason: response?.candidates?.[0]?.finishReason?.toLowerCase() ?? null,
       },
     ],
   };
@@ -519,6 +733,7 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
+  if (ENV.groqApiKey) return invokeGroq(params);
   if (ENV.anthropicApiKey) return invokeAnthropic(params);
   if (ENV.openaiApiKey && ENV.openaiApiBase) return invokeOpenAI(params);
   if (ENV.geminiApiKey && !ENV.forgeApiKey) return invokeGemini(params);
@@ -590,6 +805,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     },
     body: JSON.stringify(payload),
     signal: params.signal,
+    timeoutMs: params.timeoutMs,
   });
 
   if (!response.ok) {
@@ -617,12 +833,12 @@ export type ModelsResponse = {
 export async function listLLMModels(): Promise<ModelsResponse> {
   assertApiKey();
 
-  const url = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+  const url = ENV.groqApiKey ? "https://api.groq.com/openai/v1/models" : ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
     ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
     : "https://forge.manus.im/v1/models";
 
   const response = await fetchWithBackoff(url, {
-    headers: { authorization: `Bearer ${ENV.forgeApiKey}` },
+    headers: { authorization: `Bearer ${ENV.groqApiKey || ENV.forgeApiKey}` },
   });
 
   if (!response.ok) {

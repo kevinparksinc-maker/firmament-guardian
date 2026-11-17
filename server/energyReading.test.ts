@@ -33,6 +33,7 @@ const bridge = {
   synthesis: {
     snapshotId: "verified-snapshot",
     methodOutcomes: [],
+    sourceSnapshot: { methodExecutionLedger: [] },
     contradictionsAndTensions: [],
     themes: [],
     canonApplications: [{ ruleId: "test-canon" }],
@@ -142,10 +143,14 @@ describe("Energy synthesis output pipeline", () => {
       ...bridge,
       canonicalChart: { ...chart, transits: [] },
     } as never);
+    const fixture = output();
+    fixture.paragraphs.forEach(paragraph => { paragraph.contactIds = []; });
+    respond(fixture);
     const result = await buildEnergyReading(chart);
     expect(result.score.contactsCount).toBe(0);
-    expect(result.paragraphs).toEqual([]);
-    expect(invokeLLM).not.toHaveBeenCalled();
+    expect(result.paragraphs).toHaveLength(3);
+    expect(result.paragraphs.every(paragraph => paragraph.contactIds.length === 0)).toBe(true);
+    expect(invokeLLM).toHaveBeenCalledTimes(1);
   });
 });
 

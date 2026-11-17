@@ -65,9 +65,10 @@ export function calculateEnergyRead(chart: ChartResult | null | undefined) {
 }
 
 /** Unique pairs within one event sky, using the same weights as personal energy. */
-export function calculateIndependentEnergyRead(chart: ChartResult | null | undefined) {
+export function calculateIndependentEnergyRead(chart: ChartResult | null | undefined, layer: "base" | "transit" = "base") {
   if (!chart) return null;
-  const bodies = [...chart.movingBodies, chart.northNode, chart.southNode];
+  if (layer === "transit" && !chart.transits?.length) return null;
+  const bodies = layer === "transit" ? chart.transits : [...chart.movingBodies, chart.northNode, chart.southNode];
   const angles = [
     [0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"],
     [30, "semisextile"], [45, "semisquare"], [150, "quincunx"],

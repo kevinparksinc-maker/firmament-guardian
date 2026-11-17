@@ -665,7 +665,6 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
         {mainTab === "synastry" && (
           <SynastryMatrixTab
             userChart={result}
-            onAskMasterInterpreter={handleAskMasterInterpreter}
             onOpenShareModal={() => setShowShareModal(true)}
           />
         )}
@@ -675,7 +674,6 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
           <><div className="fg-module-banner"><p className="fg-module-eyebrow">03 / THE CELESTIAL WEATHER STATION</p><h2 className="fg-module-title">The sky in motion.</h2><p className="fg-module-desc">Follow calculated planetary movements through the same fixed-stellar and local chart framework. Current testimony and future sky positions remain distinct from guaranteed life events.</p></div>
           <TransitWeatherTimeline
             chart={result}
-            onAskMasterInterpreter={handleAskMasterInterpreter}
           /></>
         )}
 
@@ -693,7 +691,6 @@ export function ProfileGuideScreen({ result, mainTab, setMainTab, worldview, set
           <><div className="fg-module-banner"><p className="fg-module-eyebrow">05 / THE CELESTIAL CONNECTIONS</p><h2 className="fg-module-title">The people in your orbit.</h2><p className="fg-module-desc">Consider two independent birth charts and the actual geometric connections between them. Respect individual privacy and keep symbolic readings distinct from verified human behavior.</p></div>
           <SocialLovedOnesMatrix
             userChart={result}
-            onAskMasterInterpreter={handleAskMasterInterpreter}
           /></>
         )}
 

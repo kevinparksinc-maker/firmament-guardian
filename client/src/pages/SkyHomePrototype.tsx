@@ -1,4 +1,3 @@
-import { CelestialDomeChart } from "@/components/CelestialDomeChart";
 import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
@@ -519,6 +518,35 @@ export default function SkyHomePrototype() {
     "Who am I beneath the surface, and how does the current sky interact with my core patterns?"
   );
   const [activeChart, setActiveChart] = useState<ChartResult | null>(null);
+  const [xyzText, setXyzText] = useState("");
+  const [xyzPositions, setXyzPositions] = useState<Record<string, { x: number; y: number; z: number }> | undefined>();
+  const [xyzError, setXyzError] = useState("");
+  const applyXYZ = () => {
+    try {
+      if (!xyzText.trim()) {
+        setXyzPositions(undefined);
+        setXyzError("");
+        loadSky(worldview, readingScope, profile, null);
+        return;
+      }
+      const value: unknown = JSON.parse(xyzText);
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Enter an object keyed by planet name.");
+      const parsed: Record<string, { x: number; y: number; z: number }> = {};
+      for (const [name, vector] of Object.entries(value)) {
+        if (!["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"].includes(name)) throw new Error(`Unknown planet: ${name}`);
+        if (!vector || typeof vector !== "object" || Array.isArray(vector)) throw new Error(`Invalid vector for ${name}`);
+        const v = vector as Record<string, unknown>;
+        if (![v.x, v.y, v.z].every(n => typeof n === "number" && Number.isFinite(n)) || Math.hypot(v.x as number, v.y as number) === 0) throw new Error(`Invalid XYZ for ${name}`);
+        parsed[name] = { x: v.x as number, y: v.y as number, z: v.z as number };
+      }
+      if (!Object.keys(parsed).length) throw new Error("At least one planetary vector is required.");
+      setXyzPositions(parsed);
+      setXyzError("");
+      loadSky(worldview, readingScope, profile, parsed);
+    } catch (error) {
+      setXyzError(error instanceof Error ? error.message : "Invalid XYZ JSON");
+    }
+  };
 
   const geo = trpc.hybrid.geocode.useQuery(
     { query: locationInput },
@@ -531,7 +559,8 @@ export default function SkyHomePrototype() {
   const loadSky = (
     nextWorldview: Worldview = worldview,
     nextScope: ReadingScope = readingScope,
-    nextProfile = profile
+    nextProfile = profile,
+    nextXYZ: typeof xyzPositions | null = xyzPositions
   ) => {
     const now = new Date();
     const transitDate = now.toISOString().slice(0, 10);
@@ -553,6 +582,7 @@ export default function SkyHomePrototype() {
         transitTime,
         worldview: "god",
         readingScope: nextScope,
+        ...(nextXYZ ? { xyzPositions: nextXYZ } : {}),
         birthTimeKnown: Boolean(nextProfile.time),
       });
     } else {
@@ -566,6 +596,7 @@ export default function SkyHomePrototype() {
         transitTime,
         worldview: nextWorldview,
         readingScope: nextScope,
+        ...(nextXYZ ? { xyzPositions: nextXYZ } : {}),
         birthTimeKnown: Boolean(nextProfile.time),
       });
     }
@@ -898,6 +929,14 @@ export default function SkyHomePrototype() {
             </div>
 
             {/* High-Fidelity Traditional SVG Chart Wheel (Natal + Transit + Horary Aspects) */}
+            <section className="rounded-2xl border border-cyan-300/20 bg-slate-950/70 p-4" aria-label="External XYZ coordinate input">
+              <h3 className="font-semibold text-cyan-100">XYZ → 360° fixed wheel</h3>
+              <p className="mt-1 text-xs text-slate-400">Paste externally calculated Cartesian vectors, keyed by planet. X points to 0° Aries; Y points to 90° Cancer in the same fixed zodiac plane. Longitude = atan2(Y, X). Z is retained for audit, not used to determine longitude. This does not calculate the sunrise Ascendant. Bodies without supplied vectors continue using Swiss Ephemeris.</p>
+              <textarea aria-label="Planet XYZ vectors JSON" value={xyzText} onChange={event => setXyzText(event.target.value)} rows={3} spellCheck={false} placeholder={'{"Mars":{"x":1,"y":1,"z":0.1}}'} className="mt-3 w-full rounded-lg border border-slate-700 bg-slate-900 p-3 font-mono text-xs text-white" />
+              <div className="mt-2 flex flex-wrap items-center gap-3"><button type="button" onClick={applyXYZ} className="rounded-lg bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950">Apply XYZ vectors</button><button type="button" onClick={() => loadSky()} className="rounded-lg border border-slate-600 px-4 py-2 text-xs text-white">Recalculate chart</button><span className="text-xs text-slate-400">{xyzPositions ? `${Object.keys(xyzPositions).length} external vector(s) applied to next calculation` : "Ephemeris fallback active"}</span></div>
+              {xyzError && <p role="alert" className="mt-2 text-xs text-rose-300">{xyzError}</p>}
+              {activeChart && <div className="mt-3 grid gap-1 text-xs text-slate-300">{activeChart.movingBodies.filter(body => body.xyz).map(body => <p key={body.name}>{body.name}: X {body.xyz!.x}, Y {body.xyz!.y}, Z {body.xyz!.z} → {body.display} (external XYZ)</p>)}</div>}
+            </section>
             {activeChart && <SkyObservatoryWheel chart={activeChart} />}
 
             {/* God View vs. Agent View Frame Relationship Panel */}
@@ -919,8 +958,6 @@ export default function SkyHomePrototype() {
               </div>
               <ThreeLayerOrrery chart={activeChart} />
             </section>
-
-            {activeChart && <CelestialDomeChart chart={activeChart} />}
 
             {/* Synchronized 4-Band Overlay Map */}
             <OverlayMap moonLongitude={moonLongitude} chart={activeChart} />
@@ -1006,7 +1043,6 @@ export default function SkyHomePrototype() {
         {screen === "maps" && (
           <div className="space-y-8">
             <OverlayMap moonLongitude={moonLongitude} chart={activeChart} />
-            {activeChart && <CelestialDomeChart chart={activeChart} />}
             {activeChart && (
               <LiveTransitFeed
                 chart={activeChart}

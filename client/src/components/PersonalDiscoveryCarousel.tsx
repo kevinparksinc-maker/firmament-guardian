@@ -7,11 +7,7 @@ interface PersonalDiscoveryCarouselProps {
   onSelectDrawer?: (drawerOrderOrId: number | string) => void;
 }
 
-/**
- * PersonalDiscoveryCarousel is powered by the comprehensive InfiniteDiscoveryEngine.
- * Eliminates all placeholder text and provides multi-tradition, evidence-backed
- * WHAT, WHY, HOW, CONSEQUENCE, and MEANING insights for every placement.
- */
+/** Calculated placements open a shared, source-backed interpretation panel. */
 export function PersonalDiscoveryCarousel({
   chart,
   compact = false,

@@ -1,46 +1,36 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
-
-import * as db from "../db";
-import { ENV } from "./env";
+import { HttpError } from "../../shared/_core/errors";
+import { TRPCError } from "@trpc/server";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  authError?: TRPCError;
 };
 
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
+  let authError: TRPCError | undefined;
 
   try {
     user = await sdk.authenticateRequest(opts.req);
   } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
+    // Missing/expired credentials are anonymous; infrastructure failures must
+    // not masquerade as a successful sign-out and remap private profiles to guest.
+    if (error instanceof HttpError && (error.statusCode === 401 || error.statusCode === 403)) user = null;
+    else authError = new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "Your account connection is temporarily unavailable. Your saved profiles have not been changed. Please retry." });
   }
 
-  // Standalone / preview environment fallback: auto-provision local keeper session
-  if (!user && !ENV.oAuthServerUrl) {
-    user = (await db.getUserByOpenId("local-observatory-user")) ?? null;
-    if (!user) {
-      await db.upsertUser({
-        openId: "local-observatory-user",
-        name: "Observatory Keeper",
-        email: "keeper@observatory.local",
-        loginMethod: "local",
-        lastSignedIn: new Date(),
-      });
-      user = (await db.getUserByOpenId("local-observatory-user")) ?? null;
-    }
-  }
 
   return {
     req: opts.req,
     res: opts.res,
     user,
+    authError,
   };
 }

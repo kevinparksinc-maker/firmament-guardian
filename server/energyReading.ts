@@ -1,12 +1,14 @@
 import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
-import { packSynthesis } from "./astrologyKnowledge/synthesis/context";
+import { packCompactSynthesisForLLM } from "./astrologyKnowledge/synthesis/context";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { ChartResult } from "./astronomy";
-import { calculateEnergyRead } from "../shared/energyScoring";
+import { calculateEnergyRead, calculateIndependentEnergyRead } from "../shared/energyScoring";
+import { calculateEnergyStarsAndLots } from "../shared/energyStarsAndLots";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { buildAstrologyInterpreterSystem, MINI_SYNTHESIS_STYLE } from "./master-interpreter";
-import { invokeLLM } from "./_core/llm";
+import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
+import { runInterpretation } from "./astrologyKnowledge/synthesis/interpretationPipeline";
 
 const readingSchema = z.object({
   headline: z.string().trim().min(10).max(240),
@@ -14,7 +16,7 @@ const readingSchema = z.object({
     .array(
       z.object({
         text: z.string().trim().min(80).max(2200),
-        contactIds: z.array(z.string()).min(1),
+        contactIds: z.array(z.string()),
         methodIds: z.array(z.string()).min(1),
         evidenceIds: z.array(z.string()).min(2),
       })
@@ -49,6 +51,7 @@ export function validateEnergyReading(
   );
   for (const paragraph of reading.paragraphs) {
     if (
+      (contacts.size > 0 && paragraph.contactIds.length === 0) ||
       paragraph.contactIds.some(id => !contacts.has(id)) ||
       paragraph.methodIds.some(id => !methods.has(id)) ||
       paragraph.evidenceIds.some(id => !evidence.has(id))
@@ -96,16 +99,8 @@ export async function generateEnergyReading(chart: ChartResult) {
     throw new Error(
       "ENERGY_SYNTHESIS_MISSING: A natal plus transit chart is required."
     );
-  if (!score.contactsCount)
-    return {
-      snapshotId: synthesis.snapshotId,
-      moment: canonicalChart.transitDate,
-      score,
-      headline: "No personal contacts within 5°",
-      paragraphs: [],
-      methodsReviewed: synthesis.methodFindings.map(m => m.id),
-    };
-  const result = await invokeLLM({
+  const starsAndLots = calculateEnergyStarsAndLots(canonicalChart);
+  const result = await runInterpretation("ENERGY_SYNTHESIS", synthesis, {
     max_tokens: 3200,
     timeoutMs: 180_000,
     response_format: { type: "json_object" },
@@ -114,25 +109,72 @@ export async function generateEnergyReading(chart: ChartResult) {
         role: "system",
         content: buildAstrologyInterpreterSystem(
           MINI_SYNTHESIS_STYLE,
-          `Write the final compact Energy overview, 3 connected paragraphs, about 210–300 words total. This is the final synthesis before the user's scores and chart evidence are displayed. Read ALL supplied Master method findings and Canon applications. Explain the dominant interaction, how actual placements and available conditions modify the strongest personal transit contacts, their concrete consequences, and how specific support interacts with specific pressure. For the principal contacts, explain how BOTH the transit planet’s and natal target’s supplied nakshatra/pada, Arabic manzil, elemental-family decan and actual fixed-star activations modify the interaction; do not merely list their names. An empty star-contact list means no activation, not a missing planet meaning. Distinguish event houses from natal houses, God from Agent, and transient conditions from natal traits. Do not invent easing windows without forecast evidence. Do not substitute planet dictionaries, aspect slogans, a method inventory, repeated advice, a life story, or percentages alone for synthesis. Explain both support and friction without forcing a happy resolution. Return JSON {"headline":"...","paragraphs":[{"text":"...","contactIds":["exact supplied contact ID"],"methodIds":["exact supplied method ID"],"evidenceIds":["exact calculated natal evidence ID","exact calculated transit: evidence ID"]}],"methodsReviewed":["every supplied method ID, including unavailable statuses"]}. Every paragraph must connect actual contacts to method findings and cite the exact calculated evidence IDs. Across the reading, actually USE and cite the natal and transit nakshatra/pada, Arabic manzil, elemental-decan and fixed-star layers; explain no activation where a star list is empty. A methodsReviewed list alone cannot satisfy depth; list only the methods used in that paragraph. Scores are model weights, never event probabilities.`
+          `Write the final compact Energy overview: a sharp, plainspoken "headline" plus 3 flowing paragraphs (about 210–300 words total) in candid second-person prose ("you / your"). Start with the strongest pattern shaping today, show what you do when it kicks in, what you are protecting or trying to get, and how your reactions land on people around you. Give natural openings and ease the same weight as pressure or friction. Keep ALL astrology terminology out of "headline" and every paragraph's "text": never name planets, zodiac signs, houses, degrees, orbs, aspects, lunar mansions, decans, fixed stars, or Lots in reader-facing text—keep every calculated method, contact, and citation strictly in the JSON metadata IDs. Return JSON {"headline":"...","paragraphs":[{"text":"...","contactIds":["exact supplied contact ID"],"methodIds":["exact supplied method ID"],"evidenceIds":["exact calculated natal evidence ID","exact calculated transit: evidence ID"]}],"methodsReviewed":["every supplied method ID, including unavailable statuses"]}. Every paragraph must synthesize all relevant supplied layers and cite the exact calculated evidence IDs. Use independentSky as optional environmental context and keep its body-to-body contacts distinct from personal contactIds. When there are zero scored contacts, use empty contactIds and interpret the available method evidence without claiming a scored contact.`
         ),
       },
       {
         role: "user",
         content: stringifyEvidence({
-          // Preserve every method and Canon application once. The bridge's prose
-          // repeats raw findings inside themes and can exceed provider context limits.
-          synthesis: packSynthesis(synthesis),
-          packetFormat: "judgmentColumns names row cells. judgmentParts numeric entries index textTable; concatenate resolved parts in order. sourceRefs index canonApplications. Evidence IDs remain literal strings and must be cited exactly.",
+          synthesis: packCompactSynthesisForLLM(synthesis, {
+            preserveFullMethodRegistry: true,
+          }),
+          packetFormat: "judgmentColumns names row cells. sourceRefs index canonApplications. Evidence IDs remain literal strings and must be cited exactly.",
           moment: canonicalChart.transitDate,
+          independentSky: calculateIndependentEnergyRead(canonicalChart, "transit"),
           natal: {
             location: canonicalChart.input.location,
-            planets: canonicalChart.movingBodies,
-            ascendant: canonicalChart.ascendant,
+            planets: (canonicalChart.movingBodies ?? []).map((p: any) => ({
+              name: p.name,
+              display: p.display,
+              house: p.house,
+              godHouse: p.godHouse,
+              agentHouse: p.agentHouse,
+              retrograde: p.retrograde || undefined,
+            })),
+            ascendant: canonicalChart.ascendant
+              ? { name: canonicalChart.ascendant.name, display: canonicalChart.ascendant.display }
+              : null,
           },
           transit: {
             location: canonicalChart.input.transitLocation,
-            planets: canonicalChart.transits,
+            planets: (canonicalChart.transits ?? []).map((p: any) => ({
+              name: p.name,
+              display: p.display,
+              house: p.house,
+              godHouse: p.godHouse,
+              agentHouse: p.agentHouse,
+              retrograde: p.retrograde || undefined,
+            })),
+          },
+          fixedStarsAndLots: {
+            sect: starsAndLots.sect,
+            lotsAvailable: starsAndLots.lotsAvailable,
+            liveSkyStars: starsAndLots.liveSkyStars.map(s => ({
+              bodyName: s.bodyName,
+              starName: s.starName,
+              isRoyal: s.isRoyal,
+              orbDeg: s.orbDeg,
+              archetype: s.archetype,
+            })),
+            natalTriggeredStars: starsAndLots.natalTriggeredStars.map(s => ({
+              bodyName: s.bodyName,
+              starName: s.starName,
+              isRoyal: s.isRoyal,
+              orbDeg: s.orbDeg,
+              liveTriggerContact: s.liveTriggerContact,
+              archetype: s.archetype,
+            })),
+            activeLotHits: starsAndLots.activeLotHits.map(h => ({
+              lot: h.lot.meta.name,
+              sign: h.lot.sign,
+              house: h.lot.house,
+              houseArena: h.lot.houseArena,
+              transit: h.aspect.transitPlanet,
+              aspect: h.aspect.aspect,
+              orbDeg: h.aspect.orbDeg,
+              isMajor: h.aspect.isMajor,
+              flow: h.aspect.flow,
+            })),
           },
           score,
         }),
@@ -162,11 +204,17 @@ export async function generateEnergyReading(chart: ChartResult) {
       "ENERGY_SYNTHESIS_INVALID: Provider returned an unreadable reading."
     );
   }
+  const validated = validateEnergyReading(raw, score, synthesis);
   return {
     snapshotId: synthesis.snapshotId,
     moment: canonicalChart.transitDate,
     score,
-    ...validateEnergyReading(raw, score, synthesis),
+    ...validated,
+    headline: scrubNonHoraryAstrologyJargon(validated.headline) || validated.headline,
+    paragraphs: validated.paragraphs.map(p => ({
+      ...p,
+      text: scrubNonHoraryAstrologyJargon(p.text) || p.text,
+    })),
   };
 }
 
@@ -181,8 +229,8 @@ export async function buildEnergyReading(chart: ChartResult) {
   const cached = energyReadings.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.promise;
   const promise = generateEnergyReading(chart);
-  energyReadings.set(key, { expiresAt: Date.now() + 10 * 60_000, promise });
-  while (energyReadings.size > 16)
+  energyReadings.set(key, { expiresAt: Date.now() + 60 * 60_000, promise });
+  while (energyReadings.size > 32)
     energyReadings.delete(energyReadings.keys().next().value!);
   try {
     return await promise;

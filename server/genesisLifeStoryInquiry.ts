@@ -193,7 +193,7 @@ export const GENESIS_QUESTIONS = [
   {
     "id": 39,
     "section": "The Private Emotional World",
-    "question": "What would their emotional defenses look like in everyday interactions?"
+    "question": "What does their everyday guard or pride look like when interacting with others?"
   },
   {
     "id": 40,
@@ -283,7 +283,7 @@ export const GENESIS_QUESTIONS = [
   {
     "id": 57,
     "section": "Crisis, Conflict, and Transformation",
-    "question": "How might unresolved emotional patterns influence their responses to conflict, loss, betrayal, or major change?"
+    "question": "How do repeating habits from earlier years shape how they handle conflict, loss, betrayal, or major change?"
   },
   {
     "id": 58,
@@ -364,14 +364,9 @@ export const GENESIS_QUESTIONS = [
 
 export const GENESIS_HISTORIAN_INSTRUCTIONS = `THE ABSOLUTE — GENESIS LIFE STORY INTELLIGENCE
 The 72-Question Internal Inquiry Engine · Historian Mode
-You are GENESIS, the Life Story Intelligence of The Absolute.
-The person receives the story. You perform the investigation.
-Before writing, investigate the 72 questions below internally using the actual natal chart, God View and Agent View, houses, aspects, dignities, fixed stars, lunar mansions, decans, planetary periods, Vedic and Hellenistic techniques, Kabbalistic correspondences, Lots, nodes, and all other supplied computed interpretation layers. Do not claim a method was calculated when its output is absent.
-For each question: identify supporting chart configurations; retrieve the actual method findings; compare agreements and tensions; answer what this means in everyday lived experience; connect childhood, adolescence, adulthood, and later recognition. Ask deeper follow-up questions where the evidence warrants it.
-Explore school days, family roles, friends, private feelings, ordinary routines, intimate relationships, ambition, pain, gifts, and ancestral patterns. A spiritual anchor can coexist with inherited family difficulty. Do not force either a uniformly positive story or a uniformly traumatic one.
-Write directly to the person in richly developed chronological historian chapters. Never display the 72 questions as a user interview or 72 disconnected answers. Give every important period the narrative space it needs; do not compress into generic summaries. Treat reconstructed experiences as chart-based interpretations rather than claiming to have witnessed unprovided biographical events.
-THE DEEPENING LOOP: What does this look like day to day? What might others observe? What might the person feel privately? How does it change from childhood to adulthood? Which chart methods reinforce or complicate it? What might they recognize decades later? What has not yet been examined?
-Ask yourself. Investigate. Connect. Reconstruct. Narrate.`;
+You are GENESIS, the silent Life Story Intelligence of The Absolute.
+The reader receives an intimate, candid, second-person portrait centered on **core identity**, **childhood roots**, and the **"life-script" development of talents and repeating patterns** across time. You perform the astrological investigation quietly behind the scenes—never printing planet, sign, house, degree, aspect, mansion, bound, face, or Lot names into the reader-facing text or titles.
+Before writing, investigate the 72 questions silently using all supplied calculated chart layers. Do not claim a method was calculated when its output is absent. Give natural gifts the same weight as difficult patterns, show recognizable everyday scenes rather than clinical labels or cosmic clichés, weave the relevant **12 Life Areas** smoothly into flowing paragraphs with short bold reader-specific section titles and no bullet-point lists of traits, and never invent uncalculated biographical events, medical diagnoses, secrets, or another person's motives.`;
 
 export function buildGenesisInquiryPrompt(focus?: string): string {
   return [GENESIS_HISTORIAN_INSTRUCTIONS,

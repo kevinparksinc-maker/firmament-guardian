@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   CHINESE_MANSIONS,
+  CHINESE_HAN_ANGULAR_EXTENTS,
+  CHINESE_HAN_TOTAL_EXTENT,
+  FIRMAMENT_CHINESE_BOUNDARIES,
   NAKSHATRA_RULERS,
+  buildFirmamentChineseBoundaries,
   chineseMansionAtLongitude,
   nakshatraRulerAtLongitude,
   normalizeMansionLongitude,
@@ -18,6 +22,13 @@ describe("fixed-frame lunar mansion utilities", () => {
   it("has 28 Chinese mansion names and 27 Nakshatra rulers", () => {
     expect(CHINESE_MANSIONS).toHaveLength(28);
     expect(NAKSHATRA_RULERS).toHaveLength(27);
+  });
+  it("retains the published unequal Han-era width record", () => {
+    expect(CHINESE_HAN_ANGULAR_EXTENTS).toHaveLength(28);
+    expect(CHINESE_HAN_TOTAL_EXTENT).toBe(367);
+    expect(new Set(CHINESE_HAN_ANGULAR_EXTENTS).size).toBeGreaterThan(1);
+    expect(FIRMAMENT_CHINESE_BOUNDARIES).toHaveLength(28);
+    expect(buildFirmamentChineseBoundaries().find(boundary => boundary.mansionIndex === 18)?.start).toBeCloseTo(45, 10);
   });
   it("normalizes angles without applying another ayanamsha", () => {
     expect(normalizeMansionLongitude(360)).toBe(0);
@@ -44,6 +55,8 @@ describe("fixed-frame lunar mansion utilities", () => {
   it("does not require an ascendant or a house to identify a mansion", () => {
     const result = chineseMansionAtLongitude(45, fixtureBoundaries);
     expect(result.referenceFrame).toBe("firmament-aldebaran-15-taurus");
-    expect(result.boundaryModel).toBe("calibrated-ecliptic");
+    expect(result.boundaryModel).toBe("historical-han-width-proportional-firmament-adaptation");
+    expect(result.determinativeStar).toBe("π Scorpii");
+    expect(chineseMansionAtLongitude(45).mansionIndex).toBe(18);
   });
 });

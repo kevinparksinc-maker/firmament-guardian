@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChartResult } from "./astronomy";
+import { calculateChart } from "./astronomy";
 
 const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
 vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
@@ -58,13 +58,13 @@ describe("AI conversation history", () => {
 
   it("does not duplicate the latest question in chart-grounded interpretation follow-up", async () => {
     const question = "How could this transit feel in daily life?";
-    const chart = {
-      input: { location: "Test city" },
-      movingBodies: [],
-      frozenStars: [],
-      transits: [],
-      houses: [],
-    } as unknown as ChartResult;
+    const chart = await calculateChart({
+      location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797,
+      timezone: "America/Chicago", date: "1986-11-20", time: "10:06",
+      readingScope: "combined", transitLocation: "Las Vegas", transitLatitude: 36.1699,
+      transitLongitude: -115.1398, transitTimezone: "America/Los_Angeles",
+      transitDate: "2026-11-06", transitTime: "11:06",
+    });
 
     await followUp(
       chart,

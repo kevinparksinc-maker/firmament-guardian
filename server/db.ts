@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertSavedChart, InsertSavedReading, InsertUser, savedCharts, savedReadings, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -19,10 +19,11 @@ export async function getDb() {
     try {
       _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
-      console.warn("[Database] Failed to connect, using in-memory mock:", error);
+      console.warn("[Database] Failed to initialize the configured connection:", error);
       _db = null;
     }
   }
+  if (!_db && process.env.NODE_ENV === "production") throw new Error("Persistent account storage is unavailable. Configure DATABASE_URL; no temporary production records will be created.");
   return _db;
 }
 
@@ -138,6 +139,12 @@ export async function listSavedCharts(openId: string) {
 
 export async function createSavedReading(input: InsertSavedReading) {
   const db = await getDb();
+  if (input.chartId != null) {
+    const owned = db
+      ? await db.select({ id: savedCharts.id }).from(savedCharts).where(and(eq(savedCharts.id, input.chartId), eq(savedCharts.openId, input.openId))).limit(1)
+      : mockCharts.filter(chart => chart.id === input.chartId && chart.openId === input.openId);
+    if (!owned.length) throw new Error("The saved chart does not belong to this account.");
+  }
   if (!db) {
     const now = new Date();
     const id = nextReadingId++;

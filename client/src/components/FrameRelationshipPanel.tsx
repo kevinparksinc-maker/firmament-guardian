@@ -48,9 +48,9 @@ export function FrameRelationshipPanel({ rows, title = "God's View of the Agent"
             <div className="rounded-lg border border-violet-200/10 bg-violet-200/[0.05] p-3"><div className="uppercase tracking-[0.14em] text-violet-200/70">God View</div><div className="mt-1 text-white">House {row.godHouse}</div><div className="mt-1 leading-5 text-slate-400">{relationship.godThemes.join(" · ")}</div></div>
             <div className="rounded-lg border border-cyan-200/10 bg-cyan-200/[0.05] p-3"><div className="uppercase tracking-[0.14em] text-cyan-200/70">Agent View</div><div className="mt-1 text-white">House {row.agentHouse}</div><div className="mt-1 leading-5 text-slate-400">{relationship.agentThemes.join(" · ")}</div></div>
           </div>
-          <div className="mt-3 rounded-lg border border-amber-200/10 bg-amber-100/[0.04] p-3 text-xs leading-5 text-amber-50"><div className="mb-1 uppercase tracking-[0.14em] text-amber-200/70">Translation</div>{relationship.translation}</div>
+          <p className="mt-3 text-xs leading-5 text-slate-300">{relationship.synthesis}</p>
           {relationship.tension && <p className="mt-3 rounded-lg border border-rose-200/10 bg-rose-200/[0.04] p-3 text-xs leading-5 text-rose-100">{relationship.tension}</p>}
-          <p className="mt-3 text-xs leading-5 text-slate-400"><span className="font-semibold text-slate-200">Synthesis:</span> {relationship.synthesis}</p>
+          <details className="mt-3 rounded-lg border border-amber-200/10 bg-amber-100/[0.03] px-3 py-2 text-xs leading-5 text-amber-50/90"><summary className="cursor-pointer uppercase tracking-[0.14em] text-amber-200/75">Frame mechanism</summary><p className="mt-1.5 text-slate-300">{relationship.translation}</p></details>
         </article>;
       })}
     </div>

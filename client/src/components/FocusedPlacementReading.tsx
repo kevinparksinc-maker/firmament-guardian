@@ -13,12 +13,16 @@ export function FocusedPlacementReading({
   layer = "natal",
   kind = "placement",
   otherName,
+  lens,
+  atUtc,
 }: {
   chart: ChartResult;
   name: string;
   layer?: FocusTarget["layer"];
   kind?: FocusTarget["kind"];
   otherName?: string;
+  lens?: FocusTarget["lens"];
+  atUtc?: string;
 }) {
   const request = trpc.interpretation.focusedPlacement.useMutation();
   const [reading, setReading] = useState<FocusedReading>();
@@ -30,6 +34,8 @@ export function FocusedPlacementReading({
   const key = JSON.stringify([
     name,
     otherName,
+    lens,
+    atUtc,
     layer,
     kind,
     chart.input,
@@ -50,7 +56,7 @@ export function FocusedPlacementReading({
     }
     setLoading(true);
     request.mutate(
-      { chart, target: { name, otherName, layer, kind } },
+      { chart, target: { name, otherName, layer, kind, lens, atUtc } },
       {
         onSuccess: data => {
           if (current === version.current) {
@@ -106,9 +112,8 @@ export function FocusedPlacementReading({
           {reading.miniNarrative && (
             <p className="text-sm leading-7 text-slate-100">{readingProse(reading.miniNarrative)}</p>
           )}
-          {reading.miniNarrative ? (
-            <details className="rounded-xl border border-white/10 p-3 text-xs text-slate-300">
-              <summary className="cursor-pointer text-cyan-200">Read the complete contact breakdown</summary>
+          <details className="rounded-xl border border-white/10 p-3 text-xs text-slate-300">
+              <summary className="cursor-pointer text-cyan-200">Calculated findings and Canon</summary>
               <div className="mt-4 space-y-5">
                 {reading.sections.map(section => (
                   <article key={section.id} className="space-y-3">
@@ -120,26 +125,6 @@ export function FocusedPlacementReading({
                 ))}
               </div>
             </details>
-          ) : reading.sections.map(section => (
-            <article key={section.id} className="space-y-3">
-              <h5 className="font-semibold text-cyan-100">{section.title}</h5>
-              {section.paragraphs.map((paragraph, index) => (
-                <p key={index} className="text-sm leading-7 text-slate-200">
-                  {readingProse(paragraph)}
-                </p>
-              ))}
-              {section.sources.length > 0 && (
-                <details className="text-xs text-slate-400">
-                  <summary className="cursor-pointer">Source records</summary>
-                  <ul className="mt-2 space-y-1">
-                    {section.sources.map(source => (
-                      <li key={source}>{source}</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </article>
-          ))}
           <details className="rounded-xl border border-white/10 p-3 text-xs text-slate-300">
             <summary className="cursor-pointer text-cyan-200">
               Exact calculation evidence

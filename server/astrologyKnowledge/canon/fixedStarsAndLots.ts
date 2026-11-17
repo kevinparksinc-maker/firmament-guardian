@@ -392,7 +392,37 @@ export const FIXED_STAR_CANON_RECORDS: FixedStarCanonRecord[] = FIXED_STARS.map(
   ([name, lon]) => ({
     name,
     firmamentLockedLongitude: lon,
-    ...FIXED_STAR_DOCTRINE[name],
+    ...(FIXED_STAR_DOCTRINE[name] ?? {
+      isRoyalStar: false,
+      constellation: "Stellar catalog anchor; see astronomical identification",
+      astronomicalFact: {
+        category: "FACT" as const,
+        statement: `${name} is included as a permanent reference in the custom Aldebaran-calibrated stellar catalog.`,
+        provenance: {
+          tradition: "firmament" as const,
+          sourceTitle: "Fixed-star catalog: 2026 reference positions, Aldebaran 45-degree calibration",
+          epistemicCategory: "FACT" as const,
+        },
+      },
+      ptolemaicPlanetaryNature: "Not yet source-verified",
+      traditionalMeaning: "Historical star-specific interpretation pending source verification.",
+      giftWhenIntegrated: "Not assigned until traditional evidence is verified.",
+      nemesisOrTest: "Not assigned until traditional evidence is verified.",
+      firmamentOrbRule: {
+        category: "FIRMAMENT_CANON" as const,
+        statement: "A natal planet activates this fixed star within a 5-degree conjunction orb.",
+        provenance: {
+          tradition: "firmament" as const,
+          sourceTitle: "The Absolute fixed-star activation rule",
+          epistemicCategory: "FIRMAMENT_CANON" as const,
+        },
+      },
+      provenance: {
+        tradition: "firmament" as const,
+        sourceTitle: "The Absolute expanded fixed-star reference catalog",
+        epistemicCategory: "FIRMAMENT_CANON" as const,
+      },
+    }),
   })
 );
 

@@ -6,11 +6,11 @@ import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
 
 const STAGES = [
-  { title: "Childhood & Roots", period: "Early life", focus: "family atmosphere, early needs, defenses, belonging and formative patterns" },
-  { title: "Youth & Becoming", period: "Adolescence and early adulthood", focus: "identity, independence, education, friendships, early love and emerging gifts" },
-  { title: "Adulthood & Building", period: "Adult life", focus: "work, money, relationships, responsibility, ambition and recurring challenges" },
-  { title: "Maturity & Transformation", period: "Middle and later adulthood", focus: "reassessment, growth, changes in priorities, deeper commitments and integration" },
-  { title: "Wisdom & Legacy", period: "Later-life themes", focus: "meaning, contribution, reconciliation, legacy and lessons carried forward" },
+  { title: "Birth, Parents, Childhood & School", period: "Early roots & school years", focus: "core nature, mother and father dynamics, home atmosphere, inherited burdens, school learning style, and early friendships" },
+  { title: "Gifts, Hobbies, Friends & Youth", period: "Adolescence & emerging passions", focus: "natural gifts vs. hidden potential, concrete hobbies and interests, friendships, hidden rivals, loyalty, betrayal, and early love" },
+  { title: "Money, Career, Love & Marriage", period: "Building adulthood", focus: "earning power, debt and financial hardship vs. lasting wealth, employment vs. business ownership, attraction, sex, marriage, heartbreak, and your own part in conflict" },
+  { title: "Children, Health, Hardship & Survival", period: "Tests, family & rebuilding", focus: "children and parenting, daily health habits without medical diagnoses, major setbacks, injustice, poor choices, and how you rebuild" },
+  { title: "Faith, Turning Points & Later Years", period: "Purpose, timing & legacy", focus: "faith and relationship with God or core beliefs, turning points anchored in calculated timing cycles, greatest blessings, hardest lessons, and legacy" },
 ] as const;
 
 export function LifeStoryInterpreter({ chart }: { chart: ChartResult }) {
@@ -25,12 +25,11 @@ export function LifeStoryInterpreter({ chart }: { chart: ChartResult }) {
     if (chapters[index]) return;
     const stage = STAGES[index];
     const question = [
-      "Write a rich, continuous LIFE STORY chapter for an anonymous person using ONLY the attached calculated natal chart and the existing Firmament Guardian canon, Genesis Pattern Engine, and available evidence.",
+      "Write a rich, continuous, plainspoken LIFE STORY chapter using ONLY the attached calculated natal chart and computed canon/evidence layers.",
       `Chapter: ${stage.title}. Life stage: ${stage.period}. Explore: ${stage.focus}.`,
-      "Use all applicable evidence available to the interpreter: planets, signs, all houses, rulers, aspects, fixed stars, lunar mansions, decans, Western/Vedic/Arabic methods, Genesis patterns, and timing methods when actually calculated. Synthesize God View and Agent View only where their calculated dual-frame evidence is present; do not invent absent frames, degrees, Dashas, or historical events.",
-      "Tell the story as an immersive third-person human portrait, with specific conditional everyday examples. Connect WHAT, WHY, HOW, CONSEQUENCE and MEANING. Show convergences, tensions and alternatives. Do not give a disconnected list of placements.",
-      "This is a symbolic life possibility, not a factual biography. Do not assert childhood events, trauma, death, marriage or future events as established facts. When age-specific timing evidence is missing, clearly distinguish developmental themes from dated predictions.",
-      "Make this a substantial chapter with an evocative title, flowing paragraphs and a brief 'Chart evidence behind this chapter' section. Never guess the person's identity.",
+      "Write like a direct, perceptive reader—NEVER like a psychiatrist or therapist (no shrink jargon). Separate Natural Gifts, Hidden Potential, Developed Strengths, and Weaknesses; deduce concrete hobbies/interests only when backed by chart testimony; explain WHY the astrological factors (planets, rulers, houses, aspects, Nakshatras/Manazil, Lots, Fixed Stars) lead to each conclusion.",
+      "Do not invent biographical events, trauma, marriage dates, or medical diagnoses. Anchor any timing statements strictly in calculated timing cycles; where timing cycles are absent, state natal themes clearly. Include honest shortcomings or what the person themselves contributes to difficulties when supported by testimony.",
+      "Make this a substantial, cohesive narrative chapter in plain 2026 English—not a bullet list of disconnected placements.",
     ].join("\n\n");
     try {
       const answer = await story.mutateAsync({ chart, mode: "natal", history: [], question });

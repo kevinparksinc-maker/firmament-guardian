@@ -51,3 +51,11 @@ export type SavedChart = typeof savedCharts.$inferSelect;
 export type InsertSavedChart = typeof savedCharts.$inferInsert;
 export type SavedReading = typeof savedReadings.$inferSelect;
 export type InsertSavedReading = typeof savedReadings.$inferInsert;
+
+/** Independent account credentials; hashes are never returned by account APIs. */
+export const accountCredentials = mysqlTable("account_credentials", {
+  email: varchar("email", { length: 320 }).primaryKey(),
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});

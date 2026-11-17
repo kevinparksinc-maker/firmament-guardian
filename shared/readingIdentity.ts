@@ -1,5 +1,5 @@
 import type { ChartResult } from "../server/astronomy";
-export const READING_FRAMEWORK_VERSION = "absolute-reading-v11-vedic-strength";
+export const READING_FRAMEWORK_VERSION = "absolute-reading-v12-canonical";
 /** A reading belongs to one account, question, mode and calculated chart snapshot. */
 export function readingCacheIdentity(chart: ChartResult, mode: "natal" | "transit" | "combined", question = "", accountId = "guest") {
   return `${READING_FRAMEWORK_VERSION}:${JSON.stringify({

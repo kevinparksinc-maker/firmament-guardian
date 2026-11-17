@@ -2262,15 +2262,10 @@ export function getPlanetInHouse(
   planet: string,
   house: number
 ): PlanetInHouseMeaning | null {
-  const clean = planet.trim().toLowerCase();
   const normalized =
-    clean === "north node" || clean === "rahu"
-      ? "Rahu"
-      : clean === "south node" || clean === "ketu"
-      ? "Ketu"
-      : planet.charAt(0).toUpperCase() + planet.slice(1).toLowerCase();
+    planet.charAt(0).toUpperCase() + planet.slice(1).toLowerCase();
   return (
-    PLANET_IN_HOUSE.find(p => p.planet.toLowerCase() === normalized.toLowerCase() && p.house === house) ??
+    PLANET_IN_HOUSE.find(p => p.planet === normalized && p.house === house) ??
     null
   );
 }

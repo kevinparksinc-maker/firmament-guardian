@@ -148,7 +148,7 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
       toast.error("Generate at least one chapter before saving to reading history.");
       return;
     }
-    const title = `Life Story (${chart.input?.location || "Cosmic"} · Age ${activeAge})`;
+    const title = `Life Story (${chart.input?.location || "Birth Chart"} · Age ${activeAge})`;
     saveReadingMutation.mutate(
       {
         title,
