@@ -23,6 +23,8 @@ export const ENV = {
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   groqApiKey: process.env.GROQ_API_KEY?.trim() ?? "",
+  openrouterApiKey: process.env.OPENROUTER_API_KEY?.trim() ?? "",
+  openrouterModel: process.env.OPENROUTER_MODEL?.trim() || "openrouter/free",
   groqModel: process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   openaiApiBase: process.env.OPENAI_API_BASE ?? process.env.OPENAI_BASE_URL ?? "",
