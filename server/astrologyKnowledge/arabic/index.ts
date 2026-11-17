@@ -1,6 +1,7 @@
 import type { ChartResult, ChartRow } from "../../astronomy";
 import { overlay, MANAZIL, normalizeLongitude } from "../../../shared/hybrid";
 import { calculateArabicLots } from "../../utils/arabicLots";
+import { majorLongitudeContact } from "../canon/fixedStarsAndLots";
 import { sourceById } from "../registry";
 import type { EvidenceItem, KnowledgePlan, SourceTrace } from "../types";
 
@@ -77,13 +78,10 @@ export function resolveArabicEvidence(
         ),
       });
   }
-  if (
-    chart.ascendant &&
-    chart.movingBodies.find(row => row.name === "Sun") &&
-    chart.movingBodies.find(row => row.name === "Moon")
-  ) {
-    const sun = chart.movingBodies.find(row => row.name === "Sun")!;
-    const moon = chart.movingBodies.find(row => row.name === "Moon")!;
+  const sun = all.find(row => row.name === "Sun");
+  const moon = all.find(row => row.name === "Moon");
+  const ascendant = all.find(row => row.name === "Ascendant");
+  if (chart.agentViewAvailable && ascendant && sun && moon) {
     const sect = sun.house >= 7 ? "day" : "night";
     evidence.push({
       id: "arabic-sect",
@@ -100,27 +98,48 @@ export function resolveArabicEvidence(
       sourceTrace: trace("sect", "arabic-day-sect"),
     });
     const lots = calculateArabicLots({
-      ascendant: chart.ascendant.longitude,
+      ascendant: ascendant.longitude,
+      venus: all.find(row => row.name === "Venus")?.longitude,
+      mercury: all.find(row => row.name === "Mercury")?.longitude,
       sun: sun.longitude,
       moon: moon.longitude,
       sect,
     });
     for (const [name, longitude] of Object.entries(lots)) {
       const m = manzil(longitude);
-      evidence.push({
+      const formulaBodies = [
+        "Ascendant", "Sun", "Moon",
+        ...(name === "eros" ? ["Venus"] : name === "necessity" ? ["Mercury"] : []),
+      ];
+      const angles = [chart.descendant, chart.midheaven].filter((row): row is ChartRow => Boolean(row));
+      const contacts = [...all, ...angles].flatMap(row => {
+        const contact = majorLongitudeContact(row.longitude, longitude, 5);
+        return contact ? [{ body: row.name, ...contact }] : [];
+      });
+      const lot: EvidenceItem = {
         id: `arabic-lot-${name}`,
         tradition: "arabic",
         category: "deterministic-rule",
         technique: "lots",
         subject: name,
-        statement: `Lot of ${name[0].toUpperCase() + name.slice(1)} calculates to ${longitude.toFixed(4)}°, activating ${m.name}.`,
-        concepts: ["lot", name, m.name.toLowerCase()],
+        statement: `Lot of ${name[0].toUpperCase() + name.slice(1)} calculates to ${longitude.toFixed(4)}° in ${m.name} using ${sect} sect and ${formulaBodies.join(", ")}.`,
+        concepts: ["lot", name, m.name.toLowerCase(), ...formulaBodies.map(body => body.toLowerCase())],
         polarity: "neutral",
         strength: 0.85,
         ruleId: "arabic-lots",
         sourceId: "local-arabic-rules",
         sourceTrace: trace("lots", "arabic-lots"),
-      });
+      };
+      evidence.push(lot);
+      for (const { body, aspect, orbDeg } of contacts) {
+        evidence.push({
+          ...lot,
+          id: `${lot.id}-${body.toLowerCase()}`,
+          subject: body,
+          concepts: ["lot", name, aspect],
+          statement: `${lot.statement} ${body} contacts this Lot by ${aspect} at ${orbDeg}° orb.`,
+        });
+      }
     }
   } else
     evidence.push({
@@ -130,7 +149,7 @@ export function resolveArabicEvidence(
       technique: "lots",
       subject: "fortune-spirit",
       statement:
-        "Fortune and Spirit were not calculated because an exact Ascendant, Sun, and Moon set was not supplied.",
+        "Fortune and Spirit were not calculated because a local Ascendant and both luminaries are required.",
       concepts: ["lots", "incomplete"],
       polarity: "neutral",
       strength: 0,

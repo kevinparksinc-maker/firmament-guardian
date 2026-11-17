@@ -142,8 +142,12 @@ export function packPlacementMiniPrompt(
   for (const j of unique)
     for (const part of split(j.judgment))
       counts.set(part, (counts.get(part) ?? 0) + 1);
+  const maxReferenceLength = String(counts.size).length;
   const textTable = Array.from(counts)
-    .filter(([part, n]) => part.length >= 60 && n > 1)
+    .filter(([part, count]) => {
+      const literalLength = JSON.stringify(part).length;
+      return (count - 1) * literalLength > count * maxReferenceLength + 1;
+    })
     .map(([part]) => part);
   const textIndex = new Map(textTable.map((part, i) => [part, i]));
   const sources = Array.from(new Set(unique.flatMap(j => j.sources)));

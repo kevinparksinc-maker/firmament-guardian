@@ -181,7 +181,7 @@ export function retrieveChartCanonDossier(
     if (p.fixedStarContacts.length > 0) {
       for (const fc of p.fixedStarContacts) {
         lines.push(
-          `  - [Fixed Star Contact: ${fc.star.name}${fc.star.isRoyalStar ? ` (Royal Star · Watcher of the ${fc.star.watcherDirection})` : ""} at ${fc.orbDeg}° orb] Nature: ${fc.star.ptolemaicPlanetaryNature}. Gift: ${fc.star.giftWhenIntegrated} Test/Nemesis: ${fc.star.nemesisOrTest}`
+          `  - [Fixed Star Contact: ${fc.star.name}${fc.star.isRoyalStar ? ` (Royal Star · Watcher of the ${fc.star.watcherDirection})` : ""} · ${fc.aspect} at ${fc.orbDeg}° orb] Nature: ${fc.star.ptolemaicPlanetaryNature}. Gift: ${fc.star.giftWhenIntegrated} Test/Nemesis: ${fc.star.nemesisOrTest}`
         );
       }
     }
@@ -379,9 +379,14 @@ export function canonDossierToEvidenceItems(
     }
     for (const contact of p.fixedStarContacts) {
       const star = contact.star;
-      if (star.ptolemaicPlanetaryNature === "Not yet source-verified") continue;
+      if (star.ptolemaicPlanetaryNature === "Not yet source-verified") {
+        add(`fixed-star-${star.name.toLowerCase()}`, "firmament",
+          `${p.body} contacts ${star.name} by ${contact.aspect} at ${contact.orbDeg}° orb. Star-specific historical doctrine is unavailable.`,
+          star.provenance.sourceTitle, [`star-${star.name.toLowerCase()}`]);
+        continue;
+      }
       add(`fixed-star-${star.name.toLowerCase()}`, "firmament",
-        `${p.body} activates ${star.name} at ${contact.orbDeg}° orb. Nature: ${star.ptolemaicPlanetaryNature}. ${star.traditionalMeaning} Gift: ${star.giftWhenIntegrated} Test: ${star.nemesisOrTest}`,
+        `${p.body} activates ${star.name} by ${contact.aspect} at ${contact.orbDeg}° orb. Nature: ${star.ptolemaicPlanetaryNature}. ${star.traditionalMeaning} Gift: ${star.giftWhenIntegrated} Test: ${star.nemesisOrTest}`,
         star.provenance.sourceTitle, [`star-${star.name.toLowerCase()}`]);
     }
   }
