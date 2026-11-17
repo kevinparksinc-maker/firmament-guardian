@@ -96,22 +96,51 @@ export async function synthesizePlacement(chart: ChartResult, body: string, ques
     ],
     maxTokens: 900,
   }, "placement-reference");
-  const content = response.choices[0]?.message?.content;
-  const rawSynthesis = typeof content === "string" ? content.trim() : "";
-  const groups = rawSynthesis.split(/\r?\n[ \t]*\r?\n/);
-  if (groups.length !== 2)
-    throw new Error("PLACEMENT_SYNTHESIS_INCOMPLETE: The provider did not return both paragraphs.");
   const allowedIds = new Set(packet.contributions.flatMap(item => item.evidenceIds ?? []));
   const timingIds = new Set(packet.timingEvidenceIds);
-  const claims = groups.map(group => group.split(/\r?\n/).map(line => {
-    const match = line.match(/^(.+?)\s+\[(evidence|timing):\s*([^\]]+)\]\s*$/);
-    if (!match) throw new Error("PLACEMENT_SYNTHESIS_TRACE: A claim is missing its evidence IDs.");
-    const evidenceIds = Array.from(new Set(match[3].split(",").map(id => id.trim())));
-    const usesActivation = evidenceIds.some(id => timingIds.has(id));
-    if (evidenceIds.some(id => !allowedIds.has(id)) || (match[2] === "timing") !== usesActivation)
-      throw new Error("PLACEMENT_SYNTHESIS_TRACE: A claim cites unsupported placement or timing evidence.");
-    return { text: scrubNonHoraryAstrologyJargon(match[1]), evidenceIds, timing: usesActivation };
-  }));
+  function parseClaims(rawSynthesis: string) {
+    const groups = rawSynthesis.split(/\r?\n[ \t]*\r?\n/).map(group => group.trim()).filter(Boolean);
+    if (groups.length !== 2)
+      throw new Error("PLACEMENT_SYNTHESIS_INCOMPLETE: The provider did not return both paragraphs.");
+    return groups.map(group => {
+      const parsed: Array<{ text: string; evidenceIds: string[]; timing: boolean }> = [];
+      const annotation = /\[(evidence|timing):\s*([^\]]+)\]/g;
+      let cursor = 0;
+      for (const match of group.matchAll(annotation)) {
+        const start = match.index ?? 0;
+        const prose = group.slice(cursor, start).trim();
+        if (!prose) throw new Error("PLACEMENT_SYNTHESIS_TRACE: An evidence annotation has no claim.");
+        const evidenceIds = Array.from(new Set(match[2].split(",").map(id => id.trim())));
+        const usesActivation = evidenceIds.some(id => timingIds.has(id));
+        if (evidenceIds.some(id => !id || !allowedIds.has(id)) || (match[1] === "timing") !== usesActivation)
+          throw new Error("PLACEMENT_SYNTHESIS_TRACE: A claim cites unsupported placement or timing evidence.");
+        parsed.push({ text: scrubNonHoraryAstrologyJargon(prose.replace(/\s+/g, " ")), evidenceIds, timing: usesActivation });
+        cursor = start + match[0].length;
+      }
+      if (!parsed.length || group.slice(cursor).trim())
+        throw new Error("PLACEMENT_SYNTHESIS_TRACE: A claim is missing its evidence IDs.");
+      return parsed;
+    });
+  }
+  const content = response.choices[0]?.message?.content;
+  const rawSynthesis = typeof content === "string" ? content.trim() : "";
+  let claims: ReturnType<typeof parseClaims>;
+  try {
+    claims = parseClaims(rawSynthesis);
+  } catch (error) {
+    if (!(error instanceof Error) || !/^PLACEMENT_SYNTHESIS_(TRACE|INCOMPLETE)/.test(error.message)) throw error;
+    const repaired = await runInterpretation("PLACEMENT_SYNTHESIS_REPAIR", fullSynthesis, {
+      provider: "gemini",
+      timeoutMs: 60_000,
+      maxTokens: 1400,
+      messages: [
+        { role: "system", content: "Repair evidence annotations only. Preserve the original meaning and two-paragraph structure. Each claim must end in [evidence: exact-id] or, for time-specific claims, [timing: exact-activation-id]. Never invent IDs, calculations, or unsupported claims. Delete claims that cannot be supported by the supplied RESULT evidence. Output only two annotated paragraphs." },
+        { role: "user", content: packet.prompt + "\n\nPREVIOUS RESPONSE TO REPAIR:\n" + rawSynthesis + "\n\nVALIDATION ERROR:\n" + error.message },
+      ],
+    }, "placement-reference");
+    const repairedContent = repaired.choices[0]?.message?.content;
+    claims = parseClaims(typeof repairedContent === "string" ? repairedContent.trim() : "");
+  }
   const synthesis = claims.map(group => group.map(claim => claim.text).join(" ")).join("\n\n");
   return { packet: { ...packet, prompt: undefined }, synthesis, claimTrace: claims.flat() };
 }
