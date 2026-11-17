@@ -92,7 +92,7 @@ async function ask(
 ) {
   try {
     const response = await runInterpretation(route, synthesis, {
-      model: "claude-sonnet-4-6",
+      provider: "gemini",
       messages,
       maxTokens,
       ...(thinkingBudget > 0
@@ -629,17 +629,31 @@ async function analyzeChart(
       content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatCompactEvidencePacket(evidencePacket)}\n\n${synthesisContext}\n\nWrite the reading plan JSON now.`,
     },
   ];
+  let firstError = "";
+  let firstResponse = "";
   try {
-    const plan = validatePlan(
-      await ask(synthesis, "READING_PLAN", messages, 2400, 1024),
-      known,
-      semantic
-    );
+    firstResponse = await ask(synthesis, "READING_PLAN", messages, 3200);
+    const plan = validatePlan(firstResponse, known, semantic);
     if (plan) return JSON.stringify(plan);
-    throw new Error("READING_PLAN_INVALID: AI reading plan failed evidence validation.");
+    firstError = "READING_PLAN_INVALID: Fewer than two evidence-backed threads or four supported chapters.";
   } catch (error) {
-    console.error("[READING_PLAN_FAILED] AI reading plan unavailable:", error);
-    throw new Error("READING_PLAN_FAILED: The AI reading plan could not be completed or validated.");
+    firstError = error instanceof Error ? error.message : String(error);
+  }
+  console.warn("[READING_PLAN] First attempt failed; requesting a single evidence-grounded repair:", firstError);
+  try {
+    const repairMessages: Message[] = [
+      ...messages,
+      { role: "assistant", content: firstResponse || "(no valid plan returned)" },
+      { role: "user", content: `Repair the reading plan using only evidence labels from the supplied chart. Return valid JSON only, with at least two evidence-backed threads and four chapters with verified evidence. Remove unsupported evidence rather than inventing it. Preserve all relevant traditions. Previous validation failure: ${firstError.slice(0, 350)}` },
+    ];
+    const repaired = await ask(synthesis, "READING_PLAN_REPAIR", repairMessages, 4000);
+    const plan = validatePlan(repaired, known, semantic);
+    if (plan) return JSON.stringify(plan);
+    throw new Error("READING_PLAN_INVALID: Repaired plan still lacks sufficient verified evidence.");
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error("[READING_PLAN_FAILED]", { firstError, repairError: reason, mode, knownEvidence: known.size, semanticEvidence: semantic.size });
+    throw new Error(`READING_PLAN_FAILED: ${reason.slice(0, 280)}`);
   }
 }
 
