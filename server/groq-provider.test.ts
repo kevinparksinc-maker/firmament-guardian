@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { env } = vi.hoisted(() => ({ env: {
   groqApiKey: "private-test-key", groqModel: "openai/gpt-oss-120b",
-  anthropicApiKey: "old-claude-key", geminiApiKey: "old-gemini-key",
+  anthropicApiKey: "old-claude-key", geminiApiKey: "",
 } }));
 vi.mock("./_core/env", () => ({ ENV: env }));
 import { getLLMProviderStatus, invokeLLM, listLLMModels } from "./_core/llm";
@@ -37,7 +37,7 @@ describe("Groq interpreter", () => {
   it("reports only allowlisted provider codes and never the private error body",async()=>{
     fetchMock.mockResolvedValue(new Response(JSON.stringify({error:{code:"invalid_request_error",message:"private chart"}}),{status:400}));
     const error=await invokeLLM({messages:[]}).catch(e=>e as Error);
-    expect(error.message).toContain("invalid_request_error");expect(error.message).not.toContain("private chart");expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(error.message).toContain("GROQ_REQUEST_FAILED");expect(error.message).not.toContain("private chart");expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it("uses Groq for the model list", async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ data: [] })));
@@ -46,7 +46,7 @@ describe("Groq interpreter", () => {
   });
   it("reports auth failures without paid fallback or leaking prompts", async () => {
     fetchMock.mockResolvedValue(new Response("private chart echoed", { status: 401 }));
-    await expect(invokeLLM({ messages: [] })).rejects.toThrow("Check GROQ_API_KEY");
+    await expect(invokeLLM({ messages: [] })).rejects.toThrow("HTTP 401");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it.each(["length", "stop"])("rejects incomplete or empty readings (%s)", async finish_reason => {

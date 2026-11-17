@@ -2,6 +2,7 @@ import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative
 import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
 import type { Message } from "./_core/llm";
 import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
+import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
 import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
 import { withCurrentQuestion } from "./_core/conversation";
 import type { ChartResult, ChartRow } from "./astronomy";
@@ -102,15 +103,8 @@ async function ask(
     return interpretationText(response);
   } catch (error) {
     console.error("[Interpretation] LLM request failed:", error);
-    const message = error instanceof Error ? error.message : String(error);
-    if (/usage exhausted|quota|credit|AI_RATE_LIMIT|RESOURCE_EXHAUSTED|429/i.test(message)) {
-      throw new Error(
-        "The chart was calculated successfully, but AI rate/token capacity was temporarily reached. Please wait ~20 seconds and try again; your chart data is still available."
-      );
-    }
-    throw new Error(
-      "The interpretation service could not complete this reading. Please try again; your chart calculation is still available."
-    );
+    const message = error instanceof Error ? error.message : "Unknown interpretation failure";
+    throw new Error(`${route}_FAILED: ${message}`, { cause: error });
   }
 }
 
@@ -400,19 +394,14 @@ function knownPoints(chart: ChartResult) {
 function resolvePoint(entry: unknown, known: Map<string, string>) {
   if (typeof entry !== "string") return null;
   const text = entry.trim().toLowerCase();
-  let best = "";
-  for (const key of Array.from(known.keys())) {
-    if (
-      text.startsWith(key) &&
-      key.length > best.length &&
-      !/[a-z]/.test(text.charAt(key.length))
-    )
-      best = key;
-  }
-  return best ? known.get(best)! : null;
+  const named = known.get(text);
+  if (named) return named;
+  // Do not accept an invented aspect merely because it starts with "Moon".
+  // Accept only a point name or the exact canonical fact printed on the sheet.
+  return Array.from(known.values()).find(value => value.trim().toLowerCase() === text) ?? null;
 }
 
-function evidenceAnchors(packet: AstrologyEvidencePacket) {
+export function evidenceAnchors(packet: AstrologyEvidencePacket, synthesis?: SynthesisResult) {
   const anchors = new Map<string, string>();
   const items = [
     ...packet.genesisAstroEvidence,
@@ -424,6 +413,9 @@ function evidenceAnchors(packet: AstrologyEvidencePacket) {
     ...packet.arabicEvidence,
     ...packet.timingEvidence,
     ...packet.fixedStarEvidence,
+    ...packet.lunarEvidence,
+    ...packet.canonEvidence,
+    ...packet.uncertainties,
   ];
   const subjectCounts = new Map<string, number>();
   for (const item of items) {
@@ -437,6 +429,22 @@ function evidenceAnchors(packet: AstrologyEvidencePacket) {
     anchors.set(item.id.trim().toLowerCase(), item.statement);
     anchors.set(item.statement.trim().toLowerCase(), item.statement);
   }
+  // Include exactly the finding and Canon IDs that runInterpretation sends.
+  // Repeated subject names remain ambiguous; exact IDs are always usable.
+  const add = (id: string, statement: string) => {
+    if (id.trim() && statement.trim()) anchors.set(id.trim().toLowerCase(), statement);
+  };
+  for (const method of synthesis?.methodOutcomes ?? []) {
+    for (const finding of method.findingJudgments) {
+      add(finding.id, finding.judgment);
+      for (const id of finding.evidenceIds) {
+        const calculated = method.calculatedFindings.find(item => item.evidenceId === id);
+        add(id, calculated ? `${calculated.label}: ${calculated.calculatedValue}` : finding.judgment);
+      }
+    }
+    for (const finding of method.calculatedFindings) add(finding.evidenceId, `${finding.label}: ${finding.calculatedValue}`);
+  }
+  for (const rule of synthesis?.canonApplications ?? []) add(rule.canonEvidenceId, rule.statement);
   return anchors;
 }
 
@@ -474,7 +482,7 @@ type ReadingPlan = {
   chapters: Record<string, { angle: string; evidence: string[] }>;
 };
 
-function validatePlan(
+export function validatePlan(
   raw: string,
   known: Map<string, string>,
   semantic: Map<string, string>
@@ -488,18 +496,16 @@ function validatePlan(
   } catch {
     return null;
   }
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const chapterIds = new Set<string>(
     READING_CHAPTERS.map(chapter => chapter.id)
   );
   const clean = (list: unknown) => {
     const out = new Set<string>();
     for (const entry of Array.isArray(list) ? list : []) {
-      const hit = resolvePoint(entry, known);
+      const semanticHit = typeof entry === "string" ? resolveSemanticEvidence(entry, semantic) : null;
+      const hit = semanticHit ?? resolvePoint(entry, known);
       if (hit) out.add(hit);
-      else if (typeof entry === "string") {
-        const semanticHit = resolveSemanticEvidence(entry, semantic);
-        if (semanticHit) out.add(semanticHit);
-      }
       // Unknown evidence is not a chart fact: never carry it into the validated plan.
     }
     return Array.from(out);
@@ -527,8 +533,8 @@ function validatePlan(
         .filter((id: string | null): id is string => Boolean(id)),
     }))
     .filter(
-      (thread: { title: string; insight: string; evidence: string[] }) =>
-        thread.title && thread.insight && thread.evidence.length
+      (thread: { title: string; insight: string; evidence: string[]; chapters: string[] }) =>
+        thread.title && thread.insight && thread.evidence.length && thread.chapters.length
     );
   const tensions = (Array.isArray(data.tensions) ? data.tensions : [])
     .map((tension: any) => ({
@@ -546,7 +552,7 @@ function validatePlan(
     const id = resolveChapterId(rawId);
     if (!id || chapters[id]) continue;
     const evidence = clean((item as any)?.evidence);
-    if (item && evidence.length) {
+    if (item && text((item as any).angle) && evidence.length) {
       chapters[id] = { angle: text((item as any).angle), evidence };
     }
   }
@@ -618,7 +624,7 @@ async function analyzeChart(
   synthesisContext = ""
 ) {
   const known = knownPoints(chart);
-  const semantic = evidenceAnchors(evidencePacket);
+  const semantic = evidenceAnchors(evidencePacket, synthesis);
   const messages: Message[] = [
     {
       role: "system",
@@ -626,18 +632,21 @@ async function analyzeChart(
     },
     {
       role: "user",
-      content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatCompactEvidencePacket(evidencePacket)}\n\n${synthesisContext}\n\nWrite the reading plan JSON now.`,
+      content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${stringifyEvidence(evidencePacket)}\n\n${synthesisContext}\n\nVALID EVIDENCE LABELS (copy exact IDs; do not invent or shorten them):\n${JSON.stringify([...Array.from(known.keys()), ...Array.from(semantic.keys())].filter(label => label.length <= 180))}\n\nWrite the reading plan JSON now.`,
     },
   ];
   let firstError = "";
   let firstResponse = "";
   try {
-    firstResponse = await ask(synthesis, "READING_PLAN", messages, 3200);
+    firstResponse = await ask(synthesis, "READING_PLAN", messages, 6500);
     const plan = validatePlan(firstResponse, known, semantic);
     if (plan) return JSON.stringify(plan);
     firstError = "READING_PLAN_INVALID: Fewer than two evidence-backed threads or four supported chapters.";
   } catch (error) {
-    firstError = error instanceof Error ? error.message : String(error);
+    const reason = error instanceof Error ? error.message : String(error);
+    // Provider routing already exhausted configured fallbacks. A second identical
+    // request cannot repair a network/auth/capacity failure or missing output.
+    throw new Error(`READING_PLAN_FAILED: ${reason}`, { cause: error });
   }
   console.warn("[READING_PLAN] First attempt failed; requesting a single evidence-grounded repair:", firstError);
   try {
@@ -646,7 +655,7 @@ async function analyzeChart(
       { role: "assistant", content: firstResponse || "(no valid plan returned)" },
       { role: "user", content: `Repair the reading plan using only evidence labels from the supplied chart. Return valid JSON only, with at least two evidence-backed threads and four chapters with verified evidence. Remove unsupported evidence rather than inventing it. Preserve all relevant traditions. Previous validation failure: ${firstError.slice(0, 350)}` },
     ];
-    const repaired = await ask(synthesis, "READING_PLAN_REPAIR", repairMessages, 4000);
+    const repaired = await ask(synthesis, "READING_PLAN_REPAIR", repairMessages, 6500);
     const plan = validatePlan(repaired, known, semantic);
     if (plan) return JSON.stringify(plan);
     throw new Error("READING_PLAN_INVALID: Repaired plan still lacks sufficient verified evidence.");
@@ -762,9 +771,10 @@ export async function generateChapter(
     }
   } catch (err) {
     console.error(`[generateChapter] Synthesized chapter unavailable for ${resolvedId}:`, err);
+    throw err;
   }
 
-  throw new Error("The synthesized chapter could not be completed. Please retry; the calculated chart remains available.");
+  throw new Error("READING_CHAPTER_INCOMPLETE: The provider returned fewer than 200 characters; retry this chapter.");
 }
 export async function followUp(
   chart: ChartResult,

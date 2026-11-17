@@ -29,5 +29,7 @@ export const ENV = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   openaiApiBase: process.env.OPENAI_API_BASE ?? process.env.OPENAI_BASE_URL ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+  geminiModel: process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash",
+  anthropicModel: process.env.ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-6",
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
 };

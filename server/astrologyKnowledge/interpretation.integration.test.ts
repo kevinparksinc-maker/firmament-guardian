@@ -155,7 +155,7 @@ describe("interpretation.generate knowledge gateway integration", () => {
         "work-purpose": { angle: "work", evidence: ["Stellium in Scorpio"] },
       },
     };
-    mocked.invokeLLM.mockResolvedValueOnce({
+    mocked.invokeLLM.mockResolvedValue({
       choices: [
         { message: { role: "assistant", content: JSON.stringify(plan) } },
       ],
@@ -165,6 +165,6 @@ describe("interpretation.generate knowledge gateway integration", () => {
       "natal",
       "What is the major pattern affecting my career?"
     )).rejects.toThrow("READING_PLAN_FAILED");
-    expect(mocked.invokeLLM).toHaveBeenCalledTimes(1);
+    expect(mocked.invokeLLM).toHaveBeenCalledTimes(2);
   });
 });

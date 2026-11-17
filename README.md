@@ -60,8 +60,24 @@ Production does not create temporary account/chart records when database configu
 
 The primary index is `/explore`. Readings use `/reading`, `/reading/depth`, and `/reading/evidence`. Energy uses `/energy`, `/energy/contacts`, `/forecast`, and `/energy/consultation`. The floating AI guide is mounted once in the shared shell and keeps its conversation across client-side navigation, resetting when the active birth profile changes.
 
-### Groq interpreter setup
+### Interpreter providers
 
-Set `GROQ_API_KEY` in the server environment (Render → service → Environment), then redeploy. Never put this secret in a `VITE_` variable or commit it. `GROQ_MODEL` defaults to `openai/gpt-oss-120b`. All shared AI interpretation requests use Groq when its key is set, even if older Claude/Gemini model hints or keys remain. Groq errors never trigger a paid-provider fallback. XYZ calculations, Canon retrieval and synthesis prompts are unchanged. `system.providerStatus` reports `groq` as the interpreter provider.
+Configure server-only keys for the providers you want enabled. Shared interpretation calls try configured providers in this order: **Gemini → Groq → OpenRouter**. Missing keys are skipped. Failed, empty, timed-out, and truncated responses move to the next configured provider without dropping evidence. Cancellation stops the chain. Only these three providers participate; Anthropic, OpenAI, and Forge are never automatic fallbacks, even when their old keys remain.
 
-The Groq free plan has request and token limits; it is not unlimited inference. Large chart dossiers and life stories may exceed the account's per-request/minute allowance. Such requests return explicit errors; no evidence is silently removed and incomplete readings are rejected. See https://console.groq.com/docs/rate-limits for current limits. A live reading must be verified after adding the account key.
+| Provider | Key | Model setting |
+| --- | --- | --- |
+| Gemini | `GEMINI_API_KEY` | `GEMINI_MODEL` (default `gemini-2.5-flash`) |
+| Groq | `GROQ_API_KEY` | `GROQ_MODEL` (default `llama-3.3-70b-versatile`; example config chooses `openai/gpt-oss-120b`) |
+| OpenRouter | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` (default `openrouter/free`) |
+
+Never put keys in `VITE_` variables or commit them. Each account/model has its own context and rate limits. Full evidence can exceed a provider's request allowance; the chain returns provider names, safe error codes, and HTTP statuses when it cannot complete a request. No provider error bodies or private chart prompts are exposed to the client.
+
+The reading-plan validator accepts exact calculated point names and evidence IDs/labels, including lunar, Kabbalah/Canon, fixed-star, and transit findings. A malformed or unsupported plan gets one evidence-grounded repair; provider outages do not trigger a redundant planning request. Complete interpretation dossiers include every calculated method and finding. Compact display summaries explicitly report omitted findings and shortened text.
+
+Run real natal, transit, and combined readings in a configured environment:
+
+```bash
+node --import tsx scripts/test-master-interpreter-live.ts
+```
+
+This calls real providers for a reading plan, full reading, and chapter in each mode. It prints result counts and failures without printing credentials or the reading. Automated fixture tests do not establish live reading quality or confirm a deployed version.

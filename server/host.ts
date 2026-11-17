@@ -44,7 +44,7 @@ export async function askHost(
     ...withCurrentQuestion(history, question, 6),
   ];
 
-  const request = { model: "claude-sonnet-4-6", messages, maxTokens: 1800 };
+  const request = { messages, maxTokens: 1800 };
   const response = calculated
     ? await runInterpretation("CHART_HOST", calculated.synthesis, request)
     : await invokeLLM(request);

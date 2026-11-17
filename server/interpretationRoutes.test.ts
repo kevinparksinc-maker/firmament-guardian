@@ -462,9 +462,11 @@ describe("user-facing tRPC interpretation routes", () => {
     const packed = decodeEvidence(
       JSON.parse(String(messages[1].content).split("\n").at(-1)!)
     ) as {
-      methodOutcomes: Array<{ methodId: string }>;
+      methods: Array<[string, ...unknown[]]>;
+      coverage: { omittedFindings: number; truncated: boolean };
     };
-    expect(packed.methodOutcomes.map(method => method.methodId)).toEqual(
+    expect(packed.coverage).toMatchObject({ omittedFindings: 0, truncated: false });
+    expect(packed.methods.map(method => method[0])).toEqual(
       expect.arrayContaining([...MASTER_METHOD_IDS])
     );
   }, 20_000);

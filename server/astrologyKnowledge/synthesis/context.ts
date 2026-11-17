@@ -153,7 +153,7 @@ function selectRepresentativeFindings<T extends { subject: string; strength?: st
 /**
  * Compact LLM packet (~12k-20k tokens vs ~555k tokens in packSynthesis).
  * Drops duplicate fullMethodOutcomes/sourceSnapshot/audit blobs and bounds high-cardinality
- * tables (D2-D60 vargas, 57 transit essays) while preserving method IDs, evidence IDs, and Canon rules.
+ * tables (D2-D60 vargas, 57 transit essays) while preserving method IDs. Evidence IDs and text are summarized; coverage below reports omissions. The complete interpretation dossier is authoritative.
  */
 export function packCompactSynthesisForLLM(
   synthesis: SynthesisResult,
@@ -209,6 +209,17 @@ export function packCompactSynthesisForLLM(
 
   return {
     snapshotId: synthesis.snapshotId,
+    coverage: {
+      summaryOnly: true,
+      findingsTotal: rawOutcomes.reduce((n, item) => n + item.outcome.findingJudgments.length, 0),
+      findingsIncluded: rawOutcomes.reduce((n, item) => n + item.selected.length, 0),
+      omittedFindings: rawOutcomes.reduce((n, item) => n + item.outcome.findingJudgments.length - item.selected.length, 0),
+      shortenedJudgments: rawOutcomes.reduce((n, item) => n + item.selected.filter(f => f.judgment.replace(/\s+/g, " ").trim().length > opts.maxJudgmentChars).length, 0),
+      truncated: rawOutcomes.some(item => item.selected.length < item.outcome.findingJudgments.length || item.selected.some(f => f.judgment.replace(/\s+/g, " ").trim().length > opts.maxJudgmentChars || f.evidenceIds.length > 3))
+        || synthesis.methodFindings.some(method => preserveFullMethodRegistry && method.evidenceIds.length > 16)
+        || synthesis.contradictionsAndTensions.length > 6 || synthesis.themes.length > 10
+        || synthesis.themes.slice(0, 10).some(theme => theme.humanTheme.replace(/\s+/g, " ").trim().length > 160),
+    },
     methodFindings: (synthesis.methodFindings ?? []).map(({ findings: _raw, ...metadata }) => {
       if (preserveFullMethodRegistry) {
         return {

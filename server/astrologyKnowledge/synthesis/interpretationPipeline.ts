@@ -1,5 +1,4 @@
 import { invokeLLM } from "../../_core/llm";
-import { packCompactSynthesisForLLM } from "./context";
 import { stringifyEvidence } from "./evidenceTransport";
 import type { SynthesisResult } from "./types";
 
@@ -22,6 +21,14 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
   return {
     snapshotId: synthesis.snapshotId,
     scope: synthesis.mode,
+    coverage: {
+      methodsTotal: synthesis.methodOutcomes.length,
+      methodsIncluded: synthesis.methodOutcomes.length,
+      findingsTotal: synthesis.methodOutcomes.reduce((n, method) => n + method.findingJudgments.length, 0),
+      findingsIncluded: synthesis.methodOutcomes.reduce((n, method) => n + method.findingJudgments.length, 0),
+      omittedFindings: 0,
+      truncated: false,
+    },
     methodColumns: [
       "id",
       "name",
@@ -32,6 +39,7 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
       "limitations",
       "judgmentFailure",
       "findingJudgments",
+      "calculatedFindings",
     ],
     findingColumns: [
       "id",
@@ -68,6 +76,7 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
         finding.frame ?? method.frame,
         finding.limitation ?? null,
       ]),
+      method.calculatedFindings,
     ]),
     calculationColumns: [
       "id",
@@ -173,9 +182,7 @@ export async function runInterpretation(
         placement.content +
         "\n\nFULL CALCULATED CHART AND METHOD OUTCOMES:\n" +
         stringifyEvidence(
-          packCompactSynthesisForLLM(ledgers[0], {
-            preserveFullMethodRegistry: true,
-          })
+          interpretationEvidence(ledgers[0])
         ),
     };
   } else {

@@ -525,7 +525,6 @@ export async function horaryFollowUp(
     : "";
   const { synthesis } = await synthesizeHoraryChart(chart);
   const response = await runInterpretation("HORARY_FOLLOW_UP", synthesis, {
-    model: "claude-sonnet-4-6",
     timeoutMs: 30_000,
     maxTokens: 1800,
     messages: [

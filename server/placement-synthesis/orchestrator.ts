@@ -106,7 +106,7 @@ export async function synthesizePlacement(chart: ChartResult, body: string, ques
       const parsed: Array<{ text: string; evidenceIds: string[]; timing: boolean }> = [];
       const annotation = /\[(evidence|timing):\s*([^\]]+)\]/g;
       let cursor = 0;
-      for (const match of group.matchAll(annotation)) {
+      for (const match of Array.from(group.matchAll(annotation))) {
         const start = match.index ?? 0;
         const prose = group.slice(cursor, start).trim();
         if (!prose) throw new Error("PLACEMENT_SYNTHESIS_TRACE: An evidence annotation has no claim.");

@@ -68,7 +68,7 @@ export type InvokeParams = {
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
   model?: string;
-  provider?: "gemini";
+  provider?: "gemini" | "groq" | "openrouter";
   signal?: AbortSignal;
   /** Per-request timeout for provider response headers. */
   timeoutMs?: number;
@@ -228,8 +228,8 @@ const resolveApiUrl = () =>
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.groqApiKey && !ENV.geminiApiKey && !ENV.openrouterApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
-    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.openrouterApiKey && !ENV.groqApiKey && !ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
 
@@ -253,7 +253,7 @@ const readableAssistantText = (result: ProviderResponse): string => {
 };
 
 // All interpretation callers use this adapter, including legacy Claude model hints.
-// A Groq failure stays a Groq failure: never fall through to paid providers.
+// Provider-specific adapters retain the original evidence and request options.
 async function invokeGroq(params: InvokeParams): Promise<InvokeResult> {
   const messages = params.messages.map(message => {
     const { name: _name, ...normalized } = normalizeMessage(message);
@@ -325,7 +325,7 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
     content: contentToText(message.content),
   }));
   const maxTokens = params.max_tokens ?? params.maxTokens ?? 4096;
-  const body: Record<string, unknown> = { model: params.model ?? "claude-sonnet-4-6", max_tokens: maxTokens, messages };
+  const body: Record<string, unknown> = { model: params.model ?? ENV.anthropicModel, max_tokens: maxTokens, messages };
   const thinking = params.thinking as { type?: string; budget_tokens?: number } | undefined;
   if (thinking?.type === "enabled") {
     const budget = Math.max(1024, Math.floor(thinking.budget_tokens ?? 1024));
@@ -341,21 +341,20 @@ async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
     timeoutMs: params.timeoutMs,
   });
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Anthropic invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+    throw new Error(`ANTHROPIC_REQUEST_FAILED: HTTP ${response.status}`);
   }
   const result = await response.json() as { id: string; model: string; content?: Array<{ type: string; text?: string }>; stop_reason?: string };
   const text = (result.content ?? []).filter(part => part.type === "text").map(part => part.text ?? "").join("\n");
   return { id: result.id, created: Math.floor(Date.now() / 1000), model: result.model, choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: result.stop_reason ?? null }] };
 }
 
-async function invokeOpenAI(params: InvokeParams, freeRouter = false): Promise<InvokeResult> {
-  const url = freeRouter ? "https://openrouter.ai/api/v1/chat/completions" : `${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`;
-  const headers = { "content-type": "application/json", authorization: `Bearer ${freeRouter ? ENV.openrouterApiKey : ENV.openaiApiKey}` };
+async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
+  const url = `${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`;
+  const headers = { "content-type": "application/json", authorization: `Bearer ${ENV.openaiApiKey}` };
   const messages = params.messages.map(normalizeMessage);
   const max_tokens = params.max_tokens ?? params.maxTokens ?? 4096;
   const requestedModel = params.model && !params.model.startsWith("claude") ? params.model : undefined;
-  const models = freeRouter ? [ENV.openrouterModel] : requestedModel ? [requestedModel] : ["gpt-5-mini", "gpt-5-nano"];
+  const models = requestedModel ? [requestedModel] : ["gpt-5-mini", "gpt-5-nano"];
   let lastFailure = "no readable message";
 
   for (const model of models) {
@@ -443,19 +442,22 @@ const normalizeResponseFormat = ({
 const RETRY_MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 500;
 const RETRY_MAX_DELAY_MS = 30_000;
-const LLM_REQUEST_TIMEOUT_MS = 150_000;
+const LLM_REQUEST_TIMEOUT_MS = 60_000;
 
-type FreeProvider = "gemini" | "groq" | "openrouter";
-function freeProviderOrder(): FreeProvider[] {
-  const providers: FreeProvider[] = [];
-  if (ENV.geminiApiKey) providers.push("gemini");
-  if (ENV.groqApiKey) providers.push("groq");
-  if (ENV.openrouterApiKey) providers.push("openrouter");
-  return providers;
-}
 export function getLLMProviderStatus() {
-  const ordered = freeProviderOrder();
-  return { configured: ordered.length > 0, provider: ordered[0] ?? "unconfigured", fallbackProviders: ordered.slice(1), requestTimeoutMs: LLM_REQUEST_TIMEOUT_MS, maxRetries: RETRY_MAX_RETRIES };
+  const providers = [
+    ENV.geminiApiKey ? "gemini" : null,
+    ENV.groqApiKey ? "groq" : null,
+    ENV.openrouterApiKey ? "openrouter" : null,
+  ].filter((provider): provider is string => Boolean(provider));
+  return {
+    configured: providers.length > 0,
+    provider: providers[0] ?? "unconfigured",
+    fallbackProviders: providers.slice(1),
+    requestTimeoutMs: LLM_REQUEST_TIMEOUT_MS,
+    maxRetries: RETRY_MAX_RETRIES,
+  };
+
 }
 
 type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
@@ -561,7 +563,7 @@ const fetchWithBackoff = async (
 };
 
 async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
-  const model = params.provider === "gemini" ? "gemini-3.8-flash" : "gemini-4-hydrogen";
+  const model = ENV.geminiModel || "gemini-2.5-flash";
   const timeoutMs = params.timeoutMs ?? LLM_REQUEST_TIMEOUT_MS;
   const ai = new GoogleGenAI({
     apiKey: ENV.geminiApiKey,
@@ -602,6 +604,8 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
           model,
           contents: contents.length > 0 ? contents : "Hello",
           config: {
+            maxOutputTokens: params.max_tokens ?? params.maxTokens ?? 4096,
+            ...(model.startsWith("gemini-2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
             ...(params.signal ? { abortSignal: params.signal } : {}),
             ...(systemInstruction ? { systemInstruction } : {}),
             ...(normalizedResponseFormat?.type === "json_object" || normalizedResponseFormat?.type === "json_schema"
@@ -688,26 +692,14 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
           ? ` Please wait ~${retryAfterSec} seconds and try again.`
           : " Please wait ~20 seconds and try again.";
         throw new Error(
-          `AI_RATE_LIMIT: Free-tier token limit (250k input tokens/min) was temporarily reached.${waitHint} No new API key is needed.`
+          `GEMINI_RATE_LIMIT: HTTP 429. Provider capacity was reached.${waitHint}`
         );
       }
 
-      // Extract readable message from any Google GenAI JSON error payload so UI never shows raw JSON dumps.
-      let readable = errStr;
-      try {
-        const jsonStart = errStr.indexOf("{");
-        if (jsonStart >= 0) {
-          const parsedErr = JSON.parse(errStr.slice(jsonStart)) as {
-            error?: { message?: string; status?: string };
-          };
-          if (parsedErr?.error?.message) {
-            readable = parsedErr.error.message.split("\n")[0];
-          }
-        }
-      } catch {
-        // Keep trimmed fallback below.
-      }
-      throw new Error(`AI_REQUEST_FAILED: ${readable.slice(0, 260)}`);
+      const statusByName: Record<string, number> = { UNAVAILABLE: 503, INVALID_ARGUMENT: 400, NOT_FOUND: 404, PERMISSION_DENIED: 403, UNAUTHENTICATED: 401 };
+      const status = typeof err?.status === "number" ? err.status
+        : typeof err?.code === "number" ? err.code : statusByName[err?.status];
+      throw new Error(`GEMINI_REQUEST_FAILED: ${status ? `HTTP ${status}` : "Provider rejected the request"}`);
     }
   }
 
@@ -726,22 +718,69 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
   };
 }
 
+async function invokeOpenRouter(params: InvokeParams): Promise<InvokeResult> {
+  const format = normalizeResponseFormat(params);
+  const response = await fetchWithBackoff("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ENV.openrouterApiKey}` },
+    body: JSON.stringify({
+      model: ENV.openrouterModel,
+      messages: params.messages.map(normalizeMessage),
+      max_tokens: params.max_tokens ?? params.maxTokens ?? 4096,
+      ...(format ? { response_format: format } : {}),
+      ...(params.tools?.length ? { tools: params.tools } : {}),
+      ...(params.toolChoice || params.tool_choice ? { tool_choice: normalizeToolChoice(params.toolChoice ?? params.tool_choice, params.tools) } : {}),
+    }),
+    signal: params.signal,
+    timeoutMs: params.timeoutMs,
+  });
+  if (!response.ok) throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status}`);
+  return await response.json() as InvokeResult;
+}
+
+function assertComplete(result: InvokeResult, provider: string) {
+  const choice = result.choices?.[0];
+  const finish = choice?.finish_reason?.toLowerCase();
+  if (finish && !["stop", "end_turn", "stop_sequence", "completed", "tool_calls"].includes(finish))
+    throw new Error(`${provider.toUpperCase()}_INCOMPLETE: finish_reason=${finish}`);
+  if (!responseContentToText(choice?.message?.content).trim() && !choice?.message?.tool_calls?.length)
+    throw new Error(`${provider.toUpperCase()}_EMPTY: Provider returned no reading.`);
+}
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  const providers = freeProviderOrder();
-  if (!providers.length) throw new Error("AI_FREE_PROVIDER_UNCONFIGURED: Configure GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY.");
-  let lastError: unknown;
-  for (const provider of providers) {
+  const chain = [
+    { name: "gemini", key: ENV.geminiApiKey, invoke: invokeGemini },
+    { name: "groq", key: ENV.groqApiKey, invoke: invokeGroq },
+    { name: "openrouter", key: ENV.openrouterApiKey, invoke: invokeOpenRouter },
+  ];
+  // A provider hint selects the starting point; only configured downstream
+  // providers participate. Legacy model hints never override provider models.
+  const start = params.provider ? chain.findIndex(p => p.name === params.provider) : 0;
+  const candidates = chain.slice(Math.max(0, start)).filter(provider => provider.key);
+  const failures: string[] = [];
+  for (const provider of candidates) {
+    if (params.signal?.aborted) throw params.signal.reason ?? new Error("LLM request aborted.");
+    const deadline = AbortSignal.timeout(params.timeoutMs ?? 60_000);
+    const signal = params.signal ? AbortSignal.any([params.signal, deadline]) : deadline;
     try {
-      if (provider === "gemini") return await invokeGemini(params);
-      if (provider === "groq") return await invokeGroq(params);
-      return await invokeOpenAI(params, true);
+      const result = await provider.invoke({ ...params, model: undefined, signal });
+      assertComplete(result, provider.name);
+      return result;
     } catch (error) {
-      lastError = error;
-      console.warn("[invokeLLM] Free provider failed:", provider, error instanceof Error ? error.message.slice(0, 180) : "unknown");
+      if (params.signal?.aborted) throw params.signal.reason ?? error;
+      if (error instanceof Error && error.message.includes("UNSUPPORTED_CONTENT")) throw error;
+      // Never return SDK bodies, request headers, or chart prompts to the UI.
+      const message = error instanceof Error ? error.message : "";
+      const code = message.match(/\b[A-Z][A-Z_]+:/)?.[0] ?? "REQUEST_FAILED:";
+      const status = message.match(/\bHTTP \d{3}\b/)?.[0] ?? (deadline.aborted ? "timeout" : "request failed");
+      failures.push(`${provider.name} ${code} ${status}`);
     }
   }
-  throw lastError instanceof Error ? lastError : new Error("AI_FREE_PROVIDERS_EXHAUSTED");
+  if (candidates.length) throw new Error(`AI_PROVIDERS_FAILED: ${failures.join("; ")}`);
+  throw new Error("AI_FREE_PROVIDER_UNCONFIGURED: Configure GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY.");
+}
 
+async function invokeForge(params: InvokeParams): Promise<InvokeResult> {
   const {
     messages,
     tools,
