@@ -37,7 +37,7 @@ export const INTERPRETATION_AUTHORITY_HIERARCHY = `INTERPRETATION AUTHORITY — 
 6. Timing techniques (transits, dashas, retrogrades, planetary day/hour) determine WHEN a natal theme is active, not a replacement for natal meaning. Distinguish the birth sky, God frame and event sky.
 Consult EVERY applicable calculated method and its status. Priority controls narrative emphasis, not whether evidence is supplied. Do not create invented scores, missing mansion assignments, unwarranted causal claims, or a fabricated certainty percentage. Weave the final reading as one direct, second-person narrative; put detailed calculations in evidence views.`;
 
-export const MASTER_INTERPRETER_PROMPT = PSYCHOLOGICAL_PORTRAIT_PROMPT;
+export const MASTER_INTERPRETER_PROMPT = `${PSYCHOLOGICAL_PORTRAIT_PROMPT}\n\n${INTERPRETATION_AUTHORITY_HIERARCHY}`;
 
 export const SYNTHESIS_LAYERS_AND_EXAMPLES = `SILENT MULTI-LAYER SYNTHESIS (INTERNAL REASONING ONLY — ZERO JARGON IN OUTPUT)
 Examine every populated layer silently—sign temperament, decans, faces, bounds, dignities, sect, house rulerships, dispositor chains, aspects, lunar mansions and stations, strength scores, Lots, Nodes, and timing cycles—and weave what agrees into one coherent insight while showing how conflicting pulls take turns in ordinary life. Do not mention any astrological term in the reader-facing prose or section titles.`;
@@ -52,12 +52,12 @@ export const DEEP_SYNTHESIS_METHOD = `SILENT REASONING ARCHITECTURE (DO NOT PRIN
 4. Give natural gifts, quiet pleasures, and what others rely on you for the same weight as difficult truths, guarded habits, loyalty tensions, and self-sabotage.
 5. Never invent personal events, medical diagnoses, secrets, or another person's motives, never repeat the same placement or insight across sections, never use bullet-point lists of traits, and end with a sentence that belongs strictly to this reader and this chart.`;
 
-export const FULL_SYNTHESIS_STYLE = `${PSYCHOLOGICAL_PORTRAIT_PROMPT}
+export const FULL_SYNTHESIS_STYLE = `${MASTER_INTERPRETER_PROMPT}
 
 ${DEEP_SYNTHESIS_METHOD}`;
 
 export function buildAstrologyInterpreterSystem(...domainInstructions: string[]): string {
-  return [MASTER_INTERPRETER_PROMPT, INTERPRETATION_AUTHORITY_HIERARCHY, ...domainInstructions]
+  return [MASTER_INTERPRETER_PROMPT, ...domainInstructions]
     .filter(section => section.trim().length > 0)
     .join("\n\n---\n\n");
 }
