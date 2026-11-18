@@ -112,7 +112,7 @@ export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartRea
  * The method ledger and canon remain authoritative. This small cross-view map
  * tells the *same* interpreter how to weigh their relationships, as Horary does.
  */
-export function threeChartJudgmentInstructions(mode: ThreeChartReadingMode): string {
+export function threeChartJudgmentInstructions(mode: ThreeChartReadingMode, eventOnly = false): string {
   return [
     "THREE-CHART TESTIMONY — HORARY-STYLE WEIGHING, NOT THREE SEPARATE READINGS.",
     "Examine natal Agent houses, natal fixed God houses, and (for transit/combined readings) current God placements together.",
