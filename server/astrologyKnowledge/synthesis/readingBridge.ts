@@ -1,5 +1,5 @@
 import type { ChartResult } from "../../astronomy";
-import { buildUnifiedMasterChart, getMasterNatalChart } from "../../masterChart/builder";
+import { getCanonicalReadingChart } from "../../masterChart/builder";
 import { synthesizeMasterReading } from "./synthesizer";
 import type { SynthesisResult } from "./types";
 
@@ -9,9 +9,7 @@ export async function synthesizeChartForReading(
   mode: "natal" | "transit" | "combined",
   question: string
 ): Promise<{ synthesis: SynthesisResult; context: string }> {
-  const snapshot = mode === "natal" && chart.worldview === "agent-vs-god"
-    ? await getMasterNatalChart({ ...chart.input, mode })
-    : await buildUnifiedMasterChart({ ...chart.input, mode });
+  const snapshot = await getCanonicalReadingChart({ ...chart.input, mode });
   // Do not silently interpret a second chart if an earlier client chart differs.
   for (const body of chart.movingBodies) {
     const canonical = snapshot.baseCelestialState.planets.find(row => row.name === body.name);
