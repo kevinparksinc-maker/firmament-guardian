@@ -99,11 +99,11 @@ export async function synthesizeMasterReading(
     failed: ledger.filter(l => l.status === "failed").length,
   };
 
-  // 7. Evidence coverage audit. Do not claim a perfect score without checking.
+  // 7. PRE-NARRATIVE evidence-to-theme coverage audit. This is NOT proof that the AI\n  // interpreted the evidence; narrative coverage requires a separate post-generation check.
   const expectedEvidenceIds = new Set(
     ledger.filter(l => l.status === "computed-with-result").flatMap(l => l.evidenceIds)
   );
-  // Only evidence actually incorporated into a synthesized theme counts as interpreted.
+  // Only evidence linked to a computed theme counts as theme coverage.
   // Inventory-only ledger entries cannot inflate the interpretation coverage score.
   const tracedEvidenceIds = new Set(themes.flatMap(theme => theme.evidenceIds));
   const missingEvidenceIds = Array.from(expectedEvidenceIds).filter(id => !tracedEvidenceIds.has(id));
@@ -120,15 +120,15 @@ export async function synthesizeMasterReading(
   const qualityAudit = {
     groundedRatio,
     unsupportedClaims: [
-      ...missingEvidenceIds.map(id => `Not incorporated into interpreted themes: ${id}`),
-      ...uninterpretedMethods.map(layer => `Computed method missing from interpreted themes: ${layer.id}`),
+      ...missingEvidenceIds.map(id => `Not incorporated into computed themes: ${id}`),
+      ...uninterpretedMethods.map(layer => `Computed method missing from computed themes: ${layer.id}`),
     ],
     passed: missingEvidenceIds.length === 0 && uninterpretedMethods.length === 0,
   };
   // Report method coverage explicitly; reference-only or unavailable layers are never
   // described as calculated. The raw evidence remains available in the snapshot.
   integratedNarrative.push(
-    `Calculation coverage: ${ledger.filter(l => l.status === "computed-with-result").length} methods returned results, ${methodLedgerSummary.referenceOnly} are reference-only, ${methodLedgerSummary.notApplicable} are not applicable, and ${methodLedgerSummary.failed} failed. ${missingEvidenceIds.length === 0 ? "All recorded computed evidence IDs are incorporated into interpreted themes." : `${missingEvidenceIds.length} computed evidence IDs are not incorporated into interpreted themes.`}`
+    `Calculation coverage: ${ledger.filter(l => l.status === "computed-with-result").length} methods returned results, ${methodLedgerSummary.referenceOnly} are reference-only, ${methodLedgerSummary.notApplicable} are not applicable, and ${methodLedgerSummary.failed} failed. ${missingEvidenceIds.length === 0 ? "All recorded computed evidence IDs are linked to computed themes; AI narrative coverage is not yet verified." : `${missingEvidenceIds.length} computed evidence IDs are not linked to computed themes.`}`
   );
 
   // The ledger is the source of truth; AI must interpret it, not replace it
