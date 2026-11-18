@@ -1187,10 +1187,10 @@ export async function generateChapter(
       return text;
     }
   } catch (err) {
-    console.warn(`[generateChapter] AI request for chapter ${chapterId} failed, using rich deterministic life-story fallback:`, err);
+    throw new Error(`Chapter ${chapterId} could not be synthesized from the calculated evidence: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  return buildLifeStoryChapterFallback(chart, mode, evidencePacket, chapterId, chapter);
+  throw new Error(`Chapter ${chapterId} returned insufficient interpretation; no canned reading was substituted.`);
 }
 export async function followUp(
   chart: ChartResult,
