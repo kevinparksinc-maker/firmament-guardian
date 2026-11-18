@@ -105,6 +105,19 @@ export async function getMasterNatalChart(
   }
 }
 
+/**
+ * Single chart entry point for all reading outputs. Natal requests reuse the
+ * same versioned foundation; transit/combined requests use their event inputs.
+ * Consumers must interpret this snapshot, never independently recalculate it.
+ */
+export function getCanonicalReadingChart(
+  input: MasterChartInput
+): Promise<UnifiedMasterChartSnapshot> {
+  return (input.mode ?? "natal") === "natal"
+    ? getMasterNatalChart(input)
+    : buildUnifiedMasterChart(input);
+}
+
 function getSign(longitude: number): string {
   return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
 }
