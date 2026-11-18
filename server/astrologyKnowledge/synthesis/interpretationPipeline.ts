@@ -1,6 +1,7 @@
 import { invokeLLM } from "../../_core/llm";
 import { stringifyEvidence } from "./evidenceTransport";
 import type { SynthesisResult } from "./types";
+import { buildThreeChartTestimony, threeChartJudgmentInstructions } from "../../threeChartSynthesis";
 
 type Request = Parameters<typeof invokeLLM>[0];
 
@@ -248,6 +249,17 @@ export async function runInterpretation(
       `${route}_EVIDENCE_MISSING: No calculated synthesis was provided.`
     );
   const messages = [...request.messages];
+  const threeChartDossiers = ledgers.map(ledger => {
+    const natal = ledger.sourceSnapshot.natal;
+    if (!natal) {
+      throw new Error(`${route}_NATAL_CHART_MISSING: Cannot build three-chart testimony without a canonical birth chart.`);
+    }
+    return {
+      snapshotId: ledger.snapshotId,
+      testimony: buildThreeChartTestimony(natal, ledger.mode, ledger.sourceSnapshot),
+    };
+  });
+  const threeChartContext = stringifyEvidence(threeChartDossiers);
   const firstUser = messages.findIndex(message => message.role === "user");
   if (layout === "placement-reference") {
     const placement = messages[firstUser];
@@ -268,6 +280,14 @@ export async function runInterpretation(
           interpretationEvidence(ledgers[0])
         ),
     };
+    // Preserve the reference placement's original prompt and evidence content.
+    // Supply the cross-view interpretation discipline in a separate message.
+    messages.push({
+      role: "system",
+      content: threeChartJudgmentInstructions(ledgers[0].mode, ledgers[0].sourceSnapshot.natal?.input.chartRole === "event") +
+        "\nTHREE-CHART RELATIONSHIP MAP (not independent extra evidence):\n" +
+        threeChartContext,
+    });
   } else {
     // Universal placement-reference reasoning contract. This is intentionally
     // output-format-neutral: Horary verdicts, JSON plans and energy ledgers keep
@@ -282,6 +302,7 @@ export async function runInterpretation(
         "Speak directly to the reader in second person, with concrete strengths, costs and difficult truths. Never invent personal events, motives, astronomical placements or missing calculations.",
         "Keep all evidence references in the requested technical/structured fields when the route requires them. Follow the route-specific JSON schema, Horary verdict, chapter plan or other output contract exactly.",
         "Do not claim to have used evidence that was not actually delivered.",
+        threeChartJudgmentInstructions(ledgers[0].mode, ledgers[0].sourceSnapshot.natal?.input.chartRole === "event"),
       ].join("\n"),
     };
     const evidence = typeof layout === "object"
@@ -293,7 +314,7 @@ export async function runInterpretation(
         (typeof layout === "object"
           ? "FOCUSED PLACEMENT DOSSIER. Read every method row. Apply chart-wide context only when it bears directly on the selected placement. Treat missing findings and method statuses as limits on interpretation.\n"
           : "COMPLETE CALCULATED INTERPRETATION DOSSIER. Consider every applicable method, connecting agreement and tension to the specific question. Read each table using its matching column names. canonRefs index the canon table. Respect frames, evidence IDs and method status. Never fill gaps from inference. Previous prose is conversation context only.\n") +
-        evidence,
+        evidence + "\n\nTHREE-CHART TESTIMONY (calculated cross-frame relationships; not additional independent methods):\n" + threeChartContext,
     };
     // Preserve the domain packet and keep the current turn last in conversations.
     const index = firstUser < 0 ? messages.length : firstUser + 1;

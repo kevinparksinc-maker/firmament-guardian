@@ -155,7 +155,7 @@ export async function getZodiacSignReading(input: SignReadingInput): Promise<Zod
   const sky = await calculateChart({
     location: "", latitude: 0, longitude: 0, timezone: "UTC",
     date: input.date, time: input.time, worldview: "god",
-    readingScope: "transit", birthTimeKnown: true,
+    readingScope: "transit", birthTimeKnown: true, chartRole: "event",
   });
   const evidence = createRulerAnchoredEvidence(input.sign, sky, input.date, input.time, input.question);
   // The canonical methods are calculated for the actual God View sky.
