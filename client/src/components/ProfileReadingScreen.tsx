@@ -63,7 +63,7 @@ export function ProfileReadingScreen({
   onReadingModeChange,
 }: ProfileReadingScreenProps) {
   const [activeReadingTab, setActiveReadingTab] = useState<"natal" | "lifestory" | "blueprint" | "transits">("natal");
-  const [expandedLayer, setExpandedLayer] = useState<number | null>(1);
+  const [expandedLayer, setExpandedLayer] = useState<number | null>(5);
 
   const sun = chart.movingBodies.find((b) => b.name === "Sun");
   const moon = chart.movingBodies.find((b) => b.name === "Moon");
@@ -76,79 +76,8 @@ export function ProfileReadingScreen({
   const layers = useMemo(
     () => [
       {
-        id: 1,
-        title: "1. Powerful Opening Interpretation",
-        subtitle: "The Divine Blueprint & Soul Mandate",
-        content: `Your incarnation operates under a profound ${sunSign} solar polarity, anchored in an intuitive ${moonSign} emotional sanctuary, and expressed through a ${ascSign} horizon interface. In the Aldebaran zero-tilt framework, your chart indicates an individual endowed with sovereign self-direction who bridges classical discipline with transformative vision. You are not here to conform to external molds, but to construct lasting systems aligned with cosmic law.`,
-        badge: "Executive Synthesis",
-        color: "text-[#D9B66F]",
-      },
-      {
-        id: 2,
-        title: "2. Key Astrological Findings",
-        subtitle: "Dominant Drivers & Karmic Levers",
-        content: (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-              <span className="text-[10px] uppercase font-bold text-[#D9B66F] tracking-wider">
-                Primary Evolutionary Purpose
-              </span>
-              <p className="mt-1 text-xs text-slate-200">
-                Harnessing {sunSign} solar energy to establish authority, master craft, and inspire community through authentic self-expression.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-              <span className="text-[10px] uppercase font-bold text-[#8B5CF6] tracking-wider">
-                Emotional Sanctuary & Instinct
-              </span>
-              <p className="mt-1 text-xs text-slate-200">
-                {moonSign} lunar placement grants penetrating discernment and deep interior resilience; solitude renews your clarity.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-              <span className="text-[10px] uppercase font-bold text-[#22D3EE] tracking-wider">
-                Incarnate Persona & Outer Horizon
-              </span>
-              <p className="mt-1 text-xs text-slate-200">
-                Ascendant in {ascSign} filters your interactions, making you approachable yet magnetically distinct in public spheres.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-              <span className="text-[10px] uppercase font-bold text-teal-300 tracking-wider">
-                Kendra Angle Strength
-              </span>
-              <p className="mt-1 text-xs text-slate-200">
-                Equal house pillars anchor stability across life quadrants, enabling resilience through cyclical shifts.
-              </p>
-            </div>
-          </div>
-        ),
-        badge: "Core Architecture",
-        color: "text-[#8B5CF6]",
-      },
-      {
-        id: 3,
-        title: "3. Real-Life Manifestations",
-        subtitle: "Vocation, Relationships & Practical Mastery",
-        content: (
-          <div className="space-y-3 text-xs text-slate-200">
-            <p className="leading-relaxed">
-              <strong className="text-white">Vocation & Calling:</strong> You thrive where strategy, intellectual autonomy, and execution converge. Environments with bureaucratic rigidity constrain your natural initiative; you do best when leading projects or building proprietary assets.
-            </p>
-            <p className="leading-relaxed">
-              <strong className="text-white">Relational Dynamics:</strong> In partnerships, you require equal intellectual caliber and sovereign space. Superficial connections drain you quickly; lifelong loyalties form around shared mission and mutual respect.
-            </p>
-            <p className="leading-relaxed">
-              <strong className="text-white">Daily Rhythm & Decision Making:</strong> When confronted with major forks in the road, grounding yourself before deciding prevents impulsive reactions. Trusting your instinctive first impression rarely fails you.
-            </p>
-          </div>
-        ),
-        badge: "Action Blueprint",
-        color: "text-[#22D3EE]",
-      },
-      {
         id: 4,
-        title: "4. Supporting Astrological Evidence",
+        title: "2. Supporting Astrological Evidence",
         subtitle: "Mathematical Rigor & Doctrine Validation",
         content: (
           <div className="space-y-2 text-xs font-mono">
@@ -171,7 +100,7 @@ export function ProfileReadingScreen({
               </div>
             </div>
             <p className="text-[11px] font-sans text-slate-400">
-              Every interpretation is directly derived from these invariant spherical coordinates, ensuring zero hallucinated placements.
+              These are calculated positions, not an interpretation. Review the synthesized reading and its evidence ledger for the actual conclusions.
             </p>
           </div>
         ),
@@ -180,12 +109,12 @@ export function ProfileReadingScreen({
       },
       {
         id: 5,
-        title: "5. Deeper Technical Explanation & Master Synthesis",
+        title: "1. Personalized Master Synthesis",
         subtitle: "Classical Commentary & Comprehensive Dossier",
         content: (
           <div className="space-y-4">
             <p className="text-xs text-slate-300 leading-relaxed">
-              Below is the complete technical dossier, integrating the Master Interpreter AI, classical Hellenistic & Vedic doctrines, and God/Agent dual-perspective calculations.
+              Generate your personalized synthesis from the available calculated methods. The evidence ledger is shown separately for verification.
             </p>
             <div className="pt-2">
               <InterpretationPanel
@@ -243,7 +172,7 @@ export function ProfileReadingScreen({
       {/* 4 Primary Reading Navigation Tabs */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 bg-[#080B14]/90 p-1.5 rounded-2xl border border-white/10 shadow-lg">
         {[
-          { id: "natal", label: "Full Natal Reading", Icon: Diamond, desc: "5-Layer Synthesis" },
+          { id: "natal", label: "Full Natal Reading", Icon: Diamond, desc: "Master Synthesis" },
           { id: "lifestory", label: "Life Story & Chapters", Icon: BookOpenText, desc: "Profections & Epochs" },
           { id: "blueprint", label: "Guide & Blueprint", Icon: Layers, desc: "Ancient Mansions" },
           { id: "transits", label: "Current Transits & Q&A", Icon: Zap, desc: "Live Skies & Dialog" },
@@ -269,7 +198,7 @@ export function ProfileReadingScreen({
         })}
       </div>
 
-      {/* TAB 1: FULL NATAL READING WITH 5-LAYER PROGRESSION */}
+      {/* TAB 1: FULL NATAL READING */}
       {activeReadingTab === "natal" && (
         <section className="space-y-6 animate-in fade-in duration-200" aria-label="Full Natal Reading">
           <div className="rounded-3xl border border-[#D9B66F]/30 bg-[#080B14]/90 p-5 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
@@ -279,13 +208,13 @@ export function ProfileReadingScreen({
                   Layered Celestial Presentation
                 </span>
                 <h2 className="font-serif text-2xl font-bold text-white">
-                  5-Tier Astrological Deconstruction
+                  Personalized Synthesis & Evidence
                 </h2>
               </div>
               <span className="text-[10px] font-mono text-cyan-300">High-Energy Intelligence</span>
             </div>
 
-            {/* The 5 Layer Cards */}
+            {/* Synthesis and evidence cards */}
             <div className="space-y-4">
               {layers.map((layer) => {
                 const isExpanded = expandedLayer === layer.id;
