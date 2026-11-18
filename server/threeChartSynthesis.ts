@@ -90,7 +90,7 @@ export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartRea
     },
     currentGod: live || eventOnly
       ? {
-          instantUtc: snapshot?.transit?.transitInstantUtc ?? chart.transitDate,
+          instantUtc: eventOnly ? chart.utc : snapshot?.transit?.transitInstantUtc ?? chart.transitDate,
           placements: current.map(({ body, longitude, godHouse }) => ({ body, longitude, house: godHouse })),
         }
       : null,
