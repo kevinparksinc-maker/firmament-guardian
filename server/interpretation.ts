@@ -1,5 +1,4 @@
 import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
-import { buildThreeChartTestimony, threeChartJudgmentInstructions } from "./threeChartSynthesis";
 import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
 import type { Message } from "./_core/llm";
 import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
@@ -633,7 +632,7 @@ async function analyzeChart(
     },
     {
       role: "user",
-      content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${stringifyEvidence(evidencePacket)}\n\n${threeChartJudgmentInstructions(mode)}\n\nTHREE-CHART RELATIONSHIP MAP (calculated facts only):\n${JSON.stringify(buildThreeChartTestimony(chart, mode))}\n\n${synthesisContext}\n\nVALID EVIDENCE LABELS (copy exact IDs; do not invent or shorten them):\n${JSON.stringify([...Array.from(known.keys()), ...Array.from(semantic.keys())].filter(label => label.length <= 180))}\n\nWrite the reading plan JSON now.`,
+      content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${stringifyEvidence(evidencePacket)}\n\n${synthesisContext}\n\nVALID EVIDENCE LABELS (copy exact IDs; do not invent or shorten them):\n${JSON.stringify([...Array.from(known.keys()), ...Array.from(semantic.keys())].filter(label => label.length <= 180))}\n\nWrite the reading plan JSON now.`,
     },
   ];
   let firstError = "";
@@ -698,11 +697,9 @@ export async function generateInterpretation(
   const master = await buildMasterPipeline(chart, mode, question);
   const masterContext = formatCompactMasterGateContext(master);
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
-  const testimony = buildThreeChartTestimony(chart, mode);
-  const testimonyContext = `${threeChartJudgmentInstructions(mode)}\n\n${JSON.stringify(testimony)}`;
-  const intelligence = `${masterContext}\n\n${buildChartMap(chart, mode)}\n\n${formatCompactEvidencePacket(evidencePacket)}\n\n${testimonyContext}\n\n${synthesisContext}`;
+  const intelligence = `${masterContext}\n\n${buildChartMap(chart, mode)}\n\n${formatCompactEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
   const analysis = await analyzeChart(chart, master.synthesis, mode, evidencePacket, synthesisContext);
-  const narrated = await narrateMasterSynthesis(master.synthesis, question, `${formatCompactEvidencePacket(evidencePacket)}\n\n${testimonyContext}`);
+  const narrated = await narrateMasterSynthesis(master.synthesis, question, formatCompactEvidencePacket(evidencePacket));
   const reading = narrated.narrative.answer;
   return {
     masterSnapshot: master.snapshot,
@@ -744,7 +741,7 @@ export async function generateChapter(
     `${question ? `User question: ${question}\n\n` : ""}Chapter focus: ${chapter.title}. ${chapter.focus}`,
     mode
   );
-  const facts = `${masterContext}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatCompactEvidencePacket(evidencePacket)}\n\n${threeChartJudgmentInstructions(mode)}\n\n${JSON.stringify(buildThreeChartTestimony(chart, mode))}\n\n${synthesisContext}`;
+  const facts = `${masterContext}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatCompactEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
   const condensedChapters = completedChapters.map((c, idx) =>
     idx < completedChapters.length - 2 && c.length > 1600
       ? c.slice(0, 1500) + "…"
