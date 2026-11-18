@@ -115,7 +115,12 @@ export function FocusedPlacementReading({
               {reading.title}
             </h4>
             <p className="text-xs text-slate-400">
-              Calculated moment: {new Date(reading.moment).toLocaleString()}
+              Calculated moment: {new Date(reading.moment).toLocaleString([], {
+                timeZone: layer === "transit"
+                  ? (chart.input.transitTimezone || chart.input.timezone)
+                  : chart.input.timezone,
+                timeZoneName: "short",
+              })}
             </p>
           </header>
           {reading.miniNarrative && (
