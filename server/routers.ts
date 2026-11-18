@@ -136,7 +136,7 @@ export const appRouter = router({
           validation: snapshot.validation,
           godView: snapshot.godView,
           agentView: snapshot.agentView,
-          synthesis: synthesizeMasterReading({
+          synthesis: await synthesizeMasterReading({
             snapshot,
             readingMode: "natal",
             userQuestion: "Establish the foundational natal synthesis for this profile.",
