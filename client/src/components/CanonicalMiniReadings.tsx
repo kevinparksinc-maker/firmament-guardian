@@ -15,6 +15,8 @@ export function CanonicalMiniReadings({ chart, mode }: { chart: ChartResult; mod
     ...chart.houses.map((_, i) => ({ key: `house-${i + 1}`, label: `House ${i + 1}`, focus: `Interpret natal house ${i + 1}, its ruler, occupants, aspects and all applicable method relationships from the complete chart ledger.` })),
     ...(mode === "natal" ? [] : chart.transits.map(body => ({ key: `transit-${body.name}`, label: `Transit ${body.name}`, focus: `Interpret transit ${body.name} against the natal and God View evidence, considering all applicable calculated methods and timing.` }))),
   ];
+  const activeFocus = focusItems.find(item => item.key === selected)?.focus;
+  const resultIsCurrent = reading.data?.focus === activeFocus && !reading.isPending;
   const run = (item: (typeof focusItems)[number]) => {
     setSelected(item.key);
     reading.reset();
@@ -41,7 +43,7 @@ export function CanonicalMiniReadings({ chart, mode }: { chart: ChartResult; mod
       </div>
       {reading.isPending && <p role="status" className="text-sm text-cyan-200">Interpreting complete Master Chart evidence…</p>}
       {reading.error && <p role="alert" className="text-sm text-rose-300">{reading.error.message}</p>}
-      {reading.data && !reading.isPending && !reading.error && (
+      {reading.data && resultIsCurrent && !reading.error && (
         <div className="space-y-2 rounded-xl border border-white/10 p-3">
           <p className="whitespace-pre-wrap text-sm leading-7 text-slate-100">{reading.data.reading}</p>
           <p className="text-xs text-slate-400">Master snapshot: {reading.data.snapshotId} · Calculated methods: {reading.data.methodLedgerSummary.computedWithResult}/{reading.data.methodLedgerSummary.totalEvaluated} · Pre-AI evidence audit: {reading.data.qualityAudit.passed ? "passed" : "incomplete"} · AI narrative coverage not independently verified</p>
