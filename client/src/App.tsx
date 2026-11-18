@@ -38,7 +38,7 @@ function Router() {
   const [path] = useLocation();
   const { profile } = useProfileSession();
   // A birth profile is still required before opening profile-based observatory modules.
-  if (!profile && path !== "/account" && path !== "/profiles" && path !== "/" && path !== "/legacy" && path !== "/horary" && path !== "/zodiac-readings" && path !== "/sky" && path !== "/history") return <Redirect to="/" />;
+  if (!profile && path !== "/account" && path !== "/profiles" && path !== "/" && path !== "/legacy" && path !== "/horary" && path !== "/zodiac-readings" && path !== "/sky" && path !== "/history" && path !== "/transit-sky") return <Redirect to="/" />;
   return (
     <Switch>
       <Route path="/account" component={AccountPage} />
