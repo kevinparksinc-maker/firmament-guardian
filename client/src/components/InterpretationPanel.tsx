@@ -48,21 +48,22 @@ const READING_MEMORY_CACHE = new Map<
   { interpretation: Interpretation; messages: Message[] }
 >();
 
-function getReadingCacheKey(chart: ChartResult, mode: ReadingMode): string {
+function getReadingCacheKey(chart: ChartResult, mode: ReadingMode, question = ""): string {
   const loc = chart.input.location || "god-view";
   const date = chart.input.date || "live";
   const time = chart.input.time || "none";
   const natalSignature = chart.movingBodies.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
   const transitSignature = chart.transits.map(body => `${body.name}:${body.longitude.toFixed(6)}`).join("|");
   const inputSignature = JSON.stringify(chart.input);
-  return `absolute-reading-v5:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${inputSignature}:${natalSignature}:${transitSignature}`;
+  return `absolute-reading-v6:${encodeURIComponent(question.trim())}:${loc}:${date}:${time}:${chart.utc}:${chart.worldview}:${mode}:${inputSignature}:${natalSignature}:${transitSignature}`;
 }
 
 function loadCachedReading(
   chart: ChartResult,
-  mode: ReadingMode
+  mode: ReadingMode,
+  question = ""
 ): { interpretation: Interpretation; messages: Message[] } | null {
-  const key = getReadingCacheKey(chart, mode);
+  const key = getReadingCacheKey(chart, mode, question);
   const inMem = READING_MEMORY_CACHE.get(key);
   if (inMem) return inMem;
   try {
@@ -101,7 +102,8 @@ function saveCachedReading(
   chart: ChartResult,
   mode: ReadingMode,
   interpretation: Interpretation | null,
-  messages: Message[]
+  messages: Message[],
+  question = ""
 ) {
   if (!interpretation) return;
   const key = getReadingCacheKey(chart, mode);
@@ -245,7 +247,7 @@ function InterpretationPanelInner({
   const prevInitialModeRef = useRef<ReadingMode>(initialMode);
   const [activeQuestion, setActiveQuestion] = useState<string>(initialQuestion);
   const [interpretation, setInterpretation] = useState<Interpretation | null>(
-    () => loadCachedReading(chart, initialMode)?.interpretation ?? null
+    () => loadCachedReading(chart, initialMode, initialQuestion)?.interpretation ?? null
   );
   const [messages, setMessages] = useState<Message[]>(
     () => loadCachedReading(chart, initialMode)?.messages ?? []
@@ -273,7 +275,7 @@ function InterpretationPanelInner({
 
   useEffect(() => {
     if (interpretation) {
-      saveCachedReading(chart, mode, interpretation, messages);
+      saveCachedReading(chart, mode, interpretation, messages, activeQuestion);
     }
   }, [chart, mode, interpretation, messages]);
 
@@ -349,7 +351,7 @@ function InterpretationPanelInner({
         ),
       };
       setInterpretation(updatedBase);
-      saveCachedReading(chart, mode, updatedBase, messages);
+      saveCachedReading(chart, mode, updatedBase, messages, questionOverride);
       setCollapsedChapters(prev => ({ ...prev, [chapter.id]: false }));
       const nextIndex = index + 1;
       if (nextIndex < base.chapters.length)
@@ -380,7 +382,7 @@ function InterpretationPanelInner({
       });
       const initial = { ...base, chapters: base.chapters as Chapter[] };
       setInterpretation(initial);
-      saveCachedReading(chart, mode, initial, []);
+      saveCachedReading(chart, mode, initial, [], q);
       await generateChapterAt(initial, 0, q);
     } finally {
       setIsGeneratingReading(false);
@@ -496,7 +498,7 @@ function InterpretationPanelInner({
     prevInitialModeRef.current = nextMode;
     setMode(nextMode);
     onModeChange?.(nextMode);
-    const cached = loadCachedReading(chart, nextMode);
+    const cached = loadCachedReading(chart, nextMode, activeQuestion);
     setInterpretation(cached?.interpretation ?? null);
     setMessages(cached?.messages ?? []);
     setCollapsedChapters({});
