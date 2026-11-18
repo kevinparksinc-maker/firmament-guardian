@@ -30,6 +30,13 @@ describe("canonical mini-reading wiring", () => {
     expect(mini).not.toContain('Theme coverage: {reading.data.qualityAudit.passed ? "complete"');
   });
 
+  it("shows only the interpretation for the selected planet or contact", () => {
+    const mini = source("../../../client/src/components/CanonicalMiniReadings.tsx");
+    const energy = source("../../../client/src/pages/EnergyPage.tsx");
+    expect(mini).toContain("reading.data?.focus === activeFocus");
+    expect(energy).toContain("contactReading.data?.focus === contactFocus(c)");
+  });
+
   it("reuses calculated event snapshots for repeated requests", () => {
     const builder = source("../../masterChart/builder.ts");
     expect(builder).toContain("eventSnapshotCache.get(key)");
