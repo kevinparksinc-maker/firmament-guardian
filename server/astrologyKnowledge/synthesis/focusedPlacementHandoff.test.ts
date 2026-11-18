@@ -35,5 +35,15 @@ it("keeps every Moon finding and linked calculation in the serialized focused re
     .find(value => typeof value === "string" && value.startsWith("FOCUSED PLACEMENT DOSSIER"));
   if (typeof content !== "string") throw new Error("Missing Moon dossier");
   const dossier = decodeEvidence(JSON.parse(content.slice(content.indexOf("\n") + 1)));
-  expect(dossier).toMatchObject([{ methods: [[null, null, null, null, judgments, calculations, null]] }]);
+  const [packet] = dossier as Array<{
+    coverage: { omittedJudgments: number; omittedCalculations: number };
+    methods: Array<[string, string, string, string, Array<[string, string, string, string, string[]]>, Array<[string, string, string]>]>;
+  }>;
+  const method = packet.methods[0];
+  expect(method[4].map(item => item[0])).toEqual(judgments.map(item => item.id));
+  expect(method[5].map(item => item[0])).toEqual(calculations.map(item => item.evidenceId));
+  expect(packet.coverage).toMatchObject({ omittedJudgments: 0, omittedCalculations: 0 });
+  // The scoped model packet preserves all evidence IDs but avoids repeating
+  // long chart-wide prose that creates provider 413 request-size failures.
+  expect(content.length).toBeLessThan(16_000);
 });
