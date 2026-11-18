@@ -186,6 +186,21 @@ export async function runInterpretation(
         ),
     };
   } else {
+    // Universal placement-reference reasoning contract. This is intentionally
+    // output-format-neutral: Horary verdicts, JSON plans and energy ledgers keep
+    // their specialized schemas. Placement itself is left byte-for-byte intact.
+    messages.unshift({
+      role: "system",
+      content: [
+        "UNIVERSAL EVIDENCE-WEAVING CONTRACT (all chart interpretation routes):",
+        "Read every applicable calculated method and its status. Treat unavailable, failed, not-calculated and reference-only methods as gaps, never as facts.",
+        "Derive conclusions from actual evidence IDs and method findings. Connect rulerships, occupations, aspects, timing, God/Agent differences, and cross-tradition agreement or contradiction where calculated.",
+        "Do not list parallel methods as a substitute for interpretation. Explain what converging and conflicting evidence means together for the question and for recognizable everyday behavior.",
+        "Speak directly to the reader in second person, with concrete strengths, costs and difficult truths. Never invent personal events, motives, astronomical placements or missing calculations.",
+        "Keep all evidence references in the requested technical/structured fields when the route requires them. Follow the route-specific JSON schema, Horary verdict, chapter plan or other output contract exactly.",
+        "Do not claim to have used evidence that was not actually delivered.",
+      ].join("\\n"),
+    });
     const evidence = stringifyEvidence(ledgers.map(interpretationEvidence));
     const dossier = {
       role: "user" as const,
