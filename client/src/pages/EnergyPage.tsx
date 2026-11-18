@@ -56,6 +56,7 @@ export default function EnergyPage() {
   const readContact = (contact: { id: string; transit: string; natal: string; aspect: string; orb: number }) => {
     if (!chart) return;
     setContactReadingId(contact.id);
+    contactReading.reset();
     contactReading.mutate({ chart, mode: "combined", outputDepth: "mini", focus: `Explain transit ${contact.transit} ${contact.aspect} natal ${contact.natal} (orb ${contact.orb.toFixed(2)} degrees) from the calculated Master Chart evidence. Consider all applicable methods, receptions, rulers, houses, timing, God View and Agent View. Never invent uncalculated evidence.` });
   };
   const [customQuestion, setCustomQuestion] = useState("");
