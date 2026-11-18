@@ -1,3 +1,4 @@
+import React from "react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
 import { HouseStrengthChart, PlanetStrengthChart } from "./VedicStrengthCharts";
