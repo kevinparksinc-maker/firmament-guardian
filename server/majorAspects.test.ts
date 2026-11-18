@@ -21,8 +21,8 @@ describe("canonical major aspect scoring contract", () => {
     expect(aspectBetween(0, angle)).toBeNull();
   });
 
-  it("retains sextile only in the separate half-weight minor-contact channel", () => {
-    expect(minorAspectBetween(0, 60)).toMatchObject({ aspect: "sextile", weightMultiplier: 0.5 });
-    expect(aspectBetween(0, 60)).toBeNull();
+  it("retains sextile as the fifth full-weight major aspect", () => {
+    expect(aspectBetween(0, 60)).toMatchObject({ aspect: "sextile", orb: 0 });
+    expect(minorAspectBetween(0, 60)).toBeNull();
   });
 });
