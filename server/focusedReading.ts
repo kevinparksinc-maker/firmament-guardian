@@ -211,7 +211,7 @@ export async function buildFocusedReading(
     reading.sourceNotes.push(star.firmamentOrbRule.statement);
     if (includeMiniNarrative && !reading.miniNarrative) {
       try {
-        reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
+        reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens, star.name);
       } catch (error) {
         // Stellar calculations and their sourced Canon must remain readable
         // even when all configured language-model providers are unavailable.
@@ -383,7 +383,7 @@ export async function buildFocusedReading(
       );
     if (includeMiniNarrative) {
       try {
-        reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
+        reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens, `${row.name}|${rooted.name}`);
       } catch (error) {
         // The contact geometry and Canon have already been computed. An exhausted
         // AI provider must not turn a valid aspect into a customer-facing 429.
@@ -618,7 +618,7 @@ export async function buildFocusedReading(
   if (includeMiniNarrative) {
     try {
       reading.miniNarrative = await narrateFocusedContactMini(
-        reading, verification.synthesis, target.lens, target.layer === "natal" ? row.name : undefined
+        reading, verification.synthesis, target.lens, row.name
       );
     } catch (error) {
       // Preserve the already calculated placement and its Canon even on a
