@@ -139,36 +139,75 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
 function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
   const body = focus.toLowerCase().replaceAll(" ", "[-_ ]");
   const matchesBody = new RegExp(`(?:^|[^a-z])${body}(?:$|[^a-z])`, "i");
+  // Complete method coverage is not the same as resending every unrelated
+  // paragraph. This is a focused *reading* packet, not a raw chart archive.
+  // Keep every method/status and explicit omission counts when a method's
+  // selected details exceed its share of the model request budget.
+  const perMethodBudget = Math.max(360, Math.floor(16_000 / Math.max(1, synthesis.methodOutcomes.length)));
+  const short = (value: string, limit: number) =>
+    value.length > limit ? value.slice(0, limit) + "…" : value;
+  let omittedJudgments = 0;
+  let omittedCalculations = 0;
+  const methods = synthesis.methodOutcomes.map(method => {
+    const namedCalculations = new Set(method.calculatedFindings
+      .filter(finding => matchesBody.test(finding.label) || matchesBody.test(finding.evidenceId))
+      .map(finding => finding.evidenceId));
+    const judgments = method.findingJudgments.filter(finding =>
+      matchesBody.test(finding.subject) ||
+      finding.evidenceIds.some(id => matchesBody.test(id) || namedCalculations.has(id))
+    );
+    const citedIds = new Set(judgments.flatMap(finding => finding.evidenceIds));
+    const calculations = method.calculatedFindings.filter(finding =>
+      namedCalculations.has(finding.evidenceId) || citedIds.has(finding.evidenceId)
+    );
+    const selectedJudgments: unknown[] = [];
+    const selectedCalculations: unknown[] = [];
+    let used = 0;
+    const add = (destination: unknown[], value: unknown) => {
+      const size = JSON.stringify(value).length;
+      if (used + size > perMethodBudget) return false;
+      destination.push(value);
+      used += size;
+      return true;
+    };
+    // Direct, calculated judgments take precedence over long nested objects.
+    for (const finding of judgments) {
+      const item = [
+        finding.id, finding.subject,
+        short(finding.judgment, 240), short(finding.mechanism, 160),
+        finding.evidenceIds, finding.limitation ?? null,
+      ];
+      if (!add(selectedJudgments, item)) omittedJudgments++;
+    }
+    for (const finding of calculations) {
+      const item = [
+        finding.evidenceId, finding.label,
+        short(finding.calculatedValue, 220),
+      ];
+      if (!add(selectedCalculations, item)) omittedCalculations++;
+    }
+    return [
+      method.methodId, method.methodName, method.status, method.frame,
+      selectedJudgments, selectedCalculations,
+      { selected: [selectedJudgments.length, selectedCalculations.length],
+        omitted: [judgments.length - selectedJudgments.length, calculations.length - selectedCalculations.length] },
+    ];
+  });
   return {
     snapshotId: synthesis.snapshotId,
     focus,
-    coverage: "Every method is listed. Matching judgments and calculations retain their full text and source IDs.",
-    methodColumns: ["id", "name", "status", "frame", "focusedJudgments", "focusedCalculations", "chartContext"],
-    methods: synthesis.methodOutcomes.map(method => {
-      const namedCalculations = new Set(method.calculatedFindings
-        .filter(finding => matchesBody.test(finding.label) || matchesBody.test(finding.evidenceId))
-        .map(finding => finding.evidenceId));
-      const judgments = method.findingJudgments.filter(finding =>
-        matchesBody.test(finding.subject) ||
-        finding.evidenceIds.some(id => matchesBody.test(id) || namedCalculations.has(id))
-      );
-      const citedIds = new Set(judgments.flatMap(finding => finding.evidenceIds));
-      const calculations = method.calculatedFindings.filter(finding =>
-        namedCalculations.has(finding.evidenceId) || citedIds.has(finding.evidenceId)
-      );
-      return [
-        method.methodId,
-        method.methodName,
-        method.status,
-        method.frame,
-        judgments,
-        calculations,
-        // The focused packet must not resend each unrelated method's full
-        // chart-wide prose (which previously produced 80–145 KB requests).
-        // Every method and status remains listed; only focus-linked evidence is sent.
-        null,
-      ];
-    }),
+    coverage: {
+      methodsTotal: synthesis.methodOutcomes.length,
+      methodsIncluded: methods.length,
+      omittedJudgments,
+      omittedCalculations,
+      detailsCompacted: true,
+      note: "Every method and status is included. Only focus-linked judgments and calculations are summarized. Omitted detail counts are explicit; full calculated evidence remains available in the technical ledger.",
+    },
+    methodColumns: ["id", "name", "status", "frame", "focusedJudgments", "focusedCalculations", "detailCounts"],
+    judgmentColumns: ["id", "subject", "judgment", "mechanism", "evidenceIds", "limitation"],
+    focusedCalculationColumns: ["id", "label", "calculatedValue"],
+    methods,
     calculationColumns: ["id", "executionStatus"],
     calculations: synthesis.sourceSnapshot.methodExecutionLedger.map(method => [method.id, method.status]),
   };
