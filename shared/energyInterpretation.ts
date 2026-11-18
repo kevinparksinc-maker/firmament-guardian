@@ -50,3 +50,33 @@ export function describeAspectPair(
     return `${geometry} A sourced interpretation for this combination is not available in this rule set.`;
   return `${first.name} concerns ${themes[first.name]}; ${second.name} concerns ${themes[second.name]}. ${geometry} ${actions[aspect.toLowerCase()]}`;
 }
+
+/**
+ * Evidence-grounded, deterministic customer copy when an AI provider is unavailable.
+ * Unlike generated synthesis, this only interprets the known body pair and aspect;
+ * it never pretends to have woven the full chart or inferred a life event.
+ */
+export function describeAspectFallback(
+  firstName: string,
+  secondName: string,
+  aspect: string
+): string {
+  const firstTheme = themes[firstName];
+  const secondTheme = themes[secondName];
+  const key = aspect.toLowerCase();
+  const action = actions[key];
+  if (!firstTheme || !secondTheme || !action) {
+    return `Your current ${firstName}–${secondName} contact is calculated, but a specific interpretation is not available in the local Canon. Check the calculated findings below for its actual placements and orb.`;
+  }
+  const relationship: Record<string, string> = {
+    conjunction: "bring these two concerns together in one concentrated opening",
+    trine: "let these two concerns work together more easily",
+    sextile: "offer an opening that becomes useful when you act",
+    square: "bring competing needs into sharper focus",
+    opposition: "ask you to balance two different priorities",
+    semisextile: "call for a subtle adjustment between these concerns",
+    semisquare: "bring a small but noticeable point of friction",
+    quincunx: "ask you to change how these concerns fit together",
+  };
+  return `You may notice how ${firstTheme} connects with ${secondTheme}. This ${key} can ${relationship[key] ?? "connect these parts of your experience"}; it describes a symbolic tendency, not a guaranteed event. ${action} The detailed calculated positions and conditions remain available below.`;
+}
