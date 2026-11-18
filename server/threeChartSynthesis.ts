@@ -31,14 +31,17 @@ function placement(row: ChartRow) {
 
 /** Assemble three related views without inventing or re-calculating positions. */
 export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartReadingMode, snapshot?: UnifiedMasterChartSnapshot) {
+  const eventOnly = chart.input?.chartRole === "event";
   const live = mode !== "natal";
   const birth = [
     ...chart.movingBodies,
     chart.northNode,
     chart.southNode,
   ];
-  const natal = birth.map(placement);
-  const current = live ? (snapshot?.transit?.planets ?? chart.transits).map(placement) : [];
+  const natal = eventOnly ? [] : birth.map(placement);
+  const current = eventOnly
+    ? birth.map(placement)
+    : live ? (snapshot?.transit?.planets ?? chart.transits).map(placement) : [];
   // Keep all observed major and minor contacts. The master snapshot is a
   // fallback for callers whose canonical ChartResult has no transit rows.
   const rowContacts = chart.transits.flatMap(row => [
@@ -70,17 +73,22 @@ export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartRea
   return {
     kind: "horary-style-three-chart-testimony" as const,
     mode,
+    eventOnly,
+    eventAgent: eventOnly ? {
+      ascendant: chart.ascendant?.display ?? null,
+      houses: chart.houses,
+    } : null,
     natalAgent: {
-      available: chart.agentViewAvailable,
-      ascendant: chart.agentViewAvailable ? chart.ascendant?.display ?? null : null,
-      houses: chart.agentViewAvailable ? chart.houses : [],
+      available: !eventOnly && chart.agentViewAvailable,
+      ascendant: !eventOnly && chart.agentViewAvailable ? chart.ascendant?.display ?? null : null,
+      houses: !eventOnly && chart.agentViewAvailable ? chart.houses : [],
       placements: natal.map(({ body, longitude, agentHouse }) => ({ body, longitude, house: agentHouse })),
     },
     natalGod: {
       frame: "fixed" as const,
       placements: natal.map(({ body, longitude, godHouse }) => ({ body, longitude, house: godHouse })),
     },
-    currentGod: live
+    currentGod: live || eventOnly
       ? {
           instantUtc: snapshot?.transit?.transitInstantUtc ?? chart.transitDate,
           placements: current.map(({ body, longitude, godHouse }) => ({ body, longitude, house: godHouse })),
@@ -92,6 +100,7 @@ export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartRea
     transitContacts: contacts,
     safeguards: {
       sharedBirthPositionsCountOnce: true,
+      eventSkyMustNotBecomePersonalNatal: true,
       currentSkyNotRequiredForNatal: true,
       useOnlyCalculatedContacts: true,
       noUnverifiedAnglesOrHouses: true,
@@ -109,6 +118,7 @@ export function threeChartJudgmentInstructions(mode: ThreeChartReadingMode): str
     "Examine natal Agent houses, natal fixed God houses, and (for transit/combined readings) current God placements together.",
     "Treat each natal planetary longitude as one fact displayed in two frames; NEVER double-count it.",
     "Follow the supplied calculated transit contacts; never invent a contact, time, ruler, angle, or house.",
+    "Respect chart role: independent event skies and sign-centered symbolic charts are not the reader\'s natal chart. Never turn them into a personal biography.",
     "Weigh primary testimony, corroboration, contradictions, and timing as one causal narrative. Trace house rulership and entwinement only where the method ledger supports it.",
     "Use all relevant calculated method outcomes from the authoritative synthesis; this map is an index and must not replace that evidence.",
     mode === "natal"
