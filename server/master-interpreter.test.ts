@@ -22,7 +22,7 @@ beforeAll(async () => {
 
 function systemPromptFromLastCall() {
   const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };
-  return request.messages.find(message => message.role === "system")?.content ?? "";
+  return request.messages.filter(message => message.role === "system").map(message => message.content).join("\n");
 }
 
 beforeEach(() => {

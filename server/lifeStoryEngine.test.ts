@@ -82,8 +82,8 @@ describe("LifeStoryPage Engine System Instructions & Chapters", () => {
     expect(mockInvokeLLM).toHaveBeenCalledTimes(1);
     const callArg = mockInvokeLLM.mock.calls[0][0];
     expect(callArg.messages[0].role).toBe("system");
-    expect(callArg.messages[0].content).toBe(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS);
-    expect(callArg.messages[1].content).toContain("life-script development");
+    expect(callArg.messages.filter((message: {role:string}) => message.role === "system").map((message: {content: string}) => String(message.content)).join("\n")).toContain(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS);
+    expect(callArg.messages.filter((message: {role:string}) => message.role === "user").map((message: {content: string}) => String(message.content)).join("\n")).toContain("life-script development");
 
     expect(result.content).not.toMatch(/emotional regulation/i);
     expect(result.content).not.toMatch(/protective strategies/i);

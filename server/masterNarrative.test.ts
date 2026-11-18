@@ -20,8 +20,8 @@ describe("AI master reading", () => {
     const failedAudit = { ...synthesis, qualityAudit: { ...synthesis.qualityAudit, passed: false } };
     const result = await narrateMasterSynthesis(failedAudit, "Read my Sun and Moon");
     const request = vi.mocked(invokeLLM).mock.calls[0][0];
-    expect(String(request.messages[0].content)).toContain("Do not repeat the same placement in more than one section");
-    expect(String(request.messages[1].content)).toContain("PLANET PERSONA CANON MATRIX");
+    expect(String(request.messages.filter(message => message.role === "system").map(message => String(message.content)).join("\n"))).toContain("Do not repeat the same placement in more than one section");
+    expect(String(request.messages.filter(message => message.role === "user").map(message => String(message.content)).join("\n"))).toContain("PLANET PERSONA CANON MATRIX");
     expect(result.narrative.answer).toContain(text);
     expect(result.calculatedNarrative).toEqual(synthesis.integratedNarrative);
     expect(result.narrativeAudit.deliveredMethodIds).toHaveLength(synthesis.sourceSnapshot.methodExecutionLedger.length);

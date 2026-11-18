@@ -150,7 +150,7 @@ describe("Compact Chart page placement summaries", () => {
       "Write only the requested placement readings"
     );
     expect(instruction).toContain("70–110 words");
-    const delivered = JSON.parse(String(call.messages.find(message => message.role === "user" && String(message.content).includes('"placements"'))!.content)) as {
+    const delivered = JSON.parse(String(call.messages.find(message => message.role === "user" && String(message.content).trim().startsWith('{"chartScope"'))!.content)) as {
       chartScope?: string;
       placements: Array<{
         name: string;
@@ -162,7 +162,7 @@ describe("Compact Chart page placement summaries", () => {
     expect(delivered.placements).toHaveLength(2);
     expect(delivered.placements[0].methods.length).toBeGreaterThan(0);
     expect(instruction).toContain("Keep all astrology terminology out");
-    expect(call.messages.find(message => message.role === "user" && String(message.content).includes('"placements"'))!.content).not.toContain("UNIFIED MASTER SYNTHESIS");
+    expect(call.messages.find(message => message.role === "user" && String(message.content).trim().startsWith('{"chartScope"'))!.content).not.toContain("UNIFIED MASTER SYNTHESIS");
     await buildChartPageReading(chart, "natal");
     expect(invokeLLM).toHaveBeenCalledTimes(1);
   });
@@ -179,7 +179,7 @@ describe("Compact Chart page placement summaries", () => {
       transitTime: "09:00",
     });
     vi.mocked(invokeLLM).mockImplementation(async request => {
-      const input = JSON.parse(String(request.messages.find(message => message.role === "user" && String(message.content).includes('"placements"'))!.content)) as {
+      const input = JSON.parse(String(request.messages.find(message => message.role === "user" && String(message.content).trim().startsWith('{"chartScope"'))!.content)) as {
         chartScope?: string;
         placements: Array<{
           name: string;

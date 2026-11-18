@@ -171,33 +171,33 @@ describe("horary astrology", () => {
     const messages = mocked.invokeLLM.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
 
     expect(result.reading).toContain("evidence-led horary reading");
-    expect(messages[0].content).toContain("THE FIRMAMENT — MASTER AI HORARY INTERPRETER");
-    expect(messages[0].content).toContain("CARE-CENTERED IMPERATIVE — NON-NEGOTIABLE");
-    expect(messages[0].content).toContain("CARE-FIRST DELIVERY STANDARD — NON-NEGOTIABLE");
-    expect(messages[0].content).toContain("Never write as though a loved one is merely a significator");
-    expect(messages[0].content).toContain("HORARY VISIBLE ANSWER CONTRACT — REQUIRED");
-    expect(messages[0].content).toContain("## What I hear beneath your question");
-    expect(messages[0].content).toContain("what it means for this specific person");
-    expect(messages[0].content).toContain("CALCULATE DEEPLY. JUDGE HIERARCHICALLY. INTERPRET HUMANLY.");
-    expect(messages[0].content).toContain("The user should feel that the entire relevant chart was considered.");
-    expect(messages[0].content).toContain("Do not expose hidden chain-of-thought");
-    expect(messages[0].content).toContain("WHAT IS THE ANSWER?");
-    expect(messages[1].content).toContain(sampleInput.question);
-    expect(messages[1].content).toContain(result.chart.querentRuler);
-    expect(messages[1].content).toContain(result.chart.subjectRuler);
-    expect(messages[1].content).toContain(result.chart.topicRuler);
-    expect(messages[1].content).toContain("Roles:");
-    expect(messages[1].content).toContain("LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED");
-    expect(messages[1].content).toContain("GOD VIEW / AGENT VIEW RELATIONSHIP SYNTHESIS");
-    expect(messages[1].content).toContain("Synthesis shown in the box:");
-    expect(messages[1].content).toContain("FULL 16/20-LAYER SYNTHESIS REPORT");
-    expect(messages[1].content).toContain("16 SELF-KNOWLEDGE DIMENSIONS");
-    expect(messages[1].content).toContain("16-SYSTEM CONVERGENCE AUDIT");
-    expect(messages[1].content).toContain("PLANET INTERACTION MATRIX");
-    expect(messages[1].content).toContain("LANGUAGE SAFETY RESTRICTIONS");
-    expect(messages[1].content).toContain("This is the compact judgment evidence");
-    expect(messages[1].content).toContain("FULL TECHNICAL EVIDENCE");
-    expect(messages[1].content).toContain("TRADITIONAL MOON STATUS");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("THE FIRMAMENT — MASTER AI HORARY INTERPRETER");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("CARE-CENTERED IMPERATIVE — NON-NEGOTIABLE");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("CARE-FIRST DELIVERY STANDARD — NON-NEGOTIABLE");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("Never write as though a loved one is merely a significator");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("HORARY VISIBLE ANSWER CONTRACT — REQUIRED");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("## What I hear beneath your question");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("what it means for this specific person");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("CALCULATE DEEPLY. JUDGE HIERARCHICALLY. INTERPRET HUMANLY.");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("The user should feel that the entire relevant chart was considered.");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("Do not expose hidden chain-of-thought");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("WHAT IS THE ANSWER?");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain(sampleInput.question);
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain(result.chart.querentRuler);
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain(result.chart.subjectRuler);
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain(result.chart.topicRuler);
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("Roles:");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("GOD VIEW / AGENT VIEW RELATIONSHIP SYNTHESIS");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("Synthesis shown in the box:");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("FULL 16/20-LAYER SYNTHESIS REPORT");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("16 SELF-KNOWLEDGE DIMENSIONS");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("16-SYSTEM CONVERGENCE AUDIT");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("PLANET INTERACTION MATRIX");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("LANGUAGE SAFETY RESTRICTIONS");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("This is the compact judgment evidence");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("FULL TECHNICAL EVIDENCE");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("TRADITIONAL MOON STATUS");
     expect(result.chart.canonEvidenceText).toContain("Condition:");
   });
 
@@ -242,7 +242,7 @@ describe("horary astrology", () => {
     expect(messages.filter(message => message.role === "user" && message.content === question)).toHaveLength(1);
     expect(messages.some(message => message.content.includes("Original horary judgment evidence"))).toBe(true);
     expect(messages.some(message => message.content.includes("Will the hypothetical applicant accept the new role?"))).toBe(true);
-    expect(messages[0].content).toContain("Keep the original chart and question fixed");
+    expect(messages.filter(message => message.role === "system").map(message => message.content).join("\n")).toContain("Keep the original chart and question fixed");
   });
 });
 
@@ -315,7 +315,7 @@ describe("Horary edited inputs and natal separation", () => {
     expect(result.synthesisStatus).toBe("ai_completed");
     expect(result.chart.questionAnalysis.isInterpersonal).toBe(false);
     const request = mocked.invokeLLM.mock.calls.at(-1)![0];
-    expect(request.messages[1].content).toContain("SUBJECT FRAMING: The querent is asking for themselves");
+    expect(request.messages.filter(message => message.role === "user").map(message => String(message.content)).join("\n")).toContain("SUBJECT FRAMING: The querent is asking for themselves");
 
     mocked.invokeLLM.mockRejectedValueOnce(new Error("provider unavailable"));
     await expect(horaryFollowUp(result.chart, [], "What should I do next?")).rejects.toThrow("provider unavailable");
@@ -329,9 +329,9 @@ describe("Horary edited inputs and natal separation", () => {
       topicHouse: 5,
     });
     const messages = mocked.invokeLLM.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
-    expect(messages[1].content).toContain("SUBJECT FRAMING: The querent is asking for themselves");
-    expect(messages[1].content).toContain("Do NOT assume this is a two-person argument or romance");
-    expect(messages[1].content).toContain("TONE AND LANGUAGE MANDATE:");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("SUBJECT FRAMING: The querent is asking for themselves");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("Do NOT assume this is a two-person argument or romance");
+    expect(messages.filter(message => message.role === "user").map(message => message.content).join("\n")).toContain("TONE AND LANGUAGE MANDATE:");
   });
 
   it("automatically classifies 'What does this app need to make it complete?' without manual house/subject steps", async () => {

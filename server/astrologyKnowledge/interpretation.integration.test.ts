@@ -74,9 +74,9 @@ describe("interpretation.generate knowledge gateway integration", () => {
     expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "ashtakavarga")).toBe(true);
     const userPrompts = mocked.invokeLLM.mock.calls.map(call =>
       String(
-        call[0].messages.find(
+        call[0].messages.filter(
           (message: { role: string }) => message.role === "user"
-        )?.content ?? ""
+        ).map((message: {content: string}) => String(message.content)).join("\n")
       )
     );
     expect(
@@ -105,9 +105,9 @@ describe("interpretation.generate knowledge gateway integration", () => {
     );
     const laterPrompts = mocked.invokeLLM.mock.calls.map(call =>
       String(
-        call[0].messages.find(
+        call[0].messages.filter(
           (message: { role: string }) => message.role === "user"
-        )?.content ?? ""
+        ).map((message: {content: string}) => String(message.content)).join("\n")
       )
     );
     expect(
