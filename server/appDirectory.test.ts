@@ -17,6 +17,8 @@ describe("page index", () => {
       searchDirectory("saved profiles").some(item => item.href === "/profiles")
     ).toBe(true);
     expect(searchDirectory("nonexistentxyz")).toEqual([]);
+    // The sports simulator is a separate app, not a main Absolute destination.
+    expect(APP_DIRECTORY.some(item => item.href === "/sports-lab")).toBe(false);
   });
   it("points every indexed page at an existing router destination", () => {
     const router = readFileSync(
