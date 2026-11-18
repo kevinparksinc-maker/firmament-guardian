@@ -4,30 +4,17 @@ import { HouseStrengthChart, PlanetStrengthChart } from "./VedicStrengthCharts";
 
 /**
  * First-class access to the numerical strength evidence already produced by
- * interpretation.methodOutcomes. Uses the same query key as ChartMethodOutcomes:
- * no client-side strength estimates, placeholder scores or separate LLM call.
+ * the deterministic vedic.strength endpoint. It does not call an LLM and
+ * does not wait for interpretation.methodOutcomes or its provider-dependent minis.
  */
-export function ChartStrengthOverview({
-  chart,
-  mode,
-}: {
-  chart: ChartResult;
-  mode: "natal" | "transit" | "combined";
-}) {
-  const query = trpc.interpretation.methodOutcomes.useQuery(
-    { chart, mode },
+export function ChartStrengthOverview({ chart }: { chart: ChartResult }) {
+  const query = trpc.vedic.strength.useQuery(
+    { chart },
     { retry: false, staleTime: Infinity, refetchOnWindowFocus: false }
   );
 
-  const methods = query.data?.methods.filter(
-    method => !method.methodId.startsWith("transit:")
-  );
-  const planetary = methods?.find(method => method.methodId === "vedic-shadbala");
-  const houses = methods?.find(method => method.methodId === "vedic-bhava-bala");
-  const planetRows =
-    planetary?.status === "interpreted" ? planetary.planetStrength : undefined;
-  const houseRows =
-    houses?.status === "interpreted" ? houses.houseStrength : undefined;
+  const planetRows = query.data?.planets;
+  const houseRows = query.data?.houses;
   const sortedPlanets = [...(planetRows ?? [])].sort((a, b) => a.rank - b.rank);
   const sortedHouses = [...(houseRows ?? [])].sort((a, b) => a.rank - b.rank);
 
@@ -118,9 +105,7 @@ export function ChartStrengthOverview({
               </>
             ) : (
               <p role="status" className="rounded-lg border border-amber-300/20 p-3 text-sm text-amber-100">
-                {planetary
-                  ? `Shadbala: ${planetary.status}. ${planetary.interpretation || planetary.judgment || "Inspect the method outcome for missing prerequisites."}`
-                  : "Shadbala was not returned by the method registry."}
+                "No Shadbala values were returned by the calculation engine."
               </p>
             )}
           </section>
@@ -173,9 +158,7 @@ export function ChartStrengthOverview({
               </>
             ) : (
               <p role="status" className="rounded-lg border border-cyan-300/20 p-3 text-sm text-cyan-100">
-                {houses
-                  ? `Bhava Bala: ${houses.status}. ${houses.interpretation || houses.judgment || "Inspect the method outcome for missing prerequisites."}`
-                  : "Bhava Bala was not returned by the method registry."}
+                "No Bhava Bala values were returned by the calculation engine."
               </p>
             )}
           </section>
