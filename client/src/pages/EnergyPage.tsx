@@ -396,7 +396,7 @@ export default function EnergyPage() {
         </div>
       </section>
 
-      {chart && <CanonicalMiniReadings key={`${chart.utc}:${chart.transits.map(body => `${body.name}:${body.longitude}`).join("|")}:energy`} chart={chart} mode="combined" />}
+      {chart && <CanonicalMiniReadings key={`${chart.utc}:${chart.movingBodies.map(body => `${body.name}:${body.longitude}`).join("|")}:${chart.houses.join("|")}:${chart.transits.map(body => `${body.name}:${body.longitude}`).join("|")}:energy`} chart={chart} mode="combined" />}
 
       {/* SECTION 4: FORECAST TIMELINE */}
       <div className="flex justify-end"><Link href="/transit-sky" className="rounded-xl border border-cyan-300/40 bg-cyan-950/30 px-4 py-2 text-sm font-semibold text-cyan-200">Open Independent Transit Chart →</Link></div>
