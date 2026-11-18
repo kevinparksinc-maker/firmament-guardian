@@ -209,12 +209,7 @@ export async function runInterpretation(
         evidence,
     };
     // Preserve the domain packet and keep the current turn last in conversations.
-    const index =
-      firstUser < 0
-        ? messages.length
-        : firstUser === messages.length - 1
-          ? firstUser + 1
-          : messages.length - 1;
+    const index = firstUser < 0 ? messages.length : firstUser + 1;
     messages.splice(index, 0, dossier);
   }
   const response = await invokeLLM({ ...request, messages });
