@@ -17,6 +17,7 @@ export function CanonicalMiniReadings({ chart, mode }: { chart: ChartResult; mod
   ];
   const run = (item: (typeof focusItems)[number]) => {
     setSelected(item.key);
+    reading.reset();
     reading.mutate({ chart, mode, focus: item.focus, outputDepth: depth });
   };
   return (
@@ -43,7 +44,7 @@ export function CanonicalMiniReadings({ chart, mode }: { chart: ChartResult; mod
       {reading.data && !reading.isPending && !reading.error && (
         <div className="space-y-2 rounded-xl border border-white/10 p-3">
           <p className="whitespace-pre-wrap text-sm leading-7 text-slate-100">{reading.data.reading}</p>
-          <p className="text-xs text-slate-400">Master snapshot: {reading.data.snapshotId} · Calculated methods: {reading.data.methodLedgerSummary.computedWithResult}/{reading.data.methodLedgerSummary.totalEvaluated} · Theme coverage: {reading.data.qualityAudit.passed ? "complete" : "incomplete"}</p>
+          <p className="text-xs text-slate-400">Master snapshot: {reading.data.snapshotId} · Calculated methods: {reading.data.methodLedgerSummary.computedWithResult}/{reading.data.methodLedgerSummary.totalEvaluated} · Pre-AI evidence audit: {reading.data.qualityAudit.passed ? "passed" : "incomplete"} · AI narrative coverage not independently verified</p>
         </div>
       )}
     </section>
