@@ -6,6 +6,11 @@ import type { UserProfileData } from "@/components/NatalProfileBuilder";
 const PROFILE_KEY = "algorithms_cosmos_profile";
 const SAVED_PROFILES_KEY = "fg:saved-birth-profiles:v1";
 
+/** Storage failures are reported without exposing profile names, birth data, or account IDs. */
+function reportProfileStorageFailure(operation: string): void {
+  console.warn(`[ProfileSession] Browser storage unavailable during ${operation}; changes may not persist.`);
+}
+
 function legacyKey(p: UserProfileData): string {
   return [p.name.trim().toLowerCase(), p.date, p.time, p.location.trim().toLowerCase()].join("|");
 }
@@ -26,7 +31,10 @@ function readSavedProfiles(key = SAVED_PROFILES_KEY): UserProfileData[] {
     const migrated = valid.map(p => ensureId(repairProfileLocations(p)));
     if (JSON.stringify(valid) !== JSON.stringify(migrated)) window.localStorage.setItem(key, JSON.stringify(migrated));
     return migrated;
-  } catch { return []; }
+  } catch {
+    reportProfileStorageFailure("saved profile read");
+    return [];
+  }
 }
 
 
@@ -45,6 +53,7 @@ function readProfile(profileKey = PROFILE_KEY, savedKey = SAVED_PROFILES_KEY): U
     }
     return null;
   } catch {
+    reportProfileStorageFailure("active profile read");
     return null;
   }
 }
@@ -87,7 +96,7 @@ const ProfileSessionContext = createContext<ProfileSession | null>(null);
 
 export function ProfileSessionProvider({ children, accountId = "guest" }: { children: ReactNode; accountId?: string }) {
   const { active: PROFILE_KEY, saved: SAVED_PROFILES_KEY } = profileStorageKeys(accountId);
-  const [deviceProfilesCount, setDeviceProfilesCount] = useState(() => { try { return window.localStorage.getItem(`fg:account:${accountId}:device-imported`) ? 0 : readDeviceProfilesForImport(accountId).length; } catch { return 0; } });
+  const [deviceProfilesCount, setDeviceProfilesCount] = useState(() => { try { return window.localStorage.getItem(`fg:account:${accountId}:device-imported`) ? 0 : readDeviceProfilesForImport(accountId).length; } catch { reportProfileStorageFailure("device import status read"); return 0; } });
   const [profile, updateProfile] = useState<UserProfileData | null>(() => readProfile(PROFILE_KEY, SAVED_PROFILES_KEY));
   const [chart, setChart] = useState<ChartResult | null>(null);
   const [energyChart, setEnergyChart] = useState<ChartResult | null>(null);
@@ -110,6 +119,7 @@ export function ProfileSessionProvider({ children, accountId = "guest" }: { chil
       } else window.localStorage.removeItem(PROFILE_KEY);
       window.dispatchEvent(new Event("fg:profile-updated"));
     } catch {
+      reportProfileStorageFailure("profile save");
       // The current session remains usable if local storage is blocked.
     }
   }, []);
@@ -129,6 +139,7 @@ export function ProfileSessionProvider({ children, accountId = "guest" }: { chil
       setSavedProfiles(updated);
       window.dispatchEvent(new Event("fg:profile-updated"));
     } catch {
+      reportProfileStorageFailure("profile edit");
       // Editing remains available for this session if browser storage is blocked.
     }
   }, []);
@@ -146,7 +157,9 @@ export function ProfileSessionProvider({ children, accountId = "guest" }: { chil
         setEnergyChart(null);
       }
       window.dispatchEvent(new Event("fg:profile-updated"));
-    } catch { /* Browser storage may be unavailable. */ }
+    } catch {
+      reportProfileStorageFailure("profile deletion");
+    }
   }, [profile]);
 
   const importProfiles = useCallback((incoming: UserProfileData[]): number => {
@@ -218,7 +231,9 @@ export function ProfileSessionProvider({ children, accountId = "guest" }: { chil
           const updated = [next, ...withoutMatch].slice(0, 100);
           window.localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(updated));
           setSavedProfiles(updated);
-        } catch {}
+        } catch {
+          reportProfileStorageFailure("transit location update");
+        }
       }
       return next;
     });
@@ -229,8 +244,13 @@ export function ProfileSessionProvider({ children, accountId = "guest" }: { chil
     const deviceProfiles = readDeviceProfilesForImport(accountId);
     importProfiles(deviceProfiles);
     if (deviceProfiles[0]) setProfile(deviceProfiles[0]);
-    try { window.localStorage.setItem(`fg:account:${accountId}:device-imported`, "true"); } catch {}
-    setDeviceProfilesCount(0);
+    try {
+      window.localStorage.setItem(`fg:account:${accountId}:device-imported`, "true");
+      setDeviceProfilesCount(0);
+    } catch {
+      reportProfileStorageFailure("device import acknowledgement");
+      // Keep the import available so the user can retry after storage is restored.
+    }
   }, [accountId, importProfiles, setProfile]);
 
   const value = useMemo(
