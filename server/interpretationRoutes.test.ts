@@ -338,10 +338,23 @@ function expectFocusedPlacementDossier(name: string) {
 describe("user-facing tRPC interpretation routes", () => {
   it.each(routes)(
     "%s sends the complete registry and propagates provider failure",
-    async (_name, count, invoke) => {
-      await expect(invoke()).rejects.toThrow(
-        /Fixture provider unavailable|reading plan could not|interpretation service could not|synthesized chapter could not/i
-      );
+    async (name, count, invoke) => {
+      if (name === "interpretation.focusedPlacement contact") {
+        // Contact pages now return grounded local prose and calculated evidence
+        // when the AI provider fails, instead of leaking a 429 to customers.
+        const reading = await invoke() as {
+          synthesisUnavailable?: boolean;
+          miniNarrative?: string;
+          evidence?: Array<{ id: string }>;
+        };
+        expect(reading.synthesisUnavailable).toBe(true);
+        expect(reading.miniNarrative).toContain("You may notice");
+        expect(reading.evidence?.some(item => item.id === "contact-geometry")).toBe(true);
+      } else {
+        await expect(invoke()).rejects.toThrow(
+          /Fixture provider unavailable|reading plan could not|interpretation service could not|synthesized chapter could not/i
+        );
+      }
       expectCompleteDossiers(count);
     },
     20_000
