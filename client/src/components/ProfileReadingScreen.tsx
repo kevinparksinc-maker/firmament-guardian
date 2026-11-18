@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
 import { ChartOverview } from "@/components/ChartOverview";
+import { CanonicalMiniReadings } from "@/components/CanonicalMiniReadings";
 import { LifeStoryInterpreter } from "@/components/LifeStoryInterpreter";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
 import { WelcomeHost } from "@/components/WelcomeHost";
@@ -263,6 +264,8 @@ export function ProfileReadingScreen({
             </div>
           </div>
 
+          <CanonicalMiniReadings key={chart.utc + ":natal"} chart={chart} mode="natal" />
+
           {/* Charts and Overview Visuals */}
           <ChartOverview chart={chart} view={readingView} onViewChange={onReadingViewChange} />
           <GuardianDiamondCharts chart={chart} />
@@ -322,6 +325,7 @@ export function ProfileReadingScreen({
               <span>Full Energy Forecast →</span>
             </Link>
           </div>
+          <CanonicalMiniReadings key={chart.utc + ":transit"} chart={chart} mode="transit" />
           <InterpretationPanel
             key={`transit-panel-${chart.input.location || "god"}`}
             chart={chart}
