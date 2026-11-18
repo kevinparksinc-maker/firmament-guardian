@@ -44,6 +44,8 @@ function computeSnapshotId(input: MasterChartInput, version: string): string {
     tz: input.timezone,
     d: input.date,
     t: input.time,
+    birthTimeKnown: input.birthTimeKnown ?? null,
+    elevation: input.elevation ?? null,
     tl: input.transitLocation ?? "",
     tlat: input.transitLatitude ?? null,
     tlon: input.transitLongitude ?? null,
