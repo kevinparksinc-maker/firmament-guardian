@@ -15,6 +15,8 @@ export async function synthesizeMasterReading(
   input: SynthesisInput
 ): Promise<SynthesisResult> {
   const { snapshot, readingMode } = input;
+  const outputDepth = input.outputDepth ?? "full";
+  const outputLengths = { quick: "2–4 sentences", mini: "1–2 paragraphs", standard: "3–5 paragraphs", full: "a detailed multi-section reading" } as const;
 
   // 1. Extract normalized propositions across all available traditions and methods
   const propositions = extractPropositionsFromSnapshot(snapshot);
@@ -149,6 +151,9 @@ export async function synthesizeMasterReading(
           "Do not print JSON, raw method inventories, or generic templates.",
           "If a method is unavailable, do not claim it was calculated.",
           "Ground the interpretation in named placements and methods.",
+          "Consider the ENTIRE calculated ledger before writing, regardless of requested output length.",
+          "Output depth changes only the final narrative length, never the evidence or methods considered.",
+          `Write ${outputLengths[outputDepth]}; synthesize rather than list methods when space is short.`,
         ].join(" "),
       },
       {
@@ -156,6 +161,7 @@ export async function synthesizeMasterReading(
         content: JSON.stringify({
           question,
           readingMode,
+          outputDepth,
           snapshotId: snapshot.snapshotId,
           godView: snapshot.godView,
           agentView: snapshot.agentView,
