@@ -139,30 +139,31 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
 function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
   const body = focus.toLowerCase().replaceAll(" ", "[-_ ]");
   const matchesBody = new RegExp(`(?:^|[^a-z])${body}(?:$|[^a-z])`, "i");
-  const limitText = (text: string) => {
-    const clean = text.replace(/\s+/g, " ").trim();
-    return clean.length <= 230 ? clean : `${clean.slice(0, Math.max(clean.lastIndexOf(" ", 229), 150))}…`;
-  };
   return {
     snapshotId: synthesis.snapshotId,
     focus,
-    coverage: "Every method is listed. Finding excerpts prioritize the selected placement; the focused evidence and Canon sections supply its exact details.",
+    coverage: "Every method is listed. Matching judgments and calculations retain their full text and source IDs.",
     methodColumns: ["id", "name", "status", "frame", "focusedJudgments", "focusedCalculations", "chartContext"],
     methods: synthesis.methodOutcomes.map(method => {
+      const namedCalculations = new Set(method.calculatedFindings
+        .filter(finding => matchesBody.test(finding.label) || matchesBody.test(finding.evidenceId))
+        .map(finding => finding.evidenceId));
       const judgments = method.findingJudgments.filter(finding =>
-        matchesBody.test(finding.subject) || finding.evidenceIds.some(id => matchesBody.test(id))
+        matchesBody.test(finding.subject) ||
+        finding.evidenceIds.some(id => matchesBody.test(id) || namedCalculations.has(id))
       );
+      const citedIds = new Set(judgments.flatMap(finding => finding.evidenceIds));
       const calculations = method.calculatedFindings.filter(finding =>
-        matchesBody.test(finding.label) || matchesBody.test(finding.evidenceId)
+        namedCalculations.has(finding.evidenceId) || citedIds.has(finding.evidenceId)
       );
       return [
         method.methodId,
         method.methodName,
         method.status,
         method.frame,
-        judgments.slice(0, 2).map(finding => [finding.subject, limitText(finding.judgment)]),
-        calculations.slice(0, 2).map(finding => [finding.label, limitText(finding.calculatedValue)]),
-        !judgments.length && !calculations.length ? limitText(method.contribution || method.interpretation) : null,
+        judgments,
+        calculations,
+        !judgments.length && !calculations.length ? (method.contribution || method.interpretation) : null,
       ];
     }),
     calculationColumns: ["id", "executionStatus"],
