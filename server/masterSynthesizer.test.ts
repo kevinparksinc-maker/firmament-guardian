@@ -96,7 +96,7 @@ describe("Master Synthesizer Pipeline", () => {
     // Verify method ledger summary reports real counts
     expect(result.methodLedgerSummary.totalEvaluated).toBe(16);
     expect(result.methodLedgerSummary.computedWithResult).toBeGreaterThanOrEqual(10);
-    expect(result.methodLedgerSummary.referenceOnly).toBe(1); // Chinese 28 Xiu
+    expect(result.methodLedgerSummary.referenceOnly).toBe(2); // Chinese Xiu plus unverified symbolic fixed-star anchors
 
     // Quality audit verification
     expect(result.qualityAudit.passed).toBe(true);

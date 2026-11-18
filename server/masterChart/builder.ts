@@ -370,13 +370,16 @@ export async function buildUnifiedMasterChart(
     tradition: "babylonian",
     technique: "fixed-stars-and-royal-watchers",
     name: "Polaris-Centered Firmament & Royal Watchers",
-    status: "computed-with-result",
+    // ACIF withholds symbolic zodiac-star angles until a verified equatorial
+    // fixed-star catalog exists. An empty array is not a computed result.
+    status: "reference-only",
     frame: "god",
     prerequisites: ["firmament-fixed-frame"],
     calculationVersion: engineVersion,
     evidenceIds: royalStarContacts.map(s => `star-${s.name.toLowerCase()}`),
     sourceIds: ["ptolemy-fixed-stars", "babylonian-mul-apin"],
     results: royalStarContacts,
+    notes: "Royal-star catalog anchors are symbolic references, not verified measured equatorial RA contacts. No personal star conjunction is asserted.",
   };
 
   // Layer 6: Arabic & Hermetic Lots
