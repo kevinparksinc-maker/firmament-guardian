@@ -1,4 +1,5 @@
 import { invokeLLM } from "../../_core/llm";
+import { OUTPUT_DEPTH_INSTRUCTIONS } from "./outputDepth";
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type {
   SynthesisInput,
@@ -16,7 +17,6 @@ export async function synthesizeMasterReading(
 ): Promise<SynthesisResult> {
   const { snapshot, readingMode } = input;
   const outputDepth = input.outputDepth ?? "full";
-  const outputLengths = { quick: "2–4 sentences", mini: "1–2 paragraphs", standard: "3–5 paragraphs", full: "a detailed multi-section reading" } as const;
 
   // 1. Extract normalized propositions across all available traditions and methods
   const propositions = extractPropositionsFromSnapshot(snapshot);
@@ -153,7 +153,7 @@ export async function synthesizeMasterReading(
           "Ground the interpretation in named placements and methods.",
           "Consider the ENTIRE calculated ledger before writing, regardless of requested output length.",
           "Output depth changes only the final narrative length, never the evidence or methods considered.",
-          `Write ${outputLengths[outputDepth]}; synthesize rather than list methods when space is short.`,
+          `${OUTPUT_DEPTH_INSTRUCTIONS[outputDepth]} Synthesize rather than list methods when space is short.`,
         ].join(" "),
       },
       {
