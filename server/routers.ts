@@ -613,19 +613,15 @@ Analyze their 7th house, Venus, Moon, and descendant aspects to describe their c
           maxTokens: 2000,
           responseFormat: { type: "json_object" },
         });
-        try {
-          const content = String(response.choices[0]?.message?.content ?? "{}");
-          const parsed = JSON.parse(content);
-          return {
-            soulmatePrediction: parsed.soulmatePrediction || "A profound partner who mirrors your deep loyalty, integrity, and quiet strength.",
-            descriptors: Array.isArray(parsed.descriptors) ? parsed.descriptors : ["Grounding", "Loyal", "Intuitive", "Sovereign"],
-          };
-        } catch {
-          return {
-            soulmatePrediction: "Your cosmic soulmate is someone whose steady presence offers complete psychological safety—matching your fierce loyalty and honoring your need for sacred space.",
-            descriptors: ["Loyal", "Grounded", "Perceptive", "Steadfast"],
-          };
+        const content = String(response.choices[0]?.message?.content ?? "");
+        let parsed: any;
+        try { parsed = JSON.parse(content); } catch { throw new Error("Soulmate interpretation returned invalid JSON; no generic reading was substituted."); }
+        if (typeof parsed?.soulmatePrediction !== "string" || !parsed.soulmatePrediction.trim() ||
+            !Array.isArray(parsed.descriptors)) {
+          throw new Error("Soulmate interpretation was incomplete; no generic reading was substituted.");
         }
+        return { soulmatePrediction: parsed.soulmatePrediction, descriptors: parsed.descriptors };
+
       }),
 
     generateSynastryBreakdown: publicProcedure
@@ -664,26 +660,15 @@ Generate a rich, deeply insightful relationship compatibility breakdown in JSON 
           maxTokens: 2500,
           responseFormat: { type: "json_object" },
         });
-        try {
-          const content = String(response.choices[0]?.message?.content ?? "{}");
-          const parsed = JSON.parse(content);
-          return {
-            interpretation: parsed.interpretation || "A powerful synastry dynamic rooted in complementary strengths and mutual growth.",
-            aspectGroups: Array.isArray(parsed.aspectGroups) ? parsed.aspectGroups : [],
-          };
-        } catch {
-          return {
-            interpretation: "This celestial pairing unites complementary strengths, balancing individual sovereignty with unshakeable mutual dedication.",
-            aspectGroups: [
-              {
-                type: "harmonious",
-                aspects: [
-                  { planet1: "Sun", planet2: "Moon", aspect: "Trine", orb: 1.8, interpretation: "Mutual intuitive ease and natural respect for each other's emotional rhythms." }
-                ]
-              }
-            ],
-          };
+        const content = String(response.choices[0]?.message?.content ?? "");
+        let parsed: any;
+        try { parsed = JSON.parse(content); } catch { throw new Error("Synastry interpretation returned invalid JSON; no invented aspects were substituted."); }
+        if (typeof parsed?.interpretation !== "string" || !parsed.interpretation.trim() ||
+            !Array.isArray(parsed.aspectGroups)) {
+          throw new Error("Synastry interpretation was incomplete; no invented aspects were substituted.");
         }
+        return { interpretation: parsed.interpretation, aspectGroups: parsed.aspectGroups };
+
       }),
 
     genesisReading: publicProcedure
