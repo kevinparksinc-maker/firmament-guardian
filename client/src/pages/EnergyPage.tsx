@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Activity,
@@ -66,6 +66,15 @@ export default function EnergyPage() {
     window.dispatchEvent(new Event("fg:transit-location-updated"));
     setTimeout(() => setIsRefreshing(false), 700);
   };
+
+  const chartSignature = chart
+    ? `${chart.utc}:${chart.transits.map(body => `${body.name}:${body.longitude}`).join("|")}`
+    : "no-chart";
+  useEffect(() => {
+    setExpandedContactId(null);
+    setContactReadingId(null);
+    contactReading.reset();
+  }, [chartSignature]);
 
   const energyData = useMemo(() => calculateEnergyRead(chart), [chart]);
 
