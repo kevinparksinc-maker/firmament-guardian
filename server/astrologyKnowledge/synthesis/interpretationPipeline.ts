@@ -284,7 +284,7 @@ export async function runInterpretation(
     // Supply the cross-view interpretation discipline in a separate message.
     messages.push({
       role: "system",
-      content: threeChartJudgmentInstructions(ledgers[0].mode) +
+      content: threeChartJudgmentInstructions(ledgers[0].mode, ledgers[0].sourceSnapshot.natal?.input.chartRole === "event") +
         "\nTHREE-CHART RELATIONSHIP MAP (not independent extra evidence):\n" +
         threeChartContext,
     });
@@ -302,7 +302,7 @@ export async function runInterpretation(
         "Speak directly to the reader in second person, with concrete strengths, costs and difficult truths. Never invent personal events, motives, astronomical placements or missing calculations.",
         "Keep all evidence references in the requested technical/structured fields when the route requires them. Follow the route-specific JSON schema, Horary verdict, chapter plan or other output contract exactly.",
         "Do not claim to have used evidence that was not actually delivered.",
-        threeChartJudgmentInstructions(ledgers[0].mode),
+        threeChartJudgmentInstructions(ledgers[0].mode, ledgers[0].sourceSnapshot.natal?.input.chartRole === "event"),
       ].join("\n"),
     };
     const evidence = typeof layout === "object"
