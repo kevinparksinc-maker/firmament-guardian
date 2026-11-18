@@ -163,7 +163,10 @@ function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
         method.frame,
         judgments,
         calculations,
-        !judgments.length && !calculations.length ? (method.contribution || method.interpretation) : null,
+        // The focused packet must not resend each unrelated method's full
+        // chart-wide prose (which previously produced 80–145 KB requests).
+        // Every method and status remains listed; only focus-linked evidence is sent.
+        null,
       ];
     }),
     calculationColumns: ["id", "executionStatus"],
@@ -224,8 +227,8 @@ export async function runInterpretation(
     // Universal placement-reference reasoning contract. This is intentionally
     // output-format-neutral: Horary verdicts, JSON plans and energy ledgers keep
     // their specialized schemas. Placement itself is left byte-for-byte intact.
-    messages.unshift({
-      role: "system",
+    const sharedContract = {
+      role: "system" as const,
       content: [
         "UNIVERSAL EVIDENCE-WEAVING CONTRACT (all chart interpretation routes):",
         "Read every applicable calculated method and its status. Treat unavailable, failed, not-calculated and reference-only methods as gaps, never as facts.",
@@ -249,7 +252,10 @@ export async function runInterpretation(
     };
     // Preserve the domain packet and keep the current turn last in conversations.
     const index = firstUser < 0 ? messages.length : firstUser + 1;
-    messages.splice(index, 0, dossier);
+    // Keep the route-specific system prompt at index 0 and its original input
+    // at index 1. Some JSON routes require that stable contract. All providers
+    // collect system-role messages independently of their position.
+    messages.splice(index, 0, sharedContract, dossier);
   }
   const response = await invokeLLM({ ...request, messages });
   const finish = response.choices?.[0]?.finish_reason;
