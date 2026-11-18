@@ -249,10 +249,16 @@ export async function runInterpretation(
       `${route}_EVIDENCE_MISSING: No calculated synthesis was provided.`
     );
   const messages = [...request.messages];
-  const threeChartDossiers = ledgers.map(ledger => ({
-    snapshotId: ledger.snapshotId,
-    testimony: buildThreeChartTestimony(ledger.sourceSnapshot.natal!, ledger.mode, ledger.sourceSnapshot),
-  }));
+  const threeChartDossiers = ledgers.map(ledger => {
+    const natal = ledger.sourceSnapshot.natal;
+    if (!natal) {
+      throw new Error(`${route}_NATAL_CHART_MISSING: Cannot build three-chart testimony without a canonical birth chart.`);
+    }
+    return {
+      snapshotId: ledger.snapshotId,
+      testimony: buildThreeChartTestimony(natal, ledger.mode, ledger.sourceSnapshot),
+    };
+  });
   const threeChartContext = stringifyEvidence(threeChartDossiers);
   const firstUser = messages.findIndex(message => message.role === "user");
   if (layout === "placement-reference") {
@@ -274,6 +280,14 @@ export async function runInterpretation(
           interpretationEvidence(ledgers[0])
         ),
     };
+    // Preserve the reference placement's original prompt and evidence content.
+    // Supply the cross-view interpretation discipline in a separate message.
+    messages.push({
+      role: "system",
+      content: threeChartJudgmentInstructions(ledgers[0].mode) +
+        "\nTHREE-CHART RELATIONSHIP MAP (not independent extra evidence):\n" +
+        threeChartContext,
+    });
   } else {
     // Universal placement-reference reasoning contract. This is intentionally
     // output-format-neutral: Horary verdicts, JSON plans and energy ledgers keep
