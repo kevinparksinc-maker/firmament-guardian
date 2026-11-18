@@ -1,3 +1,4 @@
+import React from "react";
 import type { VedicStrength } from "../../../server/astrologyKnowledge/vedic/strength";
 const fmt = (n: number) => n.toFixed(2);
 export function PlanetStrengthChart({
