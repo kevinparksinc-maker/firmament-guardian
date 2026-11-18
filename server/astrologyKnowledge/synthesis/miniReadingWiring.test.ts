@@ -38,6 +38,8 @@ describe("canonical mini-reading wiring", () => {
     expect(mini).toContain("reading.data?.outputDepth === depth");
     expect(mini).toContain("requestedDepth === depth");
     expect(energy).toContain("contactReading.data?.focus === contactFocus(c)");
+    expect(energy).toContain('chart.movingBodies.map(body => `${body.name}:${body.longitude}`).join("|")');
+    expect(energy).toContain('chart.houses.join("|")');
   });
 
   it("reuses calculated event snapshots for repeated requests", () => {
