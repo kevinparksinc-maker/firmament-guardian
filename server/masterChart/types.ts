@@ -47,6 +47,9 @@ export interface MasterChartInput {
   timezone: string;
   date: string;
   time: string;
+  /** Optional birth-input metadata used to distinguish canonical snapshot identities. */
+  birthTimeKnown?: boolean;
+  elevation?: number;
   transitLocation?: string;
   transitLatitude?: number;
   transitLongitude?: number;
