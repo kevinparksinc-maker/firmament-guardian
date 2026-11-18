@@ -392,7 +392,7 @@ export const appRouter = router({
         const { context } = await synthesizeChartForReading(input.chart as ChartResult, input.mode, input.question);
         return followUp(
           input.chart as ChartResult,
-          { ...input.interpretation, intelligence: `${input.interpretation.intelligence}\\n\\n${context}` },
+          { ...input.interpretation, intelligence: `${input.interpretation.intelligence}\n\n${context}` },
           input.history,
           input.question,
           input.mode
