@@ -7,6 +7,7 @@ import { createServer } from "http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { chartQueryServerTransport } from "../../shared/trpcTransport";
 import { sessionConfiguration } from "./env";
+import { excludedFromPublicSourceZip } from "./sourceArchive";
 
 async function startServer() {
   sessionConfiguration();
@@ -65,11 +66,12 @@ async function startServer() {
         const relPath = relBase ? `${relBase}/${entry.name}` : entry.name;
 
         if (entry.isDirectory()) {
-          if (excludedDirs.has(entry.name)) continue;
+          if (excludedDirs.has(entry.name) || excludedFromPublicSourceZip(relPath)) continue;
           addDirectoryRecursive(fullPath, relPath);
         } else if (entry.isFile()) {
           if (
             excludedFiles.has(entry.name) ||
+            excludedFromPublicSourceZip(relPath) ||
             entry.name.endsWith(".zip") ||
             entry.name.endsWith(".tar.gz")
           ) {
