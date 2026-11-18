@@ -15,6 +15,7 @@ This is an evidence-based **source-code and automated-test audit** of the main a
 - **Routing:** Removed the main app's Sports Lab page route and index entry. Independent event-sky viewing at `/transit-sky` now bypasses the natal-profile gate. Removed a duplicate/unreachable Explore route.
 - **History:** Fixed old branding and added read-only opening of stored charts and saved readings without regenerating a new chart; retained original records for inspection.
 - **Public source ZIP:** Added exclusions for environment files, private keys and standard credential paths, with regression tests.
+- **Readiness diagnostics:** `/ready` now distinguishes listening from actual configured app readiness. It checks a safe session secret, one of the providers the current interpreter actually uses, and database configuration. It lists provider **names only**, never secret values; `/healthz` remains the liveness check.
 
 ## Routed-page review matrix
 Legend: **Reviewed** = source/navigation and relevant integration inspected. **Automated** = corresponding tests passed in a green full workflow. **Live pending** = no real-browser/device click-through has been performed.
