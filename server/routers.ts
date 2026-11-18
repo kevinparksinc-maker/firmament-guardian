@@ -295,10 +295,11 @@ export const appRouter = router({
             .min(1)
             .max(2000)
             .default("What should I understand from this chart?"),
+          outputDepth: z.enum(["quick", "mini", "standard", "full"]).default("full"),
         })
       )
       .mutation(async ({ input }) => {
-        const { synthesis, context } = await synthesizeChartForReading(input.chart, input.mode, input.question);
+        const { synthesis, context } = await synthesizeChartForReading(input.chart, input.mode, input.question, input.outputDepth);
         const canonicalReading = synthesis.integratedNarrative.join("\n\n");
         const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context, canonicalReading);
         return { ...interpretation, synthesis };
