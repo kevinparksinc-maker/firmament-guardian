@@ -19,6 +19,7 @@ describe("canonical mini-reading wiring", () => {
     expect(energy).toContain("contactReading.mutate(");
     expect(energy).not.toContain("function interpretContact(");
     expect(energy).not.toContain("const PLANET_THEMES:");
+    expect(energy).toContain("let list = [...energyData.contacts]");
   });
 
   it("keeps long focused contact prompts and honest audit labels", () => {
@@ -34,6 +35,8 @@ describe("canonical mini-reading wiring", () => {
     const mini = source("../../../client/src/components/CanonicalMiniReadings.tsx");
     const energy = source("../../../client/src/pages/EnergyPage.tsx");
     expect(mini).toContain("reading.data?.focus === activeFocus");
+    expect(mini).toContain("reading.data?.outputDepth === depth");
+    expect(mini).toContain("requestedDepth === depth");
     expect(energy).toContain("contactReading.data?.focus === contactFocus(c)");
   });
 
