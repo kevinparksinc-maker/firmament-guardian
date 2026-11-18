@@ -32,7 +32,7 @@ function systemPromptFromLastCall() {
 beforeEach(() => {
   mocked.invokeLLM.mockReset();
   mocked.invokeLLM.mockResolvedValue({
-    choices: [{ message: { role: "assistant", content: "A concise synthetic interpretation response." } }],
+    choices: [{ message: { role: "assistant", content: "You have a clearly documented synthetic chart pattern to consider, and the interpreter must work with the supplied planetary evidence rather than create new chart details. The test response connects its central evidence to a practical conclusion, recognizes that the original question matters, and explains why a coherent response needs more than a generic statement about personality or timing." } }],
   });
 });
 

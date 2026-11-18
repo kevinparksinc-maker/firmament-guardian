@@ -71,6 +71,8 @@ describe("Hybrid Zodiac constants and overlays", () => {
   it("marks the documented Dallas profile as the validation case", async () => {
     const result = await calculateChart({ location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797, timezone: "America/Chicago", date: "1986-11-20", time: "10:06" });
     expect(result.validation.passed).toBe(true);
-    expect(result.frozenStars.find(row => row.name === "Hamal")?.display).toBe("Aries 12°56′");
+    // Symbolic zodiac-star anchors are not measured equatorial RA.
+    expect(result.frozenStars).toEqual([]);
+    expect(result.validation.notes.join(" ")).toContain("symbolic fixed-star positions");
   });
 });

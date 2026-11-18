@@ -88,7 +88,7 @@ describe("interpretation.generate knowledge gateway integration", () => {
     mocked.invokeLLM.mockResolvedValue({
       choices: [
         {
-          message: { role: "assistant", content: "not a valid plan" },
+          message: { role: "assistant", content: "You are examining a synthetic chart whose relationship evidence can be followed from the provided calculation packet. The interpreter must connect the chart factors that are actually present, distinguish computed evidence from possible symbolism, and avoid inventing placements or timing. The useful outcome is a focused relationship interpretation showing the evidence, its likely meaning, and what you can do with it." },
           finish_reason: "stop",
         },
       ],

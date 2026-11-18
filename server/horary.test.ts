@@ -163,7 +163,8 @@ describe("horary astrology", () => {
 
   it("sends calculated astrology evidence and the translated clarity standard to the existing LLM adapter", async () => {
     const result = await openHoraryQuestion(sampleInput);
-    const messages = mocked.invokeLLM.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
+    // Master synthesis may call the adapter first. Inspect the final horary request.
+    const messages = mocked.invokeLLM.mock.calls.at(-1)![0].messages as Array<{ role: string; content: string }>;
 
     expect(result.reading).toContain("evidence-led horary reading");
     expect(messages[0].content).toContain("THE FIRMAMENT — MASTER AI HORARY INTERPRETER");
@@ -190,7 +191,7 @@ describe("horary astrology", () => {
   });
 
   it("returns a deterministic core judgment when optional language synthesis fails", async () => {
-    mocked.invokeLLM.mockRejectedValueOnce(new Error("provider unavailable"));
+    mocked.invokeLLM.mockRejectedValue(new Error("provider unavailable"));
 
     const result = await openHoraryQuestion(sampleInput);
 
