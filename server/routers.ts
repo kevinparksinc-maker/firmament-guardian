@@ -304,6 +304,27 @@ export const appRouter = router({
         const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context, canonicalReading);
         return { ...interpretation, synthesis };
       }),
+    miniReading: publicProcedure
+      .input(chartResultInput.extend({
+        mode: z.enum(["natal", "transit", "combined"]).default("combined"),
+        focus: z.string().trim().min(1).max(300),
+        outputDepth: z.enum(["quick", "mini", "standard", "full"]).default("mini"),
+      }))
+      .mutation(async ({ input }) => {
+        // All methods are evaluated by the canonical bridge. Focus and depth
+        // influence only synthesis emphasis and final narrative length.
+        const { synthesis } = await synthesizeChartForReading(
+          input.chart, input.mode, input.focus, input.outputDepth
+        );
+        return {
+          snapshotId: synthesis.snapshotId,
+          focus: input.focus,
+          outputDepth: input.outputDepth,
+          reading: synthesis.integratedNarrative.join("\n\n"),
+          methodLedgerSummary: synthesis.methodLedgerSummary,
+          qualityAudit: synthesis.qualityAudit,
+        };
+      }),
     masterSynthesize: publicProcedure
       .input(
         chartInput.extend({
