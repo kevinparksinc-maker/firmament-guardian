@@ -192,6 +192,23 @@ describe("focused contact interpretation", () => {
   });
 });
 
+describe("star interpretation provider outage", () => {
+  it("retains the fixed-star calculation, Canon and provenance instead of showing HTTP 429", async () => {
+    const chart = await calculateChart(input);
+    vi.mocked(invokeLLM).mockRejectedValueOnce(
+      new Error("AI_PROVIDERS_FAILED: gemini GEMINI_RATE_LIMIT: HTTP 429")
+    );
+    const reading = await buildFocusedReading(chart, {
+      kind: "star", name: "Sirius", layer: "natal",
+    }, true);
+    expect(reading.synthesisUnavailable).toBe(true);
+    expect(reading.evidence.some(item => item.id === "star-Sirius")).toBe(true);
+    expect(section(reading, "star-meaning")?.paragraphs.length).toBeGreaterThan(0);
+    expect(reading.sourceNotes.length).toBeGreaterThan(0);
+    expect(JSON.stringify(reading)).not.toContain("AI_PROVIDERS_FAILED");
+  });
+});
+
 describe("provider outage fallback for a clicked aspect", () => {
   it("shows calculated transit contact and local meaning instead of Gemini 429", async () => {
     const chart = await calculateChart(input);
