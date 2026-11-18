@@ -6,6 +6,7 @@
  * share the same planetary longitude and must never be counted twice.
  */
 import type { ChartResult, ChartRow } from "./astronomy";
+import type { UnifiedMasterChartSnapshot } from "./masterChart/types";
 
 export type ThreeChartReadingMode = "natal" | "transit" | "combined";
 
@@ -29,7 +30,7 @@ function placement(row: ChartRow) {
 }
 
 /** Assemble three related views without inventing or re-calculating positions. */
-export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartReadingMode) {
+export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartReadingMode, snapshot?: UnifiedMasterChartSnapshot) {
   const live = mode !== "natal";
   const birth = [
     ...chart.movingBodies,
@@ -37,9 +38,17 @@ export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartRea
     chart.southNode,
   ];
   const natal = birth.map(placement);
-  const current = live ? chart.transits.map(placement) : [];
+  const current = live ? (snapshot?.transit?.planets ?? chart.transits).map(placement) : [];
   const contacts = live
-    ? chart.transits.flatMap(row => [
+    ? (snapshot?.transit?.aspectsToNatal?.length
+        ? snapshot.transit.aspectsToNatal.map(contact => ({
+            from: contact.transitBody,
+            to: contact.natalBody,
+            aspect: contact.aspect,
+            orb: contact.orb,
+            weight: 1,
+          }))
+        : chart.transits.flatMap(row => [
         ...row.natalContacts.map(contact => ({
           from: row.name,
           to: contact.natalName,
@@ -54,7 +63,7 @@ export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartRea
           orb: contact.orb,
           weight: contact.weightMultiplier,
         })),
-      ])
+      ]))
     : [];
   return {
     kind: "horary-style-three-chart-testimony" as const,
@@ -71,7 +80,7 @@ export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartRea
     },
     currentGod: live
       ? {
-          instantUtc: chart.transitDate,
+          instantUtc: snapshot?.transit?.transitInstantUtc ?? chart.transitDate,
           placements: current.map(({ body, longitude, godHouse }) => ({ body, longitude, house: godHouse })),
         }
       : null,
