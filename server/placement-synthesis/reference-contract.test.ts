@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PLACEMENT_METHODS } from "./registry";
-import { buildPlacementPacket } from "./orchestrator";
 import { MINI_SYNTHESIS_STYLE } from "../master-interpreter";
 
 // A source-level regression lock: do not silently rewrite the reference
