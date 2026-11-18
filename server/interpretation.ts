@@ -1015,12 +1015,13 @@ export async function generateInterpretation(
   chart: ChartResult,
   mode: ReadingMode = "combined",
   question = "What should I understand from this chart?",
-  synthesisContext = ""
+  synthesisContext = "",
+  canonicalReading?: string
 ) {
   const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
   const intelligence = `${buildChartMap(chart, mode)}\n\n${formatEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
   const analysis = await analyzeChart(chart, mode, evidencePacket, synthesisContext);
-  const reading = await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis, synthesisContext);
+  const reading = canonicalReading ?? await generateLifeStoryReading(chart, mode, evidencePacket, question, analysis, synthesisContext);
   return {
     intelligence,
     evidencePacket,
