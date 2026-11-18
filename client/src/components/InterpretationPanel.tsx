@@ -106,7 +106,7 @@ function saveCachedReading(
   question = ""
 ) {
   if (!interpretation) return;
-  const key = getReadingCacheKey(chart, mode);
+  const key = getReadingCacheKey(chart, mode, question);
   const payload = { interpretation, messages };
   READING_MEMORY_CACHE.set(key, payload);
   try {
@@ -250,7 +250,7 @@ function InterpretationPanelInner({
     () => loadCachedReading(chart, initialMode, initialQuestion)?.interpretation ?? null
   );
   const [messages, setMessages] = useState<Message[]>(
-    () => loadCachedReading(chart, initialMode)?.messages ?? []
+    () => loadCachedReading(chart, initialMode, initialQuestion)?.messages ?? []
   );
   const [isGeneratingReading, setIsGeneratingReading] = useState(false);
   const [collapsedChapters, setCollapsedChapters] = useState<
@@ -266,7 +266,7 @@ function InterpretationPanelInner({
       prevInitialModeRef.current = initialMode;
       if (!isGeneratingReading && initialMode !== mode) {
         setMode(initialMode);
-        const cached = loadCachedReading(chart, initialMode);
+        const cached = loadCachedReading(chart, initialMode, initialQuestion);
         setInterpretation(cached?.interpretation ?? null);
         setMessages(cached?.messages ?? []);
       }
@@ -1098,5 +1098,5 @@ function InterpretationPanelInner({
 
 /** Remount reading state when the canonical chart identity changes. */
 export function InterpretationPanel(props: Parameters<typeof InterpretationPanelInner>[0]) {
-  return <InterpretationPanelInner key={getReadingCacheKey(props.chart, props.initialMode ?? "combined")} {...props} />;
+  return <InterpretationPanelInner key={getReadingCacheKey(props.chart, props.initialMode ?? "combined", props.initialQuestion ?? "")} {...props} />;
 }
