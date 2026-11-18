@@ -67,11 +67,16 @@ export function FocusedPlacementReading({
         },
         onError: error => {
           if (current === version.current) {
+            // Preserve an actionable message without exposing provider stack
+            // details, request bodies, quota errors or internal chart payloads.
+            const rawMessage = error.message || "";
+            const diagnosis = rawMessage.match(/\b(?:MASTER_[A-Z_]+|TRANSIT_[A-Z_]+|FOCUSED_[A-Z_]+|AI_PROVIDERS_FAILED|AI_FREE_PROVIDER_UNCONFIGURED):/)?.[0];
             setError(
-              layer === "natal" && kind === "placement"
-                ? "The placement reading could not load. Try again."
-                : error.message
+              /Master Chart mismatch|TRANSIT_FRAMEWORK_MISSING|FOCUSED_MOMENT_INVALID|no supported contact/.test(rawMessage)
+                ? "The selected calculation could not be verified. Refresh the chart or the 24-hour curve and try again."
+                : "This interpretation could not be completed. Your original chart has not been changed. Try again."
             );
+            if (diagnosis) console.warn("[FocusedPlacementReading] Request failed", diagnosis);
             setLoading(false);
           }
         },
@@ -118,7 +123,9 @@ export function FocusedPlacementReading({
           )}
           {reading.synthesisUnavailable && (
             <div role="status" className="space-y-2 text-sm text-slate-300">
-              <p>The written synthesis is temporarily unavailable. Your calculated findings are below.</p>
+              <p>{reading.miniNarrative
+                ? "The full AI synthesis is temporarily unavailable. The explanation above uses the locally calculated aspect rules; detailed Canon evidence is below."
+                : "The AI synthesis is temporarily unavailable. Your calculated findings and Canon remain available below."}</p>
               <button
                 type="button"
                 onClick={() => setRetry(value => value + 1)}
