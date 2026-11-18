@@ -21,6 +21,15 @@ describe("canonical mini-reading wiring", () => {
     expect(energy).not.toContain("const PLANET_THEMES:");
   });
 
+  it("keeps long focused contact prompts and honest audit labels", () => {
+    const router = source("../../routers.ts");
+    const mini = source("../../../client/src/components/CanonicalMiniReadings.tsx");
+    expect(router).toContain('focus: z.string().trim().min(1).max(2000)');
+    expect(mini).toContain("reading.reset()");
+    expect(mini).toContain("AI narrative coverage not independently verified");
+    expect(mini).not.toContain('Theme coverage: {reading.data.qualityAudit.passed ? "complete"');
+  });
+
   it("reuses calculated event snapshots for repeated requests", () => {
     const builder = source("../../masterChart/builder.ts");
     expect(builder).toContain("eventSnapshotCache.get(key)");
