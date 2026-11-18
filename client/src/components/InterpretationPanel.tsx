@@ -259,7 +259,9 @@ function InterpretationPanelInner({
 
   useEffect(() => {
     setActiveQuestion(initialQuestion);
-  }, [initialQuestion]);
+    setInterpretation(loadCachedReading(chart, initialMode, initialQuestion)?.interpretation ?? null);
+    setMessages(loadCachedReading(chart, initialMode, initialQuestion)?.messages ?? []);
+  }, [chart, initialMode, initialQuestion]);
 
   useEffect(() => {
     if (prevInitialModeRef.current !== initialMode) {
