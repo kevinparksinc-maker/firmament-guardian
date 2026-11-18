@@ -40,7 +40,7 @@ export async function synthesizeChartForReading(
   const synthesis = await synthesizeMasterReading({ snapshot, readingMode: mode, userQuestion: question, outputDepth });
   const context = [
     `UNIFIED MASTER SYNTHESIS — SNAPSHOT ${synthesis.snapshotId}`,
-    `Computed methods: ${synthesis.methodLedgerSummary.computedWithResult} / ${synthesis.methodLedgerSummary.totalEvaluated}; quality audit: ${synthesis.qualityAudit.passed ? "passed" : "incomplete"}.`,
+    `Computed methods: ${synthesis.methodLedgerSummary.computedWithResult} / ${synthesis.methodLedgerSummary.totalEvaluated}; pre-AI evidence linkage audit: ${synthesis.qualityAudit.passed ? "passed" : "incomplete"}. Final AI narrative coverage has not been independently verified.`,
     `Dominant conclusion: ${synthesis.dominantConclusion}`,
     `FULL CANONICAL INTERPRETATION (preserve and deepen, do not contradict): ${synthesis.integratedNarrative.join("\n\n")}`, 
     ...synthesis.themes.map(theme => `Theme ${theme.humanTheme}: ${theme.primaryConclusion}; evidence ${theme.evidenceIds.join(", ")}`),
