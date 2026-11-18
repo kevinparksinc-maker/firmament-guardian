@@ -47,3 +47,56 @@ it("keeps every Moon finding and linked calculation in the serialized focused re
   // long chart-wide prose that creates provider 413 request-size failures.
   expect(content.length).toBeLessThan(16_000);
 });
+
+it("keeps both bodies of a transit contact and the full method registry without sending unrelated Mars detail", async () => {
+  vi.mocked(invokeLLM).mockClear();
+  const bodies = ["Moon", "Mercury", "Mars"];
+  const synthesis = {
+    snapshotId: "contact-snapshot",
+    methodOutcomes: [
+      {
+        methodId: "planetary-aspects", methodName: "Aspects",
+        status: "computed-with-result", frame: "agent",
+        findingJudgments: bodies.map(name => ({
+          id: `judgment-${name}`, subject: name,
+          evidenceIds: [`evidence-${name}`],
+          judgment: `Interpret ${name} based on its calculated position.`,
+        })),
+        calculatedFindings: bodies.map(name => ({
+          evidenceId: `evidence-${name}`,
+          label: `${name} placement`, calculatedValue: `${name} chart coordinates`,
+        })),
+      },
+      {
+        methodId: "fixed-stars-royal-watchers", methodName: "Fixed Stars",
+        status: "not-calculated", frame: "agent",
+        findingJudgments: [], calculatedFindings: [],
+      },
+    ],
+    sourceSnapshot: { methodExecutionLedger: [
+      { id: "planetary-aspects", status: "computed-with-result" },
+      { id: "fixed-stars-royal-watchers", status: "not-calculated" },
+    ] },
+  } as unknown as SynthesisResult;
+
+  await runInterpretation("FOCUSED_MINI", synthesis, {
+    messages: [{ role: "user", content: "Moon trine natal Mercury" }],
+  }, { focusedPlacement: "Moon|Mercury" });
+  const messages = vi.mocked(invokeLLM).mock.calls.at(-1)![0].messages;
+  const serialized = messages.map(m => m.content).find(
+    value => typeof value === "string" && value.startsWith("FOCUSED PLACEMENT DOSSIER.")
+  );
+  if (typeof serialized !== "string") throw new Error("Missing contact dossier");
+  const [packet] = decodeEvidence(JSON.parse(serialized.slice(serialized.indexOf("\n") + 1))) as Array<{
+    coverage: { methodsIncluded: number };
+    methods: Array<[string, string, string, string, Array<[string]>, Array<[string]>]>;
+  }>;
+  expect(packet.coverage.methodsIncluded).toBe(2);
+  expect(packet.methods.map(method => method[0])).toEqual([
+    "planetary-aspects", "fixed-stars-royal-watchers",
+  ]);
+  expect(packet.methods[0][4].map(j => j[0])).toEqual(["judgment-Moon", "judgment-Mercury"]);
+  expect(packet.methods[0][5].map(c => c[0])).toEqual(["evidence-Moon", "evidence-Mercury"]);
+  expect(serialized).not.toContain("judgment-Mars");
+  expect(serialized.length).toBeLessThan(16_000);
+});
