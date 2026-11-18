@@ -17,6 +17,7 @@ import { interactiveNatalChat } from "./interactiveNatalCompanion";
 import { calculateHarmonicForecast } from "./harmonicForecast";
 import { buildVimshottariTimeline, getAshtakavargaVisual } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
 import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
+import { calculateVedicStrength } from "./astrologyKnowledge/vedic/strength";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { z } from "zod";
 import { checkAccountRateLimit, getAccountAvailability, loginAccount, registerAccount } from "./accountAuth";
@@ -313,6 +314,11 @@ export const appRouter = router({
       }),
   }),
   vedic: router({
+    // Pure numeric computation. This must never depend on an AI provider or
+    // wait for full-chart mini readings to finish.
+    strength: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => calculateVedicStrength(input.chart)),
     ashtakavargaVisual: publicProcedure
       .input(chartResultInput)
       .query(({ input }) => getAshtakavargaVisual(input.chart)),
