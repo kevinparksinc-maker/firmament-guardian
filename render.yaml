@@ -12,7 +12,15 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      # Primary interpreter and automatic downstream fallbacks.
+      # Secrets must be populated on Render: the blueprint cannot supply them.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
       - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
         sync: false
       - key: GROQ_MODEL
         value: openai/gpt-oss-120b
