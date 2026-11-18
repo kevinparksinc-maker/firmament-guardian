@@ -1,8 +1,9 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: [main, fix/acif-equatorial-coordinate-contract]
   pull_request:
+  workflow_dispatch:
 jobs:
   check:
     runs-on: ubuntu-latest
