@@ -307,7 +307,7 @@ export const appRouter = router({
     miniReading: publicProcedure
       .input(chartResultInput.extend({
         mode: z.enum(["natal", "transit", "combined"]).default("combined"),
-        focus: z.string().trim().min(1).max(300),
+        focus: z.string().trim().min(1).max(2000),
         outputDepth: z.enum(["quick", "mini", "standard", "full"]).default("mini"),
       }))
       .mutation(async ({ input }) => {
