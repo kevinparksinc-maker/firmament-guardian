@@ -60,14 +60,18 @@ export function FocusedPlacementReading({
       {
         onSuccess: data => {
           if (current === version.current) {
-            cache.current.set(key, data);
+            if (!data.synthesisUnavailable) cache.current.set(key, data);
             setReading(data);
             setLoading(false);
           }
         },
         onError: error => {
           if (current === version.current) {
-            setError(error.message);
+            setError(
+              layer === "natal" && kind === "placement"
+                ? "The placement reading could not load. Try again."
+                : error.message
+            );
             setLoading(false);
           }
         },
@@ -112,7 +116,19 @@ export function FocusedPlacementReading({
           {reading.miniNarrative && (
             <p className="text-sm leading-7 text-slate-100">{readingProse(reading.miniNarrative)}</p>
           )}
-          <details className="rounded-xl border border-white/10 p-3 text-xs text-slate-300">
+          {reading.synthesisUnavailable && (
+            <div role="status" className="space-y-2 text-sm text-slate-300">
+              <p>The written synthesis is temporarily unavailable. Your calculated findings are below.</p>
+              <button
+                type="button"
+                onClick={() => setRetry(value => value + 1)}
+                className="underline"
+              >
+                Retry written synthesis
+              </button>
+            </div>
+          )}
+          <details open={reading.synthesisUnavailable} className="rounded-xl border border-white/10 p-3 text-xs text-slate-300">
               <summary className="cursor-pointer text-cyan-200">Calculated findings and Canon</summary>
               <div className="mt-4 space-y-5">
                 {reading.sections.map(section => (

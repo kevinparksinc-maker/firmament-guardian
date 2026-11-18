@@ -1,3 +1,4 @@
+import { useIsMobile } from "@/hooks/useMobile";
 import React, { useState, useMemo } from "react";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
@@ -126,6 +127,7 @@ function getDignityBadge(planetName: string, sign: string): { label: string; col
 }
 
 export function CompletePlacementsTable({ chart }: { chart: ChartResult }) {
+  const isMobile = useIsMobile();
   const [filter, setFilter] = useState<"all" | "personal" | "outer" | "angles">("all");
   const [expandedPlanet, setExpandedPlanet] = useState<string | null>(null);
 
@@ -332,7 +334,7 @@ export function CompletePlacementsTable({ chart }: { chart: ChartResult }) {
                             {PLANET_DESCRIPTIONS[row.name] || ""} In {sign}, this energy expresses with {elInfo?.element.toLowerCase()} and {elInfo?.modality.toLowerCase()} qualities, focusing directly into your {HOUSE_THEMES[row.agentHouse ?? row.house]?.toLowerCase()}.
                           </p>
 
-                          <FocusedPlacementReading chart={chart} name={row.name} />
+                          {!isMobile && <FocusedPlacementReading chart={chart} name={row.name} />}
                         </div>
                       </td>
                     </tr>
@@ -413,7 +415,7 @@ export function CompletePlacementsTable({ chart }: { chart: ChartResult }) {
                   <p className="text-xs text-slate-300 leading-relaxed">
                     {PLANET_DESCRIPTIONS[row.name] || ""} Governs {HOUSE_THEMES[row.agentHouse ?? row.house]?.toLowerCase()}.
                   </p>
-                  <FocusedPlacementReading chart={chart} name={row.name} />
+                  {isMobile && <FocusedPlacementReading chart={chart} name={row.name} />}
                 </div>
               )}
             </div>

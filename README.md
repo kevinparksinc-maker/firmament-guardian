@@ -66,7 +66,7 @@ Configure server-only keys for the providers you want enabled. Shared interpreta
 
 | Provider | Key | Model setting |
 | --- | --- | --- |
-| Gemini | `GEMINI_API_KEY` | `GEMINI_MODEL` (default `gemini-2.5-flash`) |
+| Gemini | `GEMINI_API_KEY` | `GEMINI_MODEL` (default `gemini-3.5-flash`) |
 | Groq | `GROQ_API_KEY` | `GROQ_MODEL` (default `llama-3.3-70b-versatile`; example config chooses `openai/gpt-oss-120b`) |
 | OpenRouter | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` (default `openrouter/free`) |
 

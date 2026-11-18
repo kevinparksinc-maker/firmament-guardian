@@ -67,6 +67,7 @@ export type FocusTarget = {
 export type FocusedReading = {
   title: string;
   miniNarrative?: string;
+  synthesisUnavailable?: true;
   snapshotId: string;
   moment: string;
   sections: Array<{
@@ -592,8 +593,18 @@ export async function buildFocusedReading(
       "This is the selected transit moment. Event-house meanings describe current context; natal personality and life-history claims are not inferred from a temporary transit placement."
     );
   }
-  if (includeMiniNarrative)
-    reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
+  if (includeMiniNarrative) {
+    try {
+      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
+    } catch (error) {
+      if (target.layer !== "natal") throw error;
+      const message = error instanceof Error ? error.message : "";
+      const code = message.match(/^[A-Z][A-Z_]+:/)?.[0] ?? "SYNTHESIS_FAILED:";
+      const status = message.match(/HTTP \d{3}/)?.[0];
+      console.warn("[focusedReading] Natal placement synthesis unavailable", code, status ?? "");
+      reading.synthesisUnavailable = true;
+    }
+  }
   return reading;
 }
 
@@ -622,7 +633,11 @@ export async function readFocusedPlacement(chart: ChartResult, target: FocusTarg
   focusedCache.set(key, { expiresAt: Date.now() + 30 * 60_000, reading });
   while (focusedCache.size > 32) focusedCache.delete(focusedCache.keys().next().value!);
   try {
-    return await reading;
+    const result = await reading;
+    if (result.synthesisUnavailable && focusedCache.get(key)?.reading === reading) {
+      focusedCache.delete(key);
+    }
+    return result;
   } catch (error) {
     if (focusedCache.get(key)?.reading === reading) focusedCache.delete(key);
     throw error;

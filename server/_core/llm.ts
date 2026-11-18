@@ -1,5 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
-import { ENV } from "./env";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { DEFAULT_GEMINI_MODEL, ENV } from "./env";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -563,7 +563,20 @@ const fetchWithBackoff = async (
 };
 
 async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
-  const model = ENV.geminiModel || "gemini-2.5-flash";
+  const model = ENV.geminiModel;
+  try {
+    return await invokeGeminiModel(params, model);
+  } catch (error) {
+    if (params.signal?.aborted || model === DEFAULT_GEMINI_MODEL ||
+        !(error instanceof Error) || error.message !== "GEMINI_REQUEST_FAILED: HTTP 404") {
+      throw error;
+    }
+    console.warn("[invokeGemini] Configured model returned HTTP 404. Trying the default Gemini model.");
+    return invokeGeminiModel(params, DEFAULT_GEMINI_MODEL);
+  }
+}
+
+async function invokeGeminiModel(params: InvokeParams, model: string): Promise<InvokeResult> {
   const timeoutMs = params.timeoutMs ?? LLM_REQUEST_TIMEOUT_MS;
   const ai = new GoogleGenAI({
     apiKey: ENV.geminiApiKey,
@@ -606,6 +619,9 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
           config: {
             maxOutputTokens: params.max_tokens ?? params.maxTokens ?? 4096,
             ...(model.startsWith("gemini-2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+            ...(model === DEFAULT_GEMINI_MODEL && !params.thinking && !params.reasoning
+              ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } }
+              : {}),
             ...(params.signal ? { abortSignal: params.signal } : {}),
             ...(systemInstruction ? { systemInstruction } : {}),
             ...(normalizedResponseFormat?.type === "json_object" || normalizedResponseFormat?.type === "json_schema"

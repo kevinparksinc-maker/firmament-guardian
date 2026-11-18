@@ -125,15 +125,6 @@ const routes: RouteCase[] = [
     () => caller.interpretation.chartBriefing({ chart }),
   ],
   [
-    "interpretation.focusedPlacement placement",
-    1,
-    () =>
-      caller.interpretation.focusedPlacement({
-        chart,
-        target: { kind: "placement", name: "Moon", layer: "natal" },
-      }),
-  ],
-  [
     "interpretation.focusedPlacement star",
     1,
     () =>
@@ -295,6 +286,14 @@ const routes: RouteCase[] = [
   ],
 ];
 
+function routeEvidencePacket(): string {
+  const message = vi.mocked(invokeLLM).mock.calls[0][0].messages.find(
+    message => message.role === "user" && String(message.content).startsWith("{")
+  );
+  expect(message).toBeDefined();
+  return String(message!.content);
+}
+
 function expectCompleteDossiers(count: number) {
   const calls = vi.mocked(invokeLLM).mock.calls;
   expect(calls).toHaveLength(1);
@@ -331,6 +330,47 @@ describe("user-facing tRPC interpretation routes", () => {
     20_000
   );
 
+  it.each([
+    "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
+    "Uranus", "Neptune", "Pluto", "Ascendant", "Descendant", "North Node", "South Node",
+  ])("returns a focused reading for %s in the placement inventory", async name => {
+    const prose = "You notice changes in the way people respond to you, and you remember the moments when their actions line up with their words. Let those moments tell you where trust has room to grow.";
+    vi.mocked(invokeLLM).mockResolvedValueOnce({
+      choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: prose } }],
+    } as Awaited<ReturnType<typeof invokeLLM>>);
+    const reading = await caller.interpretation.focusedPlacement({
+      chart,
+      target: { kind: "placement", name, layer: "natal" },
+    });
+    expect(reading.title).toBe(`Natal ${name}`);
+    expect(reading.miniNarrative).toBe(prose);
+    expect(reading.sections.length).toBeGreaterThan(0);
+    expect(reading.evidence.some(item => item.id === `placement-${name}`)).toBe(true);
+    expectCompleteDossiers(1);
+  }, 20_000);
+
+  it("keeps Moon findings after a Gemini 404 and generates synthesis on retry", async () => {
+    const input = { chart: target, target: { kind: "placement", name: "Moon", layer: "natal" } } as const;
+    vi.mocked(invokeLLM).mockRejectedValueOnce(
+      new Error("AI_PROVIDERS_FAILED: gemini GEMINI_REQUEST_FAILED: HTTP 404"),
+    );
+    const partial = await caller.interpretation.focusedPlacement(input);
+    expect(partial.synthesisUnavailable).toBe(true);
+    expect(partial.miniNarrative).toBeUndefined();
+    expect(partial.sections.length).toBeGreaterThan(0);
+    expect(partial.evidence.some(item => item.id === "placement-Moon")).toBe(true);
+    expectCompleteDossiers(1);
+
+    const prose = "You feel the shift when somebody stops making an effort to meet you halfway. Ask them plainly what they are willing to give before you take on the whole weight of keeping the connection alive.";
+    vi.mocked(invokeLLM).mockResolvedValueOnce({
+      choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: prose } }],
+    } as Awaited<ReturnType<typeof invokeLLM>>);
+    const recovered = await caller.interpretation.focusedPlacement(input);
+    expect(recovered.synthesisUnavailable).toBeUndefined();
+    expect(recovered.miniNarrative).toBe(prose);
+    expect(recovered.evidence).toEqual(partial.evidence);
+  }, 20_000);
+
   it("reads the selected Synastry Studio contact using both verified charts and the Studio contact list", async () => {
     const studio = computeSynastry(target, chart);
     const focus = studio.aspects[0];
@@ -355,7 +395,7 @@ describe("user-facing tRPC interpretation routes", () => {
     expectCompleteDossiers(2);
     const packet = decodeEvidence(
       JSON.parse(
-        String(vi.mocked(invokeLLM).mock.calls[0][0].messages[1].content)
+        routeEvidencePacket()
       )
     ) as {
       studio: typeof studio;
@@ -395,7 +435,7 @@ describe("user-facing tRPC interpretation routes", () => {
       expectCompleteDossiers(1);
       const packet = decodeEvidence(
         JSON.parse(
-          String(vi.mocked(invokeLLM).mock.calls[0][0].messages[1].content)
+          routeEvidencePacket()
         )
       ) as { contact?: typeof contact };
       expect(packet.contact).toEqual(contactId ? contact : undefined);
@@ -423,8 +463,11 @@ describe("user-facing tRPC interpretation routes", () => {
       caller.interpretation.host({ chart: forecast, mode: "transit", question })
     ).rejects.toThrow(providerError);
     expectCompleteDossiers(1);
-    const [system] = vi.mocked(invokeLLM).mock.calls[0][0].messages;
-    expect(system.content).toContain(
+    const system = vi.mocked(invokeLLM).mock.calls[0][0].messages
+      .filter(message => message.role === "system")
+      .map(message => message.content)
+      .join("\n");
+    expect(system).toContain(
       `Selected transit instant: ${forecast.transitDate}`
     );
     expect(forecast.transitDate).not.toEqual(chart.transitDate);
