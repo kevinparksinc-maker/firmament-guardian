@@ -106,16 +106,40 @@ export async function getMasterNatalChart(
 }
 
 /**
- * Single chart entry point for all reading outputs. Natal requests reuse the
- * same versioned foundation; transit/combined requests use their event inputs.
- * Consumers must interpret this snapshot, never independently recalculate it.
+ * One authoritative snapshot for every reading of the same explicit chart
+ * inputs. The natal foundation has its own long-lived cache; transit/combined
+ * snapshots are reused briefly to avoid recomputing the entire method ledger
+ * for each mini-reading click. The cache key includes transit instant,
+ * location, worldview, XYZ inputs and calculation version.
  */
+const EVENT_CACHE_LIMIT = 32;
+const EVENT_CACHE_TTL_MS = 30_000;
+const eventSnapshotCache = new Map<string, { expiresAt: number; pending: Promise<UnifiedMasterChartSnapshot> }>();
+
 export function getCanonicalReadingChart(
   input: MasterChartInput
 ): Promise<UnifiedMasterChartSnapshot> {
-  return (input.mode ?? "natal") === "natal"
-    ? getMasterNatalChart(input)
-    : buildUnifiedMasterChart(input);
+  if ((input.mode ?? "natal") === "natal") return getMasterNatalChart(input);
+  const key = computeSnapshotId(input, "firmament-master-2026.1");
+  const now = Date.now();
+  const existing = eventSnapshotCache.get(key);
+  if (existing && existing.expiresAt > now) {
+    eventSnapshotCache.delete(key);
+    eventSnapshotCache.set(key, existing);
+    return existing.pending;
+  }
+  eventSnapshotCache.delete(key);
+  const pending = buildUnifiedMasterChart(input);
+  eventSnapshotCache.set(key, { pending, expiresAt: now + EVENT_CACHE_TTL_MS });
+  while (eventSnapshotCache.size > EVENT_CACHE_LIMIT) {
+    const oldest = eventSnapshotCache.keys().next().value;
+    if (oldest === undefined) break;
+    eventSnapshotCache.delete(oldest);
+  }
+  void pending.catch(() => {
+    if (eventSnapshotCache.get(key)?.pending === pending) eventSnapshotCache.delete(key);
+  });
+  return pending;
 }
 
 function getSign(longitude: number): string {
