@@ -23,6 +23,22 @@ export function HarmonicFlowTimeline({ chart }: { chart: ChartResult }) {
     hour: "numeric", minute: "2-digit", month: "short", day: "numeric",
   });
   const point = result?.points[selected];
+  const easing = point?.score?.challenging.map(contact => {
+    let previousOrb = contact.orb;
+    let widening: string | undefined;
+    let outside: string | undefined;
+    for (const sample of result!.points.slice(selected + 1)) {
+      if (!sample.score) break;
+      const next = sample.score.contacts.find(item => item.id === contact.id);
+      if (!next) {
+        outside = sample.moment;
+        break;
+      }
+      if (!widening && next.orb > previousOrb) widening = sample.moment;
+      previousOrb = next.orb;
+    }
+    return { contact, widening, outside };
+  });
   return <section aria-label="30-minute harmonic forecast" className="space-y-3 rounded-2xl border border-cyan-300/25 bg-slate-950/70 p-4">
     <h3 className="font-serif text-xl text-white">Personal Harmonic Flow Clock · Next 24 hours</h3>
     <p className="text-xs text-slate-300">49 calculated snapshots, every 30 minutes. Select or hover over a time for its score and contact evidence.</p>
@@ -42,6 +58,11 @@ export function HarmonicFlowTimeline({ chart }: { chart: ChartResult }) {
         {point.score ? <>
           <p>{point.score.signal} · Harmony {point.score.flowPct}% ({point.score.flowWeight} points) · Friction {point.score.frictionPct}% ({point.score.frictionWeight} points)</p>
           {point.score.tightest && <p>Closest contact: {point.score.tightest.transit} {point.score.tightest.aspect} natal {point.score.tightest.natal} · {point.score.tightest.orb.toFixed(2)}° orb · {point.score.tightest.strength} weighted points. Open the evidence below to compare the other contacts at this moment.</p>}
+          {Boolean(easing?.length) && <details><summary>When each friction contact eases</summary>
+            <ul>{easing?.map(({ contact, widening, outside }) => <li key={contact.id}>
+              {contact.transit} {contact.aspect} natal {contact.natal} · {widening ? `First wider sample ${format(widening)}` : "No wider sample observed"} · {outside ? `First sample outside orb ${format(outside)}` : "Exit unconfirmed in available samples"}
+            </li>)}</ul>
+          </details>}
           <details><summary className="cursor-pointer text-cyan-200">Contact evidence ({point.score.contactsCount})</summary>
             <ul className="mt-2 space-y-1 text-xs">{[...point.score.contacts].sort((a,b) => a.orb - b.orb).map(c => <li key={c.id}>{c.transit} {c.aspect} natal {c.natal} · {c.orb.toFixed(2)}° · {c.intensity}/5 · {c.stars} × {c.natalStars} × {c.majorFactor} · {c.strength} points</li>)}</ul>
           </details>

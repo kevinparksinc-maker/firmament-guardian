@@ -2,66 +2,12 @@ import { readingCacheIdentity } from "@shared/readingIdentity";
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
+import { calculateEnergyRead } from "@/lib/energyScoring";
 import { Link } from "wouter";
 
 interface Props {
   chart: ChartResult | null;
   className?: string;
-}
-const TYPES: Record<string, { kind: "flow" | "friction"; factor: number }> = {
-  conjunction: { kind: "flow", factor: 1 },
-  semisextile: { kind: "flow", factor: 0.5 },
-  sextile: { kind: "flow", factor: 0.5 },
-  trine: { kind: "flow", factor: 1 },
-  semisquare: { kind: "friction", factor: 0.5 },
-  square: { kind: "friction", factor: 1 },
-  quincunx: { kind: "friction", factor: 0.5 },
-  opposition: { kind: "friction", factor: 1 },
-};
-const STARS: Record<string, number> = {
-  Sun: 5,
-  Moon: 5,
-  Mars: 5,
-  Jupiter: 5,
-  Saturn: 5,
-  Pluto: 5,
-  Mercury: 4,
-  Neptune: 4,
-  Venus: 3,
-  Uranus: 3,
-};
-type Contact = {
-  transit: string;
-  natal: string;
-  aspect: string;
-  orb: number;
-  kind: "flow" | "friction";
-  weight: number;
-};
-function contactsFor(chart: ChartResult): Contact[] {
-  const contacts: Contact[] = [];
-  for (const t of chart.transits) {
-    for (const c of [
-      ...(t.natalContacts || []),
-      ...(t.minorNatalContacts || []),
-    ]) {
-      const rule = TYPES[c.aspect];
-      if (!rule || c.orb > 5) continue;
-      contacts.push({
-        transit: t.name,
-        natal: c.natalName,
-        aspect: c.aspect,
-        orb: c.orb,
-        kind: rule.kind,
-        weight:
-          rule.factor *
-          Math.max(1, 5 - Math.floor(c.orb)) *
-          (STARS[t.name] ?? 3) *
-          (STARS[c.natalName] ?? 3),
-      });
-    }
-  }
-  return contacts.sort((a, b) => b.weight - a.weight);
 }
 export function TransitWeatherTimeline({ chart, className = "" }: Props) {
   const [selected, setSelected] = useState(0);
@@ -78,7 +24,7 @@ export function TransitWeatherTimeline({ chart, className = "" }: Props) {
     try {
       const text = await reading.mutateAsync({
         chart: selectedChart,
-        mode: "transit",
+        mode: "combined",
         question:
           "Interpret the personal transit patterns at this selected forecast moment.",
       });
@@ -148,14 +94,8 @@ export function TransitWeatherTimeline({ chart, className = "" }: Props) {
       active = false;
     };
   }, [chart, key, day, cached]);
-  const contacts = cached ? contactsFor(cached) : [];
-  const flow = contacts
-    .filter(c => c.kind === "flow")
-    .reduce((a, c) => a + c.weight, 0);
-  const friction = contacts
-    .filter(c => c.kind === "friction")
-    .reduce((a, c) => a + c.weight, 0);
-  const total = flow + friction;
+  const score = calculateEnergyRead(cached);
+  const contacts = [...(score?.contacts ?? [])].sort((a, b) => b.strength - a.strength);
   return (
     <section
       className={`space-y-4 ${className}`}
@@ -221,7 +161,7 @@ export function TransitWeatherTimeline({ chart, className = "" }: Props) {
               <p className="text-sm text-slate-200">
                 {contacts.length === 0
                   ? "No natal-transit contacts within the configured 5° orb at this moment."
-                  : `Weighted harmony ${Math.round((100 * flow) / total)}% · Friction ${Math.round((100 * friction) / total)}% · ${contacts.length} contacts`}
+                  : `Weighted harmony ${score?.flowPct}% · Friction ${score?.frictionPct}% · ${contacts.length} contacts`}
               </p>
               <div className="space-y-2">
                 {contacts.slice(0, 12).map((c, i) => (
@@ -234,13 +174,13 @@ export function TransitWeatherTimeline({ chart, className = "" }: Props) {
                     </span>
                     <span
                       className={
-                        c.kind === "flow"
+                        c.flow === 1
                           ? "text-emerald-300"
                           : "text-amber-300"
                       }
                     >
-                      {c.orb.toFixed(2)}° · {c.kind} · weight{" "}
-                      {c.weight.toFixed(1)}
+                      {c.orb.toFixed(2)}° · {c.flow === 1 ? "flow" : "friction"} · weight{" "}
+                      {c.strength.toFixed(1)}
                     </span>
                   </div>
                 ))}

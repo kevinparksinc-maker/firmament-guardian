@@ -46,6 +46,7 @@ function Router() {
       <Route path="/profiles" component={SavedProfilesPage} />
       <Route path="/reading/depth"><Home section="reading" /></Route>
       <Route path="/reading/evidence"><Home section="reading" /></Route>
+      <Route path="/energy/real-life"><Home section="energy" /></Route>
       <Route path="/energy/contacts"><Home section="energy" /></Route>
       <Route path="/energy/consultation"><Home section="energy" /></Route>
       <Route path="/forecast"><Home section="energy" /></Route>

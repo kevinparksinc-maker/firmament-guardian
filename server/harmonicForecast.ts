@@ -16,11 +16,11 @@ export async function calculateHarmonicForecast(input: ChartInput, start: string
     try {
       const chart = await calculateChart({ ...input, readingScope: "combined",
         transitDate: local.date, transitTime: local.time,
-        transitXYZPositions: undefined, transitSunriseAnchor: undefined, transitInstantUtc: undefined });
+        transitXYZPositions: undefined, transitSunriseAnchor: undefined, transitInstantUtc: moment.toISOString() });
       const score = calculateEnergyRead(chart)!;
       points.push({ moment: chart.transitDate, score, error: null });
     } catch (error) {
-      // Repeated or missing local times remain explicit gaps, never guessed samples.
+      // Preserve the failed instant so adjacent samples keep their positions.
       points.push({ moment: moment.toISOString(), score: null,
         error: error instanceof Error ? error.message : "Calculation unavailable" });
     }

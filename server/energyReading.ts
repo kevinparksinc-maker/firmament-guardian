@@ -46,15 +46,16 @@ export function validateEnergyReading(
     throw new Error(
       "ENERGY_SYNTHESIS_INCOMPLETE: Every method must be reviewed before output."
     );
-  const evidence = new Set(
-    synthesis.methodFindings.flatMap(method => method.evidenceIds)
-  );
+  const evidenceByMethod = new Map(synthesis.methodFindings.map(method => [method.id, new Set(method.evidenceIds)]));
   for (const paragraph of reading.paragraphs) {
     if (
       (contacts.size > 0 && paragraph.contactIds.length === 0) ||
       paragraph.contactIds.some(id => !contacts.has(id)) ||
       paragraph.methodIds.some(id => !methods.has(id)) ||
-      paragraph.evidenceIds.some(id => !evidence.has(id))
+      !paragraph.evidenceIds.some(id => id.startsWith("transit:")) ||
+      !paragraph.evidenceIds.some(id => !id.startsWith("transit:")) ||
+      paragraph.evidenceIds.some(id => !paragraph.methodIds.some(method => evidenceByMethod.get(method)?.has(id))) ||
+      paragraph.methodIds.some(method => !paragraph.evidenceIds.some(id => evidenceByMethod.get(method)?.has(id)))
     )
       throw new Error(
         "ENERGY_SYNTHESIS_UNGROUNDED: Reading cites unavailable contacts or methods."
@@ -109,7 +110,7 @@ export async function generateEnergyReading(chart: ChartResult) {
         role: "system",
         content: buildAstrologyInterpreterSystem(
           MINI_SYNTHESIS_STYLE,
-          `Write the final compact Energy overview: a sharp, plainspoken "headline" plus 3 flowing paragraphs (about 210–300 words total) in candid second-person prose ("you / your"). Start with the strongest pattern shaping today, show what you do when it kicks in, what you are protecting or trying to get, and how your reactions land on people around you. Give natural openings and ease the same weight as pressure or friction. Keep ALL astrology terminology out of "headline" and every paragraph's "text": never name planets, zodiac signs, houses, degrees, orbs, aspects, lunar mansions, decans, fixed stars, or Lots in reader-facing text—keep every calculated method, contact, and citation strictly in the JSON metadata IDs. Return JSON {"headline":"...","paragraphs":[{"text":"...","contactIds":["exact supplied contact ID"],"methodIds":["exact supplied method ID"],"evidenceIds":["exact calculated natal evidence ID","exact calculated transit: evidence ID"]}],"methodsReviewed":["every supplied method ID, including unavailable statuses"]}. Every paragraph must synthesize all relevant supplied layers and cite the exact calculated evidence IDs. Use independentSky as optional environmental context and keep its body-to-body contacts distinct from personal contactIds. When there are zero scored contacts, use empty contactIds and interpret the available method evidence without claiming a scored contact.`
+          `Write the final compact Energy overview: a sharp, plainspoken "headline" plus 3 flowing paragraphs (about 210–300 words total) in candid second-person prose ("you / your"). Start with the strongest pattern shaping today, show what you do when it kicks in, what you are protecting or trying to get, and how your reactions land on people around you. Give natural openings and ease the same weight as pressure or friction. Keep ALL astrology terminology out of "headline" and every paragraph's "text": never name planets, zodiac signs, houses, degrees, orbs, aspects, lunar mansions, decans, fixed stars, or Lots in reader-facing text—keep every calculated method, contact, and citation strictly in the JSON metadata IDs. Return JSON {"headline":"...","paragraphs":[{"text":"...","contactIds":["exact supplied contact ID"],"methodIds":["exact supplied method ID"],"evidenceIds":["exact calculated natal evidence ID","exact calculated transit: evidence ID"]}],"methodsReviewed":["every supplied method ID, including unavailable statuses"]}. Each cited method must own at least one cited evidence ID. Every paragraph must synthesize all relevant supplied layers and cite the exact calculated evidence IDs. Use independentSky as optional environmental context and keep its body-to-body contacts distinct from personal contactIds. When there are zero scored contacts, use empty contactIds and interpret the available method evidence without claiming a scored contact.`
         ),
       },
       {

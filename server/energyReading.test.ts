@@ -41,7 +41,7 @@ const bridge = {
       {
         id: "transit-activation-layer",
         findings: [],
-        evidenceIds: ["transit-test"],
+        evidenceIds: ["transit:test"],
       },
       { id: "elemental-decans", findings: [], evidenceIds: ["natal-test"] },
     ],
@@ -52,8 +52,8 @@ const output = () => ({
   paragraphs: Array.from({ length: 3 }, () => ({
     text: "This connected interpretation explains the supplied personal contact through its actual method findings and consequences.",
     contactIds: ["Moon-trine-Saturn", "Moon-square-Ascendant"],
-    methodIds: ["transit-activation-layer"],
-    evidenceIds: ["natal-test", "transit-test"],
+    methodIds: ["transit-activation-layer", "elemental-decans"],
+    evidenceIds: ["natal-test", "transit:test"],
   })),
   methodsReviewed: ["transit-activation-layer", "elemental-decans"],
 });
@@ -79,7 +79,7 @@ describe("Energy synthesis output pipeline", () => {
       vi.mocked(synthesizeChartForReading).mock.invocationCallOrder[0]
     ).toBeLessThan(vi.mocked(invokeLLM).mock.invocationCallOrder[0]);
     const payload = decodeEvidence(JSON.parse(
-      vi.mocked(invokeLLM).mock.calls[0][0].messages[1].content as string
+      vi.mocked(invokeLLM).mock.calls[0][0].messages.find(message => typeof message.content === "string" && message.content.startsWith("{") && message.content.includes("fixedStarsAndLots"))!.content as string
     )) as any;
     expect(payload.synthesis.methodFindings.map((m: {id:string})=>m.id)).toEqual(bridge.synthesis.methodFindings.map(m=>m.id));
     expect(payload.synthesis.canonApplications[0].ruleId).toBe("test-canon");

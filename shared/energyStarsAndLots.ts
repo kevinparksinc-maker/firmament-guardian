@@ -439,7 +439,7 @@ export interface ArabicLotEnergyEntry {
 }
 
 export interface EnergyStarsAndLotsResult {
-  sect: "day" | "night";
+  sect: "day" | "night" | "unknown";
   lotsAvailable: boolean;
   lotsUnavailableReason?: string;
   liveSkyStars: FixedStarEnergyActivation[];
@@ -585,7 +585,7 @@ export function calculateEnergyStarsAndLots(
 ): EnergyStarsAndLotsResult {
   if (!chart) {
     return {
-      sect: "day",
+      sect: "unknown",
       lotsAvailable: false,
       lotsUnavailableReason: "Calculate a chart to view Fixed Stars and Arabic Lots.",
       liveSkyStars: [],
@@ -598,17 +598,19 @@ export function calculateEnergyStarsAndLots(
   }
 
   const sun = chart.movingBodies?.find(b => b.name === "Sun");
-  const sunHouse = sun?.agentHouse ?? sun?.house ?? 10;
-  const sect: "day" | "night" = sunHouse >= 7 && sunHouse <= 12 ? "day" : "night";
+  const sunHouse = sun?.agentHouse ?? (chart.worldview === "agent" ? sun?.house : undefined);
+  const sect = !sunHouse ? "unknown" : sunHouse >= 7 && sunHouse <= 12 ? "day" : "night";
 
   // Build map of active transit-to-natal contacts to spotlight natal stars triggered today
   const natalTriggerMap = new Map<string, string>();
+  const triggerOrbs = new Map<string, number>();
   for (const t of chart.transits ?? []) {
     const allContacts = [...(t.natalContacts ?? []), ...(t.minorNatalContacts ?? [])]
       .filter(c => c.orb <= ENERGY_MAX_ORB)
       .sort((a, b) => a.orb - b.orb);
     for (const c of allContacts) {
-      if (!natalTriggerMap.has(c.natalName)) {
+      if (c.orb < (triggerOrbs.get(c.natalName) ?? Infinity)) {
+        triggerOrbs.set(c.natalName, c.orb);
         natalTriggerMap.set(c.natalName, `Transit ${t.name} ${c.aspect} (${c.orb.toFixed(1)}° orb)`);
       }
     }
@@ -777,7 +779,7 @@ export function calculateEnergyStarsAndLots(
   });
 
   // 3. Hermetic / Arabic Lots & Live Transits Hitting Lots Today
-  if (ascLon == null || !sun || !chart.movingBodies?.find(b => b.name === "Moon")) {
+  if (sect === "unknown" || ascLon == null || !sun || !chart.movingBodies?.find(b => b.name === "Moon")) {
     return {
       sect,
       lotsAvailable: false,

@@ -272,7 +272,7 @@ export function EnergyFixedStarsAndLots({
         {/* Sect & Active Counters */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 font-semibold text-slate-200">
-            {data.sect === "day" ? "☀ Day Sect Chart" : "☾ Night Sect Chart"}
+            {data.sect === "unknown" ? "Sect unavailable" : data.sect === "day" ? "☀ Day Sect Chart" : "☾ Night Sect Chart"}
           </span>
           <span className="rounded-lg border border-cyan-400/30 bg-cyan-950/30 px-3 py-1.5 font-semibold text-cyan-200">
             ★ {activeStarCount} Active Star{activeStarCount === 1 ? "" : "s"}

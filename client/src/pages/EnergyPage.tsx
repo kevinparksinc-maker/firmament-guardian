@@ -39,71 +39,53 @@ import { ENERGY_ASPECT_FLOW, calculateEnergyRead } from "@/lib/energyScoring";
 const ENERGY_READING_CACHE_KEY = "fg:energy-reading-cache:v3";
 const ENERGY_BUCKET_TTL_MS = 30 * 60 * 1000;
 
-function energyBucketKey(chart: ChartResult): string {
-  const parsed = Date.parse(chart.transitDate);
-  const bucket = Number.isFinite(parsed) ? Math.floor(parsed / ENERGY_BUCKET_TTL_MS) : 0;
-  return JSON.stringify([
-    chart.input.date,
-    chart.input.time,
-    chart.input.latitude,
-    chart.input.longitude,
-    chart.input.transitLocation || chart.input.location,
-    chart.input.transitLatitude ?? chart.input.latitude,
-    chart.input.transitLongitude ?? chart.input.longitude,
-    chart.worldview,
-    bucket,
-  ]);
-}
-
-function readCachedEnergyReading<T>(readingKey: string, bucketKey: string): T | null {
+function readCachedEnergyReading<T>(readingKey: string): T | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(ENERGY_READING_CACHE_KEY);
     if (!raw) return null;
     const entries = JSON.parse(raw) as Array<{
       readingKey: string;
-      bucketKey: string;
+     
       savedAt: number;
       reading: T;
     }>;
     if (!Array.isArray(entries)) return null;
     const now = Date.now();
-    const match =
-      entries.find((e) => e.readingKey === readingKey && now - e.savedAt < ENERGY_BUCKET_TTL_MS * 2) ??
-      entries.find((e) => e.bucketKey === bucketKey && now - e.savedAt < ENERGY_BUCKET_TTL_MS);
+    const match = entries.find(e => e.readingKey === readingKey && now - e.savedAt < ENERGY_BUCKET_TTL_MS * 2);
     return match ? match.reading : null;
   } catch {
     return null;
   }
 }
 
-function writeCachedEnergyReading<T>(readingKey: string, bucketKey: string, reading: T) {
+function writeCachedEnergyReading<T>(readingKey: string, reading: T) {
   if (typeof window === "undefined") return;
   try {
     const raw = window.localStorage.getItem(ENERGY_READING_CACHE_KEY);
     const prev = raw
-      ? (JSON.parse(raw) as Array<{ readingKey: string; bucketKey: string; savedAt: number; reading: T }>)
+      ? (JSON.parse(raw) as Array<{ readingKey: string; savedAt: number; reading: T }>)
       : [];
     const filtered = Array.isArray(prev)
-      ? prev.filter((e) => e.readingKey !== readingKey && e.bucketKey !== bucketKey)
+      ? prev.filter((e) => e.readingKey !== readingKey)
       : [];
-    const next = [{ readingKey, bucketKey, savedAt: Date.now(), reading }, ...filtered].slice(0, 6);
+    const next = [{ readingKey, savedAt: Date.now(), reading }, ...filtered].slice(0, 6);
     window.localStorage.setItem(ENERGY_READING_CACHE_KEY, JSON.stringify(next));
   } catch {
     // Ignore storage quota restrictions cleanly.
   }
 }
 
-function clearCachedEnergyBucket(bucketKey: string) {
+function clearCachedEnergyReading(readingKey: string) {
   if (typeof window === "undefined") return;
   try {
     const raw = window.localStorage.getItem(ENERGY_READING_CACHE_KEY);
     if (!raw) return;
-    const prev = JSON.parse(raw) as Array<{ bucketKey: string }>;
+    const prev = JSON.parse(raw) as Array<{ readingKey: string }>;
     if (!Array.isArray(prev)) return;
     window.localStorage.setItem(
       ENERGY_READING_CACHE_KEY,
-      JSON.stringify(prev.filter((e) => e.bucketKey !== bucketKey))
+      JSON.stringify(prev.filter((e) => e.readingKey !== readingKey))
     );
   } catch {
     // Ignore storage errors.
@@ -139,11 +121,10 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
 
   const synthesisRequest = trpc.interpretation.energyReading.useMutation();
   type Reading = NonNullable<typeof synthesisRequest.data>;
-  const readingKey = chart ? readingCacheIdentity(chart, "combined", "energy-overview-v3") : "";
-  const bucketKey = chart ? energyBucketKey(chart) : "";
+  const readingKey = chart ? readingCacheIdentity(chart, "combined", "energy-overview-v4") : "";
   const [resolved, setResolved] = useState<{ key: string; reading: Reading } | null>(() => {
     if (!readingKey) return null;
-    const cached = readCachedEnergyReading<Reading>(readingKey, bucketKey);
+    const cached = readCachedEnergyReading<Reading>(readingKey);
     return cached ? { key: readingKey, reading: cached } : null;
   });
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
@@ -151,7 +132,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const handleRefreshTransits = () => {
-    if (bucketKey) clearCachedEnergyBucket(bucketKey);
+    if (readingKey) clearCachedEnergyReading(readingKey);
     setResolved(null);
     onRefresh?.();
   };
@@ -162,7 +143,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
     if (!chart || calculating) {
       return () => { active = false; };
     }
-    const cached = readCachedEnergyReading<Reading>(readingKey, bucketKey);
+    const cached = readCachedEnergyReading<Reading>(readingKey);
     if (cached && retry === 0) {
       setResolved({ key: readingKey, reading: cached });
       return () => { active = false; };
@@ -170,7 +151,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
     setResolved(null);
     synthesisRequest.mutateAsync({ chart }).then(reading => {
       if (!active) return;
-      writeCachedEnergyReading(readingKey, bucketKey, reading);
+      writeCachedEnergyReading(readingKey, reading);
       setResolved({ key: readingKey, reading });
     }).catch(error => {
       if (active) setFailure({ key: readingKey, message: error instanceof Error ? error.message : "Energy synthesis failed." });
@@ -818,7 +799,7 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
           <InterpretationPanel
             key={`energy-panel-${chart.input.location || "god"}`}
             chart={chart}
-            initialMode="transit"
+            initialMode="combined"
             initialQuestion={
               new URLSearchParams(window.location.search).get("question") || activeInterpreterQuestion ||
               "What is the single most important planetary transit active for me right now, and how should I align my actions today?"
