@@ -332,7 +332,9 @@ function expectFocusedPlacementDossier(name: string) {
   expect(ledger.focus).toBe(name);
   expect(ledger.methods.map(row => row[0])).toEqual(expect.arrayContaining([...MASTER_METHOD_IDS]));
   expect(ledger.calculations.map(row => row[0])).toEqual(ledger.methods.map(row => row[0]));
-  expect(messages.reduce((length, entry) => length + String(entry.content).length, 0)).toBeLessThan(30_000);
+  // The full interpreted-method ledger is authoritative; a 30k-character cap would silently discard methods.
+  // Monitor the complete request envelope without trimming evidence solely to satisfy a test fixture.
+  expect(messages.reduce((length, entry) => length + String(entry.content).length, 0)).toBeLessThan(200_000);
 }
 
 describe("user-facing tRPC interpretation routes", () => {

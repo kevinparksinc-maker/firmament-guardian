@@ -26,11 +26,11 @@ describe("Master Interpreter coordinated repair", () => {
   it.each(["natal", "transit", "combined"] as const)("repairs a malformed %s plan and completes reading and chapter using every method", async mode => {
     let plans = 0;
     vi.mocked(invokeLLM).mockImplementation(async request => {
-      const system = String(request.messages[0].content);
+      const system = request.messages.filter(message => message.role === "system").map(message => String(message.content)).join("\n");
       if (system.includes("silent first reader")) {
         plans++;
         if (plans === 1) return response("{broken");
-        const domain = String(request.messages[1].content);
+        const domain = String(request.messages.find(message => message.role === "user" && String(message.content).includes("VALID EVIDENCE LABELS"))!.content);
         const labels = JSON.parse(domain.split("VALID EVIDENCE LABELS (copy exact IDs; do not invent or shorten them):\n")[1].split("\n")[0]) as string[];
         // Validate a real non-point method ID from the complete dossier.
         const label = labels.find(id => id.startsWith(mode === "transit" ? "transit:" : "sy-"))!;

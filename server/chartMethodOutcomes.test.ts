@@ -8,7 +8,7 @@ import { invokeLLM } from "./_core/llm";
 vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
 beforeEach(() => {
   vi.mocked(invokeLLM).mockClear().mockImplementation(async request => {
-    const payload = JSON.parse(String(request.messages[1].content));
+    const payload = JSON.parse(String(request.messages.find(message => message.role === "user" && String(message.content).includes("requestedMethodIds"))!.content));
     return { choices: [{ message: { content: JSON.stringify(
       Object.fromEntries(payload.requestedMethodIds.map((id: string, index: number) => [
         id, `This fixture gives the calculated finding a complete and distinct reading for entry ${index}.`,

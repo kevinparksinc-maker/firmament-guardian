@@ -22,7 +22,7 @@ beforeAll(async () => {
 
 function systemPromptFromLastCall() {
   const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };
-  return request.messages.find(message => message.role === "system")?.content ?? "";
+  return request.messages.filter(message => message.role === "system").map(message => message.content).join("\n");
 }
 
 beforeEach(() => {
@@ -58,7 +58,7 @@ describe("Master Interpreter prompt coverage", () => {
     await generateChapter(chart, "natal", "synthetic chart intelligence", "identity", [], analysis);
     const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };
     const system = systemPromptFromLastCall();
-    const user = request.messages.find(message => message.role === "user")?.content ?? "";
+    const user = request.messages.filter(message => message.role === "user").map(message => String(message.content)).join("\n");
     expect(system).toContain(MASTER_INTERPRETER_PROMPT);
     expect(system).not.toContain("What this means for you");
     expect(system).toContain("Follow the reading plan");

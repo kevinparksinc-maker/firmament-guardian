@@ -26,7 +26,7 @@ describe("interpretation.generate knowledge gateway integration", () => {
   beforeEach(() => {
     mocked.invokeLLM.mockReset();
     mocked.invokeLLM.mockImplementation(async request => {
-      const system = request.messages.find((message: { role: string }) => message.role === "system")?.content || "";
+      const system = request.messages.filter((message: { role: string }) => message.role === "system").map((message: { content: string }) => String(message.content)).join("\n");
       const plan = {
         threads: [
           { title: "Solar pattern", insight: "Fixture solar evidence.", evidence: ["Sun"], chapters: ["identity", "work-purpose"] },
@@ -37,7 +37,7 @@ describe("interpretation.generate knowledge gateway integration", () => {
       };
       let content = system.includes("silent first reader") ? JSON.stringify(plan) : "A synthetic interpretation grounded in the supplied chart evidence. ".repeat(8);
       if (system.includes("Interpret ALL supplied method outcomes")) {
-        const user = request.messages.find((m: {role:string}) => m.role === "user").content as string;
+        const user = request.messages.find((m: {role:string; content: string}) => m.role === "user" && String(m.content).includes("methodOutcomes"))!.content as string;
         const packet = JSON.parse(user.slice(user.lastIndexOf("\n") + 1));
         const active = packet.methodOutcomes.filter((o: {status:string}) => o.status === "interpreted");
         const sections = Array.from({length:3}, (_,i) => ({id:`section-${i}`,title:`Integrated theme ${i}`,text:"A connected interpretation grounded in actual method judgments, explaining the chart-specific relationship between placement, mansion, condition, and their practical consequences. ".repeat(2),findingIds:[] as string[]}));
@@ -74,9 +74,9 @@ describe("interpretation.generate knowledge gateway integration", () => {
     expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "ashtakavarga")).toBe(true);
     const userPrompts = mocked.invokeLLM.mock.calls.map(call =>
       String(
-        call[0].messages.find(
+        call[0].messages.filter(
           (message: { role: string }) => message.role === "user"
-        )?.content ?? ""
+        ).map((message: {content: string}) => String(message.content)).join("\n")
       )
     );
     expect(
@@ -105,9 +105,9 @@ describe("interpretation.generate knowledge gateway integration", () => {
     );
     const laterPrompts = mocked.invokeLLM.mock.calls.map(call =>
       String(
-        call[0].messages.find(
+        call[0].messages.filter(
           (message: { role: string }) => message.role === "user"
-        )?.content ?? ""
+        ).map((message: {content: string}) => String(message.content)).join("\n")
       )
     );
     expect(
