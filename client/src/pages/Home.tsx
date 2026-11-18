@@ -103,7 +103,12 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
 
   const handleAskMasterInterpreter = (question: string) => {
     if (section !== "reading") {
-      try { sessionStorage.setItem("fg:pending-interpreter-prompt", question); } catch {}
+      try {
+        sessionStorage.setItem("fg:pending-interpreter-prompt", question);
+      } catch {
+        setFormError("Your browser blocked temporary storage, so your question could not be carried to the Master Interpreter. Please open the Reading page and enter it there.");
+        return;
+      }
       navigate("/reading");
       return;
     }
