@@ -238,7 +238,7 @@ export async function runInterpretation(
         "Keep all evidence references in the requested technical/structured fields when the route requires them. Follow the route-specific JSON schema, Horary verdict, chapter plan or other output contract exactly.",
         "Do not claim to have used evidence that was not actually delivered.",
       ].join("\n"),
-    });
+    };
     const evidence = typeof layout === "object"
       ? stringifyEvidence(ledgers.map(ledger => focusedPlacementEvidence(ledger, layout.focusedPlacement)))
       : stringifyEvidence(ledgers.map(interpretationEvidence));
