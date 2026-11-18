@@ -20,6 +20,11 @@ describe("page index", () => {
     // The sports simulator is a separate app, not a main Absolute destination.
     expect(APP_DIRECTORY.some(item => item.href === "/sports-lab")).toBe(false);
   });
+  it("keeps the independent transit sky accessible without a birth profile", () => {
+    const router = readFileSync(new URL("../client/src/App.tsx", import.meta.url), "utf8");
+    expect(router).toContain('path !== "/transit-sky"');
+  });
+
   it("points every indexed page at an existing router destination", () => {
     const router = readFileSync(
       new URL("../client/src/App.tsx", import.meta.url),
