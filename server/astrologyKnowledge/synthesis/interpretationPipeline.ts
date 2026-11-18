@@ -199,7 +199,7 @@ export async function runInterpretation(
         "Speak directly to the reader in second person, with concrete strengths, costs and difficult truths. Never invent personal events, motives, astronomical placements or missing calculations.",
         "Keep all evidence references in the requested technical/structured fields when the route requires them. Follow the route-specific JSON schema, Horary verdict, chapter plan or other output contract exactly.",
         "Do not claim to have used evidence that was not actually delivered.",
-      ].join("\\n"),
+      ].join("\n"),
     });
     const evidence = stringifyEvidence(ledgers.map(interpretationEvidence));
     const dossier = {
