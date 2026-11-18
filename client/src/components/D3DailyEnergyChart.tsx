@@ -80,8 +80,10 @@ function buildForecastCacheKey(chart: ChartResult): string {
   return JSON.stringify([
     chart.input.date,
     chart.input.time,
+    chart.input.timezone,
     chart.input.latitude,
     chart.input.longitude,
+    chart.input.transitTimezone || chart.input.timezone,
     chart.input.transitLocation || chart.input.location,
     chart.input.transitLatitude ?? chart.input.latitude,
     chart.input.transitLongitude ?? chart.input.longitude,
@@ -173,12 +175,13 @@ export function D3DailyEnergyChart({ chart }: D3DailyEnergyChartProps) {
   // Auto-load zero-token astronomical forecast once per cacheKey
   useEffect(() => {
     const cached = readCachedForecast(cacheKey);
-    if (cached) {
-      setData(cached);
-      setSelectedIndex(0);
-      return;
-    }
-    fetchForecast(false);
+    // Never show a prior person's 24-hour aspects after the profile, frame,
+    // timezone or selected transit instant changes.
+    setData(cached);
+    setSelectedIndex(0);
+    setSelectedLaneId(null);
+    setShowAllLanes(false);
+    if (!cached) fetchForecast(false);
     return () => {
       activeRequest.current++;
     };
