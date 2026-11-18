@@ -4,8 +4,8 @@ const { env, generateContent } = vi.hoisted(() => ({
   env: { geminiApiKey: "private-gemini", geminiModel: "configured-gemini", groqApiKey: "private-groq", groqModel: "configured-groq", openrouterApiKey: "private-router", openrouterModel: "configured-router", anthropicApiKey: "unused-legacy-key" },
   generateContent: vi.fn(),
 }));
-vi.mock("./_core/env", () => ({ ENV: env }));
-vi.mock("@google/genai", () => ({ GoogleGenAI: class { models = { generateContent }; } }));
+vi.mock("./_core/env", () => ({ ENV: env, DEFAULT_GEMINI_MODEL: "gemini-3.5-flash" }));
+vi.mock("@google/genai", () => ({ GoogleGenAI: class { models = { generateContent }; }, ThinkingLevel: { MINIMAL: "MINIMAL" } }));
 import { invokeLLM } from "./_core/llm";
 
 const fetchMock = vi.fn();
