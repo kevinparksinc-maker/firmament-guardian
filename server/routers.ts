@@ -301,10 +301,9 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         const { synthesis, context } = await synthesizeChartForReading(input.chart, input.mode, input.question);
-        const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context);
-        // The canonical full-ledger interpretation is the primary reading. Do not
-        // replace it with a second model call or deterministic life-story fallback.
-        return { ...interpretation, reading: synthesis.integratedNarrative.join("\n\n"), synthesis };
+        const canonicalReading = synthesis.integratedNarrative.join("\n\n");
+        const interpretation = await generateInterpretation(input.chart, input.mode, input.question, context, canonicalReading);
+        return { ...interpretation, synthesis };
       }),
     masterSynthesize: publicProcedure
       .input(
