@@ -164,6 +164,8 @@ export async function buildUnifiedMasterChart(
     timezone: input.timezone,
     date: input.date,
     time: input.time,
+    birthTimeKnown: input.birthTimeKnown,
+    elevation: input.elevation,
     transitDate: input.transitDate,
     transitTime: input.transitTime,
     transitLocation: input.transitLocation,
