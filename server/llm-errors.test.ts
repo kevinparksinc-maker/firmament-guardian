@@ -1,48 +1,45 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-vi.mock("./_core/env", () => ({ ENV: { anthropicApiKey: "test-key" } }));
+
+vi.mock("./_core/env", () => ({
+  ENV: {
+    geminiApiKey: "",
+    groqApiKey: "test-key",
+    groqModel: "test-model",
+    openrouterApiKey: "",
+    anthropicApiKey: "",
+  },
+}));
 import { invokeLLM } from "./_core/llm";
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.useRealTimers();
-});
-describe("AI request error handling", () => {
-  it("returns the provider explanation without retrying a rejected 400", async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            error: { message: "Your credit balance is too low" },
-          }),
-          { status: 400, statusText: "Bad Request" }
-        )
-      );
-    vi.stubGlobal("fetch", fetch);
-    await expect(
-      invokeLLM({ messages: [{ role: "user", content: "Summary" }] })
-    ).rejects.toThrow("Your credit balance is too low");
-    expect(fetch).toHaveBeenCalledTimes(1);
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("AI provider request error handling", () => {
+  it("does not retry a rejected 400 or reveal provider response bodies", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: { message: "Private chart and financial details from provider" },
+    }), { status: 400, statusText: "Bad Request" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const error = await invokeLLM({
+      messages: [{ role: "user", content: "Private chart details" }],
+    }).catch(value => value as Error);
+    expect(error.message).toContain("groq");
+    expect(error.message).toContain("HTTP 400");
+    expect(error.message).not.toMatch(/Private chart|financial details/i);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
-  it("reports the requested timeout and avoids resending the same timed-out generation", async () => {
-    vi.useFakeTimers();
-    const fetch = vi.fn(
-      (_url, init) =>
-        new Promise((_resolve, reject) =>
-          init.signal.addEventListener("abort", () =>
-            reject(new Error("aborted"))
-          )
-        )
-    );
-    vi.stubGlobal("fetch", fetch);
-    const pending = invokeLLM({
-      messages: [{ role: "user", content: "Summary" }],
-      timeoutMs: 180000,
-    });
-    const assertion = expect(pending).rejects.toThrow(
-      "AI_REQUEST_TIMEOUT: The AI service did not respond within 180 seconds"
-    );
-    await vi.advanceTimersByTimeAsync(180000);
-    await assertion;
-    expect(fetch).toHaveBeenCalledTimes(1);
+
+  it("times out a hanging provider call without retrying or leaking the prompt", async () => {
+    const fetchMock = vi.fn((_url: string, init: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    const error = await invokeLLM({
+      messages: [{ role: "user", content: "Private chart details" }],
+      timeoutMs: 40,
+    }).catch(value => value as Error);
+    expect(error.message).toMatch(/AI_PROVIDERS_FAILED: groq .*timeout/i);
+    expect(error.message).not.toContain("Private chart");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
