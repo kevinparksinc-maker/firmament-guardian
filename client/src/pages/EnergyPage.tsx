@@ -23,6 +23,8 @@ import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { TransitLocationBar } from "@/components/TransitLocationBar";
 import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
 import { InterpretationPanel } from "@/components/InterpretationPanel";
+import { trpc } from "@/lib/trpc";
+import { CanonicalMiniReadings } from "@/components/CanonicalMiniReadings";
 import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
 import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
 
@@ -87,6 +89,13 @@ export default function EnergyPage() {
   const [selectedPlanetFilter, setSelectedPlanetFilter] = useState<string | null>(null);
   const [aspectCategory, setAspectCategory] = useState<"all" | "harmonious" | "challenging" | "dynamic">("all");
   const [expandedContactId, setExpandedContactId] = useState<string | null>(null);
+  const contactReading = trpc.interpretation.miniReading.useMutation();
+  const [contactReadingId, setContactReadingId] = useState<string | null>(null);
+  const readContact = (contact: { id: string; transit: string; natal: string; aspect: string; orb: number }) => {
+    if (!chart) return;
+    setContactReadingId(contact.id);
+    contactReading.mutate({ chart, mode: "combined", outputDepth: "mini", focus: `Explain transit ${contact.transit} ${contact.aspect} natal ${contact.natal} (orb ${contact.orb.toFixed(2)} degrees) from the calculated Master Chart evidence. Consider all applicable methods, receptions, rulers, houses, timing, God View and Agent View. Never invent uncalculated evidence.` });
+  };
   const [customQuestion, setCustomQuestion] = useState("");
   const [activeInterpreterQuestion, setActiveInterpreterQuestion] = useState<string | null>(null);
 
@@ -346,13 +355,12 @@ export default function EnergyPage() {
             const isFlow = ENERGY_ASPECT_FLOW[c.aspect] === 1;
             const isFriction = ENERGY_ASPECT_FLOW[c.aspect] === -1;
             const symbol = ASPECT_SYMBOLS[c.aspect] || c.aspect;
-            const interpretation = interpretContact(c);
             const isExpanded = expandedContactId === c.id;
 
             return (
               <div
                 key={c.id}
-                onClick={() => setExpandedContactId(isExpanded ? null : c.id)}
+                onClick={() => { setExpandedContactId(isExpanded ? null : c.id); if (!isExpanded) readContact(c); }}
                 className={`cursor-pointer rounded-2xl border p-4 transition-all ${
                   isExpanded
                     ? "border-[#D9B66F] bg-[#101628] shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
@@ -392,8 +400,9 @@ export default function EnergyPage() {
 
                 {isExpanded && (
                   <div className="mt-3 border-t border-white/10 pt-3 space-y-2 animate-in fade-in duration-200">
-                    <p className="text-xs font-semibold text-[#D9B66F]">{interpretation.theme}</p>
-                    <p className="text-xs text-slate-300 leading-relaxed">{interpretation.advice}</p>
+                    {contactReadingId === c.id && contactReading.isPending && <p role="status" className="text-xs text-cyan-200">Weaving the full Master Chart evidence…</p>}
+                    {contactReadingId === c.id && contactReading.error && <p role="alert" className="text-xs text-rose-300">{contactReading.error.message}</p>}
+                    {contactReadingId === c.id && contactReading.data && !contactReading.isPending && !contactReading.error && <p className="whitespace-pre-wrap text-sm text-slate-200 leading-relaxed">{contactReading.data.reading}</p>}
                     <div className="flex justify-end pt-1">
                       <button
                         type="button"
@@ -413,6 +422,8 @@ export default function EnergyPage() {
           })}
         </div>
       </section>
+
+      {chart && <CanonicalMiniReadings key={`${chart.utc}:${chart.transits.map(body => `${body.name}:${body.longitude}`).join("|")}:energy`} chart={chart} mode="combined" />}
 
       {/* SECTION 4: FORECAST TIMELINE */}
       <div className="flex justify-end"><Link href="/transit-sky" className="rounded-xl border border-cyan-300/40 bg-cyan-950/30 px-4 py-2 text-sm font-semibold text-cyan-200">Open Independent Transit Chart →</Link></div>
