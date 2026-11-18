@@ -1,4 +1,5 @@
 import { stringifyEvidence } from "./evidenceTransport";
+import { INTERPRETATION_AUTHORITY_HIERARCHY } from "../../master-interpreter";
 import type { SynthesisResult } from "./types";
 
 /** Lossless text/source interning keeps ALL judged findings within the interpreter packet. */
@@ -89,6 +90,7 @@ export function packSynthesis(synthesis: SynthesisResult) {
 export function formatSynthesisContext(synthesis: SynthesisResult) {
   return [
     "UNIFIED MASTER SYNTHESIS — CALCULATED METHOD FINDINGS AND CANON RULE APPLICATIONS",
+    INTERPRETATION_AUTHORITY_HIERARCHY,
     "The authoritative inputs are sourceSnapshot, calculatedMethodOutcomes, fullMethodOutcomes and fullCanonApplications. Read every supplied calculation and outcome, including findings whose rule-based interpretation failed. The compact rows below are an additional view, never a selection gate. Rows use judgmentColumns. In judgmentParts, a number means the exact textTable entry; strings are literal text. Concatenate the parts IN ORDER to read the full judgment. sourceRefs index canonApplications. ALL judgments are retained; these references only avoid repeated text. Cite the original evidence ID strings, never the numeric text/source references.",
     "Each judgment already applies its specific Canon to its actual findings. Reconcile their support, pressure and conditions using WHAT → WHY → HOW → CONSEQUENCE → MEANING. Reconcile the raw calculations and Canon directly when a rule-based judgment is incomplete. Preserve method execution statuses; do not invent a calculation that is absent.",
     "Unprefixed evidence belongs to the base chart. transit: identifies the separate event sky. chartScope identifies natal/event independently of God/Agent/shared frame. God House sectors are fixed background fields; Agent houses follow the real local horizon. Divisional and timing results seeded from an event are event-model results, never a person's natal biography.",
@@ -281,6 +283,7 @@ export function formatCompactSynthesisContext(
 ) {
   return [
     "UNIFIED MASTER SYNTHESIS — COMPACT METHOD FINDINGS AND CANON APPLICATIONS",
+    INTERPRETATION_AUTHORITY_HIERARCHY,
     "Rows use judgmentColumns ([subject, judgment, evidenceIds, sourceRefs, valence, strength, frame]). sourceRefs index canonApplications. Preserve method execution statuses, separate natal (unprefixed) from event (transit:), and separate God House sectors from Agent local horizon houses. Cite original evidence ID strings, never sourceRef integers.",
     JSON.stringify(packCompactSynthesisForLLM(synthesis, options)),
   ].join("\n");
