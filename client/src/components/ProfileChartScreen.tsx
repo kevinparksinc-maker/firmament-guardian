@@ -268,7 +268,7 @@ export function ProfileChartScreen({
       <CompletePlacementsTable chart={chart} />
 
       {/* Important numerical chart strengths are visible before the long method ledger. */}
-      <ChartStrengthOverview chart={chart} mode={readingMode} />
+      <ChartStrengthOverview chart={chart} />
 
       {/* Standalone Fixed Star & Arabic Lot Position Layer (Works with or without Aspects) */}
       <NatalStarsAndLotsLayer chart={chart} />
