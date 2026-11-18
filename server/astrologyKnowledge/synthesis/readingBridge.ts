@@ -7,7 +7,8 @@ import type { SynthesisResult } from "./types";
 export async function synthesizeChartForReading(
   chart: ChartResult,
   mode: "natal" | "transit" | "combined",
-  question: string
+  question: string,
+  outputDepth: "quick" | "mini" | "standard" | "full" = "full"
 ): Promise<{ synthesis: SynthesisResult; context: string }> {
   const snapshot = await getCanonicalReadingChart({ ...chart.input, mode });
   // Do not silently interpret a second chart if an earlier client chart differs.
@@ -36,7 +37,7 @@ export async function synthesizeChartForReading(
       }
     }
   }
-  const synthesis = await synthesizeMasterReading({ snapshot, readingMode: mode, userQuestion: question });
+  const synthesis = await synthesizeMasterReading({ snapshot, readingMode: mode, userQuestion: question, outputDepth });
   const context = [
     `UNIFIED MASTER SYNTHESIS — SNAPSHOT ${synthesis.snapshotId}`,
     `Computed methods: ${synthesis.methodLedgerSummary.computedWithResult} / ${synthesis.methodLedgerSummary.totalEvaluated}; quality audit: ${synthesis.qualityAudit.passed ? "passed" : "incomplete"}.`,
