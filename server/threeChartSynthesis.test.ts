@@ -43,6 +43,22 @@ describe("Horary-style three-chart testimony", () => {
     ]);
   });
 
+  it("keeps an independent event chart separate from a personal natal chart", () => {
+    const original = fixture();
+    const chart = {
+      ...original,
+      input: { chartRole: "event" as const },
+      utc: "2026-11-18T12:00:00.000Z",
+    } as ChartResult;
+    const result = buildThreeChartTestimony(chart, "natal");
+    expect(result.eventOnly).toBe(true);
+    expect(result.natalAgent.placements).toEqual([]);
+    expect(result.natalGod.placements).toEqual([]);
+    expect(result.currentGod?.placements[0].body).toBe("Sun");
+    expect(result.currentGod?.instantUtc).toBe(chart.utc);
+    expect(result.transitContacts).toEqual([]);
+  });
+
   it("does not invent personal houses without an Agent frame", () => {
     const chart = { ...fixture(), agentViewAvailable: false, ascendant: null };
     const result = buildThreeChartTestimony(chart, "combined");
