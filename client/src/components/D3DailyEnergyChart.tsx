@@ -124,6 +124,7 @@ export function D3DailyEnergyChart({ chart }: D3DailyEnergyChartProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [patternFilter, setPatternFilter] = useState<"all" | "major" | "minor" | "flow" | "friction">("all");
   const [selectedLaneId, setSelectedLaneId] = useState<string | null>(null);
+  const [showAllLanes, setShowAllLanes] = useState(false);
   const [containerWidth, setContainerWidth] = useState(860);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -276,14 +277,21 @@ export function D3DailyEnergyChart({ chart }: D3DailyEnergyChartProps) {
     });
   }, [validPoints]);
 
-  const filteredLanes = useMemo(() => {
+  const matchingLanes = useMemo(() => {
     let list = allAspectLanes;
     if (patternFilter === "major") list = list.filter((l) => l.isMajor);
     else if (patternFilter === "minor") list = list.filter((l) => !l.isMajor);
     else if (patternFilter === "flow") list = list.filter((l) => l.flow === 1);
     else if (patternFilter === "friction") list = list.filter((l) => l.flow === -1);
-    return list.slice(0, 12);
+    return list;
   }, [allAspectLanes, patternFilter]);
+
+  // Keep the initial chart compact on phones, but never silently hide rows
+  // while displaying "All (N)". The visitor can reveal every matching lane.
+  const filteredLanes = useMemo(
+    () => showAllLanes ? matchingLanes : matchingLanes.slice(0, 12),
+    [matchingLanes, showAllLanes]
+  );
 
   const selectedPoint = validPoints[selectedIndex] ?? validPoints[0] ?? null;
 
@@ -580,10 +588,21 @@ export function D3DailyEnergyChart({ chart }: D3DailyEnergyChartProps) {
       const isSelected = selectedLaneId === lane.id;
       const baseColor = lane.flow === 1 ? "#2DD4BF" : lane.flow === -1 ? "#FB7185" : "#38BDF8";
 
+      const toggleLane = () => setSelectedLaneId(current => current === lane.id ? null : lane.id);
       const rowGroup = g
         .append("g")
         .style("cursor", "pointer")
-        .on("click", () => setSelectedLaneId(isSelected ? null : lane.id));
+        .attr("role", "button")
+        .attr("tabindex", 0)
+        .attr("aria-pressed", isSelected ? "true" : "false")
+        .attr("aria-label", `${lane.transit} ${lane.aspect} natal ${lane.natal}, minimum orb ${lane.minOrb.toFixed(2)} degrees. Open interpretation.`)
+        .on("click", toggleLane)
+        .on("keydown", (event: KeyboardEvent) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            toggleLane();
+          }
+        });
 
       // Row background
       rowGroup
@@ -824,7 +843,7 @@ export function D3DailyEnergyChart({ chart }: D3DailyEnergyChartProps) {
                   <button
                     key={f.id}
                     type="button"
-                    onClick={() => setPatternFilter(f.id as any)}
+                    onClick={() => { setPatternFilter(f.id as any); setShowAllLanes(false); setSelectedLaneId(null); }}
                     className={`rounded-lg px-2.5 py-1 font-semibold transition ${
                       patternFilter === f.id
                         ? "bg-[#D9B66F] text-black"
@@ -845,6 +864,20 @@ export function D3DailyEnergyChart({ chart }: D3DailyEnergyChartProps) {
               <p className="rounded-xl border border-white/10 bg-black/30 p-4 text-xs text-slate-400">
                 No planetary aspect patterns match this filter during the 24-hour window.
               </p>
+            )}
+
+            {matchingLanes.length > 12 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
+                <span>Showing {filteredLanes.length} of {matchingLanes.length} matching aspect patterns.</span>
+                <button
+                  type="button"
+                  aria-expanded={showAllLanes}
+                  onClick={() => setShowAllLanes(value => !value)}
+                  className="rounded-lg border border-cyan-400/40 bg-cyan-950/40 px-3 py-2 font-semibold text-cyan-200 hover:bg-cyan-900/50"
+                >
+                  {showAllLanes ? "Show first 12 patterns" : `Show all ${matchingLanes.length} patterns`}
+                </button>
+              </div>
             )}
 
             {/* Selected Aspect Pattern Everyday Human Explanation */}
