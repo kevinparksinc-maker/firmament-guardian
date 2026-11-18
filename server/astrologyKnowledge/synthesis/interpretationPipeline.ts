@@ -137,8 +137,12 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
 }
 
 function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
-  const body = focus.toLowerCase().replaceAll(" ", "[-_ ]");
-  const matchesBody = new RegExp(`(?:^|[^a-z])${body}(?:$|[^a-z])`, "i");
+  // A contact has two bodies. Keep both sides' method findings while
+  // excluding unrelated chart-wide content from the provider payload.
+  // The separator is internal and comes from canonical chart body names.
+  const bodyPatterns = focus.split("|").map(name => name.trim()).filter(Boolean)
+    .map(name => new RegExp(`(?:^|[^a-z])${name.toLowerCase().replaceAll(" ", "[-_ ]")}(?:$|[^a-z])`, "i"));
+  const matchesBody = (value: string) => bodyPatterns.some(pattern => pattern.test(value));
   // Complete method coverage is not the same as resending every unrelated
   // paragraph. This is a focused *reading* packet, not a raw chart archive.
   // Keep every method/status and explicit omission counts when a method's
@@ -152,11 +156,11 @@ function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
   let omittedCalculations = 0;
   const methods = synthesis.methodOutcomes.map(method => {
     const namedCalculations = new Set(method.calculatedFindings
-      .filter(finding => matchesBody.test(finding.label) || matchesBody.test(finding.evidenceId))
+      .filter(finding => matchesBody(finding.label) || matchesBody(finding.evidenceId))
       .map(finding => finding.evidenceId));
     const judgments = method.findingJudgments.filter(finding =>
-      matchesBody.test(finding.subject) ||
-      finding.evidenceIds.some(id => matchesBody.test(id) || namedCalculations.has(id))
+      matchesBody(finding.subject) ||
+      finding.evidenceIds.some(id => matchesBody(id) || namedCalculations.has(id))
     );
     const citedIds = new Set(judgments.flatMap(finding => finding.evidenceIds));
     const calculations = method.calculatedFindings.filter(finding =>
