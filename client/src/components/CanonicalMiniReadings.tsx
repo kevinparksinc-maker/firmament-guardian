@@ -9,6 +9,7 @@ type Depth = "quick" | "mini" | "standard" | "full";
 export function CanonicalMiniReadings({ chart, mode }: { chart: ChartResult; mode: Mode }) {
   const [depth, setDepth] = useState<Depth>("mini");
   const [selected, setSelected] = useState<string | null>(null);
+  const [requestedDepth, setRequestedDepth] = useState<Depth | null>(null);
   const reading = trpc.interpretation.miniReading.useMutation();
   const focusItems = [
     ...chart.movingBodies.map(body => ({ key: `planet-${body.name}`, label: body.name, focus: `Interpret ${body.name} in the natal foundation${mode === "natal" ? "" : " and its relationship to the current transit sky"} using all applicable calculated methods, houses, rulers, aspects, receptions, mansions, stars and cross-method evidence.` })),
@@ -16,9 +17,10 @@ export function CanonicalMiniReadings({ chart, mode }: { chart: ChartResult; mod
     ...(mode === "natal" ? [] : chart.transits.map(body => ({ key: `transit-${body.name}`, label: `Transit ${body.name}`, focus: `Interpret transit ${body.name} against the natal and God View evidence, considering all applicable calculated methods and timing.` }))),
   ];
   const activeFocus = focusItems.find(item => item.key === selected)?.focus;
-  const resultIsCurrent = reading.data?.focus === activeFocus && !reading.isPending;
+  const resultIsCurrent = reading.data?.focus === activeFocus && reading.data?.outputDepth === depth && requestedDepth === depth && !reading.isPending;
   const run = (item: (typeof focusItems)[number]) => {
     setSelected(item.key);
+    setRequestedDepth(depth);
     reading.reset();
     reading.mutate({ chart, mode, focus: item.focus, outputDepth: depth });
   };
