@@ -189,6 +189,8 @@ function julianDay(date: Date) {
 // NOAA solar-calculator equations: apparent sunrise at solar zenith 90.833 degrees.
 // Inputs are the LOCAL civil date and signed geographic coordinates (east positive).
 // A missing sunrise (polar day/night) is an error, never a substituted angle.
+class UndefinedSolarEvent extends Error {}
+
 export function noaaSunriseUtc(localDate: string, latitude: number, longitude: number, setting = false): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate) || !Number.isFinite(latitude) || Math.abs(latitude) > 90 || !Number.isFinite(longitude) || Math.abs(longitude) > 180)
     throw new Error("Valid local date and coordinates required for NOAA sunrise.");
@@ -212,7 +214,7 @@ export function noaaSunriseUtc(localDate: string, latitude: number, longitude: n
     const l = l0 * rad;
     const eqtime = 4 * (180 / Math.PI) * (y * Math.sin(2 * l) - 2 * ecc * Math.sin(m) + 4 * ecc * y * Math.sin(m) * Math.cos(2 * l) - 0.5 * y * y * Math.sin(4 * l) - 1.25 * ecc * ecc * Math.sin(2 * m));
     const cosH = (Math.cos(90.833 * rad) - Math.sin(latitude * rad) * Math.sin(decl)) / (Math.cos(latitude * rad) * Math.cos(decl));
-    if (!Number.isFinite(cosH) || cosH < -1 || cosH > 1) throw new Error("NOAA sunrise undefined for this location/date; no fallback.");
+    if (!Number.isFinite(cosH) || cosH < -1 || cosH > 1) throw new UndefinedSolarEvent("NOAA sunrise undefined for this location/date; no fallback.");
     return 720 - 4 * (longitude + (setting ? -1 : 1) * Math.acos(cosH) / rad) - eqtime;
   };
   let minutes = solar(jd0 + 0.5);
@@ -224,11 +226,17 @@ function automaticSunriseAnchor(latitude: number, longitude: number, event: Date
   // longitudes. Select the latest real sunrise before the exact event,
   // rather than assuming its input timezone is the observer's civil day.
   const day = Date.UTC(event.getUTCFullYear(), event.getUTCMonth(), event.getUTCDate());
-  const candidates = [-1, 0, 1].map(offset =>
-    noaaSunriseUtc(new Date(day + offset * 86400000).toISOString().slice(0, 10), latitude, longitude)
-  ).filter(sunrise => sunrise.getTime() <= event.getTime());
-  if (!candidates.length) throw new Error("No preceding NOAA sunrise found; no fallback.");
-  const sunrise = candidates.reduce((latest, candidate) => candidate > latest ? candidate : latest);
+  let sunrise: Date | undefined;
+  for (const offset of [-1, 0, 1]) {
+    const date = new Date(day + offset * 86400000).toISOString().slice(0, 10);
+    try {
+      const candidate = noaaSunriseUtc(date, latitude, longitude);
+      if (candidate <= event && (!sunrise || candidate > sunrise)) sunrise = candidate;
+    } catch (error) {
+      if (!(error instanceof UndefinedSolarEvent)) throw error;
+    }
+  }
+  if (!sunrise) throw new Error("No preceding NOAA sunrise found; no fallback.");
   return { sunriseUtc: sunrise.toISOString(), sunriseSunXYZ: calculatedXYZ(julianDay(sunrise), 0).xyz };
 }
 function row(name: string, longitude: number, house: number, worldview: Worldview, ascendant: number | null, extra: Partial<ChartRow> = {}): ChartRow {
