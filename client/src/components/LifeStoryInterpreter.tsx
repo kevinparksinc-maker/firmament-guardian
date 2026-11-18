@@ -17,7 +17,7 @@ export function LifeStoryInterpreter({ chart }: { chart: ChartResult }) {
   const [open, setOpen] = useState(false);
   const [chapters, setChapters] = useState<Record<number, string>>({});
   const [active, setActive] = useState<number | null>(null);
-  const story = trpc.interpretation.host.useMutation();
+  const story = trpc.interpretation.generate.useMutation();
 
   const read = async (index: number) => {
     if (story.isPending) return;
@@ -28,13 +28,13 @@ export function LifeStoryInterpreter({ chart }: { chart: ChartResult }) {
       "Write a rich, continuous LIFE STORY chapter for an anonymous person using ONLY the attached calculated natal chart and the existing Firmament Guardian canon, Genesis Pattern Engine, and available evidence.",
       `Chapter: ${stage.title}. Life stage: ${stage.period}. Explore: ${stage.focus}.`,
       "Use all applicable evidence available to the interpreter: planets, signs, all houses, rulers, aspects, fixed stars, lunar mansions, decans, Western/Vedic/Arabic methods, Genesis patterns, and timing methods when actually calculated. Synthesize God View and Agent View only where their calculated dual-frame evidence is present; do not invent absent frames, degrees, Dashas, or historical events.",
-      "Tell the story as an immersive third-person human portrait, with specific conditional everyday examples. Connect WHAT, WHY, HOW, CONSEQUENCE and MEANING. Show convergences, tensions and alternatives. Do not give a disconnected list of placements.",
+      "Tell the story directly to the reader in second person, with specific conditional everyday examples. Connect WHAT, WHY, HOW, CONSEQUENCE and MEANING. Show convergences, tensions and alternatives. Do not give a disconnected list of placements.",
       "This is a symbolic life possibility, not a factual biography. Do not assert childhood events, trauma, death, marriage or future events as established facts. When age-specific timing evidence is missing, clearly distinguish developmental themes from dated predictions.",
       "Make this a substantial chapter with an evocative title, flowing paragraphs and a brief 'Chart evidence behind this chapter' section. Never guess the person's identity.",
     ].join("\n\n");
     try {
-      const answer = await story.mutateAsync({ chart, mode: "natal", history: [], question });
-      setChapters(previous => ({ ...previous, [index]: answer }));
+      const answer = await story.mutateAsync({ chart, mode: "natal", question });
+      setChapters(previous => ({ ...previous, [index]: answer.reading }));
     } catch {
       // The mutation error is shown below and the chapter can be retried.
     }
