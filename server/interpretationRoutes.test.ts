@@ -318,6 +318,23 @@ function expectCompleteDossiers(count: number) {
   }
 }
 
+function expectFocusedPlacementDossier(name: string) {
+  const calls = vi.mocked(invokeLLM).mock.calls;
+  expect(calls).toHaveLength(1);
+  const messages = calls[0][0].messages;
+  const message = messages.find(entry => String(entry.content).startsWith("FOCUSED PLACEMENT DOSSIER."));
+  expect(message).toBeDefined();
+  const [ledger] = decodeEvidence(JSON.parse(String(message!.content).split("\n").at(-1)!)) as Array<{
+    focus: string;
+    methods: string[][];
+    calculations: string[][];
+  }>;
+  expect(ledger.focus).toBe(name);
+  expect(ledger.methods.map(row => row[0])).toEqual(expect.arrayContaining([...MASTER_METHOD_IDS]));
+  expect(ledger.calculations.map(row => row[0])).toEqual(ledger.methods.map(row => row[0]));
+  expect(messages.reduce((length, entry) => length + String(entry.content).length, 0)).toBeLessThan(30_000);
+}
+
 describe("user-facing tRPC interpretation routes", () => {
   it.each(routes)(
     "%s sends the complete registry and propagates provider failure",
@@ -346,7 +363,7 @@ describe("user-facing tRPC interpretation routes", () => {
     expect(reading.miniNarrative).toBe(prose);
     expect(reading.sections.length).toBeGreaterThan(0);
     expect(reading.evidence.some(item => item.id === `placement-${name}`)).toBe(true);
-    expectCompleteDossiers(1);
+    expectFocusedPlacementDossier(name);
   }, 20_000);
 
   it("keeps Moon findings after a Gemini 404 and generates synthesis on retry", async () => {
@@ -359,7 +376,7 @@ describe("user-facing tRPC interpretation routes", () => {
     expect(partial.miniNarrative).toBeUndefined();
     expect(partial.sections.length).toBeGreaterThan(0);
     expect(partial.evidence.some(item => item.id === "placement-Moon")).toBe(true);
-    expectCompleteDossiers(1);
+    expectFocusedPlacementDossier("Moon");
 
     const prose = "You feel the shift when somebody stops making an effort to meet you halfway. Ask them plainly what they are willing to give before you take on the whole weight of keeping the connection alive.";
     vi.mocked(invokeLLM).mockResolvedValueOnce({

@@ -136,6 +136,40 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
   };
 }
 
+function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
+  const body = focus.toLowerCase().replaceAll(" ", "[-_ ]");
+  const matchesBody = new RegExp(`(?:^|[^a-z])${body}(?:$|[^a-z])`, "i");
+  const limitText = (text: string) => {
+    const clean = text.replace(/\s+/g, " ").trim();
+    return clean.length <= 230 ? clean : `${clean.slice(0, Math.max(clean.lastIndexOf(" ", 229), 150))}…`;
+  };
+  return {
+    snapshotId: synthesis.snapshotId,
+    focus,
+    coverage: "Every method is listed. Finding excerpts prioritize the selected placement; the focused evidence and Canon sections supply its exact details.",
+    methodColumns: ["id", "name", "status", "frame", "focusedJudgments", "focusedCalculations", "chartContext"],
+    methods: synthesis.methodOutcomes.map(method => {
+      const judgments = method.findingJudgments.filter(finding =>
+        matchesBody.test(finding.subject) || finding.evidenceIds.some(id => matchesBody.test(id))
+      );
+      const calculations = method.calculatedFindings.filter(finding =>
+        matchesBody.test(finding.label) || matchesBody.test(finding.evidenceId)
+      );
+      return [
+        method.methodId,
+        method.methodName,
+        method.status,
+        method.frame,
+        judgments.slice(0, 2).map(finding => [finding.subject, limitText(finding.judgment)]),
+        calculations.slice(0, 2).map(finding => [finding.label, limitText(finding.calculatedValue)]),
+        !judgments.length && !calculations.length ? limitText(method.contribution || method.interpretation) : null,
+      ];
+    }),
+    calculationColumns: ["id", "executionStatus"],
+    calculations: synthesis.sourceSnapshot.methodExecutionLedger.map(method => [method.id, method.status]),
+  };
+}
+
 export function interpretationText(
   response: Awaited<ReturnType<typeof invokeLLM>>
 ) {
@@ -155,7 +189,7 @@ export async function runInterpretation(
   route: string,
   synthesis: SynthesisResult | readonly SynthesisResult[],
   request: Request,
-  layout: "complete" | "placement-reference" = "complete"
+  layout: "complete" | "placement-reference" | { focusedPlacement: string } = "complete"
 ) {
   const ledgers = (
     Array.isArray(synthesis) ? synthesis : [synthesis]
@@ -201,11 +235,15 @@ export async function runInterpretation(
         "Do not claim to have used evidence that was not actually delivered.",
       ].join("\n"),
     });
-    const evidence = stringifyEvidence(ledgers.map(interpretationEvidence));
+    const evidence = typeof layout === "object"
+      ? stringifyEvidence(ledgers.map(ledger => focusedPlacementEvidence(ledger, layout.focusedPlacement)))
+      : stringifyEvidence(ledgers.map(interpretationEvidence));
     const dossier = {
       role: "user" as const,
       content:
-        "COMPLETE CALCULATED INTERPRETATION DOSSIER. Consider every applicable method, connecting agreement and tension to the specific question. Read each table using its matching column names. canonRefs index the canon table. Respect frames, evidence IDs and method status. Never fill gaps from inference. Previous prose is conversation context only.\n" +
+        (typeof layout === "object"
+          ? "FOCUSED PLACEMENT DOSSIER. Read every method row. Apply chart-wide context only when it bears directly on the selected placement. Treat missing findings and method statuses as limits on interpretation.\n"
+          : "COMPLETE CALCULATED INTERPRETATION DOSSIER. Consider every applicable method, connecting agreement and tension to the specific question. Read each table using its matching column names. canonRefs index the canon table. Respect frames, evidence IDs and method status. Never fill gaps from inference. Previous prose is conversation context only.\n") +
         evidence,
     };
     // Preserve the domain packet and keep the current turn last in conversations.

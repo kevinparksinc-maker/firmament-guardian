@@ -20,9 +20,9 @@ import { MINI_SYNTHESIS_STYLE } from "./master-interpreter";
 import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
 
 /** A short AI interpretation for a clicked contact; detailed calculated evidence stays intact. */
-async function narrateFocusedContactMini(reading: FocusedReading, synthesis: SynthesisResult, lens?: FocusTarget["lens"]): Promise<string> {
+async function narrateFocusedContactMini(reading: FocusedReading, synthesis: SynthesisResult, lens?: FocusTarget["lens"], focusedPlacement?: string): Promise<string> {
   const result = await runInterpretation("FOCUSED_MINI", synthesis, {
-    maxTokens: 450,
+    maxTokens: focusedPlacement ? 900 : 450,
     timeoutMs: 60_000,
     messages: [
       {
@@ -32,8 +32,10 @@ async function narrateFocusedContactMini(reading: FocusedReading, synthesis: Syn
           "\nReturn only one 90–130-word flowing second-person paragraph translating this exact focus through the full calculated chart silently. Show what you actually do in ordinary life, what you are trying to protect or get, and how it lands on others, balancing natural strength with friction. Keep ALL astrology terminology out of the paragraph (never name planets, signs, houses, degrees, aspects, mansions, bounds, faces, or Lots). No headings, bullet lists, invented history, or recap endings.",
       },
       { role: "user", content: stringifyEvidence({
-        synthesis: packCompactSynthesisForLLM(synthesis, {
-          preserveFullMethodRegistry: true,
+        ...(focusedPlacement ? {} : {
+          synthesis: packCompactSynthesisForLLM(synthesis, {
+            preserveFullMethodRegistry: true,
+          }),
         }),
         title: reading.title,
         lens: lens && lens !== "all" ? { mind: "mood and focus", work: "work and money", love: "relationships and conversation" }[lens] : "everyday life",
@@ -43,7 +45,7 @@ async function narrateFocusedContactMini(reading: FocusedReading, synthesis: Syn
         gaps: reading.gaps,
       }) },
     ],
-  });
+  }, focusedPlacement ? { focusedPlacement } : "complete");
   if (["length", "max_tokens"].includes(result.choices[0]?.finish_reason ?? ""))
     throw new Error("FOCUSED_MINI_INCOMPLETE: AI response was truncated.");
   const content = result.choices[0]?.message?.content;
@@ -595,7 +597,9 @@ export async function buildFocusedReading(
   }
   if (includeMiniNarrative) {
     try {
-      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
+      reading.miniNarrative = await narrateFocusedContactMini(
+        reading, verification.synthesis, target.lens, target.layer === "natal" ? row.name : undefined
+      );
     } catch (error) {
       if (target.layer !== "natal") throw error;
       const message = error instanceof Error ? error.message : "";
