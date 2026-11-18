@@ -31,7 +31,6 @@ async function narrateFocusedContactMini(reading: FocusedReading, synthesis: Syn
           "\nReturn only one 90–130-word flowing second-person paragraph translating this exact focus through the full calculated chart silently. Show what you actually do in ordinary life, what you are trying to protect or get, and how it lands on others, balancing natural strength with friction. Keep ALL astrology terminology out of the paragraph (never name planets, signs, houses, degrees, aspects, mansions, bounds, faces, or Lots). No headings, bullet lists, invented history, or recap endings.",
       },
       { role: "user", content: stringifyEvidence({
-        }),
         title: reading.title,
         lens: lens && lens !== "all" ? { mind: "mood and focus", work: "work and money", love: "relationships and conversation" }[lens] : "everyday life",
         moment: reading.moment,
