@@ -192,6 +192,31 @@ describe("focused contact interpretation", () => {
   });
 });
 
+describe("provider outage fallback for a clicked aspect", () => {
+  it("shows calculated transit contact and local meaning instead of Gemini 429", async () => {
+    const chart = await calculateChart(input);
+    const transit = chart.transits.find(body => body.natalContacts.some(
+      c => !["Ascendant", "Descendant"].includes(c.natalName)
+    ))!;
+    const contact = transit.natalContacts.find(
+      c => !["Ascendant", "Descendant"].includes(c.natalName)
+    )!;
+    vi.mocked(invokeLLM).mockRejectedValueOnce(
+      new Error("AI_PROVIDERS_FAILED: gemini GEMINI_RATE_LIMIT: HTTP 429")
+    );
+    const reading = await buildFocusedReading(chart, {
+      kind: "contact", name: transit.name, otherName: contact.natalName, layer: "transit"
+    }, true);
+    expect(reading.synthesisUnavailable).toBe(true);
+    expect(reading.title).toContain(contact.aspect);
+    expect(reading.evidence.find(item => item.id === "contact-geometry")?.value)
+      .toContain(contact.orb.toFixed(2));
+    expect(reading.miniNarrative).toContain("You may notice");
+    expect(JSON.stringify(reading)).not.toContain("AI_PROVIDERS_FAILED");
+    expect(section(reading, "contact-meaning")?.paragraphs.length).toBeGreaterThan(0);
+  });
+});
+
 describe("calculated audio chapters", () => {
   it("uses source-linked synthesis chapters rather than a fixed daily advice script", async () => {
     vi.mocked(invokeLLM).mockResolvedValue({ id:"audio-test", created:0, model:"test", choices:[{index:0, finish_reason:"stop", message:{role:"assistant", content:"You bring your chart’s distinct strengths and pressures into the same decisions. This audio reading interprets the calculated layers together rather than repeating a fixed advice script."}}] });
