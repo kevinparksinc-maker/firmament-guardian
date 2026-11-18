@@ -82,7 +82,7 @@ export default function EnergyPage() {
 
   const filteredContacts = useMemo(() => {
     if (!energyData) return [];
-    let list = energyData.contacts;
+    let list = [...energyData.contacts];
     if (selectedPlanetFilter) {
       list = list.filter((c) => c.transit === selectedPlanetFilter || c.natal === selectedPlanetFilter);
     }
