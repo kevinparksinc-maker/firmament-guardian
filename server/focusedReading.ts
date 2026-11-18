@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { localDateTime } from "../shared/transitTime";
 import { calculateMasterChart } from "./masterChart/entry";
 import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
-import { packCompactSynthesisForLLM } from "./astrologyKnowledge/synthesis/context";
 import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
 import {
   aspectBetween,
@@ -32,10 +31,6 @@ async function narrateFocusedContactMini(reading: FocusedReading, synthesis: Syn
           "\nReturn only one 90–130-word flowing second-person paragraph translating this exact focus through the full calculated chart silently. Show what you actually do in ordinary life, what you are trying to protect or get, and how it lands on others, balancing natural strength with friction. Keep ALL astrology terminology out of the paragraph (never name planets, signs, houses, degrees, aspects, mansions, bounds, faces, or Lots). No headings, bullet lists, invented history, or recap endings.",
       },
       { role: "user", content: stringifyEvidence({
-        ...(focusedPlacement ? {} : {
-          synthesis: packCompactSynthesisForLLM(synthesis, {
-            preserveFullMethodRegistry: true,
-          }),
         }),
         title: reading.title,
         lens: lens && lens !== "all" ? { mind: "mood and focus", work: "work and money", love: "relationships and conversation" }[lens] : "everyday life",
@@ -144,6 +139,9 @@ export async function buildFocusedReading(
     const starLayer = calculateEnergyStarsAndLots(canonicalChart).natalStarPositions.find(
       pos => pos.starName === star.name
     );
+    const transitStar = target.layer === "transit";
+    const placementLabel = transitStar ? "Placement at the selected transit time" : "Your natal placement";
+    const frame = transitStar ? "event" : "natal";
     reading.title = star.name;
     reading.evidence.push({
       id: `star-${star.name}`,
@@ -153,14 +151,14 @@ export async function buildFocusedReading(
     if (starLayer) {
       reading.evidence.push({
         id: `star-house-${star.name}`,
-        label: "Your natal placement",
+        label: placementLabel,
         value: `${starLayer.starDisplay} · House ${starLayer.house} (${starLayer.houseArena})`,
       });
       section(
-        "star-natal-position",
-        `Your natal placement · ${starLayer.sign} · House ${starLayer.house}`,
-        [starLayer.personalHouseReading, starLayer.sabotageOrShadowRisk],
-        ["Calculated natal house frame; fixed-star position layer"]
+        `star-${frame}-position`,
+        `${placementLabel} · ${starLayer.sign} · House ${starLayer.house}`,
+        transitStar ? [`At the selected moment, ${star.name} falls in House ${starLayer.house} (${starLayer.houseArena}).`] : [starLayer.personalHouseReading, starLayer.sabotageOrShadowRisk],
+        [`Calculated ${frame} house frame; fixed-star position layer`]
       );
     }
     if (star.ptolemaicPlanetaryNature === "Not yet source-verified")
@@ -206,9 +204,9 @@ export async function buildFocusedReading(
         "star-house-solo",
         "Un-aspected standalone placement",
         [
-          `No natal planet sits within 5° of ${star.name}. Instead, ${star.name} operates directly through House ${starLayer.house} (${starLayer.houseArena}) in ${starLayer.sign}.`,
+          `No ${frame} body sits within 5° of ${star.name}. Instead, ${star.name} operates directly through House ${starLayer.house} (${starLayer.houseArena}) in ${starLayer.sign}.`,
         ],
-        ["Calculated natal house frame; fixed-star catalog"]
+        [`Calculated ${frame} house frame; fixed-star catalog`]
       );
     }
     reading.sourceNotes.push(star.firmamentOrbRule.statement);
