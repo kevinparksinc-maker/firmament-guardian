@@ -70,7 +70,7 @@ export default function EnergyPage() {
   };
 
   const chartSignature = chart
-    ? `${chart.utc}:${chart.transits.map(body => `${body.name}:${body.longitude}`).join("|")}`
+    ? `${chart.utc}:${chart.movingBodies.map(body => `${body.name}:${body.longitude}`).join("|")}:${chart.houses.join("|")}:${chart.transits.map(body => `${body.name}:${body.longitude}`).join("|")}`
     : "no-chart";
   useEffect(() => {
     setExpandedContactId(null);
