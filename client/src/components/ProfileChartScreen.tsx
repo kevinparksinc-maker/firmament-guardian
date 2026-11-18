@@ -179,6 +179,13 @@ export function ProfileChartScreen({
               <UserRound size={14} />
               <span>Edit Birth Data</span>
             </Link>
+            <a
+              href="#planetary-house-strength"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300/40 bg-amber-300/10 px-3.5 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-300/20"
+            >
+              <Scale size={14} />
+              <span>Strength Scores</span>
+            </a>
             <Link
               href="/energy"
               className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/40 bg-cyan-400/15 px-3.5 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/25"
