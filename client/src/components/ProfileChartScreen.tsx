@@ -1,5 +1,6 @@
 import { SystematicDeconstruction } from "./SystematicDeconstruction";
 import { ChartMethodOutcomes } from "./ChartMethodOutcomes";
+import { ChartStrengthOverview } from "./ChartStrengthOverview";
 import { MasterSynthesizerPanel } from "./MasterSynthesizerPanel";
 import React, { useState, useMemo } from "react";
 import { TechniqueAuditDashboard } from "./TechniqueAuditDashboard";
@@ -265,6 +266,9 @@ export function ProfileChartScreen({
 
       {/* Complete Planetary Placements Table Directly Underneath */}
       <CompletePlacementsTable chart={chart} />
+
+      {/* Important numerical chart strengths are visible before the long method ledger. */}
+      <ChartStrengthOverview chart={chart} mode={readingMode} />
 
       {/* Standalone Fixed Star & Arabic Lot Position Layer (Works with or without Aspects) */}
       <NatalStarsAndLotsLayer chart={chart} />
