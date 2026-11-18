@@ -53,11 +53,12 @@ export default function EnergyPage() {
   const [expandedContactId, setExpandedContactId] = useState<string | null>(null);
   const contactReading = trpc.interpretation.miniReading.useMutation();
   const [contactReadingId, setContactReadingId] = useState<string | null>(null);
+  const contactFocus = (contact: { transit: string; natal: string; aspect: string; orb: number }) => `Explain transit ${contact.transit} ${contact.aspect} natal ${contact.natal} (orb ${contact.orb.toFixed(2)} degrees) from the calculated Master Chart evidence. Consider all applicable methods, receptions, rulers, houses, timing, God View and Agent View. Never invent uncalculated evidence.`;
   const readContact = (contact: { id: string; transit: string; natal: string; aspect: string; orb: number }) => {
     if (!chart) return;
     setContactReadingId(contact.id);
     contactReading.reset();
-    contactReading.mutate({ chart, mode: "combined", outputDepth: "mini", focus: `Explain transit ${contact.transit} ${contact.aspect} natal ${contact.natal} (orb ${contact.orb.toFixed(2)} degrees) from the calculated Master Chart evidence. Consider all applicable methods, receptions, rulers, houses, timing, God View and Agent View. Never invent uncalculated evidence.` });
+    contactReading.mutate({ chart, mode: "combined", outputDepth: "mini", focus: contactFocus(contact) });
   };
   const [customQuestion, setCustomQuestion] = useState("");
   const [activeInterpreterQuestion, setActiveInterpreterQuestion] = useState<string | null>(null);
@@ -374,7 +375,7 @@ export default function EnergyPage() {
                   <div className="mt-3 border-t border-white/10 pt-3 space-y-2 animate-in fade-in duration-200">
                     {contactReadingId === c.id && contactReading.isPending && <p role="status" className="text-xs text-cyan-200">Weaving the full Master Chart evidence…</p>}
                     {contactReadingId === c.id && contactReading.error && <p role="alert" className="text-xs text-rose-300">{contactReading.error.message}</p>}
-                    {contactReadingId === c.id && contactReading.data && !contactReading.isPending && !contactReading.error && <p className="whitespace-pre-wrap text-sm text-slate-200 leading-relaxed">{contactReading.data.reading}</p>}
+                    {contactReadingId === c.id && contactReading.data?.focus === contactFocus(c) && !contactReading.isPending && !contactReading.error && <p className="whitespace-pre-wrap text-sm text-slate-200 leading-relaxed">{contactReading.data.reading}</p>}
                     <div className="flex justify-end pt-1">
                       <button
                         type="button"
