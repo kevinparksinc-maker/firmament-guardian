@@ -35,7 +35,7 @@ import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
 import { invokeLLM } from "./_core/llm";
 import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import { runGenesisPatternPipeline, generateReading } from "./genesisBackup";
-import { buildUnifiedMasterChart, getMasterNatalChart } from "./masterChart/builder";
+import { getCanonicalReadingChart } from "./masterChart/builder";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
 
 
@@ -209,9 +209,7 @@ export const appRouter = router({
         })
       )
       .mutation(({ input }) =>
-        (input.mode === "natal" && input.worldview === "agent-vs-god"
-          ? getMasterNatalChart
-          : buildUnifiedMasterChart)({
+        getCanonicalReadingChart({
           location: input.location,
           latitude: input.latitude,
           longitude: input.longitude,
@@ -317,7 +315,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const snapshot = await (input.mode === "natal" && input.worldview === "agent-vs-god" ? getMasterNatalChart : buildUnifiedMasterChart)({
+        const snapshot = await getCanonicalReadingChart({
           location: input.location,
           latitude: input.latitude,
           longitude: input.longitude,
