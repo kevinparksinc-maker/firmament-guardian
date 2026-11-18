@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_GEMINI_MODEL, ENV } from "./env";
+import { DEFAULT_GEMINI_MODEL, ENV, resolveGroqModel } from "./env";
 import { invokeLLM } from "./llm";
 
 const { generateContent } = vi.hoisted(() => ({ generateContent: vi.fn() }));
@@ -39,5 +39,13 @@ describe("Gemini model recovery", () => {
 
     await expect(invokeLLM(request)).rejects.toThrow("GEMINI_REQUEST_FAILED: HTTP 404");
     expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Groq model configuration", () => {
+  it("replaces the retired Render model and preserves supported overrides", () => {
+    expect(resolveGroqModel(" llama-3.3-70b-versatile ")).toBe("openai/gpt-oss-120b");
+    expect(resolveGroqModel()).toBe("openai/gpt-oss-120b");
+    expect(resolveGroqModel("openai/gpt-oss-20b")).toBe("openai/gpt-oss-20b");
   });
 });

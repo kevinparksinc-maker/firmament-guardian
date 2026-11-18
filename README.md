@@ -67,7 +67,7 @@ Configure server-only keys for the providers you want enabled. Shared interpreta
 | Provider | Key | Model setting |
 | --- | --- | --- |
 | Gemini | `GEMINI_API_KEY` | `GEMINI_MODEL` (default `gemini-3.5-flash`) |
-| Groq | `GROQ_API_KEY` | `GROQ_MODEL` (default `llama-3.3-70b-versatile`; example config chooses `openai/gpt-oss-120b`) |
+| Groq | `GROQ_API_KEY` | `GROQ_MODEL` (default `openai/gpt-oss-120b`) |
 | OpenRouter | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` (default `openrouter/free`) |
 
 Never put keys in `VITE_` variables or commit them. Each account/model has its own context and rate limits. Full evidence can exceed a provider's request allowance; the chain returns provider names, safe error codes, and HTTP statuses when it cannot complete a request. No provider error bodies or private chart prompts are exposed to the client.

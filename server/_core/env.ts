@@ -1,4 +1,5 @@
 export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
+const DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b";
 
 const configuredValue = (...values: (string | undefined)[]) => values.find(value => Boolean(value?.trim()))?.trim();
 
@@ -10,6 +11,11 @@ export function sessionConfiguration(env: NodeJS.ProcessEnv = process.env) {
     throw new Error("Production requires a unique MANUS_JWT_SECRET or JWT_SECRET of at least 32 characters.");
   }
   return { appId, secret };
+}
+
+export function resolveGroqModel(configuredModel?: string) {
+  const model = configuredModel?.trim();
+  return model && model !== "llama-3.3-70b-versatile" ? model : DEFAULT_GROQ_MODEL;
 }
 
 export const ENV = {
@@ -27,7 +33,7 @@ export const ENV = {
   groqApiKey: process.env.GROQ_API_KEY?.trim() ?? "",
   openrouterApiKey: process.env.OPENROUTER_API_KEY?.trim() ?? "",
   openrouterModel: process.env.OPENROUTER_MODEL?.trim() || "openrouter/free",
-  groqModel: process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile",
+  groqModel: resolveGroqModel(process.env.GROQ_MODEL),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   openaiApiBase: process.env.OPENAI_API_BASE ?? process.env.OPENAI_BASE_URL ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
