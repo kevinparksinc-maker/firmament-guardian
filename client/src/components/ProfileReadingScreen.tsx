@@ -325,7 +325,7 @@ export function ProfileReadingScreen({
               <span>Full Energy Forecast →</span>
             </Link>
           </div>
-          <CanonicalMiniReadings key={chart.utc + ":transit"} chart={chart} mode="transit" />
+          <CanonicalMiniReadings key={`${chart.utc}:${chart.transits.map(body => `${body.name}:${body.longitude}`).join("|")}:transit`} chart={chart} mode="transit" />
           <InterpretationPanel
             key={`transit-panel-${chart.input.location || "god"}`}
             chart={chart}
