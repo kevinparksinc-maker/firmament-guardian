@@ -42,5 +42,7 @@ describe("canonical mini-reading wiring", () => {
     expect(builder).toContain("eventSnapshotCache.get(key)");
     expect(builder).toContain("return existing.pending");
     expect(builder).toContain("computeSnapshotId(input,");
+    expect(builder).toContain("birthTimeKnown: input.birthTimeKnown ?? null");
+    expect(builder).toContain("elevation: input.elevation ?? null");
   });
 });
