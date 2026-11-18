@@ -378,7 +378,7 @@ export async function buildFocusedReading(
         // AI provider must not turn a valid aspect into a customer-facing 429.
         const message = error instanceof Error ? error.message : "";
         const code = message.match(/^[A-Z][A-Z_]+:/)?.[0] ?? "SYNTHESIS_FAILED:";
-        const status = message.match(/HTTP \\d{3}/)?.[0];
+        const status = message.match(/HTTP \d{3}/)?.[0];
         console.warn("[focusedReading] Contact synthesis unavailable", code, status ?? "");
         reading.miniNarrative = describeAspectFallback(row.name, rooted.name, contact.aspect);
         reading.synthesisUnavailable = true;
