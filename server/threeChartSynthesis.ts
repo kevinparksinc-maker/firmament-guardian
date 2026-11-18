@@ -39,31 +39,33 @@ export function buildThreeChartTestimony(chart: ChartResult, mode: ThreeChartRea
   ];
   const natal = birth.map(placement);
   const current = live ? (snapshot?.transit?.planets ?? chart.transits).map(placement) : [];
+  // Keep all observed major and minor contacts. The master snapshot is a
+  // fallback for callers whose canonical ChartResult has no transit rows.
+  const rowContacts = chart.transits.flatMap(row => [
+    ...row.natalContacts.map(contact => ({
+      from: row.name,
+      to: contact.natalName,
+      aspect: contact.aspect,
+      orb: contact.orb,
+      weight: 1,
+    })),
+    ...row.minorNatalContacts.map(contact => ({
+      from: row.name,
+      to: contact.natalName,
+      aspect: contact.aspect,
+      orb: contact.orb,
+      weight: contact.weightMultiplier,
+    })),
+  ]);
+  const snapshotContacts = snapshot?.transit?.aspectsToNatal.map(contact => ({
+    from: contact.transitBody,
+    to: contact.natalBody,
+    aspect: contact.aspect,
+    orb: contact.orb,
+    weight: 1,
+  })) ?? [];
   const contacts = live
-    ? (snapshot?.transit?.aspectsToNatal?.length
-        ? snapshot.transit.aspectsToNatal.map(contact => ({
-            from: contact.transitBody,
-            to: contact.natalBody,
-            aspect: contact.aspect,
-            orb: contact.orb,
-            weight: 1,
-          }))
-        : chart.transits.flatMap(row => [
-        ...row.natalContacts.map(contact => ({
-          from: row.name,
-          to: contact.natalName,
-          aspect: contact.aspect,
-          orb: contact.orb,
-          weight: 1,
-        })),
-        ...row.minorNatalContacts.map(contact => ({
-          from: row.name,
-          to: contact.natalName,
-          aspect: contact.aspect,
-          orb: contact.orb,
-          weight: contact.weightMultiplier,
-        })),
-      ]))
+    ? rowContacts.length ? rowContacts : snapshotContacts
     : [];
   return {
     kind: "horary-style-three-chart-testimony" as const,
