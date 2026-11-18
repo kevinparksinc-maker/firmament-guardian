@@ -34,7 +34,12 @@ export default function AccountPage() {
       if (mode === "register") await register.mutateAsync({ name, email, password });
       else await login.mutateAsync({ email, password });
       setPassword("");
-      try { sessionStorage.removeItem("manus-cookie"); } catch { /* Cookie login does not require browser token storage. */ }
+      try {
+        sessionStorage.removeItem("manus-cookie");
+      } catch {
+        // Cookie authentication can continue; never log credentials or session values.
+        console.warn("[Account] Browser session storage cleanup was blocked.");
+      }
       const account = await utils.auth.me.fetch();
       if (!account) throw new Error("The browser did not retain your sign-in session. Open this app directly in your browser and try again.");
       navigate(returnPath());
