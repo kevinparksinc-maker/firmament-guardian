@@ -1,4 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
+vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
+beforeEach(() => {
+  mocked.invokeLLM.mockReset();
+  mocked.invokeLLM.mockResolvedValue({
+    choices: [{ message: { role: "assistant", content:
+      "You are facing a synthetic chart pattern whose calculated relationships ask for a clear decision. The relevant methods reinforce some evidence and complicate other evidence. You can use that tension to choose deliberate actions instead of mistaking a symbolic map for a guaranteed event." } }],
+  });
+});
+
 import { calculateChart } from "./astronomy";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 

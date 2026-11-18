@@ -1,4 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
+vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
+beforeEach(() => {
+  mocked.invokeLLM.mockReset();
+  mocked.invokeLLM.mockResolvedValue({
+    choices: [{ message: { role: "assistant", content:
+      "You are facing a synthetic chart pattern whose calculated relationships ask for a clear decision. The relevant methods reinforce some evidence and complicate other evidence. You can use that tension to choose deliberate actions instead of mistaking a symbolic map for a guaranteed event." } }],
+  });
+});
+
 import { buildUnifiedMasterChart } from "./masterChart";
 import {
   extractPropositionsFromSnapshot,
@@ -66,8 +77,13 @@ describe("Master Synthesizer Pipeline", () => {
     });
 
     expect(result.snapshotId).toBe(snapshot.snapshotId);
-    expect(result.dominantConclusion).toContain("celestial configuration");
-    expect(result.integratedNarrative.length).toBeGreaterThanOrEqual(4);
+    expect(result.dominantConclusion).toContain("You are facing a synthetic chart pattern");
+    expect(result.integratedNarrative).toHaveLength(1);
+    const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{role: string; content: string}> };
+    const payload = JSON.parse(request.messages.find(message => message.role === "user")!.content);
+    expect(payload.methodExecutionLedger.map((layer: {id: string}) => layer.id)).toEqual(
+      snapshot.methodExecutionLedger.map(layer => layer.id)
+    );
 
     // Verify trace map has entries for every theme and dominant conclusion
     expect(result.evidenceTraceMap["dominant-conclusion"]).toBeDefined();

@@ -1,4 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
+vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
+beforeEach(() => {
+  mocked.invokeLLM.mockReset();
+  mocked.invokeLLM.mockResolvedValue({
+    choices: [{ message: { role: "assistant", content:
+      "You are facing a synthetic chart pattern whose calculated relationships ask for a clear decision. The relevant methods reinforce some evidence and complicate other evidence. You can use that tension to choose deliberate actions instead of mistaking a symbolic map for a guaranteed event." } }],
+  });
+});
+
 import { buildUnifiedMasterChart } from "./masterChart";
 import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis/synthesizer";
 import { extractPropositionsFromSnapshot } from "./astrologyKnowledge/synthesis/normalizer";
@@ -26,7 +37,10 @@ describe("Unified synthesis method-coverage contract", () => {
         expect(linked.has(id)).toBe(true);
         const proposition = propositions.find(prop => prop.id === id)!;
         expect(synthesis.themes.some(theme => theme.linkedPropositionIds.includes(id) && theme.whyHow.includes(proposition.plainLanguageMeaning) && proposition.supportingEvidenceIds.every(evidenceId => theme.evidenceIds.includes(evidenceId)))).toBe(true);
-        expect(synthesis.integratedNarrative.some(line => line.includes(layer.name))).toBe(true);
+        // The reader receives every method; user-visible prose must weave, not enumerate ingredients.
+        const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{role: string; content: string}> };
+        const payload = JSON.parse(request.messages.find(message => message.role === "user")!.content);
+        expect(payload.methodExecutionLedger.some((sent: {id: string; name: string}) => sent.id === layer.id && sent.name === layer.name)).toBe(true);
       }
     }
     for (const theme of synthesis.themes) {
