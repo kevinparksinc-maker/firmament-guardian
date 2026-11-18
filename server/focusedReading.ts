@@ -209,8 +209,19 @@ export async function buildFocusedReading(
       );
     }
     reading.sourceNotes.push(star.firmamentOrbRule.statement);
-    if (includeMiniNarrative && !reading.miniNarrative)
-      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
+    if (includeMiniNarrative && !reading.miniNarrative) {
+      try {
+        reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
+      } catch (error) {
+        // Stellar calculations and their sourced Canon must remain readable
+        // even when all configured language-model providers are unavailable.
+        const message = error instanceof Error ? error.message : "";
+        const code = message.match(/^[A-Z][A-Z_]+:/)?.[0] ?? "SYNTHESIS_FAILED:";
+        const status = message.match(/HTTP \d{3}/)?.[0];
+        console.warn("[focusedReading] Star synthesis unavailable", code, status ?? "");
+        reading.synthesisUnavailable = true;
+      }
+    }
     return reading;
   }
   const row = bodies.find(row => row.name === target.name);
