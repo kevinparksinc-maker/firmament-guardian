@@ -144,8 +144,10 @@ function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
   // Keep every method/status and explicit omission counts when a method's
   // selected details exceed its share of the model request budget.
   const perMethodBudget = Math.max(360, Math.floor(16_000 / Math.max(1, synthesis.methodOutcomes.length)));
-  const short = (value: string, limit: number) =>
-    value.length > limit ? value.slice(0, limit) + "…" : value;
+  const short = (value: unknown, limit: number) => {
+    const text = typeof value === "string" ? value : value == null ? "" : String(value);
+    return text.length > limit ? text.slice(0, limit) + "…" : text;
+  };
   let omittedJudgments = 0;
   let omittedCalculations = 0;
   const methods = synthesis.methodOutcomes.map(method => {
