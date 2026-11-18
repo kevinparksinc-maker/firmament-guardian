@@ -339,23 +339,31 @@ describe("user-facing tRPC interpretation routes", () => {
   it.each(routes)(
     "%s sends the complete registry and propagates provider failure",
     async (name, count, invoke) => {
-      if (name === "interpretation.focusedPlacement contact") {
-        // Contact pages now return grounded local prose and calculated evidence
-        // when the AI provider fails, instead of leaking a 429 to customers.
+      if (name === "interpretation.focusedPlacement contact" ||
+          name === "interpretation.focusedPlacement star") {
+        // These focused routes retain verified Canon evidence through provider
+        // failures and send only the relevant, method-complete evidence.
         const reading = await invoke() as {
           synthesisUnavailable?: boolean;
           miniNarrative?: string;
           evidence?: Array<{ id: string }>;
         };
         expect(reading.synthesisUnavailable).toBe(true);
-        expect(reading.miniNarrative).toContain("You may notice");
-        expect(reading.evidence?.some(item => item.id === "contact-geometry")).toBe(true);
+        if (name.endsWith("contact")) {
+          expect(reading.miniNarrative).toContain("You may notice");
+          expect(reading.evidence?.some(item => item.id === "contact-geometry")).toBe(true);
+          const transit = chart.transits.find(row => row.natalContacts?.length)!;
+          expectFocusedPlacementDossier(`${transit.name}|${transit.natalContacts![0].natalName}`);
+        } else {
+          expect(reading.evidence?.some(item => item.id === "star-Sirius")).toBe(true);
+          expectFocusedPlacementDossier("Sirius");
+        }
       } else {
         await expect(invoke()).rejects.toThrow(
           /Fixture provider unavailable|reading plan could not|interpretation service could not|synthesized chapter could not/i
         );
+        expectCompleteDossiers(count);
       }
-      expectCompleteDossiers(count);
     },
     20_000
   );
