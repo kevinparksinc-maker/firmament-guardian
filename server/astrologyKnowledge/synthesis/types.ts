@@ -15,6 +15,7 @@ export interface SynthesisInput {
   snapshot: UnifiedMasterChartSnapshot;
   readingMode: "natal" | "transit" | "combined";
   userQuestion?: string;
+  outputDepth?: "quick" | "mini" | "standard" | "full";
 }
 
 export interface InterpretedProposition {
