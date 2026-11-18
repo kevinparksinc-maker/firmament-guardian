@@ -79,7 +79,7 @@ describe("Energy synthesis output pipeline", () => {
       vi.mocked(synthesizeChartForReading).mock.invocationCallOrder[0]
     ).toBeLessThan(vi.mocked(invokeLLM).mock.invocationCallOrder[0]);
     const payload = decodeEvidence(JSON.parse(
-      vi.mocked(invokeLLM).mock.calls[0][0].messages[1].content as string
+      vi.mocked(invokeLLM).mock.calls[0][0].messages.find(message => message.role === "user" && String(message.content).startsWith("{"))!.content as string
     )) as any;
     expect(payload.synthesis.methodFindings.map((m: {id:string})=>m.id)).toEqual(bridge.synthesis.methodFindings.map(m=>m.id));
     expect(payload.synthesis.canonApplications[0].ruleId).toBe("test-canon");
