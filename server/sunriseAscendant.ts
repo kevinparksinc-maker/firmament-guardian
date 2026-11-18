@@ -10,7 +10,9 @@
  * this module does not silently substitute an approximate sunrise.
  */
 export type FixedVector = { x: number; y: number; z: number };
-export const SIDEREAL_DEGREES_PER_UTC_HOUR = 360.98564736629 / 24;
+// The Absolute fixed-wheel convention: exactly 15° of rotation per elapsed UTC hour.
+// Retain the exported identifier for compatibility with existing call sites.
+export const SIDEREAL_DEGREES_PER_UTC_HOUR = 15;
 
 export function normalizeDegrees(value: number): number {
   if (!Number.isFinite(value)) throw new Error("Angle must be finite.");
@@ -37,10 +39,11 @@ export function sunriseEasternHorizonLongitude(sunXYZ: FixedVector, latitude: nu
   if (!Number.isFinite(cosineHourAngle) || cosineHourAngle < -1 || cosineHourAngle > 1) {
     throw new Error("No unique geometric sunrise at this latitude and solar declination.");
   }
-  const sunriseHourAngle = degrees(Math.acos(cosineHourAngle));
-  // Master sunrise anchor: Sun equatorial RA minus the sunrise hour angle.
-  // This is the explicitly specified wheel anchor, not a conventional ecliptic ASC.
-  return normalizeDegrees(sunRightAscension - sunriseHourAngle);
+  // At the supplied sunrise instant the Sun itself occupies the eastern horizon.
+  // Anchor the fixed equatorial wheel to its RA; RA minus the sunrise hour angle
+  // is the meridian, not the rising point. Latitude determines sunrise time and
+  // whether sunrise exists, not an extra longitude offset at that instant.
+  return normalizeDegrees(sunRightAscension);
 }
 
 export function ascendantFromSunrise(input: {
