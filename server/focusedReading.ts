@@ -12,7 +12,7 @@ import {
 import { synthesizeChartForReading, synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
 import { retrievePlacementDossier } from "./astrologyKnowledge/canon/retriever";
 import { FIXED_STAR_CANON_RECORDS } from "./astrologyKnowledge/canon/fixedStarsAndLots";
-import { describeAspectPair } from "../shared/energyInterpretation";
+import { describeAspectPair, describeAspectFallback } from "../shared/energyInterpretation";
 import { calculateEnergyStarsAndLots } from "../shared/energyStarsAndLots";
 import { runInterpretation } from "./astrologyKnowledge/synthesis/interpretationPipeline";
 import { MINI_SYNTHESIS_STYLE } from "./master-interpreter";
@@ -370,8 +370,20 @@ export async function buildFocusedReading(
         rootedDossier.planetInHouseKnowledge.sourceCaveat,
         rootedDossier.planetInHouseKnowledge.interpretiveGuardrail
       );
-    if (includeMiniNarrative)
-      reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
+    if (includeMiniNarrative) {
+      try {
+        reading.miniNarrative = await narrateFocusedContactMini(reading, verification.synthesis, target.lens);
+      } catch (error) {
+        // The contact geometry and Canon have already been computed. An exhausted
+        // AI provider must not turn a valid aspect into a customer-facing 429.
+        const message = error instanceof Error ? error.message : "";
+        const code = message.match(/^[A-Z][A-Z_]+:/)?.[0] ?? "SYNTHESIS_FAILED:";
+        const status = message.match(/HTTP \\d{3}/)?.[0];
+        console.warn("[focusedReading] Contact synthesis unavailable", code, status ?? "");
+        reading.miniNarrative = describeAspectFallback(row.name, rooted.name, contact.aspect);
+        reading.synthesisUnavailable = true;
+      }
+    }
     return reading;
   }
   const sun = canonicalChart.movingBodies.find(body => body.name === "Sun");
@@ -598,7 +610,8 @@ export async function buildFocusedReading(
         reading, verification.synthesis, target.lens, target.layer === "natal" ? row.name : undefined
       );
     } catch (error) {
-      if (target.layer !== "natal") throw error;
+      // Preserve the already calculated placement and its Canon even on a
+      // transit-specific AI outage. Retry can request fresh prose later.
       const message = error instanceof Error ? error.message : "";
       const code = message.match(/^[A-Z][A-Z_]+:/)?.[0] ?? "SYNTHESIS_FAILED:";
       const status = message.match(/HTTP \d{3}/)?.[0];
