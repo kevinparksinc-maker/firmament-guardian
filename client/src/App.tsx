@@ -23,7 +23,6 @@ const LifeStoryPage = lazy(() => import("./pages/LifeStoryPage"));
 const SynastryPage = lazy(() => import("./pages/SynastryPage"));
 const StandaloneTransitPage = lazy(() => import("./pages/StandaloneTransitPage"));
 const ExplorePage = lazy(() => import("./pages/ExplorePage"));
-const SportsLabPage = lazy(() => import("./pages/SportsLabPage"));
 
 function AccountEntryGate({ children }: { children: React.ReactNode }) {
   const { user, loading, error, refresh } = useAuth();
@@ -57,7 +56,6 @@ function Router() {
       <Route path={"/synastry"} component={SynastryPage} />
       <Route path={"/transit-sky"} component={StandaloneTransitPage} />
       <Route path={"/explore"} component={ExplorePage} />
-      <Route path={"/sports-lab"} component={SportsLabPage} />
       <Route path={"/sky"} component={SkyHomePrototype} />
       <Route path={"/life-story"} component={LifeStoryPage} />
       <Route path={"/horary"} component={HoraryPage} />
