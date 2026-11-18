@@ -8,6 +8,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { chartQueryServerTransport } from "../../shared/trpcTransport";
 import { sessionConfiguration } from "./env";
 import { excludedFromPublicSourceZip } from "./sourceArchive";
+import { applicationReadiness } from "./readiness";
 
 async function startServer() {
   sessionConfiguration();
@@ -95,12 +96,8 @@ async function startServer() {
 
   // Readiness reports configuration, not an unverified claim that external services work.
   app.get("/ready", (_req, res) => {
-    const checks = {
-      sessionSigning: Boolean((process.env.MANUS_JWT_SECRET ?? process.env.JWT_SECRET)?.length),
-      interpreterKey: Boolean(process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY),
-      databaseConfigured: Boolean(process.env.DATABASE_URL),
-    };
-    res.status(checks.sessionSigning ? 200 : 503).json({ ready: checks.sessionSigning, checks });
+    const readiness = applicationReadiness(process.env);
+    res.status(readiness.ready ? 200 : 503).json(readiness);
   });
 
   app.get("/api/runtime-config", (_req, res) => {
