@@ -45,7 +45,10 @@ export function useAuth(options?: UseAuthOptions) {
     // backend cookie is cleared by the logout mutation.
     try {
       sessionStorage.removeItem("manus-cookie");
-    } catch {}
+    } catch {
+      // Logout still clears the in-memory session even when browser storage is blocked.
+      console.warn("[Auth] Browser session storage could not be cleared during logout.");
+    }
     utils.auth.me.setData(undefined, null);
     queryClient.clear();
     await utils.auth.me.invalidate();
