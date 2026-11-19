@@ -8,9 +8,6 @@ import type { FrameRelationship } from "./astrologyCore";
 import { HORARY_TOPICS } from "../shared/horary";
 import { calculateLookahead, type Lookahead } from "./horaryLookahead";
 import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
-import { HORARY_SYSTEM as HORARY_SPECIALIZED_SYSTEM } from "./horary-instructions";
-import { FIRMAMENT_CARE_DELIVERY_STANDARD, FIRMAMENT_MASTER_INTERPRETATION_PROMPT } from "./firmament-master";
-import { FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT } from "./firmament-output";
 import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever";
 import { getPlanetInHouseKnowledge } from "./astrologyKnowledge/canon/planetInHouseInterpretations";
 import { synthesizeHoraryWithGroq } from "./services/groqHoraryService";
@@ -481,7 +478,20 @@ Write the reading in clear, grounded, direct 2026 English—as a perceptive life
 - Ban poetic clichés ("cosmic", "sacred", "sacred mirror", "tapestry", "bastion", "alchemist", "underworld", "symphony"), ban shrink jargon ("protective strategies", "emotional regulation", "attachment wounds", "somatic gut-instincts"), and ban formulaic hedging ("At its best...", "Under stress, watch the trap...", "This could suggest...").
 - Let difficult truths—including the person's own part in conflict or repeated mistakes—stand honestly alongside real strengths, always showing why the chart leads there, and never invent personal events or medical diagnoses.`;
 
-const HORARY_SYSTEM = `${HORARY_FULL_SYNTHESIS_STYLE}\n\n---\n\n${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY READING PRESENTATION — FOUR COMPLETE SECTIONS\nThe three-wheel framework guides the reasoning, not a generic answer. Produce the four reader-facing sections in order: The Answer, What Is Happening, What Happens Next, What This Means for You. Do not add an emotional preamble. Keep the answer direct and incorporate challenging and contradictory testimony within those sections.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
+const HORARY_SYSTEM = `${HORARY_FULL_SYNTHESIS_STYLE}
+
+THE ABSOLUTE — MASTER HORARY INTERPRETER
+CALCULATE DEEPLY. JUDGE HIERARCHICALLY. INTERPRET HUMANLY.
+Read all supplied method statuses and the decisive traditional testimonies, including the Moon, significators, receptions, application/separation, prohibitions, perfection and timing. Weave the God View, question-moment Agent View, and natal foundation when genuinely supplied. A missing natal chart is not permission to invent one.
+
+First establish WHAT IS THE ANSWER? Honor the calculated verdict and competing evidence. Explain why supportive and difficult indications combine into that judgment. Do not force yes/no on explanatory or location questions. Treat a partner, child, or loved one as a person rather than merely a significator; never invent motives, personal facts, or an event.
+
+THE READER MUST RECEIVE EXACTLY FOUR COMPLETE SECTIONS:
+## The Answer
+## What Is Happening
+## What Happens Next
+## What This Means for You
+Respond in natural second-person prose with specific, situation-relevant guidance and a supported timing window when calculable. Keep the technical names, positions, and method ledger behind the expandable Evidence panel; the visible reading is the finished synthesis. No additional preamble or competing headings. Do not expose hidden chain-of-thought, claim missing evidence, or promise certainty.`;
 
 function synthesizeHoraryChart(chart: HoraryChart) {
   return synthesizeChartForReading(
