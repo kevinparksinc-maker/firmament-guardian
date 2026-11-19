@@ -189,16 +189,17 @@ describe("horary astrology", () => {
     expect(messages[1].content).toContain(result.chart.topicRuler);
     expect(messages[1].content).toContain("Roles:");
     expect(messages[1].content).toContain("LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED");
-    expect(messages[1].content).toContain("GOD VIEW / AGENT VIEW RELATIONSHIP SYNTHESIS");
-    expect(messages[1].content).toContain("Synthesis shown in the box:");
-    expect(messages[1].content).toContain("FULL 16/20-LAYER SYNTHESIS REPORT");
-    expect(messages[1].content).toContain("16 SELF-KNOWLEDGE DIMENSIONS");
-    expect(messages[1].content).toContain("16-SYSTEM CONVERGENCE AUDIT");
-    expect(messages[1].content).toContain("PLANET INTERACTION MATRIX");
-    expect(messages[1].content).toContain("LANGUAGE SAFETY RESTRICTIONS");
-    expect(messages[1].content).toContain("This is the compact judgment evidence");
-    expect(messages[1].content).toContain("FULL TECHNICAL EVIDENCE");
-    expect(messages[1].content).toContain("TRADITIONAL MOON STATUS");
+    // The full chart evidence remains intact for the inspector, but its
+    // large raw prose packet must not be repeated inside the AI request.
+    expect(result.chart.evidenceText).toContain("GOD VIEW / AGENT VIEW RELATIONSHIP SYNTHESIS");
+    expect(result.chart.evidenceText).toContain("FULL 16/20-LAYER SYNTHESIS REPORT");
+    expect(result.chart.evidenceText).toContain("16-SYSTEM CONVERGENCE AUDIT");
+    expect(result.chart.evidenceText).toContain("PLANET INTERACTION MATRIX");
+    expect(result.chart.evidenceText).toContain("TRADITIONAL MOON STATUS");
+    expect(messages[1].content).toContain("FULL METHOD EVIDENCE: supplied once");
+    expect(messages[1].content).not.toContain("FULL 16/20-LAYER SYNTHESIS REPORT");
+    expect(messages.some(message => message.content.includes("COMPLETE CALCULATED INTERPRETATION DOSSIER"))).toBe(true);
+
     expect(result.chart.canonEvidenceText).toContain("Condition:");
   });
 
