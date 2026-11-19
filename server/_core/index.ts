@@ -2,12 +2,10 @@ import "dotenv/config";
 import express from "express";
 import fs from "fs";
 import path from "path";
-import { ZipArchive, type ArchiverError } from "archiver";
 import { createServer } from "http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { chartQueryServerTransport } from "../../shared/trpcTransport";
 import { sessionConfiguration } from "./env";
-import { excludedFromPublicSourceZip } from "./sourceArchive";
 import { applicationReadiness } from "./readiness";
 
 async function startServer() {
@@ -18,80 +16,6 @@ async function startServer() {
 
   app.get(["/health", "/healthz"], (_req, res) => {
     res.status(200).json({ ok: true });
-  });
-
-  app.get(["/the-absolute-astrology.zip", "/download-project.zip", "/api/download-zip"], (_req, res) => {
-    const rootDir = process.cwd();
-    const excludedDirs = new Set([
-      "node_modules",
-      "dist",
-      ".git",
-      ".aistudio",
-      ".next",
-      ".cache",
-      ".turbo",
-      "coverage",
-    ]);
-    const excludedFiles = new Set([".env", ".env.local", ".env.production", ".DS_Store"]);
-    const timestamp = new Date().toISOString().slice(0, 10);
-    const downloadFilename = `the-absolute-astrology-${timestamp}.zip`;
-
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", `attachment; filename="${downloadFilename}"`);
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-
-    const archive = new ZipArchive({ zlib: { level: 6 } });
-    archive.on("warning", (err: ArchiverError) => {
-      if (err.code !== "ENOENT") {
-        console.warn("[DownloadZip] Archiver warning:", err);
-      }
-    });
-    archive.on("error", (err: ArchiverError) => {
-      console.error("[DownloadZip] Archiver error:", err);
-      if (!res.headersSent) {
-        res.status(500).send("Failed to generate project ZIP archive.");
-      } else {
-        res.destroy(err);
-      }
-    });
-
-    archive.pipe(res);
-
-    const addDirectoryRecursive = (dirPath: string, relBase: string) => {
-      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isSymbolicLink()) continue;
-        const fullPath = path.join(dirPath, entry.name);
-        const relPath = relBase ? `${relBase}/${entry.name}` : entry.name;
-
-        if (entry.isDirectory()) {
-          if (excludedDirs.has(entry.name) || excludedFromPublicSourceZip(relPath)) continue;
-          addDirectoryRecursive(fullPath, relPath);
-        } else if (entry.isFile()) {
-          if (
-            excludedFiles.has(entry.name) ||
-            excludedFromPublicSourceZip(relPath) ||
-            entry.name.endsWith(".zip") ||
-            entry.name.endsWith(".tar.gz")
-          ) {
-            continue;
-          }
-          archive.file(fullPath, { name: relPath });
-        }
-      }
-    };
-
-    try {
-      addDirectoryRecursive(rootDir, "");
-      void archive.finalize();
-    } catch (err) {
-      console.error("[DownloadZip] Failed walking project tree:", err);
-      if (!res.headersSent) {
-        res.status(500).send("Failed to walk project directory for ZIP archive.");
-      }
-    }
   });
 
   // Readiness reports configuration, not an unverified claim that external services work.
