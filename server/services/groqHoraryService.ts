@@ -165,8 +165,11 @@ export async function synthesizeHoraryWithGroq(
     "--- COMPACT JUDGMENT EVIDENCE ---",
     chart.judgmentEvidenceText,
     "",
-    "--- FULL TECHNICAL EVIDENCE & CALCULATIONS ---",
-    translated.technicalEvidence,
+    // The shared runInterpretation pipeline already injects the complete
+    // calculated-method ledger. Sending chart.evidenceText a second time here
+    // duplicates extensive testimony and can exceed the provider context budget.
+    // The specialized Horary judgment above remains intact.
+    "FULL METHOD EVIDENCE: supplied once by the universal synthesis pipeline.",
     "",
     "REQUIRED 4-PART OUTPUT FORMAT — FOLLOW EXACTLY:",
     "Write the reading using ONLY these four markdown headings in order:",
@@ -208,10 +211,37 @@ export async function synthesizeHoraryWithGroq(
     throw new Error("GROQ_EMPTY_HORARY_RESPONSE: Groq returned no readable text for this horary chart.");
   }
 
-  const sections = text.split(/^## (The Answer|What Is Happening|What Happens Next|What This Means for You)\s*$/m);
-  const headings = ["The Answer", "What Is Happening", "What Happens Next", "What This Means for You"];
-  if (sections.length !== 9 || headings.some((heading, i) =>
-    sections[i * 2 + 1] !== heading || !sections[i * 2 + 2].trim()
-  )) throw new Error("HORARY_READING_INCOMPLETE: The provider omitted a required section.");
-  return text;
+  return normalizeHoraryReading(text);
+}
+
+/**
+ * Keep the reader-facing four-part Horary format, but allow common markdown
+ * variations (bold headings, optional colons, and heading levels 1-3).
+ * An incomplete response is never accepted as a completed interpretation.
+ */
+export function normalizeHoraryReading(text: string): string {
+  const names = ["The Answer", "What Is Happening", "What Happens Next", "What This Means for You"];
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  const matches: Array<{ index: number; title: string }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const normalized = lines[i]
+      .trim()
+      .replace(/^#{1,3}\s*/, "")
+      .replace(/^\*\*(.*?)\*\*:?$/, "$1")
+      .replace(/:$/, "")
+      .trim()
+      .toLowerCase();
+    const found = names.find(name => name.toLowerCase() === normalized);
+    if (found) matches.push({ index: i, title: found });
+  }
+  if (matches.length !== 4 || names.some((name, i) => matches[i]?.title !== name)) {
+    throw new Error("HORARY_READING_INCOMPLETE: The provider omitted or reordered a required section.");
+  }
+  const bodies = matches.map((match, i) =>
+    lines.slice(match.index + 1, matches[i + 1]?.index ?? lines.length).join("\n").trim()
+  );
+  if (bodies.some(body => body.length < 20)) {
+    throw new Error("HORARY_READING_INCOMPLETE: A required section did not contain a substantive answer.");
+  }
+  return names.map((name, i) => `## ${name}\n\n${bodies[i]}`).join("\n\n");
 }
