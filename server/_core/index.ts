@@ -7,12 +7,17 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { chartQueryServerTransport } from "../../shared/trpcTransport";
 import { sessionConfiguration } from "./env";
 import { applicationReadiness } from "./readiness";
+import { rateLimit, sameOriginGuard, securityHeaders } from "./security";
 
 async function startServer() {
   sessionConfiguration();
   const app = express();
   app.set("trust proxy", 1);
   const server = createServer(app);
+  app.use(securityHeaders());
+  app.use(sameOriginGuard());
+  // Place API request throttling before body parsing and router execution.
+  app.use("/api/trpc", rateLimit({ name: "trpc", limit: 240, windowMs: 60_000 }));
 
   app.get(["/health", "/healthz"], (_req, res) => {
     res.status(200).json({ ok: true });
@@ -26,42 +31,51 @@ async function startServer() {
 
   app.get("/api/runtime-config", (_req, res) => {
     res.json({
-      apiUrl: process.env.MANUS_API_URL ?? "",
-      browserKey: process.env.MANUS_API_BROWSER_KEY ?? "",
       appId: sessionConfiguration().appId,
       oauthPortalUrl: process.env.MANUS_OAUTH_PORTAL_URL ?? process.env.VITE_OAUTH_PORTAL_URL ?? "",
     });
   });
 
-  app.get("/api/maps/javascript", async (req, res) => {
-    const apiUrl = process.env.MANUS_API_URL ?? "";
-    const browserKey = process.env.MANUS_API_BROWSER_KEY ?? "";
-    const requestedOrigin = typeof req.query.origin === "string" ? req.query.origin : "";
+  // Proxy the Maps script with a server-owned referrer; callers cannot impersonate domains.
+  const mapsLimiter = rateLimit({ name: "maps", limit: 60, windowMs: 60_000 });
+  const MAPS_CACHE_MS = 6 * 60 * 60_000;
+  let mapsCache: { body: string; expires: number } | null = null;
+  app.get("/api/maps/javascript", mapsLimiter, async (_req, res) => {
+    const appOrigin = process.env.APP_ORIGIN ||
+      (process.env.RENDER_EXTERNAL_HOSTNAME ? "https://" + process.env.RENDER_EXTERNAL_HOSTNAME : "");
+    const apiUrl = process.env.MANUS_API_URL || "";
+    const browserKey = process.env.MANUS_API_BROWSER_KEY || "";
     let origin: URL;
     try {
-      origin = new URL(requestedOrigin);
-      if (origin.protocol !== "https:" && origin.protocol !== "http:") throw new Error("Unsupported origin protocol");
+      origin = new URL(appOrigin);
+      if (!["http:", "https:"].includes(origin.protocol)) throw new Error("Invalid scheme");
     } catch {
-      res.status(400).json({ error: "A valid application origin is required" });
+      res.status(503).json({ error: "A trusted APP_ORIGIN is required for Maps." });
       return;
     }
     if (!apiUrl || !browserKey) {
       res.status(503).json({ error: "Maps runtime configuration is unavailable" });
       return;
     }
-    const mapsUrl = new URL(`${apiUrl.replace(/\/+$/, "")}/v1/maps/proxy/maps/api/js`);
+    if (mapsCache && mapsCache.expires > Date.now()) {
+      res.set("Content-Type", "application/javascript; charset=utf-8")
+        .set("Cache-Control", "public, max-age=3600").send(mapsCache.body);
+      return;
+    }
+    const mapsUrl = new URL(apiUrl.replace(/\\/+$/, "") + "/v1/maps/proxy/maps/api/js");
     mapsUrl.searchParams.set("key", browserKey);
     mapsUrl.searchParams.set("v", "weekly");
     mapsUrl.searchParams.set("libraries", "marker,places,geocoding,geometry");
     try {
       const mapsResponse = await fetch(mapsUrl, {
-        headers: {
-          Origin: origin.origin,
-          Referer: `${origin.origin}/`,
-        },
+        headers: { Origin: origin.origin, Referer: origin.origin + "/" },
       });
       const body = await mapsResponse.text();
-      res.status(mapsResponse.status).set("Content-Type", "application/javascript; charset=utf-8").send(body);
+      if (mapsResponse.ok) mapsCache = { body, expires: Date.now() + MAPS_CACHE_MS };
+      res.status(mapsResponse.status)
+        .set("Content-Type", "application/javascript; charset=utf-8")
+        .set("Cache-Control", mapsResponse.ok ? "public, max-age=3600" : "no-store")
+        .send(body);
     } catch (error) {
       console.error("Google Maps script proxy failed", error);
       res.status(502).json({ error: "Google Maps script proxy failed" });
@@ -69,8 +83,9 @@ async function startServer() {
   });
 
   // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use("/api/trpc", express.json({ limit: "5mb" }));
+  app.use(express.json({ limit: "1mb" }));
+  app.use(express.urlencoded({ limit: "100kb", extended: true }));
   app.post("/api/background-music", express.raw({ type: "*/*", limit: "80mb" }), (req, res) => {
     if (process.env.NODE_ENV === "production") {
       res.status(403).json({ error: "Direct filesystem uploads are disabled in production; use authenticated persistent object storage." });
