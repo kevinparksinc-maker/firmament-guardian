@@ -87,10 +87,15 @@ jobs:
                   return []
               texts=find_text(result)
               print("text-node lengths (top 20):",sorted(texts,reverse=True)[:20])
-              if not any(n>=200 for n in texts):
-                  print("FAILED: no substantial narrative text detected")
+              reading = result.get("reading")
+              synthesis_status = result.get("synthesisStatus")
+              print("synthesisStatus:", synthesis_status)
+              print("reading type:", type(reading).__name__, "reading length:", len(reading) if isinstance(reading,str) else 0)
+              headings = ("## The Answer", "## What Is Happening", "## What Happens Next", "## What This Means for You")
+              if synthesis_status != "ai_completed" or not isinstance(reading, str) or len(reading.strip()) < 200 or not all(h in reading for h in headings):
+                  print("FAILED: calculated chart returned but AI judgment is absent or incomplete")
                   sys.exit(1)
-              print("PASS: substantial Horary result returned from live endpoint")
+              print("PASS: complete four-section Horary judgment returned from live endpoint")
           except Exception as error:
               print("horary.open transport/parser exception:",type(error).__name__,str(error)[:250])
               sys.exit(1)
