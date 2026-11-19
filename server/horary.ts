@@ -481,7 +481,7 @@ Write the reading in clear, grounded, direct 2026 English—as a perceptive life
 - Ban poetic clichés ("cosmic", "sacred", "sacred mirror", "tapestry", "bastion", "alchemist", "underworld", "symphony"), ban shrink jargon ("protective strategies", "emotional regulation", "attachment wounds", "somatic gut-instincts"), and ban formulaic hedging ("At its best...", "Under stress, watch the trap...", "This could suggest...").
 - Let difficult truths—including the person's own part in conflict or repeated mistakes—stand honestly alongside real strengths, always showing why the chart leads there, and never invent personal events or medical diagnoses.`;
 
-const HORARY_SYSTEM = `${HORARY_FULL_SYNTHESIS_STYLE}\n\n---\n\n${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY READING PRESENTATION — FLEXIBLE\nThe three-wheel framework guides examination, not the conclusion or format. Select the order, emphasis, and level of detail that best answer the actual question. No exact headings or mandatory emotional preamble. Give clear evidence for conclusions, including challenging and contradictory testimony.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
+const HORARY_SYSTEM = `${HORARY_FULL_SYNTHESIS_STYLE}\n\n---\n\n${FIRMAMENT_MASTER_INTERPRETATION_PROMPT}\n\n---\n\n${FIRMAMENT_CARE_DELIVERY_STANDARD}\n\n---\n\nHORARY VISIBLE ANSWER CONTRACT — REQUIRED\n${FIRMAMENT_VISIBLE_INTERPRETATION_FORMAT}\n\n---\n\nHORARY READING PRESENTATION — FOUR COMPLETE SECTIONS\nThe three-wheel framework guides the reasoning, not a generic answer. Produce the four reader-facing sections in order: The Answer, What Is Happening, What Happens Next, What This Means for You. Do not add an emotional preamble. Keep the answer direct and incorporate challenging and contradictory testimony within those sections.\n\n---\n\n${HORARY_SPECIALIZED_SYSTEM}`;
 
 function synthesizeHoraryChart(chart: HoraryChart) {
   return synthesizeChartForReading(
@@ -509,8 +509,18 @@ export async function openHoraryQuestion(input: HoraryInput) {
     const reading = await synthesizeHoraryWithGroq(chart, HORARY_SYSTEM, synthesis);
     return { chart, reading, synthesisStatus: "ai_completed" as const };
   } catch (error) {
-    console.warn("[Horary] Interpretation unavailable:", error instanceof Error ? error.name : "unknown");
-    return { chart, reading: null, synthesisStatus: "ai_unavailable" as const };
+    // Never leak prompts, chart data or provider bodies into logs/client errors.
+    // Preserve a stable diagnostic label so production failures can be traced.
+    const message = error instanceof Error ? error.message : "";
+    const match = message.match(/(?:^|\\s)([A-Z][A-Z0-9_]{3,}):/);
+    const errorCode = match?.[1] ?? "HORARY_SYNTHESIS_FAILED";
+    console.warn("[Horary] Interpretation unavailable:", errorCode);
+    return {
+      chart,
+      reading: null,
+      synthesisStatus: "ai_unavailable" as const,
+      synthesisErrorCode: errorCode,
+    };
   }
 }
 
