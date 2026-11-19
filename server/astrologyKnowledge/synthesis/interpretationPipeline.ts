@@ -136,6 +136,56 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
   };
 }
 
+/** Bounded Horary handoff: every method/status, budgeted findings, accurate omission counts. */
+export function horaryInterpretationEvidence(synthesis: SynthesisResult) {
+  const methods = synthesis.methodOutcomes;
+  const perMethod = Math.max(700, Math.floor(36_000 / Math.max(1, methods.length)));
+  let findingsIncluded = 0, findingsTotal = 0, calculationsIncluded = 0, calculationsTotal = 0;
+  const compactMethods = methods.map(method => {
+    let left = perMethod;
+    const judgments: unknown[] = [], calculations: unknown[] = [];
+    findingsTotal += method.findingJudgments.length;
+    calculationsTotal += method.calculatedFindings.length;
+    for (const finding of method.findingJudgments) {
+      const item = [finding.id, finding.subject, String(finding.judgment ?? "").slice(0, 175),
+        String(finding.mechanism ?? "").slice(0, 110), finding.valence, finding.strength,
+        finding.evidenceIds.slice(0, 4)];
+      const size = JSON.stringify(item).length;
+      if (size > left) break;
+      judgments.push(item); left -= size; findingsIncluded++;
+    }
+    for (const finding of method.calculatedFindings) {
+      const item = [finding.evidenceId, String(finding.label ?? "").slice(0, 95),
+        JSON.stringify(finding.calculatedValue ?? null).slice(0, 140)];
+      const size = JSON.stringify(item).length;
+      if (size > left) break;
+      calculations.push(item); left -= size; calculationsIncluded++;
+    }
+    return { id: method.methodId, name: method.methodName, tradition: method.tradition,
+      scope: method.chartScope, frame: method.frame, status: method.status,
+      limitation: String(method.strengthAndLimitations ?? "").slice(0, 220),
+      findingsTotal: method.findingJudgments.length, findingsIncluded: judgments.length,
+      calculationsTotal: method.calculatedFindings.length, calculationsIncluded: calculations.length,
+      judgments, calculations };
+  });
+  return { snapshotId: synthesis.snapshotId, scope: synthesis.mode,
+    coverage: { methodsTotal: methods.length, methodsIncluded: compactMethods.length,
+      findingsTotal, findingsIncluded, omittedFindings: findingsTotal - findingsIncluded,
+      calculationsTotal, calculationsIncluded, omittedCalculations: calculationsTotal - calculationsIncluded,
+      detailsCompacted: true,
+      note: "Every method and status is included; individual findings are budgeted with explicit omissions. Full evidence remains in the chart ledger." },
+    methodExecution: synthesis.sourceSnapshot.methodExecutionLedger.map(entry => [
+      entry.id, entry.status, entry.errorCode ?? null,
+    ]),
+    judgmentColumns: ["findingId","subject","judgment","mechanism","valence","strength","evidenceIds"],
+    calculationColumns: ["evidenceId","label","calculatedValue"],
+    methods: compactMethods,
+    convergences: synthesis.themes.slice(0, 8).map(theme => ({
+      theme: theme.humanTheme, conclusion: theme.primaryConclusion,
+    })),
+  };
+}
+
 function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
   // A contact has two bodies. Keep both sides' method findings while
   // excluding unrelated chart-wide content from the provider payload.
@@ -238,7 +288,7 @@ export async function runInterpretation(
   route: string,
   synthesis: SynthesisResult | readonly SynthesisResult[],
   request: Request,
-  layout: "complete" | "placement-reference" | { focusedPlacement: string } = "complete"
+  layout: "complete" | "placement-reference" | "horary-compact" | { focusedPlacement: string } = "complete"
 ) {
   const ledgers = (
     Array.isArray(synthesis) ? synthesis : [synthesis]
@@ -286,7 +336,9 @@ export async function runInterpretation(
     };
     const evidence = typeof layout === "object"
       ? stringifyEvidence(ledgers.map(ledger => focusedPlacementEvidence(ledger, layout.focusedPlacement)))
-      : stringifyEvidence(ledgers.map(interpretationEvidence));
+      : layout === "horary-compact"
+        ? stringifyEvidence(ledgers.map(horaryInterpretationEvidence))
+        : stringifyEvidence(ledgers.map(interpretationEvidence));
     const dossier = {
       role: "user" as const,
       content:
@@ -295,6 +347,9 @@ export async function runInterpretation(
           : "COMPLETE CALCULATED INTERPRETATION DOSSIER. Consider every applicable method, connecting agreement and tension to the specific question. Read each table using its matching column names. canonRefs index the canon table. Respect frames, evidence IDs and method status. Never fill gaps from inference. Previous prose is conversation context only.\n") +
         evidence,
     };
+    if (layout === "horary-compact") {
+      dossier.content = "HORARY CALCULATED METHOD DOSSIER. Every registered method and status is present. The specific Horary judgment testimony is in the preceding user message. Findings are budgeted and exact omitted counts are supplied; never invent evidence omitted for size.\n" + evidence;
+    }
     // Preserve the domain packet and keep the current turn last in conversations.
     const index = firstUser < 0 ? messages.length : firstUser + 1;
     // Keep the route-specific system prompt at index 0 and its original input
