@@ -503,25 +503,33 @@ export async function openHoraryQuestion(input: HoraryInput) {
       : await analyzeHoraryQuestionWithAI(input.question));
 
   const chart = await calculateHoraryChart({ ...input, questionAnalysis });
+  let failureStage: "master_synthesis" | "ai_interpretation" = "master_synthesis";
   try {
     const { synthesis } = await synthesizeHoraryChart(chart);
     chart.unifiedSynthesisSnapshotId = synthesis.snapshotId;
+    failureStage = "ai_interpretation";
     const reading = await synthesizeHoraryWithGroq(chart, HORARY_SYSTEM, synthesis);
     return { chart, reading, synthesisStatus: "ai_completed" as const };
   } catch (error) {
     // Never leak prompts, chart data or provider bodies into logs/client errors.
     // Preserve a stable diagnostic label so production failures can be traced.
     const message = error instanceof Error ? error.message : "";
-    const match = message.match(/\\b([A-Z][A-Z0-9_]{3,}):/);
+    // The first colon-delimited field is the stable adapter error code.
+    // Avoid regular-expression escapes that could suppress known diagnostics.
+    const rawCode = message.slice(0, message.indexOf(":"));
     const recognizedCodes = new Set([
       "AI_PROVIDERS_FAILED", "AI_REQUEST_TIMEOUT", "AI_FREE_PROVIDER_UNCONFIGURED",
       "HORARY_READING_INCOMPLETE", "HORARY_READING_EMPTY",
       "GROQ_INCOMPLETE_READING", "GROQ_EMPTY_READING", "GROQ_REQUEST_FAILED",
       "MASTER_INPUT_MISSING", "MASTER_CHART_MISSING",
     ]);
-    const errorCode = match && recognizedCodes.has(match[1])
-      ? match[1] : "HORARY_SYNTHESIS_FAILED";
-    console.warn("[Horary] Interpretation unavailable:", errorCode);
+    const errorCode = recognizedCodes.has(rawCode)
+      ? rawCode
+      : message.startsWith("Master Chart mismatch") || message.startsWith("Master Chart equal-house") || message.startsWith("Master Chart Ascendant")
+        ? "HORARY_MASTER_CHART_MISMATCH"
+        : failureStage === "master_synthesis"
+          ? "HORARY_MASTER_SYNTHESIS_FAILED" : "HORARY_AI_INTERPRETATION_FAILED";
+    console.warn("[Horary] Interpretation unavailable:", failureStage, errorCode);
     return {
       chart,
       reading: null,
