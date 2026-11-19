@@ -101,11 +101,21 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
   const handleGenerateChapter = async (chapterKey: LifeStageKey) => {
     if (generateChapterMutation.isPending) return;
     try {
+      // Only use the scrubbed timeline selection when it belongs to this chapter.
+      // Otherwise the server chooses an age inside the chapter's own interval.
+      const selectedChapter = chapters.find(ch => ch.key === chapterKey);
+      const chapterAge =
+        selectedAge !== null &&
+        selectedChapter &&
+        selectedAge >= selectedChapter.ageRange[0] &&
+        selectedAge < selectedChapter.ageRange[1]
+          ? selectedAge
+          : undefined;
       toast.info("Master Interpreter is synthesizing your life story chapter...");
       const res = await generateChapterMutation.mutateAsync({
         chart,
         chapterKey,
-        selectedAge: activeAge,
+        selectedAge: chapterAge,
       });
       setGeneratedChapters(prev => ({
         ...prev,
