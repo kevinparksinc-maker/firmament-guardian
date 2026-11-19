@@ -7,9 +7,9 @@ export class FixedWindowLimiter {
   private lastSweep = 0;
   consume(key: string, limit: number, windowMs: number, now = Date.now()) {
     if (now - this.lastSweep >= 60_000) {
-      for (const [name, bucket] of this.buckets) {
+      this.buckets.forEach((bucket, name) => {
         if (bucket.resetAt <= now) this.buckets.delete(name);
-      }
+      });
       this.lastSweep = now;
     }
     let bucket = this.buckets.get(key);
