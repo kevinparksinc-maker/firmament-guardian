@@ -1,376 +1,377 @@
-/** Genesis Historian Mode: 72 internal investigative questions. No user questionnaire. */
+/** Genesis Historian Mode: 72 silent, event-focused questions. No user questionnaire. */
 export const GENESIS_QUESTIONS = [
   {
     "id": 1,
-    "section": "The Child Before Self-Awareness",
-    "question": "What kind of child does this entire natal configuration symbolically describe, before the child understands their own personality?"
+    "section": "Birth and the World Entered",
+    "question": "What do the chart's supported house and ruler testimonies suggest about the resources, limitations and family setting at the start of this life?"
   },
   {
     "id": 2,
-    "section": "The Child Before Self-Awareness",
-    "question": "What would this child's natural temperament look like in ordinary daily situations?"
+    "section": "Birth and the World Entered",
+    "question": "What kinds of household support or instability may surround the first years, without treating any speculation as verified history?"
   },
   {
     "id": 3,
-    "section": "The Child Before Self-Awareness",
-    "question": "How might this child respond to unfamiliar people, environments, noises, expectations, and changes?"
+    "section": "Birth and the World Entered",
+    "question": "What opportunities or barriers could be inherited through family connections or social standing?"
   },
   {
     "id": 4,
-    "section": "The Child Before Self-Awareness",
-    "question": "What would make this child feel secure, loved, protected, and understood?"
+    "section": "Birth and the World Entered",
+    "question": "Is the opening of this life described more by stability, change, relocation, material scarcity or provision, and what chart evidence supports that?"
   },
   {
     "id": 5,
-    "section": "The Child Before Self-Awareness",
-    "question": "What might adults notice about this child that the child does not yet recognize in themselves?"
+    "section": "Birth and the World Entered",
+    "question": "What early external circumstances may put the person in the path of a distinctive education or craft?"
   },
   {
     "id": 6,
-    "section": "The Child Before Self-Awareness",
-    "question": "What natural quality might this child contribute to the family simply through their presence?"
+    "section": "Birth and the World Entered",
+    "question": "What circumstances established in infancy are most likely to matter in the next chapter?"
   },
   {
     "id": 7,
-    "section": "Home, Parents, and Family Atmosphere",
-    "question": "What might everyday family life feel like for this person during their earliest years?"
+    "section": "Family and Early Childhood",
+    "question": "What kinds of changes may occur in the family home during early childhood?"
   },
   {
     "id": 8,
-    "section": "Home, Parents, and Family Atmosphere",
-    "question": "How might this child experience their mother or primary nurturing figure, emotionally and practically?"
+    "section": "Family and Early Childhood",
+    "question": "Where might caregivers, siblings and extended family expand or restrict this child's opportunities?"
   },
   {
     "id": 9,
-    "section": "Home, Parents, and Family Atmosphere",
-    "question": "How might this child experience their father or another important authority figure?"
+    "section": "Family and Early Childhood",
+    "question": "What does the evidence imply about continuity or change in home, housing and community?"
   },
   {
     "id": 10,
-    "section": "Home, Parents, and Family Atmosphere",
-    "question": "What role might this child naturally occupy among parents, siblings, and relatives?"
+    "section": "Family and Early Childhood",
+    "question": "What practical responsibilities or advantages might arrive unusually early?"
   },
   {
     "id": 11,
-    "section": "Home, Parents, and Family Atmosphere",
-    "question": "Where might family love, security, tension, expectations, and unspoken emotions intersect in this person's experience?"
+    "section": "Family and Early Childhood",
+    "question": "What could happen during the first major age-linked timing milestones, if calculations are provided?"
   },
   {
     "id": 12,
-    "section": "Home, Parents, and Family Atmosphere",
-    "question": "How might this person become a stabilizer, protector, mediator, observer, or emotional anchor within the family?"
+    "section": "Family and Early Childhood",
+    "question": "What childhood situation could prepare the way for later school, vocation or relationships?"
   },
   {
     "id": 13,
-    "section": "Childhood Memories and Emotional Formation",
-    "question": "What ordinary childhood experiences might leave the strongest emotional impressions on this person?"
+    "section": "School and the Discovery of Gifts",
+    "question": "What education or training opportunities are suggested by the relevant houses, rulers and timing?"
   },
   {
     "id": 14,
-    "section": "Childhood Memories and Emotional Formation",
-    "question": "How might this child respond when hurt, misunderstood, disappointed, embarrassed, or excluded?"
+    "section": "School and the Discovery of Gifts",
+    "question": "Which supported gifts might become visible through a school subject, art, craft, performance, trade or competition?"
   },
   {
     "id": 15,
-    "section": "Childhood Memories and Emotional Formation",
-    "question": "What feelings might they keep private even when appearing calm, strong, cheerful, or independent?"
+    "section": "School and the Discovery of Gifts",
+    "question": "What teachers, mentors, institutions or family resources might provide a decisive opening?"
   },
   {
     "id": 16,
-    "section": "Childhood Memories and Emotional Formation",
-    "question": "What might this child learn about loyalty, trust, responsibility, affection, and personal boundaries?"
+    "section": "School and the Discovery of Gifts",
+    "question": "What circumstances could interrupt, delay, or redirect schooling?"
   },
   {
     "id": 17,
-    "section": "Childhood Memories and Emotional Formation",
-    "question": "How could family patterns affect this child before they have words to explain what they are experiencing?"
+    "section": "School and the Discovery of Gifts",
+    "question": "When might an early achievement or disappointment alter the path ahead, if dates or ages are calculated?"
   },
   {
     "id": 18,
-    "section": "Childhood Memories and Emotional Formation",
-    "question": "Which childhood themes might return to their awareness much later in adulthood, carrying new meaning?"
+    "section": "School and the Discovery of Gifts",
+    "question": "How could an early gift progress from private practice to public opportunity in the next stage?"
   },
   {
     "id": 19,
-    "section": "School, Learning, and Early Social Life",
-    "question": "What kind of student might this person be, and how would their natural intelligence express itself?"
+    "section": "Teenage Turning Points",
+    "question": "What changes in household, social world, school or responsibilities might mark the teenage years?"
   },
   {
     "id": 20,
-    "section": "School, Learning, and Early Social Life",
-    "question": "How might they behave in a classroom when interested, bored, challenged, criticized, or encouraged?"
+    "section": "Teenage Turning Points",
+    "question": "Is there evidence for an early break, transition, relocation, new institution or changed family arrangement?"
   },
   {
     "id": 21,
-    "section": "School, Learning, and Early Social Life",
-    "question": "What would teachers and classmates be most likely to notice about their personality and abilities?"
+    "section": "Teenage Turning Points",
+    "question": "What first opportunities might bring education, artistic development, competition, work or public recognition?"
   },
   {
     "id": 22,
-    "section": "School, Learning, and Early Social Life",
-    "question": "How might they respond to rules, competition, authority, discipline, and academic expectations?"
+    "section": "Teenage Turning Points",
+    "question": "What significant peer alliances or relationship milestones might reshape the available path?"
   },
   {
     "id": 23,
-    "section": "School, Learning, and Early Social Life",
-    "question": "What talents, interests, or unusual ways of thinking might emerge during their school years?"
+    "section": "Teenage Turning Points",
+    "question": "Which calculated timing windows, if provided, mark the largest teenage openings or obstacles?"
   },
   {
     "id": 24,
-    "section": "School, Learning, and Early Social Life",
-    "question": "How might their school experience shape their confidence, self-image, ambitions, or sense of belonging?"
+    "section": "Teenage Turning Points",
+    "question": "By the end of the teenage years, what life circumstances have changed materially?"
   },
   {
     "id": 25,
-    "section": "Friendship, Belonging, and Social Identity",
-    "question": "What would this person's friendships look like in everyday life, rather than merely in abstract personality terms?"
+    "section": "Young Adulthood and Independence",
+    "question": "What opportunities and pressures may define leaving childhood behind and establishing independence?"
   },
   {
     "id": 26,
-    "section": "Friendship, Belonging, and Social Identity",
-    "question": "What kinds of people might they naturally attract, trust, admire, or avoid?"
+    "section": "Young Adulthood and Independence",
+    "question": "What first work, study, enterprise or public projects could grow from demonstrated chart gifts?"
   },
   {
     "id": 27,
-    "section": "Friendship, Belonging, and Social Identity",
-    "question": "How would they express loyalty, generosity, humor, affection, protectiveness, and disagreement among friends?"
+    "section": "Young Adulthood and Independence",
+    "question": "What resources, income changes, financial burdens or debts might be important during the twenties?"
   },
   {
     "id": 28,
-    "section": "Friendship, Belonging, and Social Identity",
-    "question": "What might happen when a friendship becomes unequal, competitive, dishonest, or emotionally demanding?"
+    "section": "Young Adulthood and Independence",
+    "question": "What travel, migration, housing or family transitions could be at stake?"
   },
   {
     "id": 29,
-    "section": "Friendship, Belonging, and Social Identity",
-    "question": "Would they tend to lead, support, observe, challenge, unite, or move independently within groups, and why?"
+    "section": "Young Adulthood and Independence",
+    "question": "What serious partnership, marriage or separation themes are symbolically indicated, without declaring an event occurred?"
   },
   {
     "id": 30,
-    "section": "Friendship, Belonging, and Social Identity",
-    "question": "How might early friendships establish patterns that continue into adult social relationships?"
+    "section": "Young Adulthood and Independence",
+    "question": "Which age-supported turning point appears most consequential for the next stage of adult life?"
   },
   {
     "id": 31,
-    "section": "Adolescence and the Emerging Self",
-    "question": "How might this person's personality change as childhood gives way to adolescence?"
+    "section": "Career and Public Achievement",
+    "question": "Which forms of work or public contribution have the strongest converging testimony?"
   },
   {
     "id": 32,
-    "section": "Adolescence and the Emerging Self",
-    "question": "What internal conflicts might arise between their natural identity and other people's expectations?"
+    "section": "Career and Public Achievement",
+    "question": "Where could a breakthrough, influential supporter, commission, promotion or new venture change material prospects?"
   },
   {
     "id": 33,
-    "section": "Adolescence and the Emerging Self",
-    "question": "How might they seek freedom, independence, recognition, privacy, excitement, or belonging?"
+    "section": "Career and Public Achievement",
+    "question": "Is recognition more likely to remain local or become broader, and what evidence makes one reading stronger?"
   },
   {
     "id": 34,
-    "section": "Adolescence and the Emerging Self",
-    "question": "What might their first experiences of attraction, rejection, affection, and emotional vulnerability teach them?"
+    "section": "Career and Public Achievement",
+    "question": "What periods suggest professional expansion, competition, setbacks or reorientation?"
   },
   {
     "id": 35,
-    "section": "Adolescence and the Emerging Self",
-    "question": "How might they respond to peer pressure, confrontation, unfairness, authority, or rebellion?"
+    "section": "Career and Public Achievement",
+    "question": "How might a gift become an achievement or service other people actually encounter?"
   },
   {
     "id": 36,
-    "section": "Adolescence and the Emerging Self",
-    "question": "Which adolescent experiences might become turning points in how they understand themselves?"
+    "section": "Career and Public Achievement",
+    "question": "What lasting professional consequence might follow the strongest supported career turning point?"
   },
   {
     "id": 37,
-    "section": "The Private Emotional World",
-    "question": "What might this person think and feel privately that others rarely recognize?"
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "What does the chart suggest about times of material increase, stability, debt or financial loss?"
   },
   {
     "id": 38,
-    "section": "The Private Emotional World",
-    "question": "How might they experience loneliness, uncertainty, fear, disappointment, hope, and emotional intensity?"
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "When might employment, property, business or patronage change the person's living circumstances?"
   },
   {
     "id": 39,
-    "section": "The Private Emotional World",
-    "question": "What does their everyday guard or pride look like when interacting with others?"
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "Which calculated periods support financial opportunity or pressure, and how precise is the timing?"
   },
   {
     "id": 40,
-    "section": "The Private Emotional World",
-    "question": "How might they respond when somebody they love needs help, protection, reassurance, or sacrifice?"
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "What household or relocation changes could accompany major changes in resources?"
   },
   {
     "id": 41,
-    "section": "The Private Emotional World",
-    "question": "What emotional needs might they struggle to communicate directly?"
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "Are there competing testimonies of prosperity and reversals that suggest distinct chapters rather than a single lifelong label?"
   },
   {
     "id": 42,
-    "section": "The Private Emotional World",
-    "question": "How might their strongest qualities also become sources of pressure, exhaustion, or internal conflict?"
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "What material changes may carry into family life, later work or legacy?"
   },
   {
     "id": 43,
-    "section": "Love, Intimacy, and Partnership",
-    "question": "What kind of emotional connection might this person seek in love, even before they consciously understand it?"
+    "section": "Love, Family and Relationships",
+    "question": "What significant partnership openings or obstacles arise from the available testimony?"
   },
   {
     "id": 44,
-    "section": "Love, Intimacy, and Partnership",
-    "question": "How might they behave when genuinely attracted to someone or beginning to fall in love?"
+    "section": "Love, Family and Relationships",
+    "question": "What life changes could accompany long-term partnership, marriage or a major separation without pretending these happened?"
   },
   {
     "id": 45,
-    "section": "Love, Intimacy, and Partnership",
-    "question": "How would they express affection, commitment, loyalty, desire, vulnerability, and trust in daily relationships?"
+    "section": "Love, Family and Relationships",
+    "question": "Where might children or caregiving responsibilities become a chapter, only as a conditional possibility?"
   },
   {
     "id": 46,
-    "section": "Love, Intimacy, and Partnership",
-    "question": "What recurring disagreements, misunderstandings, or emotional challenges might appear in partnerships?"
+    "section": "Love, Family and Relationships",
+    "question": "Which periods might bring a consequential alliance, changing family role, or shared undertaking?"
   },
   {
     "id": 47,
-    "section": "Love, Intimacy, and Partnership",
-    "question": "How might childhood family roles influence the partners they choose and the responsibilities they accept?"
+    "section": "Love, Family and Relationships",
+    "question": "How could partnership or family circumstances alter travel, livelihood, housing or public position?"
   },
   {
     "id": 48,
-    "section": "Love, Intimacy, and Partnership",
-    "question": "How might their understanding of love change through experience, heartbreak, commitment, and maturity?"
+    "section": "Love, Family and Relationships",
+    "question": "What relationship-related change would leave the most lasting external consequence?"
   },
   {
     "id": 49,
-    "section": "Work, Money, Survival, and Ambition",
-    "question": "How might this person's relationship with money, security, possessions, and material independence develop?"
+    "section": "Trials, Losses and Recoveries",
+    "question": "Which life areas show the strongest testimony for interruption, conflict, loss or difficult change?"
   },
   {
     "id": 50,
-    "section": "Work, Money, Survival, and Ambition",
-    "question": "What would their natural work habits look like when motivated, pressured, discouraged, or pursuing a meaningful goal?"
+    "section": "Trials, Losses and Recoveries",
+    "question": "What might be at stake materially during the most challenging calculated periods?"
   },
   {
     "id": 51,
-    "section": "Work, Money, Survival, and Ambition",
-    "question": "How might they respond to financial uncertainty, opportunity, competition, setbacks, and responsibility?"
+    "section": "Trials, Losses and Recoveries",
+    "question": "Can the evidence distinguish a short-lived disruption from a longer restructuring of home, family, work or status?"
   },
   {
     "id": 52,
-    "section": "Work, Money, Survival, and Ambition",
-    "question": "What types of work, creation, leadership, service, or independent enterprise might express their strongest abilities?"
+    "section": "Trials, Losses and Recoveries",
+    "question": "Which protective circumstances, resources or allies might limit the impact of those setbacks?"
   },
   {
     "id": 53,
-    "section": "Work, Money, Survival, and Ambition",
-    "question": "How might their upbringing influence what success, stability, freedom, and personal power mean to them?"
+    "section": "Trials, Losses and Recoveries",
+    "question": "What change of direction, new chapter or rebuilding opportunity follows a supported difficult interval?"
   },
   {
     "id": 54,
-    "section": "Work, Money, Survival, and Ambition",
-    "question": "What recurring patterns might shape their financial decisions, ambitions, professional relationships, and long-term achievements?"
+    "section": "Trials, Losses and Recoveries",
+    "question": "What important experience could transform the person's circumstances without inventing trauma, illness or wrongdoing?"
   },
   {
     "id": 55,
-    "section": "Crisis, Conflict, and Transformation",
-    "question": "How might this person behave when life stops following their expectations?"
+    "section": "Maturity, Purpose and Contribution",
+    "question": "What mature projects, community roles, family responsibilities or spiritual undertakings are supported?"
   },
   {
     "id": 56,
-    "section": "Crisis, Conflict, and Transformation",
-    "question": "What would they be most likely to protect, defend, question, or reconsider during difficult periods?"
+    "section": "Maturity, Purpose and Contribution",
+    "question": "How might the person's accumulated work begin to benefit others in tangible ways?"
   },
   {
     "id": 57,
-    "section": "Crisis, Conflict, and Transformation",
-    "question": "How do repeating habits from earlier years shape how they handle conflict, loss, betrayal, or major change?"
+    "section": "Maturity, Purpose and Contribution",
+    "question": "What midlife turning points could alter residence, relationships, work or social standing?"
   },
   {
     "id": 58,
-    "section": "Crisis, Conflict, and Transformation",
-    "question": "What strengths might emerge when they are required to endure uncertainty or rebuild their circumstances?"
+    "section": "Maturity, Purpose and Contribution",
+    "question": "What earlier opportunity might bear fruit only later, according to the available periods?"
   },
   {
     "id": 59,
-    "section": "Crisis, Conflict, and Transformation",
-    "question": "How might significant planetary periods and developmental cycles correspond symbolically to changing life themes?"
+    "section": "Maturity, Purpose and Contribution",
+    "question": "Could a new calling or enterprise follow a long-established career, and what evidence would support that?"
   },
   {
     "id": 60,
-    "section": "Crisis, Conflict, and Transformation",
-    "question": "What might this person learn about their own nature through repeated challenges and transformations?"
+    "section": "Maturity, Purpose and Contribution",
+    "question": "What mature achievement or transition most directly sets up the later-life chapter?"
   },
   {
     "id": 61,
-    "section": "Spirituality, Ancestry, and Awakening",
-    "question": "What spiritual, philosophical, or existential questions might naturally arise from this person's chart?"
+    "section": "Later Years and Legacy",
+    "question": "How might livelihood, home and family arrangements change in later years?"
   },
   {
     "id": 62,
-    "section": "Spirituality, Ancestry, and Awakening",
-    "question": "How might their early experiences carry meanings they do not recognize until much later?"
+    "section": "Later Years and Legacy",
+    "question": "What work, knowledge, creations or institutions might continue to affect others?"
   },
   {
     "id": 63,
-    "section": "Spirituality, Ancestry, and Awakening",
-    "question": "What family or ancestral patterns might they eventually feel called to understand, challenge, or transform?"
+    "section": "Later Years and Legacy",
+    "question": "What changes in community standing or public recognition could occur later in life?"
   },
   {
     "id": 64,
-    "section": "Spirituality, Ancestry, and Awakening",
-    "question": "How might they experience the difference between inherited beliefs and their own developing spiritual understanding?"
+    "section": "Later Years and Legacy",
+    "question": "What responsibilities, opportunities or material outcomes are suggested by the later timing cycles?"
   },
   {
     "id": 65,
-    "section": "Spirituality, Ancestry, and Awakening",
-    "question": "What qualities might make them feel responsible for protecting, guiding, healing, or strengthening others?"
+    "section": "Later Years and Legacy",
+    "question": "What can be described about an enduring legacy without forecasting death, diagnosis or a specific unverified event?"
   },
   {
     "id": 66,
-    "section": "Spirituality, Ancestry, and Awakening",
-    "question": "How might their understanding of purpose, destiny, personal responsibility, and self-sovereignty evolve throughout life?"
+    "section": "Later Years and Legacy",
+    "question": "What might the concluding chapters of this life pass onward to loved ones, students, audiences or a wider community?"
   },
   {
     "id": 67,
-    "section": "The Historian's Final Synthesis",
-    "question": "Looking across the complete chart, what central themes appear repeatedly throughout this person's life?"
+    "section": "The Historian's Chronological Synthesis",
+    "question": "What is the strongest evidence-based life theme connecting early circumstances to adulthood?"
   },
   {
     "id": 68,
-    "section": "The Historian's Final Synthesis",
-    "question": "How might the child they once were still be visible in the adult they become?"
+    "section": "The Historian's Chronological Synthesis",
+    "question": "Which specific life domains show recurring openings across separate calculated stages?"
   },
   {
     "id": 69,
-    "section": "The Historian's Final Synthesis",
-    "question": "Which apparent contradictions in their personality might actually be connected expressions of the same underlying pattern?"
+    "section": "The Historian's Chronological Synthesis",
+    "question": "Where do the chart's different methods disagree, and how could that imply distinct periods of rise and reversal?"
   },
   {
     "id": 70,
-    "section": "The Historian's Final Synthesis",
-    "question": "What might this person have contributed to other people's lives without fully recognizing its significance?"
+    "section": "The Historian's Chronological Synthesis",
+    "question": "What are the most consequential age-linked windows that the provided timing data actually supports?"
   },
   {
     "id": 71,
-    "section": "The Historian's Final Synthesis",
-    "question": "What might they understand about their family, relationships, gifts, wounds, and decisions when looking backward with greater maturity?"
+    "section": "The Historian's Chronological Synthesis",
+    "question": "How do gifts, opportunities, obstacles and relationships combine into a continuous chain of possible real-world developments?"
   },
   {
     "id": 72,
-    "section": "The Historian's Final Synthesis",
-    "question": "If the entire chart were interpreted as one continuous human journey, what is the deepest coherent Life Story that emerges from all its contributing layers?"
+    "section": "The Historian's Chronological Synthesis",
+    "question": "If the chart were interpreted as a beginning-to-end symbolic biography, what is the most compelling yet responsibly qualified sequence of life chapters?"
   }
 ] as const;
 
 export const GENESIS_HISTORIAN_INSTRUCTIONS = `THE ABSOLUTE — GENESIS LIFE STORY INTELLIGENCE
-The 72-Question Internal Inquiry Engine · Historian Mode
-You are GENESIS, the silent Life Story Intelligence of The Absolute.
-The reader receives an intimate, candid, second-person portrait centered on **core identity**, **childhood roots**, and the **"life-script" development of talents and repeating patterns** across time. You perform the astrological investigation quietly behind the scenes—never printing planet, sign, house, degree, aspect, mansion, bound, face, or Lot names into the reader-facing text or titles.
-Before writing, investigate the 72 questions silently using all supplied calculated chart layers. Do not claim a method was calculated when its output is absent. Give natural gifts the same weight as difficult patterns, show recognizable everyday scenes rather than clinical labels or cosmic clichés, weave the relevant **12 Life Areas** smoothly into flowing paragraphs with short bold reader-specific section titles and no bullet-point lists of traits, and never invent uncalculated biographical events, medical diagnoses, secrets, or another person's motives.`;
+The 72-Question Internal Inquiry Engine · Biographical Historian Mode
+You are GENESIS, the silent life historian for The Absolute. Your job is to reconstruct the full *shape of a life* from the supplied chart evidence, from the circumstances of birth through school, teenage turning points, adult work, partnership, fortune, major losses, later years and legacy. Never turn this into a behavioral, personality, psychological or self-help reading.
+Investigate the 72 life-event questions silently, relying on only the calculations actually supplied. Each chapter must track potential worldly developments: where this person starts, what opportunities and setbacks appear, who or what changes their path, and what follows next. Name ages or periods only from supplied timing calculations; otherwise use broad life stages.
+Treat the astrology as symbolic testimony, not proof of historical facts or certain predictions. Never invent a verified event, profession, diagnosis, trauma, death, marriage, child, award, precise date or a third party's motives. Do not bring in the known biography of a public figure during blinded testing. Give distinctive chart-backed gifts meaningful real-world expression instead of describing traits.
+Weave the relevant 12 Life Areas into a chronological second-person story with deep, connected paragraphs, a visible human setting, meaningful change and consequence. No bullet-point lists, moral coaching or personality assessments. Do not print planet, sign, house, degree, aspect, mansion, bound, face, Lot or timing technique names into the reader's story. Keep evidence technicalities separate.`;
 
 export function buildGenesisInquiryPrompt(focus?: string): string {
   return [GENESIS_HISTORIAN_INSTRUCTIONS,
-    focus ? `FOCUS FOR THIS READING: ${focus}. Investigate all 72 questions internally; develop the questions most relevant to this chapter in greatest depth and maintain continuity with the whole life.` : "Investigate all 72 questions internally and synthesize their answers into a continuous Life Story.",
+    focus ? `FOCUS FOR THIS READING: ${focus}. Investigate all 72 questions internally; develop the life events and circumstances most relevant to this stage, preserving the larger chronological arc.` : "Investigate all 72 questions internally and synthesize their testimony into a continuous chronological life story.",
     ...GENESIS_QUESTIONS.map(q => `${q.id}. [${q.section}] ${q.question}`)
   ].join("\n");
 }
