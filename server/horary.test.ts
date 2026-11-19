@@ -203,10 +203,11 @@ describe("horary astrology", () => {
     expect(result.chart.canonEvidenceText).toContain("Condition:");
   });
 
-  it("retains the calculated judgment and flags unavailable narrative when the provider fails", async () => {
-    mocked.invokeLLM.mockRejectedValueOnce(new Error("provider unavailable"));
+  it("retains the calculated judgment and safely identifies a failed Groq HTTP status", async () => {
+    mocked.invokeLLM.mockRejectedValueOnce(new Error("AI_PROVIDERS_FAILED: groq GROQ_REQUEST_FAILED: HTTP 429"));
     const result = await openHoraryQuestion(sampleInput);
     expect(result.synthesisStatus).toBe("ai_unavailable");
+    expect(result.synthesisErrorCode).toBe("AI_PROVIDER_HTTP_429");
     expect(result.reading).toBeNull();
     expect(result.chart.traditional.judgment.verdict).toBeTruthy();
   });
