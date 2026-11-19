@@ -557,6 +557,15 @@ describe("user-facing tRPC interpretation routes", () => {
     expect(result.synthesisStatus).toBe("ai_unavailable");
     expect(result.reading).toBeNull();
     expect(result.chart.traditional.judgment.verdict).toBeTruthy();
-    expectCompleteDossiers(1);
+    const messages = vi.mocked(invokeLLM).mock.calls[0][0].messages;
+    const compact = messages.find(message => String(message.content).startsWith("HORARY CALCULATED METHOD DOSSIER."));
+    expect(compact).toBeDefined();
+    const [ledger] = decodeEvidence(JSON.parse(String(compact!.content).split("\n").at(-1)!)) as Array<{
+      coverage: { methodsTotal: number; methodsIncluded: number; omittedFindings: number };
+      methods: Array<{ id: string; status: string }>;
+    }>;
+    expect(ledger.methods.map(method => method.id)).toEqual(expect.arrayContaining([...MASTER_METHOD_IDS]));
+    expect(ledger.coverage.methodsIncluded).toBe(ledger.coverage.methodsTotal);
+    expect(ledger.coverage.omittedFindings).toBeGreaterThanOrEqual(0);
   }, 20_000);
 });
