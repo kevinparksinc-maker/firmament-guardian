@@ -512,8 +512,15 @@ export async function openHoraryQuestion(input: HoraryInput) {
     // Never leak prompts, chart data or provider bodies into logs/client errors.
     // Preserve a stable diagnostic label so production failures can be traced.
     const message = error instanceof Error ? error.message : "";
-    const match = message.match(/(?:^|\\s)([A-Z][A-Z0-9_]{3,}):/);
-    const errorCode = match?.[1] ?? "HORARY_SYNTHESIS_FAILED";
+    const match = message.match(/\\b([A-Z][A-Z0-9_]{3,}):/);
+    const recognizedCodes = new Set([
+      "AI_PROVIDERS_FAILED", "AI_REQUEST_TIMEOUT", "AI_FREE_PROVIDER_UNCONFIGURED",
+      "HORARY_READING_INCOMPLETE", "HORARY_READING_EMPTY",
+      "GROQ_INCOMPLETE_READING", "GROQ_EMPTY_READING", "GROQ_REQUEST_FAILED",
+      "MASTER_INPUT_MISSING", "MASTER_CHART_MISSING",
+    ]);
+    const errorCode = match && recognizedCodes.has(match[1])
+      ? match[1] : "HORARY_SYNTHESIS_FAILED";
     console.warn("[Horary] Interpretation unavailable:", errorCode);
     return {
       chart,
