@@ -6,34 +6,30 @@ import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
 
 const STAGES = [
-  { title: "Birth, Parents, Childhood & School", period: "Early roots & school years", focus: "core nature, mother and father dynamics, home atmosphere, inherited burdens, school learning style, and early friendships" },
-  { title: "Gifts, Hobbies, Friends & Youth", period: "Adolescence & emerging passions", focus: "natural gifts vs. hidden potential, concrete hobbies and interests, friendships, hidden rivals, loyalty, betrayal, and early love" },
-  { title: "Money, Career, Love & Marriage", period: "Building adulthood", focus: "earning power, debt and financial hardship vs. lasting wealth, employment vs. business ownership, attraction, sex, marriage, heartbreak, and your own part in conflict" },
-  { title: "Children, Health, Hardship & Survival", period: "Tests, family & rebuilding", focus: "children and parenting, daily health habits without medical diagnoses, major setbacks, injustice, poor choices, and how you rebuild" },
-  { title: "Faith, Turning Points & Later Years", period: "Purpose, timing & legacy", focus: "faith and relationship with God or core beliefs, turning points anchored in calculated timing cycles, greatest blessings, hardest lessons, and legacy" },
+  { key: "birth_origins", title: "Birth: The World You Enter", period: "Home, family circumstances and the start of the journey" },
+  { key: "childhood", title: "Childhood: Home, School & First Discoveries", period: "Growing up, early experiences and first opportunities" },
+  { key: "adolescence", title: "Teenage Years: Turning Points", period: "Education, friendships, first openings and new directions" },
+  { key: "early_adulthood", title: "Young Adulthood: Work, Love & Independence", period: "Life outside childhood and the first adult crossroads" },
+  { key: "adult_development", title: "Adult Years: Family, Achievements & Trials", period: "Building a life and confronting major reversals" },
+  { key: "later_life", title: "Later Years: Contribution & Legacy", period: "What later chapters of life may bring and leave behind" },
+  { key: "turning_points", title: "The Major Turning Points", period: "A lifetime of evidence-supported openings and setbacks" },
+  { key: "future_chapters", title: "The Road Ahead", period: "Upcoming life chapters in the supplied timing windows" },
 ] as const;
 
 export function LifeStoryInterpreter({ chart }: { chart: ChartResult }) {
   const [open, setOpen] = useState(false);
   const [chapters, setChapters] = useState<Record<number, string>>({});
   const [active, setActive] = useState<number | null>(null);
-  const story = trpc.interpretation.host.useMutation();
+  const story = trpc.lifeStory.generateChapter.useMutation();
 
   const read = async (index: number) => {
     if (story.isPending) return;
     setActive(index);
     if (chapters[index]) return;
     const stage = STAGES[index];
-    const question = [
-      "Write a rich, continuous, plainspoken LIFE STORY chapter using ONLY the attached calculated natal chart and computed canon/evidence layers.",
-      `Chapter: ${stage.title}. Life stage: ${stage.period}. Explore: ${stage.focus}.`,
-      "Write like a direct, perceptive reader—NEVER like a psychiatrist or therapist (no shrink jargon). Separate Natural Gifts, Hidden Potential, Developed Strengths, and Weaknesses; deduce concrete hobbies/interests only when backed by chart testimony; explain WHY the astrological factors (planets, rulers, houses, aspects, Nakshatras/Manazil, Lots, Fixed Stars) lead to each conclusion.",
-      "Do not invent biographical events, trauma, marriage dates, or medical diagnoses. Anchor any timing statements strictly in calculated timing cycles; where timing cycles are absent, state natal themes clearly. Include honest shortcomings or what the person themselves contributes to difficulties when supported by testimony.",
-      "Make this a substantial, cohesive narrative chapter in plain 2026 English—not a bullet list of disconnected placements.",
-    ].join("\n\n");
     try {
-      const answer = await story.mutateAsync({ chart, mode: "natal", history: [], question });
-      setChapters(previous => ({ ...previous, [index]: answer }));
+      const answer = await story.mutateAsync({ chart, chapterKey: stage.key });
+      setChapters(previous => ({ ...previous, [index]: answer.content }));
     } catch {
       // The mutation error is shown below and the chapter can be retried.
     }
@@ -46,7 +42,7 @@ export function LifeStoryInterpreter({ chart }: { chart: ChartResult }) {
         <div>
           <div className="flex items-center gap-2 text-fuchsia-200"><BookOpen className="h-5 w-5" /><span className="text-xs font-bold uppercase tracking-[0.2em]">Firmament Life Story</span></div>
           <h2 className="mt-2 font-serif text-2xl text-white">The Story Within Your Stars</h2>
-          <p className="mt-1 max-w-xl text-sm text-slate-300">A deep, chapter-by-chapter portrait drawn from your calculated birth chart and the existing Master Interpreter.</p>
+          <p className="mt-1 max-w-xl text-sm text-slate-300">A deep, chronological life journey—from childhood and first opportunities to adulthood, major changes and legacy.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
@@ -66,7 +62,7 @@ export function LifeStoryInterpreter({ chart }: { chart: ChartResult }) {
         </div>
       </div>
       {open && <div className="relative mt-5 space-y-3">
-        <p className="text-xs text-slate-400">Choose a life stage to generate its own detailed narrative. Chapters are based on symbolic chart evidence, not verified personal history.</p>
+        <p className="text-xs text-slate-400">Choose a chapter of life's journey. Read about possible real-world experiences and turning points from symbolic chart evidence—not a behavior or personality profile.</p>
         <div className="grid gap-2 sm:grid-cols-2">
           {STAGES.map((stage, index) => <button key={stage.title} type="button" disabled={story.isPending} onClick={() => void read(index)} className={`rounded-xl border p-3 text-left transition hover:border-fuchsia-300/70 hover:bg-fuchsia-400/10 ${active === index ? "border-fuchsia-300/70 bg-fuchsia-400/10" : "border-white/15 bg-white/5"}`}>
             <span className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-fuchsia-300" />{stage.title}</span>
