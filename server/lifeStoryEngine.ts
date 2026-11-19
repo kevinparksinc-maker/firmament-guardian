@@ -1,5 +1,5 @@
 import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
-import type { ChartResult, ChartRow } from "./astronomy";
+import { noaaSunriseUtc, type ChartResult, type ChartRow } from "./astronomy";
 import {
   normalizeLongitude,
   formatLongitude,
@@ -943,7 +943,12 @@ export async function generateLifeStoryChapter(
   const chapters = compileLifeStoryChapters(chart, currentAge, cycles);
   const targetChapter = chapters.find(c => c.key === chapterKey) || chapters[0];
 
-  const focusAge = selectedAge ?? (targetChapter.ageRange[0] + targetChapter.ageRange[1]) / 2;
+  // Never use a selected age from a different chapter (e.g. age 39 in childhood).
+  const [stageStart, stageEnd] = targetChapter.ageRange;
+  const focusAge =
+    selectedAge !== undefined && selectedAge >= stageStart && selectedAge < stageEnd
+      ? selectedAge
+      : (stageStart + stageEnd) / 2;
   const profection = calculateAnnualProfection(focusAge, chart);
 
   // Compute lots
@@ -955,7 +960,12 @@ export async function generateLifeStoryChapter(
 
   let arabicLotsSummary = "Unavailable";
   if (chart.ascendant && sun && moon) {
-    const isDay = chart.ascendant.longitude !== sun.longitude; // simplified sect approximation
+    // Sect is day/night at the actual birth location and time, not an angle inequality.
+    // The old inequality was almost always true and incorrectly forced nocturnal charts to day.
+    const birthMoment = Date.parse(chart.utc);
+    const sunrise = noaaSunriseUtc(chart.input.date, chart.input.latitude, chart.input.longitude);
+    const sunset = noaaSunriseUtc(chart.input.date, chart.input.latitude, chart.input.longitude, true);
+    const isDay = birthMoment >= sunrise.getTime() && birthMoment < sunset.getTime();
     const lots = calculateArabicLots({
       ascendant: chart.ascendant.longitude,
       sun: sun.longitude,
