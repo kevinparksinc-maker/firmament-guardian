@@ -131,6 +131,24 @@ export async function synthesizeHoraryWithGroq(
         .join("; ")
     : "None";
 
+  // Keep the specialist's decisive testimony, not the long prose archive.
+  // Full traditional and canon evidence remains available in HoraryChart.
+  const compactJudgment = JSON.stringify({
+    verdict: chart.traditional.judgment.verdict,
+    score: chart.traditional.judgment.score,
+    testimonyTotal: chart.traditional.judgment.testimonies.length,
+    testimonyIncluded: Math.min(12, chart.traditional.judgment.testimonies.length),
+    testimonies: chart.traditional.judgment.testimonies.slice(0, 12)
+      .map(item => JSON.stringify(item).slice(0, 225)),
+    moonStatus: chart.traditional.moonStatus,
+    receptionTotal: chart.traditional.receptions.length,
+    receptions: chart.traditional.receptions.slice(0, 8)
+      .map(item => JSON.stringify(item).slice(0, 240)),
+    perfectionTotal: chart.traditional.perfection.length,
+    perfection: chart.traditional.perfection.slice(0, 8)
+      .map(item => JSON.stringify(item).slice(0, 240)),
+    aspects: chart.relevantAspects,
+  });
   const promptContent = [
     `ACTUAL QUESTION: "${translated.question}"`,
     `STEP 1 QUESTION ANALYSIS:`,
@@ -163,7 +181,7 @@ export async function synthesizeHoraryWithGroq(
       : `• No natal birth chart supplied. Reading evaluates universal and question-moment layers without inventing natal biography.`,
     "",
     "--- COMPACT JUDGMENT EVIDENCE ---",
-    chart.judgmentEvidenceText,
+    compactJudgment,
     "",
     // The shared runInterpretation pipeline already injects the complete
     // calculated-method ledger. Sending chart.evidenceText a second time here
@@ -194,7 +212,7 @@ export async function synthesizeHoraryWithGroq(
   const result = await runInterpretation("HORARY_READING", synthesis, {
     model: ENV.groqModel || "llama-3.3-70b-versatile",
     messages,
-    maxTokens: 3200,
+    maxTokens: 2300,
     timeoutMs,
   }, "horary-compact");
 
