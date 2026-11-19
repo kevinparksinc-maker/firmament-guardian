@@ -203,9 +203,9 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
               Chronological <em>Life Story</em>
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
-              Transform your natal chart and planetary returns into a continuous biographical arc.
-              Grounded in exact Hellenistic Annual Profections, major planetary return cycles,
-              Vimshottari Dasha, and dual God/Agent reference frames.
+              Read a chronological life story based on symbolic chart testimony and changing life-stage themes.
+              Draws on Annual Profections, indicative cycle windows, Vimshottari Dasha, and
+              dual God/Agent frames. Life events are interpretive possibilities, not verified history.
             </p>
           </div>
 
@@ -561,7 +561,7 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
                   {chapter.keyCycles.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Major Planetary Cycles ({chapter.keyCycles.length})
+                        Approximate Life-Cycle Windows ({chapter.keyCycles.length})
                       </h4>
                       <div className="grid gap-2 sm:grid-cols-2">
                         {chapter.keyCycles.map(cycle => (
@@ -584,9 +584,6 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
                             <p className="mt-1 text-[11px] text-slate-300 leading-relaxed">
                               {cycle.description}
                             </p>
-                            <div className="mt-2 text-[10px] text-emerald-300 bg-emerald-400/10 p-1.5 rounded-lg border border-emerald-400/20">
-                              <strong>Remedy / Practice:</strong> {cycle.constructiveAdvice}
-                            </div>
                           </div>
                         ))}
                       </div>
