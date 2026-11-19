@@ -26,7 +26,7 @@ import { sdk } from "./_core/sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { aiProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
 import {
@@ -230,7 +230,7 @@ export const appRouter = router({
       ),
   }),
   simulationLab: router({
-    predict: publicProcedure
+    predict: aiProcedure
       .input(z.object({
         id: z.string().trim().min(1).max(120),
         league: z.enum(["NFL", "NBA", "NHL"]),
@@ -273,7 +273,7 @@ export const appRouter = router({
     harmonicForecast: publicProcedure
       .input(z.object({ chart: chartInput, start: z.string().datetime(), steps: z.number().int().min(1).max(48).default(48) }))
       .mutation(({ input }) => calculateHarmonicForecast(input.chart, input.start, input.steps)),
-    masterChart: publicProcedure
+    masterChart: aiProcedure
       .input(
         chartInput.extend({
           mode: z.enum(["natal", "transit", "combined"]).default("natal"),
@@ -372,7 +372,7 @@ export const appRouter = router({
       }),
   }),
   astrologyKnowledge: router({
-    placementSynthesis: publicProcedure
+    placementSynthesis: aiProcedure
       .input(
         chartResultInput.extend({
           body: z.string().trim().min(1).max(40),
@@ -380,7 +380,7 @@ export const appRouter = router({
         })
       )
       .mutation(({ input }) => synthesizePlacement(input.chart, input.body, input.question)),
-    behavioralReport: publicProcedure
+    behavioralReport: aiProcedure
       .input(
         chartResultInput.extend({
           question: z.string().trim().max(2000).default(""),
@@ -418,10 +418,10 @@ export const appRouter = router({
       }),
   }),
   interpretation: router({
-    methodOutcomes: publicProcedure
+    methodOutcomes: aiProcedure
       .input(chartResultInput.extend({ mode: z.enum(["natal", "transit", "combined"]).default("natal") }))
       .query(({ input }) => buildChartMethodOutcomes(input.chart, input.mode)),
-    independentSkyReading: publicProcedure
+    independentSkyReading: aiProcedure
       .input(chartResultInput.extend({ contactId: z.string().max(180).optional() }))
       .mutation(async ({ input }) => {
         if (input.chart.input.chartRole !== "event") throw new Error("An independent event chart is required.");
@@ -442,13 +442,13 @@ export const appRouter = router({
         });
         return scrubNonHoraryAstrologyJargon(interpretationText(response));
       }),
-    energyReading: publicProcedure.input(chartResultInput).mutation(({ input }) => buildEnergyReading(input.chart)),
-    chartPage: publicProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]), names: z.array(z.string().min(1).max(80)).min(1).max(2).default(["Sun", "Moon"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode, input.names)),
+    energyReading: aiProcedure.input(chartResultInput).mutation(({ input }) => buildEnergyReading(input.chart)),
+    chartPage: aiProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]), names: z.array(z.string().min(1).max(80)).min(1).max(2).default(["Sun", "Moon"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode, input.names)),
     personaMatrix: publicProcedure.input(chartResultInput).query(({ input }) => buildPlanetPersonaMatrix(input.chart)),
     canonicalMappings: publicProcedure
       .input(chartResultInput.extend({ requestedActors: z.array(z.string()).optional() }))
       .query(({ input }) => mapRequestedPlacementsToCanonicalMeaning(input.chart, input.requestedActors)),
-    chatWithChart: publicProcedure
+    chatWithChart: aiProcedure
       .input(
         z.object({
           chart: chartPayload,
@@ -468,11 +468,11 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return interactiveNatalChat(input.history, input.question, input.chart, input.mode);
       }),
-    chartBriefing: publicProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
-    focusedPlacement: publicProcedure
+    chartBriefing: aiProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
+    focusedPlacement: aiProcedure
       .input(z.object({ chart: chartPayload, target: z.object({ kind: z.enum(["placement", "star", "contact"]), name: z.string().min(1).max(80), otherName: z.string().min(1).max(80).optional(), layer: z.enum(["natal", "transit"]), lens: z.enum(["all", "mind", "work", "love"]).optional(), atUtc: z.string().datetime({ offset: true }).optional() }) }))
       .mutation(({ input }) => readFocusedPlacement(input.chart, input.target)),
-    host: publicProcedure
+    host: aiProcedure
       .input(
         z.object({
           history: z
@@ -492,7 +492,7 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return askHost(input.history, input.question, input.chart, input.mode);
       }),
-    generate: publicProcedure
+    generate: aiProcedure
       .input(
         chartResultInput.extend({
           mode: z.enum(["natal", "transit", "combined"]).default("combined"),
@@ -508,7 +508,7 @@ export const appRouter = router({
         const interpretation = await generateInterpretation(input.chart, input.mode, input.question);
         return { ...interpretation, synthesis: interpretation.masterSynthesis };
       }),
-    masterSynthesize: publicProcedure
+    masterSynthesize: aiProcedure
       .input(
         chartInput.extend({
           chart: chartPayload.optional(),
@@ -529,7 +529,7 @@ export const appRouter = router({
         const { synthesis } = await synthesizeMasterSnapshot(snapshot, input.mode, input.question);
         return narrateMasterSynthesis(synthesis, input.question);
       }),
-    chapter: publicProcedure
+    chapter: aiProcedure
       .input(
         z.object({
           chart: chartPayload,
@@ -554,7 +554,7 @@ export const appRouter = router({
           input.question
         );
       }),
-    followUp: publicProcedure
+    followUp: aiProcedure
       .input(
         z.object({
           chart: chartPayload,
@@ -583,10 +583,10 @@ export const appRouter = router({
       }),
   }),
   horary: router({
-    open: publicProcedure
+    open: aiProcedure
       .input(horaryQuestionInput)
       .mutation(({ input }) => openHoraryQuestion(input)),
-    followUp: publicProcedure
+    followUp: aiProcedure
       .input(
         z.object({
           chart: horaryPayload,
@@ -601,7 +601,7 @@ export const appRouter = router({
   zodiacHorary: router({
     // Separate from traditional Horary: the selected sign's classical ruler
     // anchors Agent House 1 while God View retains 0° Aries.
-    read: publicProcedure
+    read: aiProcedure
       .input(z.object({
         sign: z.enum(ZODIAC_SIGNS),
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -645,7 +645,7 @@ export const appRouter = router({
         const openId = ctx.user.openId;
         return db.deleteLovedOne(openId, input.id);
       }),
-    checkInStatus: publicProcedure
+    checkInStatus: aiProcedure
       .input(
         z.object({
           name: z.string(),
@@ -714,7 +714,7 @@ export const appRouter = router({
           },
         };
       }),
-    systemIntersect: publicProcedure
+    systemIntersect: aiProcedure
       .input(
         z.object({
           userChart: chartPayload,
@@ -735,7 +735,7 @@ export const appRouter = router({
       }),
   }),
   ai: router({
-    answerChartQuestion: publicProcedure
+    answerChartQuestion: aiProcedure
       .input(z.object({
         question: z.string().min(1),
         chart: chartPayload,
@@ -743,7 +743,7 @@ export const appRouter = router({
       }))
       .mutation(({ input }) => askHost([], input.question, input.chart, input.mode)),
 
-    askTransitQuestion: publicProcedure
+    askTransitQuestion: aiProcedure
       .input(chartResultInput.extend({
         question: z.string().min(1),
         conversationHistory: horaryFollowUpHistorySchema.optional(),
@@ -752,7 +752,7 @@ export const appRouter = router({
         answer: await askHost(input.conversationHistory ?? [], input.question, input.chart, "transit"),
       })),
 
-    generateSoulmatePrediction: publicProcedure
+    generateSoulmatePrediction: aiProcedure
       .input(chartResultInput)
       .mutation(async ({ input }) => {
         const { synthesis } = await synthesizeChartForReading(input.chart, "natal", "Natal relationship potential");
@@ -774,7 +774,7 @@ export const appRouter = router({
         };
       }),
 
-    generateSynastryBreakdown: publicProcedure
+    generateSynastryBreakdown: aiProcedure
       .input(z.object({ userChart: chartPayload, targetChart: chartPayload, focus: synastryFocus.optional(), question: z.string().trim().max(500).optional() }))
       .mutation(async ({ input }) => {
         const { crossChart, interpretation } = await readSynastry(input.userChart, input.targetChart, input.focus, input.question);
@@ -787,7 +787,7 @@ export const appRouter = router({
         };
       }),
 
-    genesisReading: publicProcedure
+    genesisReading: aiProcedure
       .input(chartResultInput.extend({
         question: z.string().default(""),
         focusArea: z.enum(["career", "relationships", "health", "finance", "spirituality", "general", "creativity", "home"]).default("general"),
@@ -862,7 +862,7 @@ export const appRouter = router({
         };
       }),
 
-    generateChapter: publicProcedure
+    generateChapter: aiProcedure
       .input(
         chartResultInput.extend({
           chapterKey: z.enum([
