@@ -523,12 +523,19 @@ export async function openHoraryQuestion(input: HoraryInput) {
       "GROQ_INCOMPLETE_READING", "GROQ_EMPTY_READING", "GROQ_REQUEST_FAILED",
       "MASTER_INPUT_MISSING", "MASTER_CHART_MISSING",
     ]);
-    const errorCode = recognizedCodes.has(rawCode)
-      ? rawCode
-      : message.startsWith("Master Chart mismatch") || message.startsWith("Master Chart equal-house") || message.startsWith("Master Chart Ascendant")
-        ? "HORARY_MASTER_CHART_MISMATCH"
-        : failureStage === "master_synthesis"
-          ? "HORARY_MASTER_SYNTHESIS_FAILED" : "HORARY_AI_INTERPRETATION_FAILED";
+    const providerStatus = message.includes("HTTP ")
+      ? Number(message.split("HTTP ")[1]?.slice(0, 3)) : NaN;
+    const safeProviderStatuses = new Set([400, 401, 403, 404, 408, 409, 413, 429, 500, 502, 503, 504, 529]);
+    const errorCode = rawCode === "AI_PROVIDERS_FAILED" && safeProviderStatuses.has(providerStatus)
+      ? `AI_PROVIDER_HTTP_${providerStatus}`
+      : rawCode === "AI_PROVIDERS_FAILED" && message.includes("timeout")
+        ? "AI_PROVIDER_TIMEOUT"
+        : recognizedCodes.has(rawCode)
+          ? rawCode
+          : message.startsWith("Master Chart mismatch") || message.startsWith("Master Chart equal-house") || message.startsWith("Master Chart Ascendant")
+            ? "HORARY_MASTER_CHART_MISMATCH"
+            : failureStage === "master_synthesis"
+              ? "HORARY_MASTER_SYNTHESIS_FAILED" : "HORARY_AI_INTERPRETATION_FAILED";
     console.warn("[Horary] Interpretation unavailable:", failureStage, errorCode);
     return {
       chart,
