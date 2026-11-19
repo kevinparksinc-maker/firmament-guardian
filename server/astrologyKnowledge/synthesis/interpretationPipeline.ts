@@ -139,7 +139,7 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
 /** Bounded Horary handoff: every method/status, budgeted findings, accurate omission counts. */
 export function horaryInterpretationEvidence(synthesis: SynthesisResult) {
   const methods = synthesis.methodOutcomes;
-  const perMethod = Math.max(700, Math.floor(36_000 / Math.max(1, methods.length)));
+  const perMethod = Math.max(700, Math.floor(12_000 / Math.max(1, methods.length)));
   let findingsIncluded = 0, findingsTotal = 0, calculationsIncluded = 0, calculationsTotal = 0;
   const compactMethods = methods.map(method => {
     let left = perMethod;
