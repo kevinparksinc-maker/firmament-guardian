@@ -1,3 +1,4 @@
+import { normalizeHoraryReading } from "./services/groqHoraryService";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
@@ -378,3 +379,29 @@ describe("Horary edited inputs and natal separation", () => {
   });
 });
 
+
+describe("Horary four-section output contract", () => {
+  const complete = [
+    "**The Answer:**",
+    "The evidence supports a specific outcome, with clear conditions for success.",
+    "### What Is Happening",
+    "You are confronting a practical obstacle that requires direct action.",
+    "## What Happens Next",
+    "The next stage depends on fulfilling the necessary conditions.",
+    "## What This Means for You:",
+    "Take the next concrete step, and observe the response before deciding.",
+  ].join("\n\n");
+
+  it("accepts equivalent markdown heading styles and canonicalizes the four sections", () => {
+    const normalized = normalizeHoraryReading(complete);
+    for (const heading of ["The Answer", "What Is Happening", "What Happens Next", "What This Means for You"]) {
+      expect(normalized).toContain(`## ${heading}\n\n`);
+    }
+    expect(normalized).not.toContain("**The Answer:**");
+  });
+
+  it("rejects a missing final section instead of reporting a completed AI reading", () => {
+    expect(() => normalizeHoraryReading(complete.split("## What This Means for You:")[0]))
+      .toThrow("HORARY_READING_INCOMPLETE");
+  });
+});
