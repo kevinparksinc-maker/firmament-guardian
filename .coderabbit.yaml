@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# The Absolute — independent PR review contract.
+# This is a reviewer configuration, not a replacement for runtime tests or live UX QA.
+language: en-US
+reviews:
+  profile: assertive
+  high_level_summary: true
+  review_status: true
+  review_info: true
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+  path_instructions:
+    - path: "server/astronomy.ts"
+      instructions: |
+        Check that the canonical ephemeris XYZ vectors and custom fixed-firmament projection are respected.
+        The natal Ascendant is sunrise-anchored at the chart location, then advanced by the
+        app's declared rotation rule. Flag any reintroduction of precession, obliquity transforms,
+        sidereal/Lahiri/J2000 fallback, or a +90-degree meridian shortcut in production coordinates.
+        Verify time-zone, sunrise, near-midnight, null-input and sign-boundary behavior.
+        These are application-specific rules, not claims of conventional astronomical equivalence.
+    - path: "server/masterChart/**"
+      instructions: |
+        Check every registered technique has a valid execution status, calculation provenance,
+        and reconciled evidence IDs. Prevent missing method results being quietly replaced
+        by placeholders. Preserve distinct God, natal Agent, and event/transit scopes.
+        Validate the local sunrise Ascendant, counterclockwise equal houses and house rulership.
+    - path: "server/astrologyKnowledge/vedic/**"
+      instructions: |
+        Review all seven classical Shadbala planets and six component sums, individual
+        requirements and numeric ranks; review the twelve Bhava Bala totals, lord delivery,
+        signed aspect contributions and chart-relative ranking. Do not fabricate numerical
+        Shadbala scores for nodes or outer planets. Verify actual Nakshatra plus Pada,
+        full Ashtakavarga accounting and checksum, and explicit formula variants.
+        Distinguish conventional Vedic definitions from The Absolute's custom XYZ/equal-house adaptation.
+    - path: "server/astrologyKnowledge/synthesis/**"
+      instructions: |
+        Check that every applicable calculated method is available to the synthesis and
+        that both full and compact packets disclose omissions rather than pretending to
+        be lossless. Prioritize actual Nakshatra/Pada and numerical Shadbala/Bhava Bala
+        evidence in the reading, without inventing missing computations. Watch for
+        excessive prompt payloads, provider rate-limit/503/429 handling, bad fallback,
+        repeated AI calls, duplicate findings, and absent provenance.
+    - path: "server/interpretation.ts"
+      instructions: |
+        Ensure every natal, transit and combined reading consumes the same authoritative
+        calculated dossier. Preserve God/Agent/event separation and the three-chart
+        synthesis structure without double-counting. Flag fabricated placement claims,
+        truncated evidence misreported as complete, or misleading AI success after failure.
+    - path: "server/_core/**"
+      instructions: |
+        Prioritize authentication and session isolation, secrets and API key exposure,
+        server-side validation, rate limits, provider retry/backoff, graceful errors
+        and prevention of unauthorized access to another profile.
+    - path: "client/src/**"
+      instructions: |
+        Review new-user navigation and actual user-visible states: empty/loading/error,
+        mobile responsiveness, accessibility, contrast, keyboard interaction, clickable
+        controls and data provenance. Verify the prominent Shadbala/Bhava Bala dashboard
+        uses deterministic numbers even when AI readings fail.
+        Look for dead buttons and components present in code but unreachable in the app.
+    - path: "server/simulationLab/**"
+      instructions: |
+        Keep sports prediction and Sports Center functionality separate from the
+        main application's general Energy Scanner. Check simulation reproducibility,
+        score arithmetic, evidence provenance and test coverage.
