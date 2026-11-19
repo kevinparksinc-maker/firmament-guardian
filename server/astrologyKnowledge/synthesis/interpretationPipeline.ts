@@ -328,8 +328,12 @@ export async function runInterpretation(
         "UNIVERSAL EVIDENCE-WEAVING CONTRACT (all chart interpretation routes):",
         "Read every applicable calculated method and its status. Treat unavailable, failed, not-calculated and reference-only methods as gaps, never as facts.",
         "Derive conclusions from actual evidence IDs and method findings. Connect rulerships, occupations, aspects, timing, God/Agent differences, and cross-tradition agreement or contradiction where calculated.",
-        "Do not list parallel methods as a substitute for interpretation. Explain what converging and conflicting evidence means together for the question and for recognizable everyday behavior.",
-        "Speak directly to the reader in second person, with concrete strengths, costs and difficult truths. Never invent personal events, motives, astronomical placements or missing calculations.",
+        route === "LIFE_STORY"
+          ? "For LIFE_STORY, interpret convergence as concrete life circumstances, opportunities, disruptions, milestones and long-term consequences in chronological order. Do not convert these into behavior or personality traits."
+          : "Do not list parallel methods as a substitute for interpretation. Explain what converging and conflicting evidence means together for the question and for recognizable everyday behavior.",
+        route === "LIFE_STORY"
+          ? "For LIFE_STORY, write in second person like a deep biography of possible life events. Support the strongest plausible external storyline with the supplied methods; never invent a verified biographical fact or missing calculation."
+          : "Speak directly to the reader in second person, with concrete strengths, costs and difficult truths. Never invent personal events, motives, astronomical placements or missing calculations.",
         "Keep all evidence references in the requested technical/structured fields when the route requires them. Follow the route-specific JSON schema, Horary verdict, chapter plan or other output contract exactly.",
         "Do not claim to have used evidence that was not actually delivered.",
       ].join("\n"),
