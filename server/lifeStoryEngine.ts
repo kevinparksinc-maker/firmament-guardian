@@ -495,23 +495,23 @@ export function compileLifeStoryChapters(
   }> = [
     {
       key: "birth_origins",
-      title: "1. Birth, Core Nature & What You Were Born With",
-      periodLabel: "Core Blueprint, Natural Gifts & Hidden Potential (Ages 0–1)",
+      title: "1. Birth & the World You Enter",
+      periodLabel: "Birth, Family Circumstances & Early Opportunities (Ages 0–1)",
       ageRange: [0, 1],
       astrologicalPivots: [
         "Natal Sun, Moon & Ascendant + Chart Ruler chain",
         "4th House (home roots) & Diurnal/Nocturnal Sect",
         "Hermetic Lot of Fortune, Spirit, Eros & Necessity",
-        "Natural Gifts vs. Hidden Potential vs. Early Vulnerabilities",
+        "Inherited Opportunities, Early Support & Gifts Waiting to Emerge",
       ],
       godViewThemes:
-        "Universal character baseline: core temperament, drives, what you keep private, and raw inborn gifts before outside pressure shapes them.",
+        "The circumstances and inherited opportunities surrounding the beginning of this life: family roots, social conditions, access to support, and gifts that might later change the person's course.",
       agentViewThemes:
-        "Your real-world starting point: parents' household climate, early physical stamina, and the traits people noticed in you from day one.",
+        "Where the story begins: home, caregivers, family obligations, early security or instability, and who or what gives this child a first opening.",
     },
     {
       key: "childhood",
-      title: "2. Childhood, Parents, School Years & Early Hobbies",
+      title: "2. Childhood: Home, School & First Discoveries",
       periodLabel: "Home, Upbringing & School Days (Ages 1–12)",
       ageRange: [1, 13],
       astrologicalPivots: [
@@ -521,13 +521,13 @@ export function compileLifeStoryChapters(
         "Early Annual Profections (Houses 2 through 12)",
       ],
       godViewThemes:
-        "How early temperament met rules, schooling, curiosity, and childhood pressures before adult independence began.",
+        "The formative events of childhood: household changes, access to schooling, early encouragement or restriction, important moves, and first signs of emerging gifts.",
       agentViewThemes:
-        "Everyday life with mother, father, and siblings; inherited family burdens or separation; what kind of student you were; and which hobbies, sports, or crafts pulled your attention naturally.",
+        "Describe a lived childhood: the family's circumstances, the experience of school, siblings and relatives, early responsibilities, losses or support, and the doors that begin to open.",
     },
     {
       key: "adolescence",
-      title: "3. Adolescence, Friendships, Rivals & Early Love",
+      title: "3. Teenage Years: Discovery, Opportunity & Change",
       periodLabel: "Peers, Passions & First Heartbreak (Ages 13–19)",
       ageRange: [13, 20],
       astrologicalPivots: [
@@ -536,13 +536,13 @@ export function compileLifeStoryChapters(
         "First Saturn opposition (Age ~14.7) & First Lunar Nodal return (Age ~18.6)",
       ],
       godViewThemes:
-        "Testing pride against peer pressure, loyalty, first attraction, and emerging personal passions.",
+        "Teenage milestones: changes in education or family life, first meaningful opportunities, budding artistry or craft, social turning points, and possible setbacks.",
       agentViewThemes:
-        "The friends you drew in, why early friendships lasted or broke, first experiences with jealousy or betrayal, concrete interests taking shape, and what you yourself contributed to conflict.",
+        "The sequence of adolescence: the people and institutions that shape the journey, emerging talents put into practice, early romance, social opportunities, obstacles, and decisive departures.",
     },
     {
       key: "early_adulthood",
-      title: "4. Early Adulthood: Money, Career, Love & Independence",
+      title: "4. Young Adulthood: Work, Love & Independence",
       periodLabel: "Earning, Debt, Love & First Saturn Return (Ages 20–29)",
       ageRange: [20, 30],
       astrologicalPivots: [
@@ -552,13 +552,13 @@ export function compileLifeStoryChapters(
         "First Saturn Return (Age ~29.5)",
       ],
       godViewThemes:
-        "Turning raw potential into developed strengths through real bills, job friction, serious love, and honest mistakes.",
+        "The passage into adult life: earning a living, training or education, career entry or public recognition, partnerships, money pressures, and the first major crossroads.",
       agentViewThemes:
-        "Financial struggles vs. steady earning, early romantic choices and heartbreak, poor choices or missed chances, and deciding whether to work for others or build on your own.",
+        "Tell what this period might bring: first jobs, departures from home, professional breakthroughs or delays, committed relationships, financial ups and downs, and opportunities for independence.",
     },
     {
       key: "adult_development",
-      title: "5. Adult Life: Marriage, Children, Hardship & Power",
+      title: "5. Adult Years: Family, Achievement & Trials",
       periodLabel: "Family, Wealth, Setbacks & Rebuilding (Ages 30–49)",
       ageRange: [30, 50],
       astrologicalPivots: [
@@ -567,13 +567,13 @@ export function compileLifeStoryChapters(
         "Midlife cycles: Uranus opposition, Pluto/Neptune squares, Second Saturn opposition",
       ],
       godViewThemes:
-        "Carrying real responsibility—marriage, parenting, reputation, financial durability, and surviving hard knocks without bitterness.",
+        "The events of the established adult years: family formation, children where indicated, expansion of work or wealth, recognition, upheaval, major loss, and rebuilding.",
       agentViewThemes:
-        "How marriage and children test your standards, dealing with rivals or injustice, keeping body and daily habits steady under work stress, and rebuilding stronger after losses.",
+        "Follow the life outward: career and public standing, significant partnerships, family responsibilities, relocations or separations, reversals, recoveries, and what materially changes.",
     },
     {
       key: "later_life",
-      title: "6. Faith, Maturity, Later Years & Legacy",
+      title: "6. Later Years: Meaning, Consequences & Legacy",
       periodLabel: "Beliefs, Purpose & Elder Standing (Ages 50 onward)",
       ageRange: [50, 95],
       astrologicalPivots: [
@@ -582,13 +582,13 @@ export function compileLifeStoryChapters(
         "Jupiter returns (Ages 60, 72, 84) & Uranus return (~84.0)",
       ],
       godViewThemes:
-        "What lasts when noise drops away: honest faith, settled wisdom, and reconciling lifelong strengths with lifelong faults.",
+        "The later chapters of life: changing household and community roles, results of decades of work, public or private legacy, spiritual milestones, and how the life’s work is carried onward.",
       agentViewThemes:
-        "Changing priorities with age, passing hard-earned lessons to children and community, simplifying burdens, and leaving an honest legacy.",
+        "Tell the later-life journey through meaningful events and relationships: retirement or renewed work where supported, family continuity, lasting contributions, and the circumstances surrounding one's legacy.",
     },
     {
       key: "turning_points",
-      title: "7. Turning Points, New Beginnings & Greatest Lessons",
+      title: "7. The Major Turning Points of This Life",
       periodLabel: "Calculated Timing Milestones & Hard-Won Wisdom",
       ageRange: [0, 95],
       astrologicalPivots: [
@@ -597,13 +597,13 @@ export function compileLifeStoryChapters(
         "Where life comes naturally vs. where the hardest recurring lessons sit",
       ],
       godViewThemes:
-        "How recurring life tests and major openings align with calculated planetary periods rather than random chance.",
+        "Revisit the strongest calculated turning-point windows across the lifetime, in chronological order, and identify the life areas that might change during each.",
       agentViewThemes:
-        "Relocation, new chapters, endings that cleared dead weight, and practical clarity on where to invest effort next.",
+        "Locate possible chapters of relocation, opportunity, career change, family transition, financial reversal, separation, achievement or fresh beginnings, only where supplied timing evidence supports them.",
     },
     {
       key: "future_chapters",
-      title: "8. The Road Ahead: Upcoming Timing & Next Steps",
+      title: "8. The Road Ahead: Coming Chapters",
       periodLabel: "Next 3, 5 & 10 Years (Calculated Cycles Only)",
       ageRange: [Math.floor(currentAge), Math.min(95, Math.floor(currentAge) + 12)],
       astrologicalPivots: [
@@ -612,9 +612,9 @@ export function compileLifeStoryChapters(
         "Active Vimshottari Mahadasha/Antardasha & Firdaria periods",
       ],
       godViewThemes:
-        "What the next calculated timing chapters demand in responsibility, patience, and honest action.",
+        "The next three, five, and ten years as a sequence of possible external developments, openings, tests, changes of circumstance, and cumulative outcomes.",
       agentViewThemes:
-        "Concrete focus areas for money, work, health habits, family, and love over the coming years—anchored strictly in calculated cycles.",
+        "Tell the prospective next chapters through likely developments in home, livelihood, relationships, community, work and legacy, marking the time windows and uncertainty without presenting them as known facts.",
     },
   ];
 
@@ -908,21 +908,22 @@ export function runAstrologyEngineAudit(chart: ChartResult): MethodAuditStatus[]
   ];
 }
 
-export const LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS = `You are the psychological astrologer and narrative writer for The Absolute. Turn the engine’s structured chart data into an intimate, candid portrait of how the reader moves through life across time. Write directly to the reader in the second person.
+export const LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS = `You are THE ABSOLUTE LIFE HISTORIAN, an immersive biographical storyteller. Tell the person's *life story* from the birth chart and calculated timing evidence, not their behavior profile. Write directly to the reader in second person ("you") in deep, human, clear language.
 
-## 1. USE THE FULL CHART SILENTLY
-The backend has already calculated the chart, timing cycles, Profections, Lots, mansions, and life-stage pivots. Read the entire structured brief and use every relevant, populated layer silently—including cross-system findings, rulers, aspects, and links between life areas. Do not recalculate placements, fill in missing data, or invent chart evidence. If a field is missing or unavailable, continue with the available evidence. When several findings describe the same pattern, weave them into one insight; when they pull in different directions, show when each side takes over and what that tension costs the reader.
+## 1. A LIFE, NOT A PERSONALITY REPORT
+Your subject is what HAPPENS in a life: the family and material world into which someone is born; the childhood they may experience; school and discovery of gifts; teenage turning points; first opportunities; the transition to adult work, relationships and independence; achievement or disappointment; family, money, recognition, major reversals, later years and legacy. The reading must have the forward movement of a biography, with people, settings, circumstances, stakes and consequences—not an inventory of traits, defense mechanisms, emotional responses, daily habits, psychological patterns, or behavioral advice. The reader should feel they are following a life unfolding, not visiting a therapist. Talents and karma matter because of the opportunities and challenges they may bring into the life, not as abstract descriptions of character.
 
-## 2. WRITE THE LIFE THE READER RECOGNIZES
-Start with the strongest pattern that answers this chapter’s stage and focus. Trace core identity, childhood roots, school years, and the "life-script" development of habits, talents, and repeating patterns across the 12 life areas (who they really are, money and wealth, love and intimacy, family and roots, career and reputation, friendships and betrayal, hardship and rebuilding, children and legacy, physical habits and stamina, convictions and purpose, turning points, and lasting lessons).
-- Show what the reader does when a pattern is active, what they are trying to protect or get, and how their behavior lands with other people. Be specific enough that the reader recognizes an ordinary-life moment rather than a label.
-- Give natural gifts (what comes easily, what they enjoy for its own sake, what others rely on them for) the same weight as difficult patterns (what they struggle to ask for, where loyalty feels uncertain, what they carry alone because they expect others to drop it).
-- Never invent biographical events, medical diagnoses, secrets, or another person's motives, and keep away from clinical therapy jargon or cosmic filler.
+## 2. FOLLOW THE CHRONOLOGY OF THE REQUESTED CHAPTER
+For each requested stage, begin with the life circumstances at the start of its age range, then narrate the likely progression within that range. Move from one meaningful development to the next and explain what materially changes. Make the years feel connected: an opening or restriction in one stage lays the foundation for the next. Mention years or approximate ages ONLY when supported by the supplied calculated timings; otherwise use stage-level timing ("during your teens", "as adulthood begins"). Include at least one concrete life-domain development for each supported major testimony: education, performance or creativity, trade or employment, money, housing or relocation, important alliances, family, public role, disruption or recovery, legacy. Choose domains according to the actual chart evidence, not a universal checklist. Do not repeat childhood or "core identity" in every stage.
 
-## 3. RETURN ONLY THE READING (STRICT ZERO-ASTROLOGY RULE)
-- Use short, bold section titles specific to this reader and this chapter.
-- Write in flowing paragraphs with varied length, rhythm, and openings. Skip boilerplate openings, stock transitions, generic encouragement, and recap endings.
-- Keep ALL astrology terminology out of the reader-facing text, including the titles. Never name planets, zodiac signs, houses, degrees, aspects, lunar mansions or stations, bounds, faces, Lots, Profections, or Dashas. Keep citations and technical metadata in the Evidence tab. Use no bullet-point lists of traits. End with a sentence that belongs to this reader and this chart.`;
+## 3. SILENT EVIDENCE, CLEAR CAUSAL THREAD
+Use all relevant *populated* God View, Agent View, rulers, houses, aspects, fixed stars, mansions, Lots, strength methods and timing techniques supplied by the synthesis. Weave converging evidence into specific life themes; use contradictory testimony to describe periods of rise and setback. Distinguish gifts, their possible worldly expression, and the circumstances that could obstruct or elevate them. Do not treat age-linked returns as proof an event occurred. Do not recalculate placements, fabricate missing methods, or assume chart data includes a person's actual biography.
+
+## 4. ASTROLOGICAL POSSIBILITY IS NOT VERIFIED HISTORY
+This is a symbolic, chart-based life narrative, not factual access to the reader's past or certain knowledge of their future. Speak with vivid specificity about *possible* developments and their life domains while using natural calibrated language ("may", "could", "a likely turning point") for uncertain events. Never assert an unprovided specific marriage, death, diagnosis, crime, abuse, divorce, child, award, profession, or date as a fact. Never insert known biography about a named public figure unless the caller supplies that history explicitly as evidence; for blinded testing, do not use the person's name or outside knowledge.
+
+## 5. WRITE ONLY THE BIOGRAPHICAL STORY
+Produce substantial connected paragraphs, with short distinctive chapter titles if useful. Tell the chapter like a serious literary biography in second person: a beginning, evolving circumstances, at least one meaningful pivot where supported, and an ending that naturally leads to the next era. Show the outer life first. Do not discuss behavior, personal habits, psychological tendencies, inner motives, advice, "how you respond", or lists of personality traits. Do not write a diagnostic report, horoscope tips or encouragement. Keep all astrology jargon (planets, zodiac signs, houses, aspects, degrees, mansions, Lots, profections and Dashas) out of the visible story; place calculation details in the Evidence tab. End with a concrete narrative consequence, not a moral or summary.`;
 
 /**
  * Generates an in-depth, storytelling Life Story Chapter using the Master Interpreter.
@@ -966,7 +967,7 @@ export async function generateLifeStoryChapter(
 
   const prompt = [
     `# SILENT ENGINE BRIEF FOR THIS CHAPTER (DO NOT PRINT TECHNICAL TERMS TO THE READER)`,
-    `Center this chapter on core identity, childhood roots, and the life-script development of natural gifts, passions, and repeating patterns for the stage below.`,
+    `Write the actual chronological life chapter for the period below: surrounding circumstances, life opportunities, achievements, losses, relationships, work, family, and transitions. Do not produce a personality or behavior profile.`,
     ``,
     `## CHAPTER IDENTITY`,
     `- Stage: ${targetChapter.title}`,
@@ -981,12 +982,12 @@ export async function generateLifeStoryChapter(
     `## CALCULATED TIMING CYCLES FOR THIS STAGE`,
     ...targetChapter.keyCycles.map(
       c =>
-        `* ${c.title} (Age ~${c.age}, approx ${c.approxDate}): ${c.description}. Practical response: ${c.constructiveAdvice}`
+        `* ${c.title} (Age ~${c.age}, approx ${c.approxDate}): ${c.description}`
     ),
     ``,
     `## CALCULATED LIFE SETTINGS & LOTS`,
-    `- Universal Baseline: ${targetChapter.godViewThemes}`,
-    `- Everyday Life Setting: ${targetChapter.agentViewThemes}`,
+    `- Broad life circumstances: ${targetChapter.godViewThemes}`,
+    `- Possible local events and conditions: ${targetChapter.agentViewThemes}`,
     `- Arabic Lots: ${arabicLotsSummary}`,
     ``,
     `## UNIFIED MASTER CHART — ALL COMPUTED METHOD FINDINGS`,
@@ -995,10 +996,10 @@ export async function generateLifeStoryChapter(
     buildGenesisInquiryPrompt(targetChapter.title + " — " + targetChapter.periodLabel),
     ``,
     `## OUTPUT REQUIREMENTS`,
-    `1. Read all supplied layers silently and start with the strongest active pattern for this life stage.`,
-    `2. Show what the reader does when the pattern is active, what they are trying to protect or get, and how their behavior lands with other people using recognizable everyday moments.`,
-    `3. Give natural gifts and genuine enjoyment the same weight as difficult habits and timing pressures, anchoring any timing statement strictly in the calculated cycles above without inventing biographical events or medical diagnoses.`,
-    `4. Use short, bold section titles specific to this reader and topic, write in flowing paragraphs with no bullet-point lists of traits, keep ALL astrology terminology out of both the titles and prose, and end with a sentence belonging strictly to this reader and this chart.`,
+    `1. Begin inside this chapter's age range and tell a coherent, biographical sequence of life circumstances and turning points. Move through time rather than listing traits.`,
+    `2. Describe what could happen to this person in the world—home and school, opportunity, livelihood, meaningful relationships, success or reversals—and the external consequences of the developments supported by evidence.`,
+    `3. Show how supported gifts might become work or public impact and how supported challenges might alter the course of life. Anchor precise time windows only in calculated cycles; no invented biography, medical facts or inevitable outcomes.`,
+    `4. Write deep, immersive, chronological prose in second person with no psychological analysis, behavior advice, personality checklist or visible astrology vocabulary. Give the chapter a beginning, developmental arc and human consequence.`,
   ].join("\n");
 
   const { synthesis } = await synthesizeChartForReading(chart, "natal", targetChapter.title);
