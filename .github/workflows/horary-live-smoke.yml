@@ -45,6 +45,10 @@ jobs:
                         "sessionSigning": checks.get("sessionSigning"),
                         "databaseConfigured": checks.get("databaseConfigured"),
                         "interpreterProviders": checks.get("interpreterProviders")})
+                      if "gemini" not in checks.get("interpreterProviders", []):
+                          print("FAILED: Gemini key not detected by production readiness")
+                          sys.exit(1)
+                      print("Gemini provider configuration detected (validity not yet established)")
               except Exception as e:
                   print(f"{path}: transport exception {type(e).__name__}")
           moment = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
