@@ -62,7 +62,7 @@ async function startServer() {
         .set("Cache-Control", "public, max-age=3600").send(mapsCache.body);
       return;
     }
-    const mapsUrl = new URL(apiUrl.replace(/\\/+$/, "") + "/v1/maps/proxy/maps/api/js");
+    const mapsUrl = new URL(apiUrl.replace(/\/+$/, "") + "/v1/maps/proxy/maps/api/js");
     mapsUrl.searchParams.set("key", browserKey);
     mapsUrl.searchParams.set("v", "weekly");
     mapsUrl.searchParams.set("libraries", "marker,places,geocoding,geometry");
