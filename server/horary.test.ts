@@ -198,7 +198,7 @@ describe("horary astrology", () => {
     expect(result.chart.evidenceText).toContain("TRADITIONAL MOON STATUS");
     expect(messages[1].content).toContain("FULL METHOD EVIDENCE: supplied once");
     expect(messages[1].content).not.toContain("FULL 16/20-LAYER SYNTHESIS REPORT");
-    expect(messages.some(message => message.content.includes("COMPLETE CALCULATED INTERPRETATION DOSSIER"))).toBe(true);
+    expect(messages.some(message => message.content.includes("HORARY CALCULATED METHOD DOSSIER"))).toBe(true);
 
     expect(result.chart.canonEvidenceText).toContain("Condition:");
   });
