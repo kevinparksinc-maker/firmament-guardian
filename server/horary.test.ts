@@ -172,23 +172,18 @@ describe("horary astrology", () => {
     const messages = mocked.invokeLLM.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
 
     expect(result.reading).toContain("evidence-led horary reading");
-    expect(messages[0].content).toContain("THE FIRMAMENT — MASTER AI HORARY INTERPRETER");
-    expect(messages[0].content).toContain("CARE-CENTERED IMPERATIVE — NON-NEGOTIABLE");
-    expect(messages[0].content).toContain("CARE-FIRST DELIVERY STANDARD — NON-NEGOTIABLE");
-    expect(messages[0].content).toContain("Never write as though a loved one is merely a significator");
-    expect(messages[0].content).toContain("HORARY VISIBLE ANSWER CONTRACT — REQUIRED");
-    expect(messages[0].content).toContain("## What I hear beneath your question");
-    expect(messages[0].content).toContain("what it means for this specific person");
+    expect(messages[0].content).toContain("THE ABSOLUTE — MASTER HORARY INTERPRETER");
     expect(messages[0].content).toContain("CALCULATE DEEPLY. JUDGE HIERARCHICALLY. INTERPRET HUMANLY.");
-    expect(messages[0].content).toContain("The user should feel that the entire relevant chart was considered.");
+    expect(messages[0].content).toContain("## The Answer");
+    expect(messages[0].content).toContain("## What Is Happening");
+    expect(messages[0].content).toContain("## What Happens Next");
+    expect(messages[0].content).toContain("## What This Means for You");
+    expect(messages[0].content).not.toContain("## What I hear beneath your question");
     expect(messages[0].content).toContain("Do not expose hidden chain-of-thought");
-    expect(messages[0].content).toContain("WHAT IS THE ANSWER?");
     expect(messages[1].content).toContain(sampleInput.question);
     expect(messages[1].content).toContain(result.chart.querentRuler);
     expect(messages[1].content).toContain(result.chart.subjectRuler);
     expect(messages[1].content).toContain(result.chart.topicRuler);
-    expect(messages[1].content).toContain("Roles:");
-    expect(messages[1].content).toContain("LOCAL FIRMAMENT CANON / DETERMINISTICALLY RETRIEVED");
     // The full chart evidence remains intact for the inspector, but its
     // large raw prose packet must not be repeated inside the AI request.
     expect(result.chart.evidenceText).toContain("GOD VIEW / AGENT VIEW RELATIONSHIP SYNTHESIS");
@@ -199,6 +194,7 @@ describe("horary astrology", () => {
     expect(messages[1].content).toContain("FULL METHOD EVIDENCE: supplied once");
     expect(messages[1].content).not.toContain("FULL 16/20-LAYER SYNTHESIS REPORT");
     expect(messages.some(message => message.content.includes("HORARY CALCULATED METHOD DOSSIER"))).toBe(true);
+    expect(messages.reduce((sum, message) => sum + message.content.length, 0)).toBeLessThan(45_000);
 
     expect(result.chart.canonEvidenceText).toContain("Condition:");
   });
