@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Check, Download, Loader2, Menu, Stars, X } from "lucide-react";
+import { Menu, Stars, X } from "lucide-react";
 import { PROFILE_TABS } from "@/config/profileNavigation";
 import { searchDirectory } from "@/config/appDirectory";
 import { AccountControl } from "./AccountControl";
@@ -10,39 +10,6 @@ export function GuardianNavigation() {
   const [path] = useLocation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [downloading, setDownloading] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
-
-  const handleDownloadZip = async () => {
-    if (downloading) return;
-    setDownloading(true);
-    try {
-      const endpoint = `/api/download-zip?t=${Date.now()}`;
-      const response = await fetch(endpoint, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
-      const disposition = response.headers.get("Content-Disposition") ?? "";
-      const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/i);
-      const filename = filenameMatch?.[1] || `the-absolute-astrology-${new Date().toISOString().slice(0, 10)}.zip`;
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      setDownloaded(true);
-      setTimeout(() => setDownloaded(false), 4000);
-    } catch {
-      window.location.href = `/api/download-zip?t=${Date.now()}`;
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   useEffect(() => {
     setOpen(false);
     setQuery("");
@@ -88,24 +55,6 @@ export function GuardianNavigation() {
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleDownloadZip}
-            disabled={downloading}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 text-xs sm:text-sm font-medium text-amber-200 transition hover:bg-amber-500/20 hover:border-amber-400 active:scale-95"
-            title="Download the latest full project source code as ZIP"
-          >
-            {downloading ? (
-              <Loader2 size={16} className="animate-spin text-amber-300" />
-            ) : downloaded ? (
-              <Check size={16} className="text-emerald-400" />
-            ) : (
-              <Download size={16} className="text-amber-300" />
-            )}
-            <span className="font-semibold">
-              {downloading ? "Downloading..." : downloaded ? "Saved!" : "Download ZIP"}
-            </span>
-          </button>
           <AccountControl />
           <button
             type="button"
