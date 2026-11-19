@@ -919,6 +919,11 @@ For each requested stage, begin with the life circumstances at the start of its 
 ## 3. SILENT EVIDENCE, CLEAR CAUSAL THREAD
 Use all relevant *populated* God View, Agent View, rulers, houses, aspects, fixed stars, mansions, Lots, strength methods and timing techniques supplied by the synthesis. Weave converging evidence into specific life themes; use contradictory testimony to describe periods of rise and setback. Distinguish gifts, their possible worldly expression, and the circumstances that could obstruct or elevate them. Do not treat age-linked returns as proof an event occurred. Do not recalculate placements, fabricate missing methods, or assume chart data includes a person's actual biography.
 
+## 3A. 72-QUESTION DEEP INVESTIGATION AND SPECIFIC VERDICT
+Silently work through the Genesis questions as a historian, not a personality analyst. Rank the chapter's strongest 2–4 converging testimonies. For each, decide: (a) the real-world life domain, (b) the single most plausible *external* manifestation, (c) which independent chart methods support or contradict it, (d) the best available calculated age window, and (e) how that development could lead to the next. Choose and narrate the strongest interpretation instead of offering a buffet of generic possibilities.
+Do not write filler such as "a time of growth," "you face challenges," "changes may arise," or "you have many talents" without naming the *particular* kind of situation or path supported by the evidence. If multiple domains are equally supported, connect them in a causal story rather than listing them. Pinpoint precision means a grounded interpretive choice—not pretending the chart proves a specific historic fact, profession, exact event or future certainty.
+The story must give a reader at least one distinctive concrete development and its consequence in each chapter where supplied evidence allows it. If the evidence is thin, make the strongest grounded stage-level inference instead of manufacturing details.
+
 ## 4. ASTROLOGICAL POSSIBILITY IS NOT VERIFIED HISTORY
 This is a symbolic, chart-based life narrative, not factual access to the reader's past or certain knowledge of their future. Speak with vivid specificity about *possible* developments and their life domains while using natural calibrated language ("may", "could", "a likely turning point") for uncertain events. Never assert an unprovided specific marriage, death, diagnosis, crime, abuse, divorce, child, award, profession, or date as a fact. Never insert known biography about a named public figure unless the caller supplies that history explicitly as evidence; for blinded testing, do not use the person's name or outside knowledge.
 
@@ -995,6 +1000,9 @@ export async function generateLifeStoryChapter(
     `## GENESIS 72-QUESTION INTERNAL HISTORIAN INQUIRY`,
     buildGenesisInquiryPrompt(targetChapter.title + " — " + targetChapter.periodLabel),
     ``,
+    \`## PINPOINT SILENT SYNTHESIS\`,
+    \`Before writing, use the 72 Genesis questions to choose the strongest 2–4 supported real-world developments for THIS stage. For each, identify the most plausible outward manifestation, multiple supporting methods, counter-testimony, and only the calculated timing that is actually available. Write the most defensible coherent life story, not generic interchangeable possibilities. Never expose this checklist in the prose.\`,
+    \`\`,
     `## OUTPUT REQUIREMENTS`,
     `1. Begin inside this chapter's age range and tell a coherent, biographical sequence of life circumstances and turning points. Move through time rather than listing traits.`,
     `2. Describe what could happen to this person in the world—home and school, opportunity, livelihood, meaningful relationships, success or reversals—and the external consequences of the developments supported by evidence.`,
