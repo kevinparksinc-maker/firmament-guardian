@@ -196,7 +196,7 @@ export async function synthesizeHoraryWithGroq(
     messages,
     maxTokens: 3200,
     timeoutMs,
-  });
+  }, "horary-compact");
 
   const content = result.choices?.[0]?.message?.content;
   const rawText = typeof content === "string"
