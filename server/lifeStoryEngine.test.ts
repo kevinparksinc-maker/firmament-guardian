@@ -70,7 +70,7 @@ describe("Life Story — chronology and Genesis 72-question evidence synthesis",
     expect(GENESIS_QUESTIONS.map(q => q.section)).toContain("Career and Public Achievement");
     expect(GENESIS_QUESTIONS.map(q => q.section)).toContain("Trials, Losses and Recoveries");
     expect(GENESIS_HISTORIAN_INSTRUCTIONS).toContain("life historian");
-    expect(GENESIS_HISTORIAN_INSTRUCTIONS).toContain("not a behavioral");
+    expect(GENESIS_HISTORIAN_INSTRUCTIONS).toContain("Never turn this into a behavioral");
     const prompt = buildGenesisInquiryPrompt("Teenage years");
     expect(prompt).toContain("Investigate all 72 questions internally");
     expect(prompt).toContain("Teenage years");
