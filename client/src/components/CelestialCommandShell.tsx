@@ -1,12 +1,19 @@
 import { FloatingInterpreter } from "./FloatingInterpreter";
 import type { ReactNode } from "react";
+import { useLocation } from "wouter";
 import { GuardianNavigation } from "./GuardianNavigation";
 import { PrimaryProfileNavigation } from "./PrimaryProfileNavigation";
 import "./CelestialCommandShell.css";
 
 export function CelestialCommandShell({ children }: { children: ReactNode }) {
+  const [path] = useLocation();
+  const room = path.startsWith("/horary") || path.startsWith("/zodiac-readings")
+    ? "judgment"
+    : path === "/" || path.startsWith("/home") || path.startsWith("/profiles")
+      ? "atrium"
+      : "observatory";
   return (
-    <div className="fg-command-shell">
+    <div className={`fg-command-shell fg-room-${room}`}>
       {/* Consistent luxury header across ALL pages */}
       <GuardianNavigation />
 
