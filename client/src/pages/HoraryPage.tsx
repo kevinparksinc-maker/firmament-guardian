@@ -251,7 +251,7 @@ export default function HoraryPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#080b14] text-slate-100 selection:bg-cyan-300/25">
+    <div className="relative min-h-screen overflow-hidden bg-transparent text-slate-100 selection:bg-cyan-300/25">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-36 -top-32 h-[34rem] w-[34rem] rounded-full bg-cyan-700/15 blur-3xl" />
         <div className="absolute -right-40 top-1/3 h-[32rem] w-[32rem] rounded-full bg-violet-600/10 blur-3xl" />
