@@ -120,3 +120,47 @@
 @media (prefers-reduced-motion: reduce) {
   .fg-command-main #main-cosmos-tabs button:hover { box-shadow:none; }
 }
+
+/* Celestial Observatory 2050: actual room artwork served with the app.
+   Decorative only: calculations, controls, reading content and routing stay unchanged. */
+.fg-command-shell.fg-room-atrium {
+  background-color: #040b1a;
+  background-image:
+    linear-gradient(90deg, rgba(3,8,19,.40),rgba(3,8,19,.57) 25%,rgba(3,8,19,.57) 75%,rgba(3,8,19,.40)),
+    url("/observatory/atrium.svg");
+  background-position: center top;
+  background-size: cover;
+  background-attachment: fixed;
+}
+.fg-command-shell.fg-room-judgment {
+  background-color: #060a17;
+  background-image:
+    linear-gradient(90deg,rgba(3,7,17,.47),rgba(4,8,21,.64) 50%,rgba(3,7,17,.47)),
+    url("/observatory/judgment.svg");
+  background-position: center top;
+  background-size: cover;
+  background-attachment: fixed;
+}
+.fg-command-shell:is(.fg-room-atrium,.fg-room-judgment) .fg-command-main {
+  position: relative;
+  isolation: isolate;
+}
+.fg-command-shell:is(.fg-room-atrium,.fg-room-judgment) .fg-command-main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg,rgba(3,8,18,.10),rgba(3,8,18,.35));
+}
+@media (max-width: 890px) {
+  .fg-command-shell:is(.fg-room-atrium,.fg-room-judgment) {
+    background-attachment: scroll;
+    background-size: auto 100vh;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .fg-command-shell:is(.fg-room-atrium,.fg-room-judgment) {
+    background-image: linear-gradient(180deg,#070e20,#111a2d);
+  }
+}
