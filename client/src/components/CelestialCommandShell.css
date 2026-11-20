@@ -164,3 +164,83 @@
     background-image: linear-gradient(180deg,#070e20,#111a2d);
   }
 }
+
+
+/* Grand Atrium welcome: reveal the room as an actual foreground experience,
+   not just a barely visible wallpaper around an opaque dashboard card. */
+.fg-room-atrium .fg-atrium-intro {
+  display:grid;
+  grid-template-columns:minmax(230px,.85fr) minmax(0,1.15fr);
+  align-items:stretch;
+  gap:clamp(14px,2.6vw,32px);
+  padding:clamp(14px,2vw,24px);
+  border:1px solid rgba(222,185,113,.40);
+  border-radius:30px;
+  background:linear-gradient(105deg,rgba(5,12,28,.36),rgba(5,12,28,.58));
+  box-shadow:0 24px 85px rgba(0,0,0,.45),inset 0 1px rgba(238,206,136,.10);
+  backdrop-filter:blur(5px);
+}
+.fg-room-atrium .fg-atrium-scene {
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:350px;
+  overflow:hidden;
+  border:1px solid rgba(216,178,104,.40);
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 50% 37%,rgba(207,167,89,.13),transparent 35%),
+    linear-gradient(180deg,rgba(4,10,24,.12),rgba(4,10,24,.38)),
+    url("/observatory/atrium.svg") center/cover;
+  box-shadow:inset 0 0 90px rgba(3,8,18,.53);
+}
+.fg-room-atrium .fg-atrium-halo {
+  display:grid;
+  place-items:center;
+  width:clamp(155px,18vw,245px);
+  aspect-ratio:1;
+  border:2px solid rgba(231,189,111,.83);
+  border-radius:50%;
+  box-shadow:0 0 0 15px rgba(215,172,93,.07),0 0 65px rgba(232,173,69,.12),inset 0 0 40px rgba(224,186,104,.12);
+  background:radial-gradient(circle,rgba(6,18,43,.53),rgba(3,8,21,.28));
+}
+.fg-room-atrium .fg-atrium-halo::before {
+  content:"";
+  position:absolute;
+  width:clamp(175px,21vw,285px);
+  aspect-ratio:1;
+  border:1px solid rgba(245,209,134,.37);
+  border-radius:50%;
+  transform:rotate(-25deg) scaleY(.36);
+}
+.fg-room-atrium .fg-atrium-halo span {font:normal clamp(70px,9vw,115px)/1 Georgia,serif;color:#f1ca7c;text-shadow:0 0 32px rgba(255,196,104,.4)}
+.fg-room-atrium .fg-atrium-scene-name {margin-top:24px;color:#f6d58d;font:600 clamp(13px,1.5vw,20px)/1.4 Georgia,serif;letter-spacing:.20em;text-align:center}
+.fg-room-atrium .fg-atrium-scene-subtitle {margin-top:7px;color:#d7cbba;font-size:10px;letter-spacing:.19em;text-align:center}
+.fg-room-atrium .fg-atrium-welcome {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+  border-color:rgba(231,190,113,.30);
+  background:linear-gradient(145deg,rgba(11,23,46,.88),rgba(5,12,27,.89));
+  box-shadow:inset 0 1px rgba(255,237,189,.07);
+}
+.fg-room-atrium .fg-atrium-welcome h1 {font-size:clamp(29px,3.2vw,46px);line-height:1.13;color:#f6f0e6}
+.fg-room-atrium .fg-atrium-welcome :is(p,a,button) {position:relative}
+@media(max-width:900px){
+  .fg-room-atrium .fg-atrium-intro {grid-template-columns:1fr}
+  .fg-room-atrium .fg-atrium-scene {min-height:260px}
+  .fg-room-atrium .fg-atrium-halo {width:145px}
+  .fg-room-atrium .fg-atrium-halo::before {width:175px}
+}
+@media(max-width:600px){
+  .fg-room-atrium .fg-atrium-intro {padding:10px;border-radius:22px}
+  .fg-room-atrium .fg-atrium-scene {min-height:225px}
+  .fg-room-atrium .fg-atrium-scene-name {margin-top:13px}
+  .fg-room-atrium .fg-atrium-welcome {padding:20px}
+}
+@media(prefers-reduced-transparency:reduce){
+ .fg-room-atrium .fg-atrium-intro,.fg-room-atrium .fg-atrium-welcome {backdrop-filter:none;background:#0b172d}
+}
