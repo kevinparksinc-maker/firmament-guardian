@@ -87,8 +87,14 @@ export function ProfileHomeScreen({
     { label: "South Node", body: chart?.southNode },
   ];
   return (
-    <section className="mx-auto max-w-4xl space-y-9 pb-20 text-slate-100">
-      <header className="space-y-4 rounded-3xl border border-amber-200/20 bg-[linear-gradient(135deg,#14213b,#080f1f)] p-6 sm:p-8">
+    <section className="fg-atrium-home mx-auto max-w-6xl space-y-9 pb-20 text-slate-100">
+      <div className="fg-atrium-intro" aria-label="Grand Atrium welcome">
+        <div className="fg-atrium-scene" aria-hidden="true">
+          <div className="fg-atrium-halo"><span>✦</span></div>
+          <p className="fg-atrium-scene-name">THE GRAND ATRIUM</p>
+          <p className="fg-atrium-scene-subtitle">CELESTIAL OBSERVATORY · 2050</p>
+        </div>
+      <header className="fg-atrium-welcome space-y-4 rounded-3xl border border-amber-200/30 p-6 sm:p-8">
         <p className="text-xs uppercase tracking-widest text-amber-200">
           The Absolute · Your observatory
         </p>
@@ -126,6 +132,7 @@ export function ProfileHomeScreen({
           </Link>
         </div>
       </header>
+      </div>
       <section aria-label="Your core numerology" className="space-y-4">
         <h2 className="font-serif text-xl text-amber-100">Your core numbers</h2>
         <p className="text-sm leading-6 text-slate-300">Know thyself. Love thyself. Master thyself. Be thyself. Explore your own path without measuring your worth against somebody else's.</p>
