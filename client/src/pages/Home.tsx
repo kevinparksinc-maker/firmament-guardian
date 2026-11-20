@@ -358,7 +358,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
   return (
     <div className="relative min-h-screen isolate bg-transparent text-slate-100 selection:bg-violet-400/30">
       <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(180deg,rgba(3,5,12,.10),rgba(3,5,12,.58)_62%,rgba(3,5,12,.86)),url('/assets/firmament-starfield.png')] bg-cover bg-top bg-fixed"
+        className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(180deg,rgba(3,5,12,.10),rgba(3,5,12,.34)_62%,rgba(3,5,12,.56))]"
         aria-hidden="true"
       />
       <ObservatorySoundscape />
