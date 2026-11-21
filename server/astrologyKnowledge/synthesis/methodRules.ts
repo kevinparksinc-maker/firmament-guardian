@@ -1,4 +1,4 @@
-import { ZODIAC_SIGNS, normalizeLongitude } from "../../../shared/hybrid";
+import { ZODIAC_SIGNS, normalizeLongitude , signAtLongitude as signAt } from "../../../shared/hybrid";
 import { SUMERIAN_CELESTIAL_ASSOCIATIONS, SUMERIAN_CELESTIAL_SOURCE_TITLE } from "../canon/sumerianCelestial";
 import { ENERGY_ASPECT_FLOW } from "../../../shared/energyScoring";
 import { CLASSICAL, REQUIRED, type Graha } from "../vedic/strength";
@@ -32,12 +32,7 @@ import type {
   LayerRecord,
   UnifiedMasterChartSnapshot,
 } from "../../masterChart/types";
-import type {
-  CanonRuleApplication,
-  FindingJudgment,
-  HumanDomain,
-  InterpretedProposition,
-} from "./types";
+import type { CanonRuleApplication, FindingJudgment, HumanDomain } from "./types";
 
 type Data = Record<string, any>;
 type Polarity = FindingJudgment["valence"];
@@ -83,9 +78,6 @@ function finite(value: unknown, name: string): number {
     `${name} must be finite`
   );
   return value;
-}
-function signAt(longitude: number) {
-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
 }
 function role(body: string) {
   return (

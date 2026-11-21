@@ -4,11 +4,7 @@ import type { PlanetPersonaTrait } from "../../../shared/planetPersonaMatrix";
 import type { ChartResult } from "../../astronomy";
 import { SIGN_CANON_RECORDS } from "../canon/planetsAndSigns";
 import { retrieveChartCanonDossier } from "../canon/retriever";
-import type {
-  ChartCanonDossier,
-  DispositorChainNode,
-  RetrievedPlacementDossier,
-} from "../canon/types";
+import type { ChartCanonDossier, DispositorChainNode } from "../canon/types";
 import type { SynthesisResult } from "./types";
 
 type AspectContactInfo = {

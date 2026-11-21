@@ -1,3 +1,6 @@
+import type { GuideTab } from "@/lib/guideTab";
+export type { GuideTab } from "@/lib/guideTab";
+import { Chip, OverlayCell } from "@/components/GuideChartCells";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,8 +19,6 @@ import { formatInZone } from "../../../shared/time";
 import { MAJOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
 import type { ChartResult } from "../../../server/astronomy";
 import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
-
-export type GuideTab = "blueprint" | "synastry" | "weather" | "podcast" | "social";
 
 type Props = {
   result: ChartResult;
@@ -38,25 +39,6 @@ type Props = {
   handleAskMasterInterpreter: (question: string) => void;
 };
 
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-300">
-      {children}
-    </span>
-  );
-}
-function OverlayCell({ row }: { row: any }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="font-medium text-slate-100">
-        {row.overlay.nakshatra}{" "}
-        <span className="text-slate-500">Pada {row.overlay.pada}</span>
-      </div>
-      <div className="text-xs text-slate-400">{row.overlay.manzil}</div>
-      <Chip>{row.overlay.decan}</Chip>
-    </div>
-  );
-}
 function TransitContacts({ row }: { row: any }) {
   return row.natalContacts.length ? (
     <div className="flex flex-wrap gap-1.5">

@@ -1,5 +1,4 @@
 import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
-import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
 import type { Message } from "./_core/llm";
 import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
 import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
@@ -13,9 +12,6 @@ import {
   formatCompactEvidencePacket,
   type AstrologyEvidencePacket,
 } from "./astrologyKnowledge";
-import { getDecanCanonByLongitude } from "./astrologyKnowledge/canon/decans36";
-import { getManzilCanonByLongitude } from "./astrologyKnowledge/canon/manazil28";
-import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/canon/nakshatras27";
 import { overlay as canonicalOverlay } from "../shared/hybrid";
 import { buildMasterPipeline, formatCompactMasterGateContext } from "./master-pipeline";
 

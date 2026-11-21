@@ -1,3 +1,4 @@
+import { chartRows } from "../chartRows";
 import type { ChartResult, ChartRow } from "../../astronomy";
 import { overlay, MANAZIL, normalizeLongitude } from "../../../shared/hybrid";
 import { calculateArabicLots } from "../../utils/arabicLots";
@@ -27,14 +28,6 @@ const factTrace: SourceTrace = {
   retrievedAt: new Date().toISOString(),
   confidence: "high",
 };
-function rows(chart: ChartResult) {
-  return [
-    ...chart.movingBodies,
-    chart.ascendant,
-    chart.northNode,
-    chart.southNode,
-  ].filter((row): row is ChartRow => Boolean(row));
-}
 function manzil(longitude: number) {
   const index = Math.floor(normalizeLongitude(longitude) / (360 / 28));
   return {
@@ -47,7 +40,7 @@ export function resolveArabicEvidence(
   chart: ChartResult,
   plan: KnowledgePlan
 ): EvidenceItem[] {
-  const all = rows(chart).filter(row => Number.isFinite(row.longitude));
+  const all = chartRows(chart).filter(row => Number.isFinite(row.longitude));
   const evidence: EvidenceItem[] = [];
   for (const row of all) {
     const ov = overlay(row.longitude);

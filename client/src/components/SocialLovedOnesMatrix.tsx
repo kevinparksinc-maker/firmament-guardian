@@ -1,23 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Users,
-  Heart,
-  AlertTriangle,
-  Sparkles,
-  Send,
-  Plus,
-  Trash2,
-  Copy,
-  Check,
-  Compass,
-  ArrowRight,
-  ShieldAlert,
-  Sun,
-  Moon,
-  MessageSquare,
-  Activity,
-  Share2,
-} from "lucide-react";
+import { AlertTriangle, Plus, Trash2, Copy, Check, Compass, ShieldAlert, MessageSquare, Activity, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

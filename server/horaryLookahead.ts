@@ -1,4 +1,4 @@
-import { ephemerisXYZ } from "./astronomy";
+import { ephemerisXYZ } from "./ephemeris";
 import { normalizeLongitude } from "../shared/hybrid";
 
 // Look-ahead for the horary chart: finds when aspects between the seven classical

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Compass, Eye, Layers3, Sparkles, ShieldCheck, AlertTriangle } from "lucide-react";
-import type { AstrologyEvidencePacket, EvidenceItem, EvidenceRelationship } from "../../../server/astrologyKnowledge/types";
+import type { AstrologyEvidencePacket, EvidenceItem } from "../../../server/astrologyKnowledge/types";
 import "./Interpreter2050.css";
 
 type Lens = "human" | "relations" | "sources";

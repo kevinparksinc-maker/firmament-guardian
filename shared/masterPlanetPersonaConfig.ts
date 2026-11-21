@@ -1,5 +1,5 @@
 import type { ChartResult } from "../server/astronomy";
-import { buildPlanetPersonaMatrix, type PlanetPersonaTrait } from "./planetPersonaMatrix";
+import { buildPlanetPersonaMatrix } from "./planetPersonaMatrix";
 
 export const CORE_REQUESTED_ACTORS = [
   "Sun",

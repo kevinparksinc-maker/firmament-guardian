@@ -60,7 +60,6 @@ import { FULL_SYNTHESIS_STYLE } from "./master-interpreter";
 import { runGenesisPatternPipeline } from "./genesisBackup/adapter";
 import { calculateGenesisReadingMetrics } from "./genesisBackup/readingEngine";
 import { buildUnifiedMasterChart, getMasterNatalChart } from "./masterChart/builder";
-import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
 import { buildMasterPipeline } from "./master-pipeline";
 import { buildMasterGameChart } from "./simulationLab/masterGameChart";
 import { evaluatePlanetaryTeamHouses, predictSportsGame } from "./simulationLab/sportsPredictor";

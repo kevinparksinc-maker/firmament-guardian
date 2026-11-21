@@ -1,19 +1,5 @@
 import React, { useState } from "react";
-import {
-  Compass,
-  Layers,
-  Sparkles,
-  Star,
-  CheckCircle2,
-  HelpCircle,
-  Eye,
-  Sliders,
-  Shield,
-  BookOpen,
-  ArrowRight,
-  RefreshCw,
-  Orbit,
-} from "lucide-react";
+import { Compass, Layers, Star, CheckCircle2, Shield, BookOpen, RefreshCw, Orbit } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
 import type { UnifiedMasterChartSnapshot } from "../../../server/masterChart/types";

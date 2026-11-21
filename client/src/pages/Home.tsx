@@ -1,12 +1,12 @@
+import { useGuideTab } from "@/lib/guideTab";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Diamond, House, RotateCcw, Sparkles, UserRound } from "lucide-react";
+import { Diamond, House, Sparkles } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import type { ProfileSection } from "@/config/profileNavigation";
 import { trpc } from "@/lib/trpc";
 import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
 import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
-import type { GuideTab } from "@/components/ProfileGuideScreen";
 import { CosmicShareCard } from "@/components/CosmicShareCard";
 import { NatalProfileBuilder, type UserProfileData, SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
 import { SavedProfilePicker } from "@/components/SavedProfilePicker";
@@ -84,19 +84,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
     } catch { return null; }
   });
 
-  const parseTab = (): GuideTab => {
-    const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
-    return tab === "synastry" || tab === "weather" || tab === "podcast" || tab === "social" ? tab : "blueprint";
-  };
-  const [mainTab, setMainTab] = useState<GuideTab>(parseTab);
-  useEffect(() => {
-    const onSelect = (event: Event) => {
-      const tab = (event as CustomEvent<{ tab: GuideTab }>).detail?.tab;
-      if (["blueprint","synastry","weather","podcast","social"].includes(tab)) setMainTab(tab);
-    };
-    window.addEventListener("fg:select-tab", onSelect);
-    return () => window.removeEventListener("fg:select-tab", onSelect);
-  }, []);
+  const [mainTab, setMainTab] = useGuideTab();
   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);

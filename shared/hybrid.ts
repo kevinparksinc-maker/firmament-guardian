@@ -51,6 +51,20 @@ export function overlay(longitude: number): Overlay {
     chineseBoundaryModel: chinese.boundaryModel,
   };
 }
+export function signAtLongitude(longitude: number): string {
+  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
+}
+
+export function findBodyLongitude(
+  bodies: readonly { name: string; longitude: number }[],
+  name: string
+): number | undefined {
+  const body = bodies.find(candidate => candidate.name === name);
+  return body && Number.isFinite(body.longitude)
+    ? normalizeLongitude(body.longitude)
+    : undefined;
+}
+
 export function formatLongitude(longitude: number) { const L = normalizeLongitude(longitude); const sign = ZODIAC_SIGNS[Math.floor(L / 30)]; const deg = L % 30; const d = Math.floor(deg); const m = Math.round((deg - d) * 60); return `${sign} ${String(d).padStart(2, "0")}°${String(m % 60).padStart(2, "0")}′`; }
 export function normalizeLongitude(value: number) { const wrapped = value % 360; return wrapped < 0 ? wrapped + 360 : wrapped; }
 

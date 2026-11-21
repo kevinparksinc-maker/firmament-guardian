@@ -16,20 +16,7 @@ import {
   Scatter,
   ZAxis,
 } from "recharts";
-import {
-  Sparkles,
-  Star,
-  Compass,
-  Eye,
-  SlidersHorizontal,
-  Flame,
-  Award,
-  Info,
-  Layers,
-  ChevronRight,
-  Maximize2,
-  Minimize2,
-} from "lucide-react";
+import { Sparkles, Compass, SlidersHorizontal, Flame, Award, Info, Layers, Maximize2, Minimize2 } from "lucide-react";
 import type { ChartResult } from "../../../server/astronomy";
 import { formatLongitude, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 

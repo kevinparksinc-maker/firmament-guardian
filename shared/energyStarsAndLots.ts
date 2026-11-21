@@ -1,5 +1,5 @@
 import type { ChartResult, ChartRow } from "../server/astronomy";
-import { FIXED_STARS, ZODIAC_SIGNS, formatLongitude, normalizeLongitude } from "./hybrid";
+import { FIXED_STARS, findBodyLongitude, ZODIAC_SIGNS, formatLongitude, normalizeLongitude } from "./hybrid";
 import { ENERGY_ASPECT_FLOW, ENERGY_MAX_ORB, energyIntensity } from "./energyScoring";
 
 const ROYAL_STARS = new Set(["Aldebaran", "Regulus", "Antares", "Fomalhaut"]);
@@ -794,12 +794,7 @@ export function calculateEnergyStarsAndLots(
     };
   }
 
-  const bodyLon = (name: string) => {
-    const found = chart.movingBodies.find(b => b.name === name);
-    return found && Number.isFinite(found.longitude)
-      ? normalizeLongitude(found.longitude)
-      : undefined;
-  };
+  const bodyLon = (name: string) => findBodyLongitude(chart.movingBodies, name);
   const sunLon = bodyLon("Sun")!;
   const moonLon = bodyLon("Moon")!;
   const mercuryLon = bodyLon("Mercury");

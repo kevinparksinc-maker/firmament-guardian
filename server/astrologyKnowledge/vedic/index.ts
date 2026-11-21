@@ -1,4 +1,5 @@
-import type { ChartResult, ChartRow } from "../../astronomy";
+import { chartRows } from "../chartRows";
+import type { ChartResult } from "../../astronomy";
 import {
   NAKSHATRAS,
   ZODIAC_SIGNS,
@@ -55,19 +56,11 @@ function nakshatra(longitude: number) {
     end: (index + 1) * size,
   };
 }
-function rows(chart: ChartResult) {
-  return [
-    ...chart.movingBodies,
-    chart.ascendant,
-    chart.northNode,
-    chart.southNode,
-  ].filter((row): row is ChartRow => Boolean(row));
-}
 export function resolveVedicEvidence(
   chart: ChartResult,
   plan: KnowledgePlan
 ): EvidenceItem[] {
-  const all = rows(chart).filter(row => Number.isFinite(row.longitude));
+  const all = chartRows(chart).filter(row => Number.isFinite(row.longitude));
   const asc =
     chart.ascendant && Number.isFinite(chart.ascendant.longitude)
       ? chart.ascendant

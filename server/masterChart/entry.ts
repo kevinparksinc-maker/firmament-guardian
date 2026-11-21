@@ -1,6 +1,6 @@
 import type { ChartInput, ChartResult } from "../astronomy";
 import { buildUnifiedMasterChart } from "./builder";
-import { synthesizeMasterSnapshot } from "../astrologyKnowledge/synthesis/readingBridge";
+import { synthesizeSnapshotEvidence } from "../astrologyKnowledge/synthesis/snapshotEvidence";
 
 /** Public chart production always binds the complete formation before returning. */
 export async function calculateMasterChart(
@@ -8,7 +8,7 @@ export async function calculateMasterChart(
 ): Promise<ChartResult> {
   const mode = input.readingScope ?? "combined";
   const snapshot = await buildUnifiedMasterChart({ ...input, mode });
-  const { canonicalChart, synthesis } = await synthesizeMasterSnapshot(
+  const { canonicalChart, synthesis } = await synthesizeSnapshotEvidence(
     snapshot,
     mode,
     "Evaluate this chart's complete method formation before output."

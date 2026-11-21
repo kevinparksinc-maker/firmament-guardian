@@ -1,3 +1,4 @@
+import { polarPoint } from "@/lib/chartGeometry";
 import { useMemo, useState } from "react";
 import type { ChartResult } from "../../../server/astronomy";
 import { angularDistance } from "../../../server/astrologyCore";
@@ -108,13 +109,8 @@ const ZODIAC_ABBR = [
   "PIS",
 ];
 
-const polar = (longitude: number, radius: number, center = 220) => {
-  const angle = ((longitude - 90) * Math.PI) / 180;
-  return {
-    x: center + Math.cos(angle) * radius,
-    y: center + Math.sin(angle) * radius,
-  };
-};
+const polar = (longitude: number, radius: number, center = 220) =>
+  polarPoint(longitude, radius, center);
 
 interface ThreeLayerOrreryProps {
   chart?: ChartResult | null;

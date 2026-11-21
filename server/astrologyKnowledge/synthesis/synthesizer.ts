@@ -1,4 +1,3 @@
-import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type {
   SynthesisInput,
   SynthesisResult,
@@ -6,10 +5,6 @@ import type {
 import { extractPropositionsFromMethodOutcomes } from "./normalizer";
 import { clusterPropositionsIntoThemes } from "./clustering";
 import { buildMethodOutcomes } from "./methodOutcomes";
-
-function getSign(longitude: number): string {
-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
-}
 
 export async function synthesizeMasterReading(
   input: SynthesisInput

@@ -1,32 +1,5 @@
 import React, { useState, useMemo } from "react";
-import {
-  Heart,
-  Users,
-  Sparkles,
-  Flame,
-  Shield,
-  Brain,
-  Anchor,
-  Compass,
-  ArrowRight,
-  MessageSquare,
-  Share2,
-  Lock,
-  Crown,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  Info,
-  CheckCircle2,
-  AlertCircle,
-  Plus,
-  Calendar,
-  MapPin,
-  Clock,
-  ArrowLeftRight,
-  UserPlus,
-  Search,
-} from "lucide-react";
+import { Heart, Sparkles, Flame, Shield, Brain, Anchor, Compass, ArrowRight, Share2, CheckCircle2, ArrowLeftRight, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -44,7 +17,7 @@ import { useSovereignTier, SovereignTeaserLock } from "./SovereignTierModal";
 import type { ChartResult } from "../../../server/astronomy";
 import { computeSynastry, computeRelationshipCompatibility, computeExpressionReception, computeParentChildDynamic, type ParentChildDynamic, type SynastryAspect } from "@/lib/synastry-engine";
 import { SynastryDualOrrery } from "./SynastryDualOrrery";
-import type { LovedOneRecord, RelationshipRole } from "../../../shared/social";
+import type { RelationshipRole } from "../../../shared/social";
 
 interface SynastryMatrixTabProps {
   userChart: ChartResult | null;

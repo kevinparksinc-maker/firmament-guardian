@@ -3,10 +3,7 @@ import React, { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
-import {
-  placementMiniIdentity,
-  placementRows,
-} from "@shared/placementMiniReadings";
+import { placementMiniIdentity } from "@shared/placementMiniReadings";
 import type { ChartResult } from "../../../server/astronomy";
 
 type MiniBatch = Awaited<

@@ -1,25 +1,7 @@
 import { prepareBirthStep } from "@shared/profileOnboarding";
 import { KNOWN_CITIES } from "@shared/profileLocations";
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Sparkles,
-  Calendar,
-  Clock,
-  MapPin,
-  User,
-  Heart,
-  Compass,
-  ArrowRight,
-  CheckCircle2,
-  HelpCircle,
-  RotateCcw,
-  ShieldCheck,
-  Star,
-  Flame,
-  Search,
-  Loader2,
-  X,
-} from "lucide-react";
+import { Sparkles, Calendar, Clock, MapPin, User, Heart, Compass, ArrowRight, CheckCircle2, RotateCcw, Star, Flame, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

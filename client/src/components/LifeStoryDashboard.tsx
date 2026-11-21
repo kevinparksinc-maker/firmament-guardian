@@ -1,42 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
-import { Link } from "wouter";
-import {
-  BookOpen,
-  Calendar,
-  Compass,
-  Clock,
-  Sparkles,
-  ChevronDown,
-  ChevronRight,
-  ShieldCheck,
-  Star,
-  Orbit,
-  Flame,
-  Award,
-  Sliders,
-  Volume2,
-  VolumeX,
-  Download,
-  BookmarkPlus,
-  Layers,
-  ArrowRight,
-  Eye,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  RefreshCw,
-  UserRound,
-  ExternalLink,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { BookOpen, Compass, Clock, Sparkles, ChevronDown, ShieldCheck, Sliders, Volume2, VolumeX, BookmarkPlus, Eye, Loader2, RefreshCw } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
-import type {
-  LifeStageKey,
-  PlanetaryCycleEvent,
-  LifeStoryChapterSummary,
-  MethodAuditStatus,
-} from "../../../server/lifeStoryEngine";
+import type { LifeStageKey } from "../../../server/lifeStoryEngine";
 import { toast } from "sonner";
 import {
   Dialog,

@@ -1,27 +1,12 @@
 import { readingProse } from "@shared/readingProse";
 import { useLocation } from "wouter";
 import React, { useState } from "react";
-import {
-  Sparkles,
-  BookOpen,
-  ChevronDown,
-  ChevronUp,
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
-  Layers,
-  ArrowRight,
-  Flame,
-  Star,
-  RefreshCw,
-  Search,
-} from "lucide-react";
+import { Sparkles, BookOpen, ChevronDown, ChevronUp, ShieldCheck, AlertCircle, Layers, Star, RefreshCw, Search } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
 import { PlanetPersonaMatrixSpreadsheet } from "./PlanetPersonaMatrixSpreadsheet";
 import { InteractiveNatalCompanion } from "./InteractiveNatalCompanion";
-import { Table, MessageSquare } from "lucide-react";
+import { Table } from "lucide-react";
 
 function renderInlineMarkdown(text: string): React.ReactNode[] {
   // Strip any unbalanced trailing ** so bold never bleeds

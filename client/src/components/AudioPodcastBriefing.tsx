@@ -1,24 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import type { buildChartBriefing } from "../../../server/chartBriefing";
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import {
-  Headphones,
-  Play,
-  Pause,
-  RotateCcw,
-  RotateCw,
-  Volume2,
-  VolumeX,
-  Sparkles,
-  Radio,
-  Sliders,
-  User,
-  Music,
-  FileText,
-  ChevronRight,
-  ArrowRight,
-  CheckCircle2,
-} from "lucide-react";
+import { Headphones, Play, Pause, RotateCcw, RotateCw, Sparkles, Radio, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

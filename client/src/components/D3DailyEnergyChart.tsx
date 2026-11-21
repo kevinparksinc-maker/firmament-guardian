@@ -4,15 +4,7 @@ import type { ChartResult } from "../../../server/astronomy";
 import { trpc } from "@/lib/trpc";
 import { ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
-import {
-  Activity,
-  ChevronRight,
-  Clock,
-  RefreshCw,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+import { Activity, Clock, RefreshCw, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 
 const PLANET_GLYPHS: Record<string, string> = {
   Sun: "☉",

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, Navigation, Search, Check, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { MapPin, Navigation, Search, Loader2, AlertCircle } from "lucide-react";
 import { useTransitGPS } from "@/hooks/useTransitGPS";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { trpc } from "@/lib/trpc";

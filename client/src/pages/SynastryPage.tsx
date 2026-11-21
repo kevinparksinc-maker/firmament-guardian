@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Heart, Sparkles, Users, Compass, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Heart } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { SynastryMatrixTab } from "@/components/SynastryMatrixTab";
 import { CosmicShareCard } from "@/components/CosmicShareCard";

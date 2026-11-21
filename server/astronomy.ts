@@ -1,6 +1,6 @@
-import sweph from "sweph";
+import { ephemerisXYZ, julianDay, longitudeFromXYZ, topocentricMoonLongitude } from "./ephemeris";
+export { ephemerisXYZ, longitudeFromXYZ } from "./ephemeris";
 import { knownCity } from "../shared/profileLocations";
-import { localDateTime } from "../shared/transitTime";
 import { ascendantFromSunrise, type FixedVector } from "./sunriseAscendant";
 import tzLookup from "tz-lookup";
 import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
@@ -95,52 +95,6 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
   return new Date(Array.from(candidates)[0]);
 }
 
-// Geocentric equatorial Cartesian XYZ: Moshier (4), equatorial (2048), XYZ (4096).
-// Never request a sidereal or tropical zodiac conversion for planetary positions.
-const MOSHIER_FLAGS = 4;
-const EQUATORIAL_FLAG = 2048;
-const CARTESIAN_XYZ_FLAG = 4096;
-const SPEED_FLAG = 256;
-const TOPOCENTRIC_FLAG = 32768;
-const EQUATORIAL_XYZ_FLAGS = MOSHIER_FLAGS | EQUATORIAL_FLAG | CARTESIAN_XYZ_FLAG | SPEED_FLAG;
-export function ephemerisXYZ(jd: number, planet: number, extraFlags = 0) {
-  const result: any = (sweph as any).calc_ut(jd, planet, EQUATORIAL_XYZ_FLAGS | extraFlags);
-  const data = result?.data ?? result;
-  if (!data || ![data[0], data[1], data[2]].every((n: unknown) => typeof n === "number" && Number.isFinite(n)))
-    throw new Error("Ephemeris failed to return geocentric equatorial Cartesian XYZ coordinates.");
-  const xyz = { x: Number(data[0]), y: Number(data[1]), z: Number(data[2]) };
-  const longitude = longitudeFromXYZ(xyz);
-  // Cartesian velocity components are AU/day when SEFLG_SPEED is requested.
-  const velocity = [Number(data[3]), Number(data[4]), Number(data[5])];
-  const speed = velocity.every(Number.isFinite)
-    ? ((xyz.x * velocity[1] - xyz.y * velocity[0]) / (xyz.x * xyz.x + xyz.y * xyz.y)) * 180 / Math.PI
-    : 0;
-  return { xyz, longitude, speed, velocity };
-}
-function calculatedXYZ(jd: number, planet: number) {
-  return ephemerisXYZ(jd, planet);
-}
-function safeCalc(jd: number, planet: number) {
-  return ephemerisXYZ(jd, planet);
-}
-/** Geocentric and observer-specific Moon coordinates must use the same equatorial XYZ axes. */
-function topocentricMoonLongitude(jd: number, longitude: number, latitude: number, elevation = 0) {
-  const sw = sweph as any;
-  try {
-    sw.set_topo?.(longitude, latitude, elevation);
-    return ephemerisXYZ(jd, 1, TOPOCENTRIC_FLAG).longitude;
-  } finally {
-    sw.set_topo?.(0, 0, 0);
-  }
-}
-/** Longitude from externally supplied XYZ. The supplied frame must already be aligned to the fixed 360° zodiac. */
-export function longitudeFromXYZ(vector: { x: number; y: number; z: number }): number {
-  const { x, y, z } = vector;
-  if (![x, y, z].every(Number.isFinite) || Math.hypot(x, y) === 0) {
-    throw new Error("Invalid XYZ coordinates: finite values and nonzero XY radius required.");
-  }
-  return normalizeLongitude(Math.atan2(y, x) * 180 / Math.PI);
-}
 function planetaryTopocentric(planet: number, locationAvailable: boolean) {
   return locationAvailable && planet === 1;
 }
@@ -181,10 +135,6 @@ function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope,
   if (!time || !timezone) throw new Error("An exact date, time, and timezone are required for Agent View.");
   return { date: parseLocalToUtc(date, time, timezone), precision: "exact" as const };
 }
-function julianDay(date: Date) {
-  return Number((sweph as any).julday(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours() + date.getUTCMinutes() / 60, 1));
-}
-
 // NOAA solar-calculator equations: apparent sunrise at solar zenith 90.833 degrees.
 // Inputs are the LOCAL civil date and signed geographic coordinates (east positive).
 // A missing sunrise (polar day/night) is an error, never a substituted angle.
@@ -236,7 +186,7 @@ function automaticSunriseAnchor(latitude: number, longitude: number, event: Date
     }
   }
   if (!sunrise) throw new Error("No preceding NOAA sunrise found; no fallback.");
-  return { sunriseUtc: sunrise.toISOString(), sunriseSunXYZ: calculatedXYZ(julianDay(sunrise), 0).xyz };
+  return { sunriseUtc: sunrise.toISOString(), sunriseSunXYZ: ephemerisXYZ(julianDay(sunrise), 0).xyz };
 }
 function row(name: string, longitude: number, house: number, worldview: Worldview, ascendant: number | null, extra: Partial<ChartRow> = {}): ChartRow {
   const dual = dualPlacement(longitude, ascendant, name) as DualPlacement;
@@ -249,7 +199,7 @@ function fixedHouseRows(worldview: Worldview, ascendant: number | null) {
 function moonRange(date: string): MoonUncertainty | undefined {
   if (!date) return undefined;
   const start = julianDay(new Date(`${date}T00:00:00.000Z`)); const end = julianDay(new Date(`${date}T23:59:59.000Z`));
-  const from = safeCalc(start, 1).longitude; const to = safeCalc(end, 1).longitude;
+  const from = ephemerisXYZ(start, 1).longitude; const to = ephemerisXYZ(end, 1).longitude;
   return { from, to, label: `${formatLongitude(from)} to ${formatLongitude(to)} possible on this date` };
 }
 
@@ -275,11 +225,11 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
   const houses = fixedHouseRows(worldview, asc);
   const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
   const planetNames = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
-  const movingBodies = planetNames.map((name, i) => { const xyz = input.xyzPositions?.[name]; const automatic = xyz ? undefined : calculatedXYZ(jd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: safeCalc(jd, i).speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, hasAgentLocation) ? topocentricMoonLongitude(jd, input.longitude, input.latitude, input.elevation ?? 0) : undefined; return row(name, p.longitude, houseFor(p.longitude), worldview, asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }), ...(worldview === "god" && name === "Moon" && input.birthTimeKnown === false ? { uncertainty: moonRange(input.date) } : {}) }); });
+  const movingBodies = planetNames.map((name, i) => { const xyz = input.xyzPositions?.[name]; const automatic = xyz ? undefined : ephemerisXYZ(jd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: automatic!.speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, hasAgentLocation) ? topocentricMoonLongitude(jd, input.longitude, input.latitude, input.elevation ?? 0) : undefined; return row(name, p.longitude, houseFor(p.longitude), worldview, asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }), ...(worldview === "god" && name === "Moon" && input.birthTimeKnown === false ? { uncertainty: moonRange(input.date) } : {}) }); });
   const ascRow = asc == null ? null : row("Ascendant", asc, 1, worldview, asc);
   const descLongitude = asc == null ? null : normalizeLongitude(asc + 180); const descendant = descLongitude == null ? null : row("Descendant", descLongitude, 7, worldview, asc);
   const mcRow = mc == null ? null : row("Midheaven", mc, houseFor(mc), worldview, asc);
-  const nodePosition = safeCalc(jd, 10).longitude; const northNode = row("North Node", nodePosition, houseFor(nodePosition), worldview, asc, { retrograde: true, speed: 0 }); const southNodePosition = normalizeLongitude(nodePosition + 180); const southNode = row("South Node", southNodePosition, houseFor(southNodePosition), worldview, asc, { retrograde: true, speed: 0 });
+  const nodePosition = ephemerisXYZ(jd, 10).longitude; const northNode = row("North Node", nodePosition, houseFor(nodePosition), worldview, asc, { retrograde: true, speed: 0 }); const southNodePosition = normalizeLongitude(nodePosition + 180); const southNode = row("South Node", southNodePosition, houseFor(southNodePosition), worldview, asc, { retrograde: true, speed: 0 });
   const frozenStars = FIXED_STARS.map(([name, longitude]) => row(name, longitude, houseFor(longitude), worldview, asc));
   const allPlacements = [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), ...(mcRow ? [mcRow] : []), northNode, southNode];
   const godPlacements = allPlacements.map(placement => ({ ...placement, ...dualPlacement(placement.longitude, asc, placement.name) }));
@@ -306,8 +256,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
     : null;
   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitLocationResolved ? "transit-location" : "natal-location";
   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
-  const transits: TransitRow[] = planetNames.map((name, i) => { const xyz = input.transitXYZPositions?.[name]; const automatic = xyz ? undefined : calculatedXYZ(transitJd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: safeCalc(transitJd, i).speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, transitLongitude, transitLatitude, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
-  const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
+  const transits: TransitRow[] = planetNames.map((name, i) => { const xyz = input.transitXYZPositions?.[name]; const automatic = xyz ? undefined : ephemerisXYZ(transitJd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: automatic!.speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, transitLongitude, transitLatitude, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
+  const transitNodePosition = ephemerisXYZ(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
   const minorContactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = minorAspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
   return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode), minorNatalContacts: minorContactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode), minorNatalContacts: minorContactsFor(transitSouthNode) }], validation };

@@ -1,6 +1,6 @@
+import { ephemerisXYZ } from "../../ephemeris";
 import sweph from "sweph";
 import {
-  ephemerisXYZ,
   noaaSunriseUtc,
   type ChartResult,
 } from "../../astronomy";

@@ -1,26 +1,3 @@
-import type { ChartResult, ChartRow } from "../../../server/astronomy";
-import {
-  FIXED_STARS,
-  NAKSHATRAS,
-  MANAZIL,
-  ELEMENTAL_DECAN_SIGNS,
-  normalizeLongitude,
-  overlay,
-  vargaPlacement,
-  type Varga,
-  grahaDrishtiTargetHouses,
-} from "../../../shared/hybrid";
-import {
-  MOTHER_LETTERS,
-  DOUBLE_LETTERS,
-  SIMPLE_LETTERS,
-  CONTRARY_PAIRS,
-  FOUR_WORLDS,
-} from "../../../server/astrologyKnowledge/canon/seferYetzirah";
-import {
-  detectAllYogas,
-  type PlanetPlacement,
-} from "../../../server/genesisBackup/vedicYogaDetector";
 
 export type CalculationStatus =
   | "fully-calculated"

@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from "react";
-import type { ChartResult, TransitContact, MinorTransitContact, ChartRow } from "../../../server/astronomy";
-import { ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
+import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
-import { Compass, Sparkles, Zap, Shield, ArrowRight, MessageSquare, ChevronRight, Filter } from "lucide-react";
+import { Compass, MessageSquare } from "lucide-react";
 
 const MAJOR_ASPECTS = new Set(["conjunction", "trine", "sextile", "square", "opposition"]);
 

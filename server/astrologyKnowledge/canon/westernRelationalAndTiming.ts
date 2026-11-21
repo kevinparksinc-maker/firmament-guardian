@@ -1,14 +1,8 @@
 import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
 import type { ChartResult, ChartRow } from "../../astronomy";
-import {
-  EGYPTIAN_BOUNDS_TABLE,
-  evaluatePlacementDignityAndCondition,
-  lookupBoundRuler,
-  PTOLEMAIC_BOUNDS_TABLE,
-  TRADITIONAL_ASPECT_DOCTRINE,
-} from "./dignitiesAndHorary";
+import { EGYPTIAN_BOUNDS_TABLE, evaluatePlacementDignityAndCondition, lookupBoundRuler, PTOLEMAIC_BOUNDS_TABLE } from "./dignitiesAndHorary";
 import { HOUSE_CANON_RECORDS } from "./housesAndFrames";
-import { PLANET_CANON_RECORDS, SIGN_CANON_RECORDS } from "./planetsAndSigns";
+import { SIGN_CANON_RECORDS } from "./planetsAndSigns";
 import type {
   DispositorChainNode,
   ProvenanceRecord,

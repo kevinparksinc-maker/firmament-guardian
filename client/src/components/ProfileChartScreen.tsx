@@ -5,33 +5,14 @@ import { MasterSynthesizerPanel } from "./MasterSynthesizerPanel";
 import React, { useState, useMemo } from "react";
 import { TechniqueAuditDashboard } from "./TechniqueAuditDashboard";
 import { Link } from "wouter";
-import {
-  BookOpen,
-  ChevronDown,
-  CircleDot,
-  Compass,
-  Diamond,
-  Eye,
-  Flame,
-  Globe,
-  Grid,
-  Layers,
-  Moon,
-  Orbit,
-  Scale,
-  Sparkles,
-  Star,
-  Sun,
-  UserRound,
-  Zap,
-} from "lucide-react";
+import { BookOpen, Diamond, Moon, Orbit, Scale, Sun, UserRound, Zap } from "lucide-react";
 import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
 import { ChartWheel } from "@/components/ChartWheel";
 import { CompletePlacementsTable } from "@/components/CompletePlacementsTable";
 import { NatalStarsAndLotsLayer } from "@/components/NatalStarsAndLotsLayer";
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
 import { FixedStarIntensityVisualizer } from "@/components/FixedStarIntensityVisualizer";
-import type { ChartResult, ChartRow } from "../../../server/astronomy";
+import type { ChartResult } from "../../../server/astronomy";
 import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
 
 export type ProfileChartScreenProps = {

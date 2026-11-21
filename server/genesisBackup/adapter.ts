@@ -1,13 +1,11 @@
 import type { ChartResult, ChartRow } from "../astronomy";
 import {
-  detectAllYogas,
-  analyzePatterns,
   runAstroReading,
-  type PatternAnalysis,
   type PlanetPlacement,
   type ReadingResult,
-  type YogaResult,
-} from "./index";
+} from "./astroEngine";
+import { detectAllYogas, type YogaResult } from "./vedicYogaDetector";
+import { analyzePatterns, type PatternAnalysis } from "./patternEngine";
 
 export type GenesisAstroPipelineResult = {
   engine: "genesis-astro-engine";

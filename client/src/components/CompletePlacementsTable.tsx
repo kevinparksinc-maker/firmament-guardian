@@ -2,20 +2,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import React, { useState, useMemo } from "react";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
-import {
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Compass,
-  Star,
-  Globe,
-  Flame,
-  Droplets,
-  Wind,
-  Mountain,
-  CheckCircle2,
-  Info,
-} from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 const PLANET_GLYPHS: Record<string, string> = {
   Sun: "☉",

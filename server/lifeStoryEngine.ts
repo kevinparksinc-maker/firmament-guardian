@@ -1,22 +1,10 @@
 import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
-import { noaaSunriseUtc, type ChartResult, type ChartRow } from "./astronomy";
-import {
-  normalizeLongitude,
-  formatLongitude,
-  ZODIAC_SIGNS,
-  NAKSHATRAS,
-  FIXED_STARS,
-  overlay,
-} from "../shared/hybrid";
-import { calculateArabicLots, calculateLot, LOT_FORMULAS, type Sect } from "./utils/arabicLots";
+import { noaaSunriseUtc, type ChartResult } from "./astronomy";
+import { normalizeLongitude, formatLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
+import { calculateArabicLots, type Sect } from "./utils/arabicLots";
 
-import { DOUBLE_LETTERS, SIMPLE_LETTERS, MOTHER_LETTERS } from "./astrologyKnowledge/canon/seferYetzirah";
-import { DECAN_CANON_RECORDS } from "./astrologyKnowledge/canon/decans36";
-import { MANZIL_CANON_RECORDS } from "./astrologyKnowledge/canon/manazil28";
-import { CHINESE_MANSIONS } from "./astrologyKnowledge/canon/chineseMansions28";
 import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
-import { buildAstrologyEvidencePacket, formatEvidencePacket } from "./astrologyKnowledge/evidencePacket";
 import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
 
 export type LifeStageKey =

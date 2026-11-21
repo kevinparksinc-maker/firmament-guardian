@@ -1,23 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import {
-  Crown,
-  Sparkles,
-  ShieldCheck,
-  Lock,
-  CheckCircle2,
-  Zap,
-  Star,
-  ChevronRight,
-  Flame,
-  X,
-} from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Crown, Sparkles, ShieldCheck, Lock, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 

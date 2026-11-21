@@ -1,19 +1,5 @@
 import React, { useState, useMemo } from "react";
-import {
-  Table,
-  Download,
-  Search,
-  Sparkles,
-  ShieldCheck,
-  ChevronDown,
-  ChevronUp,
-  LayoutGrid,
-  ListFilter,
-  CheckCircle2,
-  Info,
-  Flame,
-  Star,
-} from "lucide-react";
+import { Table, Download, Search, Sparkles, LayoutGrid } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
 import type { PlanetPersonaTrait } from "../../../shared/planetPersonaMatrix";

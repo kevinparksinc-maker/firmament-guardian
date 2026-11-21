@@ -2,7 +2,7 @@ import { ENV } from "../_core/env";
 import type { Message } from "../_core/llm";
 import { runInterpretation } from "../astrologyKnowledge/synthesis/interpretationPipeline";
 import type { SynthesisResult } from "../astrologyKnowledge/synthesis/types";
-import type { HoraryChart } from "../horary";
+import type { HoraryChart } from "../horaryTypes";
 
 export type GroqHoraryRequest = {
   question: string;

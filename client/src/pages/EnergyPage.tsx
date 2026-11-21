@@ -3,25 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
 import React, { useState, useMemo, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import {
-  Activity,
-  ArrowRight,
-  ChevronDown,
-  ChevronUp,
-  Compass,
-  Flame,
-  Info,
-  Layers,
-  MessageSquare,
-  Orbit,
-  RefreshCw,
-  Send,
-  ShieldCheck,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
-  Zap,
-} from "lucide-react";
+import { MessageSquare, Orbit, RefreshCw } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { EnergyScoringKey } from "@/components/EnergyScoringKey";
 import { TransitLocationBar } from "@/components/TransitLocationBar";
@@ -33,7 +15,7 @@ import { AlignEnergyBarometer } from "@/components/AlignEnergyBarometer";
 import { RealLifeAspectBreakdown } from "@/components/RealLifeAspectBreakdown";
 import { EnergyFixedStarsAndLots } from "@/components/EnergyFixedStarsAndLots";
 import { D3DailyEnergyChart } from "@/components/D3DailyEnergyChart";
-import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
+import type { TransitContact, MinorTransitContact } from "../../../server/astronomy";
 import { ENERGY_ASPECT_FLOW, calculateEnergyRead } from "@/lib/energyScoring";
 
 const ENERGY_READING_CACHE_KEY = "fg:energy-reading-cache:v3";

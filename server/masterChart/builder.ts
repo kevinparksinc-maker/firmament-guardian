@@ -20,6 +20,8 @@ import {
   normalizeLongitude,
   overlay,
   ZODIAC_SIGNS,
+
+  signAtLongitude as getSign,
 } from "../../shared/hybrid";
 import {
   calculateChartHermeticLots,
@@ -124,10 +126,6 @@ export async function getMasterNatalChart(
     if (natalSnapshotCache.get(key) === pending) natalSnapshotCache.delete(key);
     throw error;
   }
-}
-
-function getSign(longitude: number): string {
-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
 }
 
 export async function buildUnifiedMasterChart(

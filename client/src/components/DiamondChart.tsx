@@ -1,6 +1,6 @@
 import { PlacementMiniReading } from "./PlacementMiniReading";
 import { useEffect, useMemo, useState } from "react";
-import { Sparkles, Compass, Orbit, ShieldCheck } from "lucide-react";
+import { Compass } from "lucide-react";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 
 /**

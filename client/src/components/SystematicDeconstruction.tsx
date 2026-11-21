@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ShieldCheck, Compass, Orbit, Star } from "lucide-react";
+import { Sparkles, ShieldCheck } from "lucide-react";
 import { placementRows } from "@shared/placementMiniReadings";
 import { normalizeLongitude, overlay } from "@shared/hybrid";
 import { readingProse } from "@shared/readingProse";

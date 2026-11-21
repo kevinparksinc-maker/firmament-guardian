@@ -1,5 +1,5 @@
 import {
-  FIXED_STARS,
+  FIXED_STARS, findBodyLongitude,
   formatLongitude,
   normalizeLongitude,
   ZODIAC_SIGNS,
@@ -614,12 +614,7 @@ export function calculateChartHermeticLots(
     return [];
   }
   const asc = normalizeLongitude(chart.ascendant.longitude);
-  const bodyLon = (name: string) => {
-    const found = chart.movingBodies.find(b => b.name === name);
-    return found && Number.isFinite(found.longitude)
-      ? normalizeLongitude(found.longitude)
-      : undefined;
-  };
+  const bodyLon = (name: string) => findBodyLongitude(chart.movingBodies, name);
 
   const sun = bodyLon("Sun");
   const moon = bodyLon("Moon");

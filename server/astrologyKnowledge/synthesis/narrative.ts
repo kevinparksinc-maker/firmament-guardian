@@ -220,7 +220,8 @@ async function generate(synthesis: SynthesisResult, question: string, supplement
           );
         }).join("\n\n") + "\n\n";
     } catch {
-      // The full calculated dossier is still included if this display matrix is unavailable.
+      // Preserve the calculated dossier and record the missing prompt section.
+      console.warn("[NARRATIVE_PERSONA_MATRIX_UNAVAILABLE] Could not prepare the optional display matrix.");
     }
   }
 

@@ -1,4 +1,4 @@
-import { normalizeLongitude, ZODIAC_SIGNS } from "../../shared/hybrid";
+import { normalizeLongitude } from "../../shared/hybrid";
 import {
   PatternRequestSchema,
   type DiscoveredPattern,
@@ -31,10 +31,6 @@ const ASPECT_THEMES: Record<WesternAspect["type"], string[]> = {
 function angularDistance(a: number, b: number) {
   const delta = Math.abs(normalizeLongitude(a) - normalizeLongitude(b));
   return Math.min(delta, 360 - delta);
-}
-
-function signFor(longitude: number) {
-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
 }
 
 function canonicalPair(a: string, b: string) {

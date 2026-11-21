@@ -1,19 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  BookOpen,
-  Brain,
-  ChevronRight,
-  Compass,
-  Layers3,
-  Loader2,
-  Map,
-  MapPin,
-  Orbit,
-  RefreshCw,
-  Sparkles,
-  Stars,
-  UserCheck,
-} from "lucide-react";
+import { BookOpen, ChevronRight, Loader2, Map, MapPin, Orbit, RefreshCw, Stars } from "lucide-react";
 import { Link } from "wouter";
 import { ThreeLayerOrrery } from "@/components/ThreeLayerOrrery";
 import { OVERLAY_MAP_SPECS } from "@/design/overlayMapSpecs";

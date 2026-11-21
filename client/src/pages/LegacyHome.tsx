@@ -1,3 +1,5 @@
+import { useGuideTab } from "@/lib/guideTab";
+import { Chip, OverlayCell } from "@/components/GuideChartCells";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,17 +42,7 @@ import { SynastryMatrixTab } from "@/components/SynastryMatrixTab";
 import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
 import { AudioPodcastBriefing } from "@/components/AudioPodcastBriefing";
 import { useSovereignTier, SovereignTeaserLock } from "@/components/SovereignTierModal";
-import {
-  Share2,
-  Users,
-  Heart,
-  Calendar,
-  Headphones,
-  Crown,
-  Layers,
-  Sparkles as SparklesIcon,
-  User,
-} from "lucide-react";
+import { Share2, Users, Heart, Calendar, Headphones, Crown, Layers } from "lucide-react";
 import {
   NatalProfileBuilder,
   ActiveProfileBar,
@@ -144,25 +136,6 @@ const readingModes: Array<{
       "See how the current sky meets your birth chart without confusing temporary weather with identity.",
   },
 ];
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-300">
-      {children}
-    </span>
-  );
-}
-function OverlayCell({ row }: { row: any }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="font-medium text-slate-100">
-        {row.overlay.nakshatra}{" "}
-        <span className="text-slate-500">Pada {row.overlay.pada}</span>
-      </div>
-      <div className="text-xs text-slate-400">{row.overlay.manzil}</div>
-      <Chip>{row.overlay.decan}</Chip>
-    </div>
-  );
-}
 function TransitContacts({ row }: { row: any }) {
   return row.natalContacts.length ? (
     <div className="flex flex-wrap gap-1.5">
@@ -304,20 +277,7 @@ export default function Home() {
   const [showHelp, setShowHelp] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(null);
-  type ObservatoryTab = "blueprint" | "synastry" | "weather" | "podcast" | "social";
-  const parseTab = (): ObservatoryTab => {
-    const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
-    return tab === "synastry" || tab === "weather" || tab === "podcast" || tab === "social" ? tab : "blueprint";
-  };
-  const [mainTab, setMainTab] = useState<ObservatoryTab>(parseTab);
-  useEffect(() => {
-    const onSelect = (event: Event) => {
-      const tab = (event as CustomEvent<{ tab: ObservatoryTab }>).detail?.tab;
-      if (["blueprint","synastry","weather","podcast","social"].includes(tab)) setMainTab(tab);
-    };
-    window.addEventListener("fg:select-tab", onSelect);
-    return () => window.removeEventListener("fg:select-tab", onSelect);
-  }, []);
+  const [mainTab, setMainTab] = useGuideTab();
   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
   const { isSovereign, openPaywall } = useSovereignTier();
   const [activeProfile, setActiveProfile] = useState<UserProfileData | null>(() => {

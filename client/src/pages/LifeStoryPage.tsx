@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import { BookOpen, Sparkles, UserRound, ArrowLeft } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { LifeStoryDashboard } from "@/components/LifeStoryDashboard";
-import { NatalProfileBuilder, SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
+import { SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
 import { trpc } from "@/lib/trpc";
 
 export default function LifeStoryPage() {

@@ -1,4 +1,4 @@
-import { aspectBetween, type ChartResult, type ChartRow } from "../server/astronomy";
+import { aspectBetween, type ChartResult } from "../server/astronomy";
 import { placementRows } from "./placementMiniReadings";
 import { retrievePlacementDossier } from "../server/astrologyKnowledge/canon/retriever";
 import { calculateVedicStrength } from "../server/astrologyKnowledge/vedic/strength";

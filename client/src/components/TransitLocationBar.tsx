@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigation, MapPin, Loader2, Sparkles, SlidersHorizontal, CheckCircle2 } from "lucide-react";
+import { Navigation, MapPin, Loader2, SlidersHorizontal } from "lucide-react";
 import { useTransitGPS } from "@/hooks/useTransitGPS";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
 import { TransitLocationModal } from "./TransitLocationModal";

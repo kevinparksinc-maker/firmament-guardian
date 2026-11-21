@@ -1,6 +1,6 @@
 import { NAKSHATRAS, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
-import type { ChartResult, ChartRow } from "../../astronomy";
-import { PLANET_CANON_RECORDS, SIGN_CANON_RECORDS } from "./planetsAndSigns";
+import type { ChartResult } from "../../astronomy";
+import { SIGN_CANON_RECORDS } from "./planetsAndSigns";
 import type {
   DetectedVedicYoga,
   ProvenanceRecord,

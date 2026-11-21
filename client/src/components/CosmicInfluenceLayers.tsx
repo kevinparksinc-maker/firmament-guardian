@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ChartResult, ChartRow, TransitContact, MinorTransitContact } from "../../../server/astronomy";
+import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
 import { ELEMENTAL_DECAN_SIGNS, ZODIAC_SIGNS } from "../../../shared/hybrid";
 
 const RULERS: Record<string,string> = {Aries:"Mars",Taurus:"Venus",Gemini:"Mercury",Cancer:"Moon",Leo:"Sun",Virgo:"Mercury",Libra:"Venus",Scorpio:"Mars",Sagittarius:"Jupiter",Capricorn:"Saturn",Aquarius:"Saturn",Pisces:"Jupiter"};

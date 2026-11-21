@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { BookOpen, Diamond, House, LayoutGrid, MessageCircleQuestion, Zap } from "lucide-react";
 import { useProfileSession } from "@/contexts/ProfileSessionContext";
-import { trpc } from "@/lib/trpc";
 
 export function PrimaryProfileNavigation() {
   const { profile } = useProfileSession();

@@ -5,7 +5,7 @@ import {
   placementMiniIdentity,
 } from "../shared/placementMiniReadings";
 import { z } from "zod";
-import type { ChartResult, ChartRow } from "./astronomy";
+import type { ChartResult } from "./astronomy";
 import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
 import { buildAstrologyInterpreterSystem } from "./master-interpreter";
 import {
@@ -14,7 +14,7 @@ import {
 } from "./astrologyKnowledge/synthesis/readingBridge";
 import { retrievePlacementDossier } from "./astrologyKnowledge/canon/retriever";
 import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
-import { buildPlanetPersonaMatrix, type PlanetPersonaTrait } from "../shared/planetPersonaMatrix";
+import { buildPlanetPersonaMatrix } from "../shared/planetPersonaMatrix";
 import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
 
 const summarySchema = z.object({

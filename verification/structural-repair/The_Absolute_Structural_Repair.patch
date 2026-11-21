@@ -1,0 +1,2717 @@
+diff --git a/client/src/components/AudioPodcastBriefing.tsx b/client/src/components/AudioPodcastBriefing.tsx
+index dd80b8f..12deeea 100644
+--- a/client/src/components/AudioPodcastBriefing.tsx
++++ b/client/src/components/AudioPodcastBriefing.tsx
+@@ -1,24 +1,7 @@
+ import { trpc } from "@/lib/trpc";
+ import type { buildChartBriefing } from "../../../server/chartBriefing";
+ import React, { useState, useEffect, useRef, useMemo } from "react";
+-import {
+-  Headphones,
+-  Play,
+-  Pause,
+-  RotateCcw,
+-  RotateCw,
+-  Volume2,
+-  VolumeX,
+-  Sparkles,
+-  Radio,
+-  Sliders,
+-  User,
+-  Music,
+-  FileText,
+-  ChevronRight,
+-  ArrowRight,
+-  CheckCircle2,
+-} from "lucide-react";
++import { Headphones, Play, Pause, RotateCcw, RotateCw, Sparkles, Radio, FileText } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Badge } from "@/components/ui/badge";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+diff --git a/client/src/components/CompletePlacementsTable.tsx b/client/src/components/CompletePlacementsTable.tsx
+index a1f4742..2066dd5 100644
+--- a/client/src/components/CompletePlacementsTable.tsx
++++ b/client/src/components/CompletePlacementsTable.tsx
+@@ -2,20 +2,7 @@ import { useIsMobile } from "@/hooks/useMobile";
+ import React, { useState, useMemo } from "react";
+ import type { ChartResult, ChartRow } from "../../../server/astronomy";
+ import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
+-import {
+-  Sparkles,
+-  ChevronDown,
+-  ChevronUp,
+-  Compass,
+-  Star,
+-  Globe,
+-  Flame,
+-  Droplets,
+-  Wind,
+-  Mountain,
+-  CheckCircle2,
+-  Info,
+-} from "lucide-react";
++import { ChevronDown, ChevronUp } from "lucide-react";
+ 
+ const PLANET_GLYPHS: Record<string, string> = {
+   Sun: "☉",
+diff --git a/client/src/components/CosmicInfluenceLayers.tsx b/client/src/components/CosmicInfluenceLayers.tsx
+index bee2fd0..a6547bb 100644
+--- a/client/src/components/CosmicInfluenceLayers.tsx
++++ b/client/src/components/CosmicInfluenceLayers.tsx
+@@ -1,5 +1,5 @@
+ import { useMemo } from "react";
+-import type { ChartResult, ChartRow, TransitContact, MinorTransitContact } from "../../../server/astronomy";
++import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
+ import { ELEMENTAL_DECAN_SIGNS, ZODIAC_SIGNS } from "../../../shared/hybrid";
+ 
+ const RULERS: Record<string,string> = {Aries:"Mars",Taurus:"Venus",Gemini:"Mercury",Cancer:"Moon",Leo:"Sun",Virgo:"Mercury",Libra:"Venus",Scorpio:"Mars",Sagittarius:"Jupiter",Capricorn:"Saturn",Aquarius:"Saturn",Pisces:"Jupiter"};
+diff --git a/client/src/components/D3DailyEnergyChart.tsx b/client/src/components/D3DailyEnergyChart.tsx
+index 9083e1f..5892bca 100644
+--- a/client/src/components/D3DailyEnergyChart.tsx
++++ b/client/src/components/D3DailyEnergyChart.tsx
+@@ -4,15 +4,7 @@ import type { ChartResult } from "../../../server/astronomy";
+ import { trpc } from "@/lib/trpc";
+ import { ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
+ import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
+-import {
+-  Activity,
+-  ChevronRight,
+-  Clock,
+-  RefreshCw,
+-  Sparkles,
+-  TrendingDown,
+-  TrendingUp,
+-} from "lucide-react";
++import { Activity, Clock, RefreshCw, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+ 
+ const PLANET_GLYPHS: Record<string, string> = {
+   Sun: "☉",
+diff --git a/client/src/components/DiamondChart.tsx b/client/src/components/DiamondChart.tsx
+index 33f4696..a13a183 100644
+--- a/client/src/components/DiamondChart.tsx
++++ b/client/src/components/DiamondChart.tsx
+@@ -1,6 +1,6 @@
+ import { PlacementMiniReading } from "./PlacementMiniReading";
+ import { useEffect, useMemo, useState } from "react";
+-import { Sparkles, Compass, Orbit, ShieldCheck } from "lucide-react";
++import { Compass } from "lucide-react";
+ import type { ChartResult, ChartRow } from "../../../server/astronomy";
+ 
+ /**
+diff --git a/client/src/components/EnergyChartMap.tsx b/client/src/components/EnergyChartMap.tsx
+index a7d8bbd..81163c4 100644
+--- a/client/src/components/EnergyChartMap.tsx
++++ b/client/src/components/EnergyChartMap.tsx
+@@ -1,8 +1,7 @@
+ import React, { useMemo, useState } from "react";
+-import type { ChartResult, TransitContact, MinorTransitContact, ChartRow } from "../../../server/astronomy";
+-import { ENERGY_ASPECT_FLOW } from "@/lib/energyScoring";
++import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
+ import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
+-import { Compass, Sparkles, Zap, Shield, ArrowRight, MessageSquare, ChevronRight, Filter } from "lucide-react";
++import { Compass, MessageSquare } from "lucide-react";
+ 
+ const MAJOR_ASPECTS = new Set(["conjunction", "trine", "sextile", "square", "opposition"]);
+ 
+diff --git a/client/src/components/FixedStarIntensityVisualizer.tsx b/client/src/components/FixedStarIntensityVisualizer.tsx
+index e59b29a..b66ddbc 100644
+--- a/client/src/components/FixedStarIntensityVisualizer.tsx
++++ b/client/src/components/FixedStarIntensityVisualizer.tsx
+@@ -16,20 +16,7 @@ import {
+   Scatter,
+   ZAxis,
+ } from "recharts";
+-import {
+-  Sparkles,
+-  Star,
+-  Compass,
+-  Eye,
+-  SlidersHorizontal,
+-  Flame,
+-  Award,
+-  Info,
+-  Layers,
+-  ChevronRight,
+-  Maximize2,
+-  Minimize2,
+-} from "lucide-react";
++import { Sparkles, Compass, SlidersHorizontal, Flame, Award, Info, Layers, Maximize2, Minimize2 } from "lucide-react";
+ import type { ChartResult } from "../../../server/astronomy";
+ import { formatLongitude, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+ 
+diff --git a/client/src/components/GuideChartCells.tsx b/client/src/components/GuideChartCells.tsx
+new file mode 100644
+index 0000000..f75d9af
+--- /dev/null
++++ b/client/src/components/GuideChartCells.tsx
+@@ -0,0 +1,22 @@
++import type { ReactNode } from "react";
++import type { Overlay } from "@shared/hybrid";
++
++export function Chip({ children }: { children: ReactNode }) {
++  return (
++    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-300">
++      {children}
++    </span>
++  );
++}
++export function OverlayCell({ row }: { row: { overlay: Overlay } }) {
++  return (
++    <div className="space-y-1.5">
++      <div className="font-medium text-slate-100">
++        {row.overlay.nakshatra}{" "}
++        <span className="text-slate-500">Pada {row.overlay.pada}</span>
++      </div>
++      <div className="text-xs text-slate-400">{row.overlay.manzil}</div>
++      <Chip>{row.overlay.decan}</Chip>
++    </div>
++  );
++}
+diff --git a/client/src/components/InteractiveNatalCompanion.tsx b/client/src/components/InteractiveNatalCompanion.tsx
+index 5b62eeb..f8909cb 100644
+--- a/client/src/components/InteractiveNatalCompanion.tsx
++++ b/client/src/components/InteractiveNatalCompanion.tsx
+@@ -1,20 +1,5 @@
+ import React, { useState, useRef, useEffect } from "react";
+-import {
+-  Sparkles,
+-  Send,
+-  User,
+-  Bot,
+-  RotateCcw,
+-  Compass,
+-  Heart,
+-  Briefcase,
+-  Shield,
+-  HelpCircle,
+-  Clock,
+-  ChevronRight,
+-  Copy,
+-  Check,
+-} from "lucide-react";
++import { Sparkles, Send, User, Bot, RotateCcw, Compass, Heart, Briefcase, Shield, Clock, ChevronRight, Copy, Check } from "lucide-react";
+ import { trpc } from "@/lib/trpc";
+ import type { ChartResult } from "../../../server/astronomy";
+ import { Streamdown } from "streamdown";
+diff --git a/client/src/components/Interpreter2050.tsx b/client/src/components/Interpreter2050.tsx
+index 0b9595c..1a6b763 100644
+--- a/client/src/components/Interpreter2050.tsx
++++ b/client/src/components/Interpreter2050.tsx
+@@ -1,6 +1,6 @@
+ import { useMemo, useState } from "react";
+ import { BookOpen, Compass, Eye, Layers3, Sparkles, ShieldCheck, AlertTriangle } from "lucide-react";
+-import type { AstrologyEvidencePacket, EvidenceItem, EvidenceRelationship } from "../../../server/astrologyKnowledge/types";
++import type { AstrologyEvidencePacket, EvidenceItem } from "../../../server/astrologyKnowledge/types";
+ import "./Interpreter2050.css";
+ 
+ type Lens = "human" | "relations" | "sources";
+diff --git a/client/src/components/LifeStoryDashboard.tsx b/client/src/components/LifeStoryDashboard.tsx
+index 938f279..e0464a6 100644
+--- a/client/src/components/LifeStoryDashboard.tsx
++++ b/client/src/components/LifeStoryDashboard.tsx
+@@ -1,42 +1,9 @@
+-import { useState, useMemo, useEffect } from "react";
+-import { Link } from "wouter";
+-import {
+-  BookOpen,
+-  Calendar,
+-  Compass,
+-  Clock,
+-  Sparkles,
+-  ChevronDown,
+-  ChevronRight,
+-  ShieldCheck,
+-  Star,
+-  Orbit,
+-  Flame,
+-  Award,
+-  Sliders,
+-  Volume2,
+-  VolumeX,
+-  Download,
+-  BookmarkPlus,
+-  Layers,
+-  ArrowRight,
+-  Eye,
+-  CheckCircle2,
+-  AlertCircle,
+-  Loader2,
+-  RefreshCw,
+-  UserRound,
+-  ExternalLink,
+-} from "lucide-react";
++import { useState, useEffect } from "react";
++import { BookOpen, Compass, Clock, Sparkles, ChevronDown, ShieldCheck, Sliders, Volume2, VolumeX, BookmarkPlus, Eye, Loader2, RefreshCw } from "lucide-react";
+ import { Streamdown } from "streamdown";
+ import { trpc } from "@/lib/trpc";
+ import type { ChartResult } from "../../../server/astronomy";
+-import type {
+-  LifeStageKey,
+-  PlanetaryCycleEvent,
+-  LifeStoryChapterSummary,
+-  MethodAuditStatus,
+-} from "../../../server/lifeStoryEngine";
++import type { LifeStageKey } from "../../../server/lifeStoryEngine";
+ import { toast } from "sonner";
+ import {
+   Dialog,
+diff --git a/client/src/components/MasterChartObservatory.tsx b/client/src/components/MasterChartObservatory.tsx
+index ca0d460..d4571b7 100644
+--- a/client/src/components/MasterChartObservatory.tsx
++++ b/client/src/components/MasterChartObservatory.tsx
+@@ -1,19 +1,5 @@
+ import React, { useState } from "react";
+-import {
+-  Compass,
+-  Layers,
+-  Sparkles,
+-  Star,
+-  CheckCircle2,
+-  HelpCircle,
+-  Eye,
+-  Sliders,
+-  Shield,
+-  BookOpen,
+-  ArrowRight,
+-  RefreshCw,
+-  Orbit,
+-} from "lucide-react";
++import { Compass, Layers, Star, CheckCircle2, Shield, BookOpen, RefreshCw, Orbit } from "lucide-react";
+ import { trpc } from "@/lib/trpc";
+ import type { ChartResult } from "../../../server/astronomy";
+ import type { UnifiedMasterChartSnapshot } from "../../../server/masterChart/types";
+diff --git a/client/src/components/MasterSynthesizerPanel.tsx b/client/src/components/MasterSynthesizerPanel.tsx
+index 83001f2..1dcee9f 100644
+--- a/client/src/components/MasterSynthesizerPanel.tsx
++++ b/client/src/components/MasterSynthesizerPanel.tsx
+@@ -1,27 +1,12 @@
+ import { readingProse } from "@shared/readingProse";
+ import { useLocation } from "wouter";
+ import React, { useState } from "react";
+-import {
+-  Sparkles,
+-  BookOpen,
+-  ChevronDown,
+-  ChevronUp,
+-  ShieldCheck,
+-  CheckCircle2,
+-  AlertCircle,
+-  HelpCircle,
+-  Layers,
+-  ArrowRight,
+-  Flame,
+-  Star,
+-  RefreshCw,
+-  Search,
+-} from "lucide-react";
++import { Sparkles, BookOpen, ChevronDown, ChevronUp, ShieldCheck, AlertCircle, Layers, Star, RefreshCw, Search } from "lucide-react";
+ import { trpc } from "@/lib/trpc";
+ import type { ChartResult } from "../../../server/astronomy";
+ import { PlanetPersonaMatrixSpreadsheet } from "./PlanetPersonaMatrixSpreadsheet";
+ import { InteractiveNatalCompanion } from "./InteractiveNatalCompanion";
+-import { Table, MessageSquare } from "lucide-react";
++import { Table } from "lucide-react";
+ 
+ function renderInlineMarkdown(text: string): React.ReactNode[] {
+   // Strip any unbalanced trailing ** so bold never bleeds
+diff --git a/client/src/components/NatalProfileBuilder.tsx b/client/src/components/NatalProfileBuilder.tsx
+index b01e220..73592a9 100644
+--- a/client/src/components/NatalProfileBuilder.tsx
++++ b/client/src/components/NatalProfileBuilder.tsx
+@@ -1,25 +1,7 @@
+ import { prepareBirthStep } from "@shared/profileOnboarding";
+ import { KNOWN_CITIES } from "@shared/profileLocations";
+ import React, { useState, useEffect, useRef } from "react";
+-import {
+-  Sparkles,
+-  Calendar,
+-  Clock,
+-  MapPin,
+-  User,
+-  Heart,
+-  Compass,
+-  ArrowRight,
+-  CheckCircle2,
+-  HelpCircle,
+-  RotateCcw,
+-  ShieldCheck,
+-  Star,
+-  Flame,
+-  Search,
+-  Loader2,
+-  X,
+-} from "lucide-react";
++import { Sparkles, Calendar, Clock, MapPin, User, Heart, Compass, ArrowRight, CheckCircle2, RotateCcw, Star, Flame, Search, Loader2 } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+diff --git a/client/src/components/PlacementMiniReading.tsx b/client/src/components/PlacementMiniReading.tsx
+index b5dbd67..19bcff8 100644
+--- a/client/src/components/PlacementMiniReading.tsx
++++ b/client/src/components/PlacementMiniReading.tsx
+@@ -3,10 +3,7 @@ import React, { useState } from "react";
+ import { Sparkles } from "lucide-react";
+ import { useQuery } from "@tanstack/react-query";
+ import { trpc } from "@/lib/trpc";
+-import {
+-  placementMiniIdentity,
+-  placementRows,
+-} from "@shared/placementMiniReadings";
++import { placementMiniIdentity } from "@shared/placementMiniReadings";
+ import type { ChartResult } from "../../../server/astronomy";
+ 
+ type MiniBatch = Awaited<
+diff --git a/client/src/components/PlanetPersonaMatrixSpreadsheet.tsx b/client/src/components/PlanetPersonaMatrixSpreadsheet.tsx
+index c0ed815..6453364 100644
+--- a/client/src/components/PlanetPersonaMatrixSpreadsheet.tsx
++++ b/client/src/components/PlanetPersonaMatrixSpreadsheet.tsx
+@@ -1,19 +1,5 @@
+ import React, { useState, useMemo } from "react";
+-import {
+-  Table,
+-  Download,
+-  Search,
+-  Sparkles,
+-  ShieldCheck,
+-  ChevronDown,
+-  ChevronUp,
+-  LayoutGrid,
+-  ListFilter,
+-  CheckCircle2,
+-  Info,
+-  Flame,
+-  Star,
+-} from "lucide-react";
++import { Table, Download, Search, Sparkles, LayoutGrid } from "lucide-react";
+ import { trpc } from "@/lib/trpc";
+ import type { ChartResult } from "../../../server/astronomy";
+ import type { PlanetPersonaTrait } from "../../../shared/planetPersonaMatrix";
+diff --git a/client/src/components/PrimaryProfileNavigation.tsx b/client/src/components/PrimaryProfileNavigation.tsx
+index c7cb8d8..658442b 100644
+--- a/client/src/components/PrimaryProfileNavigation.tsx
++++ b/client/src/components/PrimaryProfileNavigation.tsx
+@@ -1,7 +1,6 @@
+ import { Link, useLocation } from "wouter";
+ import { BookOpen, Diamond, House, LayoutGrid, MessageCircleQuestion, Zap } from "lucide-react";
+ import { useProfileSession } from "@/contexts/ProfileSessionContext";
+-import { trpc } from "@/lib/trpc";
+ 
+ export function PrimaryProfileNavigation() {
+   const { profile } = useProfileSession();
+diff --git a/client/src/components/ProfileChartScreen.tsx b/client/src/components/ProfileChartScreen.tsx
+index 60d015e..1548d43 100644
+--- a/client/src/components/ProfileChartScreen.tsx
++++ b/client/src/components/ProfileChartScreen.tsx
+@@ -5,33 +5,14 @@ import { MasterSynthesizerPanel } from "./MasterSynthesizerPanel";
+ import React, { useState, useMemo } from "react";
+ import { TechniqueAuditDashboard } from "./TechniqueAuditDashboard";
+ import { Link } from "wouter";
+-import {
+-  BookOpen,
+-  ChevronDown,
+-  CircleDot,
+-  Compass,
+-  Diamond,
+-  Eye,
+-  Flame,
+-  Globe,
+-  Grid,
+-  Layers,
+-  Moon,
+-  Orbit,
+-  Scale,
+-  Sparkles,
+-  Star,
+-  Sun,
+-  UserRound,
+-  Zap,
+-} from "lucide-react";
++import { BookOpen, Diamond, Moon, Orbit, Scale, Sun, UserRound, Zap } from "lucide-react";
+ import { GuardianDiamondCharts } from "@/components/GuardianDiamondCharts";
+ import { ChartWheel } from "@/components/ChartWheel";
+ import { CompletePlacementsTable } from "@/components/CompletePlacementsTable";
+ import { NatalStarsAndLotsLayer } from "@/components/NatalStarsAndLotsLayer";
+ import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
+ import { FixedStarIntensityVisualizer } from "@/components/FixedStarIntensityVisualizer";
+-import type { ChartResult, ChartRow } from "../../../server/astronomy";
++import type { ChartResult } from "../../../server/astronomy";
+ import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
+ 
+ export type ProfileChartScreenProps = {
+diff --git a/client/src/components/ProfileGuideScreen.tsx b/client/src/components/ProfileGuideScreen.tsx
+index 1221779..005833a 100644
+--- a/client/src/components/ProfileGuideScreen.tsx
++++ b/client/src/components/ProfileGuideScreen.tsx
+@@ -1,3 +1,6 @@
++import type { GuideTab } from "@/lib/guideTab";
++export type { GuideTab } from "@/lib/guideTab";
++import { Chip, OverlayCell } from "@/components/GuideChartCells";
+ import { Badge } from "@/components/ui/badge";
+ import { Button } from "@/components/ui/button";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+@@ -17,8 +20,6 @@ import { MAJOR_ASPECT_ORB_DEGREES } from "../../../shared/chartRules";
+ import type { ChartResult } from "../../../server/astronomy";
+ import type { ReadingScope, Worldview } from "../../../server/astrologyCore";
+ 
+-export type GuideTab = "blueprint" | "synastry" | "weather" | "podcast" | "social";
+-
+ type Props = {
+   result: ChartResult;
+   mainTab: GuideTab;
+@@ -38,25 +39,6 @@ type Props = {
+   handleAskMasterInterpreter: (question: string) => void;
+ };
+ 
+-function Chip({ children }: { children: React.ReactNode }) {
+-  return (
+-    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-300">
+-      {children}
+-    </span>
+-  );
+-}
+-function OverlayCell({ row }: { row: any }) {
+-  return (
+-    <div className="space-y-1.5">
+-      <div className="font-medium text-slate-100">
+-        {row.overlay.nakshatra}{" "}
+-        <span className="text-slate-500">Pada {row.overlay.pada}</span>
+-      </div>
+-      <div className="text-xs text-slate-400">{row.overlay.manzil}</div>
+-      <Chip>{row.overlay.decan}</Chip>
+-    </div>
+-  );
+-}
+ function TransitContacts({ row }: { row: any }) {
+   return row.natalContacts.length ? (
+     <div className="flex flex-wrap gap-1.5">
+diff --git a/client/src/components/ProfileSwitcherModal.tsx b/client/src/components/ProfileSwitcherModal.tsx
+index ae86fe9..c9e83ea 100644
+--- a/client/src/components/ProfileSwitcherModal.tsx
++++ b/client/src/components/ProfileSwitcherModal.tsx
+@@ -1,4 +1,3 @@
+-import { useState } from "react";
+ import {
+   Dialog,
+   DialogContent,
+diff --git a/client/src/components/SkyObservatoryWheel.tsx b/client/src/components/SkyObservatoryWheel.tsx
+index 436862d..80b8912 100644
+--- a/client/src/components/SkyObservatoryWheel.tsx
++++ b/client/src/components/SkyObservatoryWheel.tsx
+@@ -1,3 +1,4 @@
++import { polarPoint as polar } from "@/lib/chartGeometry";
+ import { useEffect, useMemo, useState } from "react";
+ import type { ChartResult, ChartRow } from "../../../server/astronomy";
+ import { angularDistance } from "../../../server/astrologyCore";
+@@ -6,6 +7,8 @@ import {
+   normalizeLongitude,
+   overlay,
+   ZODIAC_SIGNS,
++
++  signAtLongitude,
+ } from "../../../shared/hybrid";
+ 
+ type AspectLayerFilter = "all" | "natal" | "transit" | "horary";
+@@ -190,15 +193,7 @@ const TRADITIONAL_HOUSE_MEANINGS: Record<number, string> = {
+ };
+ 
+ function signOf(longitude: number): string {
+-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)] ?? "Aries";
+-}
+-
+-function polar(longitude: number, radius: number, center: number) {
+-  const angle = ((longitude - 90) * Math.PI) / 180;
+-  return {
+-    x: center + Math.cos(angle) * radius,
+-    y: center + Math.sin(angle) * radius,
+-  };
++  return signAtLongitude(longitude) ?? "Aries";
+ }
+ 
+ function evaluateTraditionalPlacementRule(
+diff --git a/client/src/components/SocialLovedOnesMatrix.tsx b/client/src/components/SocialLovedOnesMatrix.tsx
+index 923787d..eb2de86 100644
+--- a/client/src/components/SocialLovedOnesMatrix.tsx
++++ b/client/src/components/SocialLovedOnesMatrix.tsx
+@@ -1,23 +1,5 @@
+ import React, { useState, useEffect } from "react";
+-import {
+-  Users,
+-  Heart,
+-  AlertTriangle,
+-  Sparkles,
+-  Send,
+-  Plus,
+-  Trash2,
+-  Copy,
+-  Check,
+-  Compass,
+-  ArrowRight,
+-  ShieldAlert,
+-  Sun,
+-  Moon,
+-  MessageSquare,
+-  Activity,
+-  Share2,
+-} from "lucide-react";
++import { AlertTriangle, Plus, Trash2, Copy, Check, Compass, ShieldAlert, MessageSquare, Activity, Share2 } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+diff --git a/client/src/components/SovereignTierModal.tsx b/client/src/components/SovereignTierModal.tsx
+index be9d3f3..55ee636 100644
+--- a/client/src/components/SovereignTierModal.tsx
++++ b/client/src/components/SovereignTierModal.tsx
+@@ -1,23 +1,6 @@
+ import React, { createContext, useContext, useState, useEffect } from "react";
+-import {
+-  Crown,
+-  Sparkles,
+-  ShieldCheck,
+-  Lock,
+-  CheckCircle2,
+-  Zap,
+-  Star,
+-  ChevronRight,
+-  Flame,
+-  X,
+-} from "lucide-react";
+-import {
+-  Dialog,
+-  DialogContent,
+-  DialogHeader,
+-  DialogTitle,
+-  DialogDescription,
+-} from "@/components/ui/dialog";
++import { Crown, Sparkles, ShieldCheck, Lock, CheckCircle2 } from "lucide-react";
++import { Dialog, DialogContent } from "@/components/ui/dialog";
+ import { Button } from "@/components/ui/button";
+ import { Badge } from "@/components/ui/badge";
+ 
+diff --git a/client/src/components/SynastryMatrixTab.tsx b/client/src/components/SynastryMatrixTab.tsx
+index 17f3cae..6f9feb0 100644
+--- a/client/src/components/SynastryMatrixTab.tsx
++++ b/client/src/components/SynastryMatrixTab.tsx
+@@ -1,32 +1,5 @@
+ import React, { useState, useMemo } from "react";
+-import {
+-  Heart,
+-  Users,
+-  Sparkles,
+-  Flame,
+-  Shield,
+-  Brain,
+-  Anchor,
+-  Compass,
+-  ArrowRight,
+-  MessageSquare,
+-  Share2,
+-  Lock,
+-  Crown,
+-  ChevronDown,
+-  ChevronUp,
+-  RefreshCw,
+-  Info,
+-  CheckCircle2,
+-  AlertCircle,
+-  Plus,
+-  Calendar,
+-  MapPin,
+-  Clock,
+-  ArrowLeftRight,
+-  UserPlus,
+-  Search,
+-} from "lucide-react";
++import { Heart, Sparkles, Flame, Shield, Brain, Anchor, Compass, ArrowRight, Share2, CheckCircle2, ArrowLeftRight, UserPlus } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Badge } from "@/components/ui/badge";
+ import { Input } from "@/components/ui/input";
+@@ -44,7 +17,7 @@ import { useSovereignTier, SovereignTeaserLock } from "./SovereignTierModal";
+ import type { ChartResult } from "../../../server/astronomy";
+ import { computeSynastry, computeRelationshipCompatibility, computeExpressionReception, computeParentChildDynamic, type ParentChildDynamic, type SynastryAspect } from "@/lib/synastry-engine";
+ import { SynastryDualOrrery } from "./SynastryDualOrrery";
+-import type { LovedOneRecord, RelationshipRole } from "../../../shared/social";
++import type { RelationshipRole } from "../../../shared/social";
+ 
+ interface SynastryMatrixTabProps {
+   userChart: ChartResult | null;
+diff --git a/client/src/components/SystematicDeconstruction.tsx b/client/src/components/SystematicDeconstruction.tsx
+index a2ccc99..8c9242c 100644
+--- a/client/src/components/SystematicDeconstruction.tsx
++++ b/client/src/components/SystematicDeconstruction.tsx
+@@ -1,6 +1,6 @@
+ import React, { useState } from "react";
+ import { motion, AnimatePresence } from "framer-motion";
+-import { Sparkles, ShieldCheck, Compass, Orbit, Star } from "lucide-react";
++import { Sparkles, ShieldCheck } from "lucide-react";
+ import { placementRows } from "@shared/placementMiniReadings";
+ import { normalizeLongitude, overlay } from "@shared/hybrid";
+ import { readingProse } from "@shared/readingProse";
+diff --git a/client/src/components/SystematicDeconstructionRegistry.ts b/client/src/components/SystematicDeconstructionRegistry.ts
+index 083c844..15e5cec 100644
+--- a/client/src/components/SystematicDeconstructionRegistry.ts
++++ b/client/src/components/SystematicDeconstructionRegistry.ts
+@@ -1,26 +1,3 @@
+-import type { ChartResult, ChartRow } from "../../../server/astronomy";
+-import {
+-  FIXED_STARS,
+-  NAKSHATRAS,
+-  MANAZIL,
+-  ELEMENTAL_DECAN_SIGNS,
+-  normalizeLongitude,
+-  overlay,
+-  vargaPlacement,
+-  type Varga,
+-  grahaDrishtiTargetHouses,
+-} from "../../../shared/hybrid";
+-import {
+-  MOTHER_LETTERS,
+-  DOUBLE_LETTERS,
+-  SIMPLE_LETTERS,
+-  CONTRARY_PAIRS,
+-  FOUR_WORLDS,
+-} from "../../../server/astrologyKnowledge/canon/seferYetzirah";
+-import {
+-  detectAllYogas,
+-  type PlanetPlacement,
+-} from "../../../server/genesisBackup/vedicYogaDetector";
+ 
+ export type CalculationStatus =
+   | "fully-calculated"
+diff --git a/client/src/components/ThreeLayerOrrery.tsx b/client/src/components/ThreeLayerOrrery.tsx
+index 93d77ba..8a751e7 100644
+--- a/client/src/components/ThreeLayerOrrery.tsx
++++ b/client/src/components/ThreeLayerOrrery.tsx
+@@ -1,3 +1,4 @@
++import { polarPoint } from "@/lib/chartGeometry";
+ import { useMemo, useState } from "react";
+ import type { ChartResult } from "../../../server/astronomy";
+ import { angularDistance } from "../../../server/astrologyCore";
+@@ -108,13 +109,8 @@ const ZODIAC_ABBR = [
+   "PIS",
+ ];
+ 
+-const polar = (longitude: number, radius: number, center = 220) => {
+-  const angle = ((longitude - 90) * Math.PI) / 180;
+-  return {
+-    x: center + Math.cos(angle) * radius,
+-    y: center + Math.sin(angle) * radius,
+-  };
+-};
++const polar = (longitude: number, radius: number, center = 220) =>
++  polarPoint(longitude, radius, center);
+ 
+ interface ThreeLayerOrreryProps {
+   chart?: ChartResult | null;
+diff --git a/client/src/components/TransitLocationBar.tsx b/client/src/components/TransitLocationBar.tsx
+index 34a6029..5f31337 100644
+--- a/client/src/components/TransitLocationBar.tsx
++++ b/client/src/components/TransitLocationBar.tsx
+@@ -1,5 +1,5 @@
+ import { useState } from "react";
+-import { Navigation, MapPin, Loader2, Sparkles, SlidersHorizontal, CheckCircle2 } from "lucide-react";
++import { Navigation, MapPin, Loader2, SlidersHorizontal } from "lucide-react";
+ import { useTransitGPS } from "@/hooks/useTransitGPS";
+ import { useProfileSession } from "@/contexts/ProfileSessionContext";
+ import { TransitLocationModal } from "./TransitLocationModal";
+diff --git a/client/src/components/TransitLocationModal.tsx b/client/src/components/TransitLocationModal.tsx
+index 081a1d2..1659d2a 100644
+--- a/client/src/components/TransitLocationModal.tsx
++++ b/client/src/components/TransitLocationModal.tsx
+@@ -2,7 +2,7 @@ import { useState } from "react";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+-import { MapPin, Navigation, Search, Check, Loader2, Sparkles, AlertCircle } from "lucide-react";
++import { MapPin, Navigation, Search, Loader2, AlertCircle } from "lucide-react";
+ import { useTransitGPS } from "@/hooks/useTransitGPS";
+ import { useProfileSession } from "@/contexts/ProfileSessionContext";
+ import { trpc } from "@/lib/trpc";
+diff --git a/client/src/lib/chartGeometry.ts b/client/src/lib/chartGeometry.ts
+new file mode 100644
+index 0000000..6575983
+--- /dev/null
++++ b/client/src/lib/chartGeometry.ts
+@@ -0,0 +1,7 @@
++export function polarPoint(longitude: number, radius: number, center: number) {
++  const angle = ((longitude - 90) * Math.PI) / 180;
++  return {
++    x: center + Math.cos(angle) * radius,
++    y: center + Math.sin(angle) * radius,
++  };
++}
+diff --git a/client/src/lib/guideTab.ts b/client/src/lib/guideTab.ts
+new file mode 100644
+index 0000000..15af10d
+--- /dev/null
++++ b/client/src/lib/guideTab.ts
+@@ -0,0 +1,21 @@
++import { useEffect, useState } from "react";
++
++export type GuideTab = "blueprint" | "synastry" | "weather" | "podcast" | "social";
++
++function readGuideTab(): GuideTab {
++  const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
++  return tab === "synastry" || tab === "weather" || tab === "podcast" || tab === "social" ? tab : "blueprint";
++}
++
++export function useGuideTab() {
++  const [mainTab, setMainTab] = useState<GuideTab>(readGuideTab);
++  useEffect(() => {
++    const onSelect = (event: Event) => {
++      const tab = (event as CustomEvent<{ tab: GuideTab }>).detail?.tab;
++      if (["blueprint","synastry","weather","podcast","social"].includes(tab)) setMainTab(tab);
++    };
++    window.addEventListener("fg:select-tab", onSelect);
++    return () => window.removeEventListener("fg:select-tab", onSelect);
++  }, []);
++  return [mainTab, setMainTab] as const;
++}
+diff --git a/client/src/pages/EnergyPage.tsx b/client/src/pages/EnergyPage.tsx
+index d639c24..825d1ba 100644
+--- a/client/src/pages/EnergyPage.tsx
++++ b/client/src/pages/EnergyPage.tsx
+@@ -3,25 +3,7 @@ import { trpc } from "@/lib/trpc";
+ import { FocusedPlacementReading } from "@/components/FocusedPlacementReading";
+ import React, { useState, useMemo, useEffect } from "react";
+ import { Link, useLocation } from "wouter";
+-import {
+-  Activity,
+-  ArrowRight,
+-  ChevronDown,
+-  ChevronUp,
+-  Compass,
+-  Flame,
+-  Info,
+-  Layers,
+-  MessageSquare,
+-  Orbit,
+-  RefreshCw,
+-  Send,
+-  ShieldCheck,
+-  Sparkles,
+-  TrendingDown,
+-  TrendingUp,
+-  Zap,
+-} from "lucide-react";
++import { MessageSquare, Orbit, RefreshCw } from "lucide-react";
+ import { useProfileSession } from "@/contexts/ProfileSessionContext";
+ import { EnergyScoringKey } from "@/components/EnergyScoringKey";
+ import { TransitLocationBar } from "@/components/TransitLocationBar";
+@@ -33,7 +15,7 @@ import { AlignEnergyBarometer } from "@/components/AlignEnergyBarometer";
+ import { RealLifeAspectBreakdown } from "@/components/RealLifeAspectBreakdown";
+ import { EnergyFixedStarsAndLots } from "@/components/EnergyFixedStarsAndLots";
+ import { D3DailyEnergyChart } from "@/components/D3DailyEnergyChart";
+-import type { ChartResult, TransitContact, MinorTransitContact } from "../../../server/astronomy";
++import type { TransitContact, MinorTransitContact } from "../../../server/astronomy";
+ import { ENERGY_ASPECT_FLOW, calculateEnergyRead } from "@/lib/energyScoring";
+ 
+ const ENERGY_READING_CACHE_KEY = "fg:energy-reading-cache:v3";
+diff --git a/client/src/pages/Home.tsx b/client/src/pages/Home.tsx
+index cc8e1ea..7d49659 100644
+--- a/client/src/pages/Home.tsx
++++ b/client/src/pages/Home.tsx
+@@ -1,12 +1,12 @@
++import { useGuideTab } from "@/lib/guideTab";
+ import { lazy, Suspense, useEffect, useRef, useState } from "react";
+ import { toast } from "sonner";
+-import { Diamond, House, RotateCcw, Sparkles, UserRound } from "lucide-react";
++import { Diamond, House, Sparkles } from "lucide-react";
+ import { useProfileSession } from "@/contexts/ProfileSessionContext";
+ import type { ProfileSection } from "@/config/profileNavigation";
+ import { trpc } from "@/lib/trpc";
+ import { ObservatorySoundscape } from "@/components/ObservatorySoundscape";
+ import { ProfileHomeScreen } from "@/components/ProfileHomeScreen";
+-import type { GuideTab } from "@/components/ProfileGuideScreen";
+ import { CosmicShareCard } from "@/components/CosmicShareCard";
+ import { NatalProfileBuilder, type UserProfileData, SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
+ import { SavedProfilePicker } from "@/components/SavedProfilePicker";
+@@ -84,19 +84,7 @@ export default function Home({ section = "home" }: { section?: ProfileSection })
+     } catch { return null; }
+   });
+ 
+-  const parseTab = (): GuideTab => {
+-    const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
+-    return tab === "synastry" || tab === "weather" || tab === "podcast" || tab === "social" ? tab : "blueprint";
+-  };
+-  const [mainTab, setMainTab] = useState<GuideTab>(parseTab);
+-  useEffect(() => {
+-    const onSelect = (event: Event) => {
+-      const tab = (event as CustomEvent<{ tab: GuideTab }>).detail?.tab;
+-      if (["blueprint","synastry","weather","podcast","social"].includes(tab)) setMainTab(tab);
+-    };
+-    window.addEventListener("fg:select-tab", onSelect);
+-    return () => window.removeEventListener("fg:select-tab", onSelect);
+-  }, []);
++  const [mainTab, setMainTab] = useGuideTab();
+   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
+ 
+   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+diff --git a/client/src/pages/LegacyHome.tsx b/client/src/pages/LegacyHome.tsx
+index 7eed430..0e4f770 100644
+--- a/client/src/pages/LegacyHome.tsx
++++ b/client/src/pages/LegacyHome.tsx
+@@ -1,3 +1,5 @@
++import { useGuideTab } from "@/lib/guideTab";
++import { Chip, OverlayCell } from "@/components/GuideChartCells";
+ import { useEffect, useMemo, useState } from "react";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+@@ -40,17 +42,7 @@ import { SynastryMatrixTab } from "@/components/SynastryMatrixTab";
+ import { TransitWeatherTimeline } from "@/components/TransitWeatherTimeline";
+ import { AudioPodcastBriefing } from "@/components/AudioPodcastBriefing";
+ import { useSovereignTier, SovereignTeaserLock } from "@/components/SovereignTierModal";
+-import {
+-  Share2,
+-  Users,
+-  Heart,
+-  Calendar,
+-  Headphones,
+-  Crown,
+-  Layers,
+-  Sparkles as SparklesIcon,
+-  User,
+-} from "lucide-react";
++import { Share2, Users, Heart, Calendar, Headphones, Crown, Layers } from "lucide-react";
+ import {
+   NatalProfileBuilder,
+   ActiveProfileBar,
+@@ -144,25 +136,6 @@ const readingModes: Array<{
+       "See how the current sky meets your birth chart without confusing temporary weather with identity.",
+   },
+ ];
+-function Chip({ children }: { children: React.ReactNode }) {
+-  return (
+-    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-300">
+-      {children}
+-    </span>
+-  );
+-}
+-function OverlayCell({ row }: { row: any }) {
+-  return (
+-    <div className="space-y-1.5">
+-      <div className="font-medium text-slate-100">
+-        {row.overlay.nakshatra}{" "}
+-        <span className="text-slate-500">Pada {row.overlay.pada}</span>
+-      </div>
+-      <div className="text-xs text-slate-400">{row.overlay.manzil}</div>
+-      <Chip>{row.overlay.decan}</Chip>
+-    </div>
+-  );
+-}
+ function TransitContacts({ row }: { row: any }) {
+   return row.natalContacts.length ? (
+     <div className="flex flex-wrap gap-1.5">
+@@ -304,20 +277,7 @@ export default function Home() {
+   const [showHelp, setShowHelp] = useState(false);
+   const [showShareModal, setShowShareModal] = useState(false);
+   const [interpreterPrompt, setInterpreterPrompt] = useState<string | null>(null);
+-  type ObservatoryTab = "blueprint" | "synastry" | "weather" | "podcast" | "social";
+-  const parseTab = (): ObservatoryTab => {
+-    const tab = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("tab");
+-    return tab === "synastry" || tab === "weather" || tab === "podcast" || tab === "social" ? tab : "blueprint";
+-  };
+-  const [mainTab, setMainTab] = useState<ObservatoryTab>(parseTab);
+-  useEffect(() => {
+-    const onSelect = (event: Event) => {
+-      const tab = (event as CustomEvent<{ tab: ObservatoryTab }>).detail?.tab;
+-      if (["blueprint","synastry","weather","podcast","social"].includes(tab)) setMainTab(tab);
+-    };
+-    window.addEventListener("fg:select-tab", onSelect);
+-    return () => window.removeEventListener("fg:select-tab", onSelect);
+-  }, []);
++  const [mainTab, setMainTab] = useGuideTab();
+   const [readingView, setReadingView] = useState<"guided" | "evidence">("guided");
+   const { isSovereign, openPaywall } = useSovereignTier();
+   const [activeProfile, setActiveProfile] = useState<UserProfileData | null>(() => {
+diff --git a/client/src/pages/LifeStoryPage.tsx b/client/src/pages/LifeStoryPage.tsx
+index a25cd2f..0b15e88 100644
+--- a/client/src/pages/LifeStoryPage.tsx
++++ b/client/src/pages/LifeStoryPage.tsx
+@@ -1,9 +1,8 @@
+-import { useState } from "react";
+ import { Link } from "wouter";
+ import { BookOpen, Sparkles, UserRound, ArrowLeft } from "lucide-react";
+ import { useProfileSession } from "@/contexts/ProfileSessionContext";
+ import { LifeStoryDashboard } from "@/components/LifeStoryDashboard";
+-import { NatalProfileBuilder, SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
++import { SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
+ import { trpc } from "@/lib/trpc";
+ 
+ export default function LifeStoryPage() {
+diff --git a/client/src/pages/SkyHomePrototype.tsx b/client/src/pages/SkyHomePrototype.tsx
+index 1d7140c..a554b26 100644
+--- a/client/src/pages/SkyHomePrototype.tsx
++++ b/client/src/pages/SkyHomePrototype.tsx
+@@ -1,19 +1,5 @@
+ import { useEffect, useMemo, useState } from "react";
+-import {
+-  BookOpen,
+-  Brain,
+-  ChevronRight,
+-  Compass,
+-  Layers3,
+-  Loader2,
+-  Map,
+-  MapPin,
+-  Orbit,
+-  RefreshCw,
+-  Sparkles,
+-  Stars,
+-  UserCheck,
+-} from "lucide-react";
++import { BookOpen, ChevronRight, Loader2, Map, MapPin, Orbit, RefreshCw, Stars } from "lucide-react";
+ import { Link } from "wouter";
+ import { ThreeLayerOrrery } from "@/components/ThreeLayerOrrery";
+ import { OVERLAY_MAP_SPECS } from "@/design/overlayMapSpecs";
+diff --git a/client/src/pages/SynastryPage.tsx b/client/src/pages/SynastryPage.tsx
+index b95b723..9f70a04 100644
+--- a/client/src/pages/SynastryPage.tsx
++++ b/client/src/pages/SynastryPage.tsx
+@@ -1,6 +1,6 @@
+ import React, { useState } from "react";
+ import { Link } from "wouter";
+-import { ArrowLeft, Heart, Sparkles, Users, Compass, ShieldCheck } from "lucide-react";
++import { ArrowLeft, Heart } from "lucide-react";
+ import { useProfileSession } from "@/contexts/ProfileSessionContext";
+ import { SynastryMatrixTab } from "@/components/SynastryMatrixTab";
+ import { CosmicShareCard } from "@/components/CosmicShareCard";
+diff --git a/scripts/check-android-readiness.mjs b/scripts/check-android-readiness.mjs
+index 90a8e4b..008fd5f 100644
+--- a/scripts/check-android-readiness.mjs
++++ b/scripts/check-android-readiness.mjs
+@@ -1,5 +1,5 @@
+ import { readFileSync, existsSync } from "node:fs";
+-import { resolve, dirname } from "node:path";
++import { resolve } from "node:path";
+ 
+ const root = process.cwd();
+ const publicDir = resolve(root, "client/public");
+diff --git a/server/astrologyKnowledge/arabic/index.ts b/server/astrologyKnowledge/arabic/index.ts
+index ababd9c..3f4dde8 100644
+--- a/server/astrologyKnowledge/arabic/index.ts
++++ b/server/astrologyKnowledge/arabic/index.ts
+@@ -1,3 +1,4 @@
++import { chartRows } from "../chartRows";
+ import type { ChartResult, ChartRow } from "../../astronomy";
+ import { overlay, MANAZIL, normalizeLongitude } from "../../../shared/hybrid";
+ import { calculateArabicLots } from "../../utils/arabicLots";
+@@ -27,14 +28,6 @@ const factTrace: SourceTrace = {
+   retrievedAt: new Date().toISOString(),
+   confidence: "high",
+ };
+-function rows(chart: ChartResult) {
+-  return [
+-    ...chart.movingBodies,
+-    chart.ascendant,
+-    chart.northNode,
+-    chart.southNode,
+-  ].filter((row): row is ChartRow => Boolean(row));
+-}
+ function manzil(longitude: number) {
+   const index = Math.floor(normalizeLongitude(longitude) / (360 / 28));
+   return {
+@@ -47,7 +40,7 @@ export function resolveArabicEvidence(
+   chart: ChartResult,
+   plan: KnowledgePlan
+ ): EvidenceItem[] {
+-  const all = rows(chart).filter(row => Number.isFinite(row.longitude));
++  const all = chartRows(chart).filter(row => Number.isFinite(row.longitude));
+   const evidence: EvidenceItem[] = [];
+   for (const row of all) {
+     const ov = overlay(row.longitude);
+diff --git a/server/astrologyKnowledge/behavioral/engine.ts b/server/astrologyKnowledge/behavioral/engine.ts
+index eb69e92..f1ddcf2 100644
+--- a/server/astrologyKnowledge/behavioral/engine.ts
++++ b/server/astrologyKnowledge/behavioral/engine.ts
+@@ -1,7 +1,7 @@
+ import type { ChartResult, ChartRow } from "../../astronomy";
+ import { angularDistance } from "../../astrologyCore";
+-import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+-import type { EvidenceItem } from "../types";
++import { normalizeLongitude, signAtLongitude } from "../../../shared/hybrid";
++import type { EvidenceItem } from "../evidenceTypes";
+ import {
+   BEHAVIORAL_POLARITY_AXES,
+   COMPACT_PATTERN_INDEX,
+@@ -11,194 +11,42 @@ import {
+   HUMAN_BEHAVIOR_PATTERNS,
+   LIFE_EVENT_PATTERNS,
+   PLANET_INTERACTION_MATRIX,
+-  type BehavioralDomain,
+-  type ResponseStyle,
+ } from "./catalog";
+ 
+-export type BehavioralConfidenceLevel = 1 | 2 | 3 | 4 | 5;
+-export type BehavioralConfidenceLabel =
+-  | "Level 1 — Possible"
+-  | "Level 2 — Supported"
+-  | "Level 3 — Strong"
+-  | "Level 4 — Dominant"
+-  | "Level 5 — Structural";
+-
+-export type BehavioralState =
+-  | "baseline"
+-  | "activated"
+-  | "suppressed"
+-  | "emerging"
+-  | "integrated"
+-  | "crisis";
+-
+-export type EvidenceChannelHit = {
+-  channel:
+-    | "planet"
+-    | "sign"
+-    | "house"
+-    | "aspect"
+-    | "angularity"
+-    | "repetition"
+-    | "development"
+-    | "god-agent"
+-    | "overlay";
+-  detail: string;
+-};
+-
+-export type EvaluatedBehaviorPattern = {
+-  id: string;
+-  codeNumber: number;
+-  name: string;
+-  domain: BehavioralDomain;
+-  domainLabel: string;
+-  confidenceLevel: BehavioralConfidenceLevel;
+-  confidenceLabel: BehavioralConfidenceLabel;
+-  languagePrefix: string;
+-  state: BehavioralState;
+-  questionRelevance: number;
+-  score: number;
+-  definition: string;
+-  observableExpressions: string[];
+-  constructiveExpression: string;
+-  shadowExpression: string;
+-  consciousExpression: string;
+-  automaticExpression: string;
+-  internalExpression: string;
+-  externalExpression: string;
+-  motivationPatterns: string[];
+-  triggerPatterns: string[];
+-  responseStyle: ResponseStyle;
+-  repeatingCycle: string;
+-  compensationPattern: string;
+-  developmentalTrajectory: {
+-    early: string;
+-    developing: string;
+-    mature: string;
+-  };
+-  godToAgentSynthesis: string;
+-  supportingEvidence: EvidenceChannelHit[];
+-  counterEvidence: string[];
+-  aiLanguageRule: string;
+-};
+-
+-export type EvaluatedPolarityAxis = {
+-  id: string;
+-  leftPole: string;
+-  rightPole: string;
+-  leftScore: number;
+-  rightScore: number;
+-  isDynamicTension: boolean;
+-  dominantSide: "left" | "right" | "balanced-tension";
+-  leftEvidence: string[];
+-  rightEvidence: string[];
+-  synthesis: string;
+-};
+-
+-export type EventConfidenceCode = "E1" | "E2" | "E3" | "E4" | "E5";
+-export type EventTemporalState =
+-  | "State 1 — Latent (Natal Promise)"
+-  | "State 2 — Approaching"
+-  | "State 3 — Activating"
+-  | "State 4 — Manifesting"
+-  | "State 5 — Peak Convergence"
+-  | "State 6 — Integrating"
+-  | "State 8 — Consolidating";
+-
+-export type EvaluatedLifeEventPattern = {
+-  id: string;
+-  codeNumber: number;
+-  name: string;
+-  category: string;
+-  categoryLabel: string;
+-  confidenceCode: EventConfidenceCode;
+-  confidenceLabel: string;
+-  temporalState: EventTemporalState;
+-  questionRelevance: number;
+-  score: number;
+-  definition: string;
+-  possibleManifestations: string[];
+-  alternativeManifestations: string[];
+-  supportingEvidence: string[];
+-  counterEvidence: string[];
+-  godToAgentTranslation: string;
+-  developmentalMeaning: string;
+-  sequencePredecessors: string[];
+-  sequenceSuccessors: string[];
+-  aiLanguageRule: string;
+-};
+-
+-export type EvaluatedSequenceChain = {
+-  id: string;
+-  name: string;
+-  activeStages: string[];
+-  supportingEvidence: string[];
+-  narrative: string;
+-  developmentalMeaning: string;
+-  strength: number;
+-};
+-
+-export type EvaluatedPlanetInteraction = {
+-  pair: string;
+-  aspect: string;
+-  orb: number;
+-  coreTheme: string;
+-  constructive: string;
+-  shadow: string;
+-  behavioralMechanism: string;
+-};
+-
+-export type SelfKnowledgeDimensionItem = {
+-  id: string;
+-  question: string;
+-  synthesis: string;
+-  astrologicalProof: string[];
+-};
+-
+-export type SystemConvergenceFactor = {
+-  system: string;
+-  category: "Foundation" | "Structure" | "Traditional Overlay" | "Frame & Synthesis";
+-  status: "convergent" | "supporting" | "contextual";
+-  evidenceSummary: string;
+-};
+-
+-export type SimulationComparisonCase = {
+-  id: string;
+-  title: string;
+-  hypothesisTested: string;
+-  surfaceOrBaselineView: string;
+-  convergentPatternReality: string;
+-  verdict: string;
+-};
+-
+-export type BehavioralIntelligenceReport = {
+-  question: string;
+-  mode: "natal" | "transit" | "combined";
+-  evaluatedAt: string;
+-  allAboutYouProfile: SelfKnowledgeDimensionItem[];
+-  convergenceSimulationLab: {
+-    sixteenSystems: SystemConvergenceFactor[];
+-    simulationComparisons: SimulationComparisonCase[];
+-  };
+-  dominantBehaviors: EvaluatedBehaviorPattern[];
+-  polarityAxes: EvaluatedPolarityAxis[];
+-  activeContradictions: EvaluatedPolarityAxis[];
+-  activeLifeEvents: EvaluatedLifeEventPattern[];
+-  eventSequences: EvaluatedSequenceChain[];
+-  planetInteractions: EvaluatedPlanetInteraction[];
+-  activeHouseAxes: Array<{
+-    name: string;
+-    theme: string;
+-    narrative: string;
+-    evidence: string[];
+-  }>;
+-  matchedVocabularyTags: Array<{
+-    code: number;
+-    domain: string;
+-    name: string;
+-    evidence: string;
+-  }>;
+-  doNotClaimRestrictions: readonly string[];
+-};
++import type {
++  BehavioralConfidenceLevel,
++  BehavioralConfidenceLabel,
++  BehavioralState,
++  EvidenceChannelHit,
++  EvaluatedBehaviorPattern,
++  EvaluatedPolarityAxis,
++  EventConfidenceCode,
++  EventTemporalState,
++  EvaluatedLifeEventPattern,
++  EvaluatedSequenceChain,
++  EvaluatedPlanetInteraction,
++  SelfKnowledgeDimensionItem,
++  SystemConvergenceFactor,
++  SimulationComparisonCase,
++  BehavioralIntelligenceReport
++} from "./types";
++export type {
++  BehavioralConfidenceLevel,
++  BehavioralConfidenceLabel,
++  BehavioralState,
++  EvidenceChannelHit,
++  EvaluatedBehaviorPattern,
++  EvaluatedPolarityAxis,
++  EventConfidenceCode,
++  EventTemporalState,
++  EvaluatedLifeEventPattern,
++  EvaluatedSequenceChain,
++  EvaluatedPlanetInteraction,
++  SelfKnowledgeDimensionItem,
++  SystemConvergenceFactor,
++  SimulationComparisonCase,
++  BehavioralIntelligenceReport
++} from "./types";
+ 
+ const TRADITIONAL_RULERS: Record<string, string> = {
+   Aries: "Mars",
+@@ -219,7 +67,7 @@ const MUTABLE_SIGNS = new Set(["Gemini", "Virgo", "Sagittarius", "Pisces"]);
+ const ANGULAR_HOUSES = new Set([1, 4, 7, 10]);
+ 
+ function signOf(longitude: number): string {
+-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)] ?? "Aries";
++  return signAtLongitude(longitude) ?? "Aries";
+ }
+ 
+ type NatalAspect = {
+diff --git a/server/astrologyKnowledge/behavioral/types.ts b/server/astrologyKnowledge/behavioral/types.ts
+new file mode 100644
+index 0000000..93e90ae
+--- /dev/null
++++ b/server/astrologyKnowledge/behavioral/types.ts
+@@ -0,0 +1,186 @@
++import type { BehavioralDomain, ResponseStyle } from "./catalog";
++
++export type BehavioralConfidenceLevel = 1 | 2 | 3 | 4 | 5;
++export type BehavioralConfidenceLabel =
++  | "Level 1 — Possible"
++  | "Level 2 — Supported"
++  | "Level 3 — Strong"
++  | "Level 4 — Dominant"
++  | "Level 5 — Structural";
++
++export type BehavioralState =
++  | "baseline"
++  | "activated"
++  | "suppressed"
++  | "emerging"
++  | "integrated"
++  | "crisis";
++
++export type EvidenceChannelHit = {
++  channel:
++    | "planet"
++    | "sign"
++    | "house"
++    | "aspect"
++    | "angularity"
++    | "repetition"
++    | "development"
++    | "god-agent"
++    | "overlay";
++  detail: string;
++};
++
++export type EvaluatedBehaviorPattern = {
++  id: string;
++  codeNumber: number;
++  name: string;
++  domain: BehavioralDomain;
++  domainLabel: string;
++  confidenceLevel: BehavioralConfidenceLevel;
++  confidenceLabel: BehavioralConfidenceLabel;
++  languagePrefix: string;
++  state: BehavioralState;
++  questionRelevance: number;
++  score: number;
++  definition: string;
++  observableExpressions: string[];
++  constructiveExpression: string;
++  shadowExpression: string;
++  consciousExpression: string;
++  automaticExpression: string;
++  internalExpression: string;
++  externalExpression: string;
++  motivationPatterns: string[];
++  triggerPatterns: string[];
++  responseStyle: ResponseStyle;
++  repeatingCycle: string;
++  compensationPattern: string;
++  developmentalTrajectory: {
++    early: string;
++    developing: string;
++    mature: string;
++  };
++  godToAgentSynthesis: string;
++  supportingEvidence: EvidenceChannelHit[];
++  counterEvidence: string[];
++  aiLanguageRule: string;
++};
++
++export type EvaluatedPolarityAxis = {
++  id: string;
++  leftPole: string;
++  rightPole: string;
++  leftScore: number;
++  rightScore: number;
++  isDynamicTension: boolean;
++  dominantSide: "left" | "right" | "balanced-tension";
++  leftEvidence: string[];
++  rightEvidence: string[];
++  synthesis: string;
++};
++
++export type EventConfidenceCode = "E1" | "E2" | "E3" | "E4" | "E5";
++export type EventTemporalState =
++  | "State 1 — Latent (Natal Promise)"
++  | "State 2 — Approaching"
++  | "State 3 — Activating"
++  | "State 4 — Manifesting"
++  | "State 5 — Peak Convergence"
++  | "State 6 — Integrating"
++  | "State 8 — Consolidating";
++
++export type EvaluatedLifeEventPattern = {
++  id: string;
++  codeNumber: number;
++  name: string;
++  category: string;
++  categoryLabel: string;
++  confidenceCode: EventConfidenceCode;
++  confidenceLabel: string;
++  temporalState: EventTemporalState;
++  questionRelevance: number;
++  score: number;
++  definition: string;
++  possibleManifestations: string[];
++  alternativeManifestations: string[];
++  supportingEvidence: string[];
++  counterEvidence: string[];
++  godToAgentTranslation: string;
++  developmentalMeaning: string;
++  sequencePredecessors: string[];
++  sequenceSuccessors: string[];
++  aiLanguageRule: string;
++};
++
++export type EvaluatedSequenceChain = {
++  id: string;
++  name: string;
++  activeStages: string[];
++  supportingEvidence: string[];
++  narrative: string;
++  developmentalMeaning: string;
++  strength: number;
++};
++
++export type EvaluatedPlanetInteraction = {
++  pair: string;
++  aspect: string;
++  orb: number;
++  coreTheme: string;
++  constructive: string;
++  shadow: string;
++  behavioralMechanism: string;
++};
++
++export type SelfKnowledgeDimensionItem = {
++  id: string;
++  question: string;
++  synthesis: string;
++  astrologicalProof: string[];
++};
++
++export type SystemConvergenceFactor = {
++  system: string;
++  category: "Foundation" | "Structure" | "Traditional Overlay" | "Frame & Synthesis";
++  status: "convergent" | "supporting" | "contextual";
++  evidenceSummary: string;
++};
++
++export type SimulationComparisonCase = {
++  id: string;
++  title: string;
++  hypothesisTested: string;
++  surfaceOrBaselineView: string;
++  convergentPatternReality: string;
++  verdict: string;
++};
++
++export type BehavioralIntelligenceReport = {
++  question: string;
++  mode: "natal" | "transit" | "combined";
++  evaluatedAt: string;
++  allAboutYouProfile: SelfKnowledgeDimensionItem[];
++  convergenceSimulationLab: {
++    sixteenSystems: SystemConvergenceFactor[];
++    simulationComparisons: SimulationComparisonCase[];
++  };
++  dominantBehaviors: EvaluatedBehaviorPattern[];
++  polarityAxes: EvaluatedPolarityAxis[];
++  activeContradictions: EvaluatedPolarityAxis[];
++  activeLifeEvents: EvaluatedLifeEventPattern[];
++  eventSequences: EvaluatedSequenceChain[];
++  planetInteractions: EvaluatedPlanetInteraction[];
++  activeHouseAxes: Array<{
++    name: string;
++    theme: string;
++    narrative: string;
++    evidence: string[];
++  }>;
++  matchedVocabularyTags: Array<{
++    code: number;
++    domain: string;
++    name: string;
++    evidence: string;
++  }>;
++  doNotClaimRestrictions: readonly string[];
++};
+diff --git a/server/astrologyKnowledge/canon/fixedStarsAndLots.ts b/server/astrologyKnowledge/canon/fixedStarsAndLots.ts
+index b9e48b7..b0b919f 100644
+--- a/server/astrologyKnowledge/canon/fixedStarsAndLots.ts
++++ b/server/astrologyKnowledge/canon/fixedStarsAndLots.ts
+@@ -1,5 +1,5 @@
+ import {
+-  FIXED_STARS,
++  FIXED_STARS, findBodyLongitude,
+   formatLongitude,
+   normalizeLongitude,
+   ZODIAC_SIGNS,
+@@ -614,12 +614,7 @@ export function calculateChartHermeticLots(
+     return [];
+   }
+   const asc = normalizeLongitude(chart.ascendant.longitude);
+-  const bodyLon = (name: string) => {
+-    const found = chart.movingBodies.find(b => b.name === name);
+-    return found && Number.isFinite(found.longitude)
+-      ? normalizeLongitude(found.longitude)
+-      : undefined;
+-  };
++  const bodyLon = (name: string) => findBodyLongitude(chart.movingBodies, name);
+ 
+   const sun = bodyLon("Sun");
+   const moon = bodyLon("Moon");
+diff --git a/server/astrologyKnowledge/canon/types.ts b/server/astrologyKnowledge/canon/types.ts
+index 04c59eb..3b85e56 100644
+--- a/server/astrologyKnowledge/canon/types.ts
++++ b/server/astrologyKnowledge/canon/types.ts
+@@ -1,4 +1,4 @@
+-import type { Tradition } from "../types";
++import type { Tradition } from "../evidenceTypes";
+ import type { PlanetInHouseKnowledgeRecord } from "./planetInHouseInterpretations";
+ 
+ /**
+diff --git a/server/astrologyKnowledge/canon/vedicJyotishCanon.ts b/server/astrologyKnowledge/canon/vedicJyotishCanon.ts
+index 0fbbf9f..ddbe3fd 100644
+--- a/server/astrologyKnowledge/canon/vedicJyotishCanon.ts
++++ b/server/astrologyKnowledge/canon/vedicJyotishCanon.ts
+@@ -1,6 +1,6 @@
+ import { NAKSHATRAS, normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+-import type { ChartResult, ChartRow } from "../../astronomy";
+-import { PLANET_CANON_RECORDS, SIGN_CANON_RECORDS } from "./planetsAndSigns";
++import type { ChartResult } from "../../astronomy";
++import { SIGN_CANON_RECORDS } from "./planetsAndSigns";
+ import type {
+   DetectedVedicYoga,
+   ProvenanceRecord,
+diff --git a/server/astrologyKnowledge/canon/westernRelationalAndTiming.ts b/server/astrologyKnowledge/canon/westernRelationalAndTiming.ts
+index 3aab26f..61c5737 100644
+--- a/server/astrologyKnowledge/canon/westernRelationalAndTiming.ts
++++ b/server/astrologyKnowledge/canon/westernRelationalAndTiming.ts
+@@ -1,14 +1,8 @@
+ import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+ import type { ChartResult, ChartRow } from "../../astronomy";
+-import {
+-  EGYPTIAN_BOUNDS_TABLE,
+-  evaluatePlacementDignityAndCondition,
+-  lookupBoundRuler,
+-  PTOLEMAIC_BOUNDS_TABLE,
+-  TRADITIONAL_ASPECT_DOCTRINE,
+-} from "./dignitiesAndHorary";
++import { EGYPTIAN_BOUNDS_TABLE, evaluatePlacementDignityAndCondition, lookupBoundRuler, PTOLEMAIC_BOUNDS_TABLE } from "./dignitiesAndHorary";
+ import { HOUSE_CANON_RECORDS } from "./housesAndFrames";
+-import { PLANET_CANON_RECORDS, SIGN_CANON_RECORDS } from "./planetsAndSigns";
++import { SIGN_CANON_RECORDS } from "./planetsAndSigns";
+ import type {
+   DispositorChainNode,
+   ProvenanceRecord,
+diff --git a/server/astrologyKnowledge/chartRows.ts b/server/astrologyKnowledge/chartRows.ts
+new file mode 100644
+index 0000000..ec16f46
+--- /dev/null
++++ b/server/astrologyKnowledge/chartRows.ts
+@@ -0,0 +1,10 @@
++import type { ChartResult, ChartRow } from "../astronomy";
++
++export function chartRows(chart: ChartResult) {
++  return [
++    ...chart.movingBodies,
++    chart.ascendant,
++    chart.northNode,
++    chart.southNode,
++  ].filter((row): row is ChartRow => Boolean(row));
++}
+diff --git a/server/astrologyKnowledge/evidenceTypes.ts b/server/astrologyKnowledge/evidenceTypes.ts
+new file mode 100644
+index 0000000..7f3e8b4
+--- /dev/null
++++ b/server/astrologyKnowledge/evidenceTypes.ts
+@@ -0,0 +1,92 @@
++export type Tradition = "western" | "vedic" | "arabic" | "firmament";
++export type KnowledgeKind = "deterministic-rule" | "source-correspondence";
++export type RuleStatus = "implemented" | "incomplete";
++export type EvidenceRelation =
++  | "reinforcement"
++  | "amplification"
++  | "qualification"
++  | "contradiction"
++  | "tension"
++  | "different-layer"
++  | "timing-difference";
++
++export type AstrologySource = {
++  id: string;
++  name: string;
++  tradition: Tradition;
++  authorityType: "calculation" | "tradition" | "reference" | "api";
++  url?: string;
++  status: "active" | "reference-only" | "disabled";
++  capabilities: string[];
++};
++
++export type AstrologyRule = {
++  id: string;
++  tradition: Tradition;
++  technique: string;
++  subject: string;
++  kind: KnowledgeKind;
++  sourceId: string;
++  status: RuleStatus;
++  statement: string;
++  doctrine?: string;
++};
++
++export type KnowledgePlan = {
++  question: string;
++  coreLayers: [
++    "genesis-astro-engine",
++    "genesis-pattern-engine",
++    "genesis-yoga-detector",
++  ];
++  genesisPolicy: "mandatory-evaluate-before-prioritization";
++  domains: string[];
++  subjects: string[];
++  techniques: string[];
++  includeTiming: boolean;
++  includeDivisionalCharts: string[];
++  reasons: string[];
++};
++
++export type EvidenceItem = {
++  id: string;
++  tradition: Tradition;
++  category:
++    | "calculated-fact"
++    | "deterministic-rule"
++    | "source-correspondence"
++    | "uncertainty";
++  technique: string;
++  subject: string;
++  statement: string;
++  concepts: string[];
++  polarity?: "supportive" | "pressured" | "mixed" | "neutral";
++  strength?: number;
++  ruleId?: string;
++  sourceId: string;
++  sourceTrace: SourceTrace;
++};
++
++export type SourceTrace = {
++  sourceId: string;
++  tradition: Tradition;
++  technique: string;
++  sourceUrl?: string;
++  sourceTitle: string;
++  retrievedAt: string;
++  ruleId?: string;
++  confidence: "high" | "moderate" | "low" | "reference-only";
++  provider?: string;
++  calculationSettings?: Record<string, unknown>;
++  implementationStatus?: RuleStatus;
++};
++
++export type EvidenceRelationship = {
++  id: string;
++  relation: EvidenceRelation;
++  theme: string;
++  evidenceIds: string[];
++  traditions: Tradition[];
++  explanation: string;
++  strength: number;
++};
+diff --git a/server/astrologyKnowledge/synthesis/deepDeterministicStory.ts b/server/astrologyKnowledge/synthesis/deepDeterministicStory.ts
+index a12da58..9669fee 100644
+--- a/server/astrologyKnowledge/synthesis/deepDeterministicStory.ts
++++ b/server/astrologyKnowledge/synthesis/deepDeterministicStory.ts
+@@ -4,11 +4,7 @@ import type { PlanetPersonaTrait } from "../../../shared/planetPersonaMatrix";
+ import type { ChartResult } from "../../astronomy";
+ import { SIGN_CANON_RECORDS } from "../canon/planetsAndSigns";
+ import { retrieveChartCanonDossier } from "../canon/retriever";
+-import type {
+-  ChartCanonDossier,
+-  DispositorChainNode,
+-  RetrievedPlacementDossier,
+-} from "../canon/types";
++import type { ChartCanonDossier, DispositorChainNode } from "../canon/types";
+ import type { SynthesisResult } from "./types";
+ 
+ type AspectContactInfo = {
+diff --git a/server/astrologyKnowledge/synthesis/methodRules.ts b/server/astrologyKnowledge/synthesis/methodRules.ts
+index 917c91f..b5239ec 100644
+--- a/server/astrologyKnowledge/synthesis/methodRules.ts
++++ b/server/astrologyKnowledge/synthesis/methodRules.ts
+@@ -1,4 +1,4 @@
+-import { ZODIAC_SIGNS, normalizeLongitude } from "../../../shared/hybrid";
++import { ZODIAC_SIGNS, normalizeLongitude , signAtLongitude as signAt } from "../../../shared/hybrid";
+ import { SUMERIAN_CELESTIAL_ASSOCIATIONS, SUMERIAN_CELESTIAL_SOURCE_TITLE } from "../canon/sumerianCelestial";
+ import { ENERGY_ASPECT_FLOW } from "../../../shared/energyScoring";
+ import { CLASSICAL, REQUIRED, type Graha } from "../vedic/strength";
+@@ -32,12 +32,7 @@ import type {
+   LayerRecord,
+   UnifiedMasterChartSnapshot,
+ } from "../../masterChart/types";
+-import type {
+-  CanonRuleApplication,
+-  FindingJudgment,
+-  HumanDomain,
+-  InterpretedProposition,
+-} from "./types";
++import type { CanonRuleApplication, FindingJudgment, HumanDomain } from "./types";
+ 
+ type Data = Record<string, any>;
+ type Polarity = FindingJudgment["valence"];
+@@ -84,9 +79,6 @@ function finite(value: unknown, name: string): number {
+   );
+   return value;
+ }
+-function signAt(longitude: number) {
+-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
+-}
+ function role(body: string) {
+   return (
+     PLANET_CANON_RECORDS[aliases[body] ?? body]?.coreMeanings[0] ??
+diff --git a/server/astrologyKnowledge/synthesis/narrative.ts b/server/astrologyKnowledge/synthesis/narrative.ts
+index adc1465..339e17f 100644
+--- a/server/astrologyKnowledge/synthesis/narrative.ts
++++ b/server/astrologyKnowledge/synthesis/narrative.ts
+@@ -220,7 +220,8 @@ async function generate(synthesis: SynthesisResult, question: string, supplement
+           );
+         }).join("\n\n") + "\n\n";
+     } catch {
+-      // The full calculated dossier is still included if this display matrix is unavailable.
++      // Preserve the calculated dossier and record the missing prompt section.
++      console.warn("[NARRATIVE_PERSONA_MATRIX_UNAVAILABLE] Could not prepare the optional display matrix.");
+     }
+   }
+ 
+diff --git a/server/astrologyKnowledge/synthesis/readingBridge.ts b/server/astrologyKnowledge/synthesis/readingBridge.ts
+index 93fb2f5..7d6e9de 100644
+--- a/server/astrologyKnowledge/synthesis/readingBridge.ts
++++ b/server/astrologyKnowledge/synthesis/readingBridge.ts
+@@ -6,12 +6,7 @@ import {
+   buildUnifiedMasterChart,
+   getMasterNatalChart,
+ } from "../../masterChart/builder";
+-import {
+-  canonDossierToEvidenceItems,
+-  retrieveChartCanonDossier,
+-} from "../canon/retriever";
+-import { buildCanonRuleApplications } from "./canonApplications";
+-import { synthesizeMasterReading } from "./synthesizer";
++import { synthesizeSnapshotEvidence } from "./snapshotEvidence";
+ import type { SynthesisResult } from "./types";
+ 
+ /** All ordinary chart readings enter through the same calculated method ledger. */
+@@ -117,71 +112,14 @@ async function synthesizeChartForReadingUncached(
+   return synthesizeMasterSnapshot(snapshot, mode, question);
+ }
+ 
+-/** Server-created snapshots enter here directly: no second ephemeris pass. */
++/** Assemble reading context from a server-created snapshot without recalculating it. */
+ export async function synthesizeMasterSnapshot(
+   snapshot: UnifiedMasterChartSnapshot,
+   mode: "natal" | "transit" | "combined",
+   question: string
+ ) {
+-  // The Master Chart remains the only calculation source. Its canonical natal
+-  // ChartResult is passed to the existing deterministic retriever; no second
+-  // astronomical calculation or alternate house/frame pipeline is introduced.
+-  const canonicalChart = snapshot.natal;
+-  if (!canonicalChart)
+-    throw new Error("MASTER_CHART_MISSING: Snapshot has no canonical chart.");
+-  const canonDossier = retrieveChartCanonDossier(canonicalChart);
+-  const canonEvidence = canonDossierToEvidenceItems(canonDossier);
+-  const canonApplications = buildCanonRuleApplications(snapshot, canonEvidence);
+-  // The same registry is evaluated for each sky. Namespace event evidence so
+-  // Saturn's present mansion can never be mistaken for natal Saturn's mansion.
+-  const event = snapshot.transit?.framework;
+-  const eventLayers =
+-    event?.methodExecutionLedger.map(layer => ({
+-      ...layer,
+-      id: `transit:${layer.id}`,
+-      name: `Current sky · ${layer.name}`,
+-      frame: layer.frame,
+-      evidenceIds: layer.evidenceIds.map(id => `transit:${id}`),
+-      prerequisites: layer.prerequisites.map(id => `transit:${id}`),
+-    })) ?? [];
+-  if (event?.natal) {
+-    const applications = buildCanonRuleApplications(
+-      event,
+-      canonDossierToEvidenceItems(retrieveChartCanonDossier(event.natal))
+-    );
+-    canonApplications.push(
+-      ...applications.map(application => ({
+-        ...application,
+-        canonEvidenceId: `transit:${application.canonEvidenceId}`,
+-        subject: `Current sky ${application.subject}`,
+-        calculationEvidenceIds: application.calculationEvidenceIds.map(
+-          id => `transit:${id}`
+-        ),
+-      }))
+-    );
+-  }
+-  const synthesisSnapshot = {
+-    ...snapshot,
+-    layers: {
+-      ...snapshot.layers,
+-      ...Object.fromEntries(eventLayers.map(layer => [layer.id, layer])),
+-    },
+-    methodExecutionLedger: [...snapshot.methodExecutionLedger, ...eventLayers],
+-  };
+-  const synthesis = await synthesizeMasterReading({
+-    snapshot: synthesisSnapshot,
+-    readingMode: mode,
+-    userQuestion: question,
+-    canonApplications,
+-  });
+-  if (!synthesis.qualityAudit.passed) {
+-    console.warn(
+-      "[SYNTHESIS_THEME_COVERAGE] Rule-based theme coverage is incomplete; forwarding all calculated results to the AI:",
+-      synthesis.qualityAudit.unsupportedClaims
+-    );
+-  }
+-  const context = formatSynthesisContext(synthesis);
+-  return { snapshot, synthesis, context, canonicalChart };
++  const result = await synthesizeSnapshotEvidence(snapshot, mode, question);
++  return { ...result, context: formatSynthesisContext(result.synthesis) };
+ }
+ 
+ // Reuse concurrent/repeated reads of the exact same source chart and question.
+diff --git a/server/astrologyKnowledge/synthesis/snapshotEvidence.ts b/server/astrologyKnowledge/synthesis/snapshotEvidence.ts
+new file mode 100644
+index 0000000..fb634cf
+--- /dev/null
++++ b/server/astrologyKnowledge/synthesis/snapshotEvidence.ts
+@@ -0,0 +1,73 @@
++import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
++import {
++  canonDossierToEvidenceItems,
++  retrieveChartCanonDossier,
++} from "../canon/retriever";
++import { buildCanonRuleApplications } from "./canonApplications";
++import { synthesizeMasterReading } from "./synthesizer";
++
++/** Server-created snapshots enter here directly: no second ephemeris pass. */
++export async function synthesizeSnapshotEvidence(
++  snapshot: UnifiedMasterChartSnapshot,
++  mode: "natal" | "transit" | "combined",
++  question: string
++) {
++  // The Master Chart remains the only calculation source. Its canonical natal
++  // ChartResult is passed to the existing deterministic retriever; no second
++  // astronomical calculation or alternate house/frame pipeline is introduced.
++  const canonicalChart = snapshot.natal;
++  if (!canonicalChart)
++    throw new Error("MASTER_CHART_MISSING: Snapshot has no canonical chart.");
++  const canonDossier = retrieveChartCanonDossier(canonicalChart);
++  const canonEvidence = canonDossierToEvidenceItems(canonDossier);
++  const canonApplications = buildCanonRuleApplications(snapshot, canonEvidence);
++  // The same registry is evaluated for each sky. Namespace event evidence so
++  // Saturn's present mansion can never be mistaken for natal Saturn's mansion.
++  const event = snapshot.transit?.framework;
++  const eventLayers =
++    event?.methodExecutionLedger.map(layer => ({
++      ...layer,
++      id: `transit:${layer.id}`,
++      name: `Current sky · ${layer.name}`,
++      frame: layer.frame,
++      evidenceIds: layer.evidenceIds.map(id => `transit:${id}`),
++      prerequisites: layer.prerequisites.map(id => `transit:${id}`),
++    })) ?? [];
++  if (event?.natal) {
++    const applications = buildCanonRuleApplications(
++      event,
++      canonDossierToEvidenceItems(retrieveChartCanonDossier(event.natal))
++    );
++    canonApplications.push(
++      ...applications.map(application => ({
++        ...application,
++        canonEvidenceId: `transit:${application.canonEvidenceId}`,
++        subject: `Current sky ${application.subject}`,
++        calculationEvidenceIds: application.calculationEvidenceIds.map(
++          id => `transit:${id}`
++        ),
++      }))
++    );
++  }
++  const synthesisSnapshot = {
++    ...snapshot,
++    layers: {
++      ...snapshot.layers,
++      ...Object.fromEntries(eventLayers.map(layer => [layer.id, layer])),
++    },
++    methodExecutionLedger: [...snapshot.methodExecutionLedger, ...eventLayers],
++  };
++  const synthesis = await synthesizeMasterReading({
++    snapshot: synthesisSnapshot,
++    readingMode: mode,
++    userQuestion: question,
++    canonApplications,
++  });
++  if (!synthesis.qualityAudit.passed) {
++    console.warn(
++      "[SYNTHESIS_THEME_COVERAGE] Rule-based theme coverage is incomplete; forwarding all calculated results to the AI:",
++      synthesis.qualityAudit.unsupportedClaims
++    );
++  }
++  return { snapshot, synthesis, canonicalChart };
++}
+diff --git a/server/astrologyKnowledge/synthesis/synthesizer.ts b/server/astrologyKnowledge/synthesis/synthesizer.ts
+index b5410b7..1ab5b8e 100644
+--- a/server/astrologyKnowledge/synthesis/synthesizer.ts
++++ b/server/astrologyKnowledge/synthesis/synthesizer.ts
+@@ -1,4 +1,3 @@
+-import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+ import type {
+   SynthesisInput,
+   SynthesisResult,
+@@ -7,10 +6,6 @@ import { extractPropositionsFromMethodOutcomes } from "./normalizer";
+ import { clusterPropositionsIntoThemes } from "./clustering";
+ import { buildMethodOutcomes } from "./methodOutcomes";
+ 
+-function getSign(longitude: number): string {
+-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
+-}
+-
+ export async function synthesizeMasterReading(
+   input: SynthesisInput
+ ): Promise<SynthesisResult> {
+diff --git a/server/astrologyKnowledge/types.ts b/server/astrologyKnowledge/types.ts
+index 95e9da7..bdea0ee 100644
+--- a/server/astrologyKnowledge/types.ts
++++ b/server/astrologyKnowledge/types.ts
+@@ -1,99 +1,20 @@
+ import type { ChartResult } from "../astronomy";
+-import type { BehavioralIntelligenceReport } from "./behavioral";
++import type { BehavioralIntelligenceReport } from "./behavioral/types";
+ import type { ChartCanonDossier } from "./canon/types";
+ 
+-export type Tradition = "western" | "vedic" | "arabic" | "firmament";
+-export type KnowledgeKind = "deterministic-rule" | "source-correspondence";
+-export type RuleStatus = "implemented" | "incomplete";
+-export type EvidenceRelation =
+-  | "reinforcement"
+-  | "amplification"
+-  | "qualification"
+-  | "contradiction"
+-  | "tension"
+-  | "different-layer"
+-  | "timing-difference";
+-
+-export type AstrologySource = {
+-  id: string;
+-  name: string;
+-  tradition: Tradition;
+-  authorityType: "calculation" | "tradition" | "reference" | "api";
+-  url?: string;
+-  status: "active" | "reference-only" | "disabled";
+-  capabilities: string[];
+-};
+-
+-export type AstrologyRule = {
+-  id: string;
+-  tradition: Tradition;
+-  technique: string;
+-  subject: string;
+-  kind: KnowledgeKind;
+-  sourceId: string;
+-  status: RuleStatus;
+-  statement: string;
+-  doctrine?: string;
+-};
+-
+-export type KnowledgePlan = {
+-  question: string;
+-  coreLayers: [
+-    "genesis-astro-engine",
+-    "genesis-pattern-engine",
+-    "genesis-yoga-detector",
+-  ];
+-  genesisPolicy: "mandatory-evaluate-before-prioritization";
+-  domains: string[];
+-  subjects: string[];
+-  techniques: string[];
+-  includeTiming: boolean;
+-  includeDivisionalCharts: string[];
+-  reasons: string[];
+-};
+-
+-export type EvidenceItem = {
+-  id: string;
+-  tradition: Tradition;
+-  category:
+-    | "calculated-fact"
+-    | "deterministic-rule"
+-    | "source-correspondence"
+-    | "uncertainty";
+-  technique: string;
+-  subject: string;
+-  statement: string;
+-  concepts: string[];
+-  polarity?: "supportive" | "pressured" | "mixed" | "neutral";
+-  strength?: number;
+-  ruleId?: string;
+-  sourceId: string;
+-  sourceTrace: SourceTrace;
+-};
+-
+-export type SourceTrace = {
+-  sourceId: string;
+-  tradition: Tradition;
+-  technique: string;
+-  sourceUrl?: string;
+-  sourceTitle: string;
+-  retrievedAt: string;
+-  ruleId?: string;
+-  confidence: "high" | "moderate" | "low" | "reference-only";
+-  provider?: string;
+-  calculationSettings?: Record<string, unknown>;
+-  implementationStatus?: RuleStatus;
+-};
+-
+-export type EvidenceRelationship = {
+-  id: string;
+-  relation: EvidenceRelation;
+-  theme: string;
+-  evidenceIds: string[];
+-  traditions: Tradition[];
+-  explanation: string;
+-  strength: number;
+-};
++import type { EvidenceItem, EvidenceRelationship, KnowledgePlan, SourceTrace } from "./evidenceTypes";
++export type {
++  Tradition,
++  KnowledgeKind,
++  RuleStatus,
++  EvidenceRelation,
++  AstrologySource,
++  AstrologyRule,
++  KnowledgePlan,
++  EvidenceItem,
++  SourceTrace,
++  EvidenceRelationship
++} from "./evidenceTypes";
+ 
+ export type AstrologyEvidencePacket = {
+   question: string;
+diff --git a/server/astrologyKnowledge/vedic/index.ts b/server/astrologyKnowledge/vedic/index.ts
+index 18c72dd..712e40b 100644
+--- a/server/astrologyKnowledge/vedic/index.ts
++++ b/server/astrologyKnowledge/vedic/index.ts
+@@ -1,4 +1,5 @@
+-import type { ChartResult, ChartRow } from "../../astronomy";
++import { chartRows } from "../chartRows";
++import type { ChartResult } from "../../astronomy";
+ import {
+   NAKSHATRAS,
+   ZODIAC_SIGNS,
+@@ -55,19 +56,11 @@ function nakshatra(longitude: number) {
+     end: (index + 1) * size,
+   };
+ }
+-function rows(chart: ChartResult) {
+-  return [
+-    ...chart.movingBodies,
+-    chart.ascendant,
+-    chart.northNode,
+-    chart.southNode,
+-  ].filter((row): row is ChartRow => Boolean(row));
+-}
+ export function resolveVedicEvidence(
+   chart: ChartResult,
+   plan: KnowledgePlan
+ ): EvidenceItem[] {
+-  const all = rows(chart).filter(row => Number.isFinite(row.longitude));
++  const all = chartRows(chart).filter(row => Number.isFinite(row.longitude));
+   const asc =
+     chart.ascendant && Number.isFinite(chart.ascendant.longitude)
+       ? chart.ascendant
+diff --git a/server/astrologyKnowledge/vedic/strength.ts b/server/astrologyKnowledge/vedic/strength.ts
+index 188e3cd..2948c06 100644
+--- a/server/astrologyKnowledge/vedic/strength.ts
++++ b/server/astrologyKnowledge/vedic/strength.ts
+@@ -1,6 +1,6 @@
++import { ephemerisXYZ } from "../../ephemeris";
+ import sweph from "sweph";
+ import {
+-  ephemerisXYZ,
+   noaaSunriseUtc,
+   type ChartResult,
+ } from "../../astronomy";
+diff --git a/server/astronomy.ts b/server/astronomy.ts
+index 01be850..d514685 100644
+--- a/server/astronomy.ts
++++ b/server/astronomy.ts
+@@ -1,6 +1,6 @@
+-import sweph from "sweph";
++import { ephemerisXYZ, julianDay, longitudeFromXYZ, topocentricMoonLongitude } from "./ephemeris";
++export { ephemerisXYZ, longitudeFromXYZ } from "./ephemeris";
+ import { knownCity } from "../shared/profileLocations";
+-import { localDateTime } from "../shared/transitTime";
+ import { ascendantFromSunrise, type FixedVector } from "./sunriseAscendant";
+ import tzLookup from "tz-lookup";
+ import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
+@@ -95,52 +95,6 @@ export function parseLocalToUtc(date: string, time: string, timezone: string) {
+   return new Date(Array.from(candidates)[0]);
+ }
+ 
+-// Geocentric equatorial Cartesian XYZ: Moshier (4), equatorial (2048), XYZ (4096).
+-// Never request a sidereal or tropical zodiac conversion for planetary positions.
+-const MOSHIER_FLAGS = 4;
+-const EQUATORIAL_FLAG = 2048;
+-const CARTESIAN_XYZ_FLAG = 4096;
+-const SPEED_FLAG = 256;
+-const TOPOCENTRIC_FLAG = 32768;
+-const EQUATORIAL_XYZ_FLAGS = MOSHIER_FLAGS | EQUATORIAL_FLAG | CARTESIAN_XYZ_FLAG | SPEED_FLAG;
+-export function ephemerisXYZ(jd: number, planet: number, extraFlags = 0) {
+-  const result: any = (sweph as any).calc_ut(jd, planet, EQUATORIAL_XYZ_FLAGS | extraFlags);
+-  const data = result?.data ?? result;
+-  if (!data || ![data[0], data[1], data[2]].every((n: unknown) => typeof n === "number" && Number.isFinite(n)))
+-    throw new Error("Ephemeris failed to return geocentric equatorial Cartesian XYZ coordinates.");
+-  const xyz = { x: Number(data[0]), y: Number(data[1]), z: Number(data[2]) };
+-  const longitude = longitudeFromXYZ(xyz);
+-  // Cartesian velocity components are AU/day when SEFLG_SPEED is requested.
+-  const velocity = [Number(data[3]), Number(data[4]), Number(data[5])];
+-  const speed = velocity.every(Number.isFinite)
+-    ? ((xyz.x * velocity[1] - xyz.y * velocity[0]) / (xyz.x * xyz.x + xyz.y * xyz.y)) * 180 / Math.PI
+-    : 0;
+-  return { xyz, longitude, speed, velocity };
+-}
+-function calculatedXYZ(jd: number, planet: number) {
+-  return ephemerisXYZ(jd, planet);
+-}
+-function safeCalc(jd: number, planet: number) {
+-  return ephemerisXYZ(jd, planet);
+-}
+-/** Geocentric and observer-specific Moon coordinates must use the same equatorial XYZ axes. */
+-function topocentricMoonLongitude(jd: number, longitude: number, latitude: number, elevation = 0) {
+-  const sw = sweph as any;
+-  try {
+-    sw.set_topo?.(longitude, latitude, elevation);
+-    return ephemerisXYZ(jd, 1, TOPOCENTRIC_FLAG).longitude;
+-  } finally {
+-    sw.set_topo?.(0, 0, 0);
+-  }
+-}
+-/** Longitude from externally supplied XYZ. The supplied frame must already be aligned to the fixed 360° zodiac. */
+-export function longitudeFromXYZ(vector: { x: number; y: number; z: number }): number {
+-  const { x, y, z } = vector;
+-  if (![x, y, z].every(Number.isFinite) || Math.hypot(x, y) === 0) {
+-    throw new Error("Invalid XYZ coordinates: finite values and nonzero XY radius required.");
+-  }
+-  return normalizeLongitude(Math.atan2(y, x) * 180 / Math.PI);
+-}
+ function planetaryTopocentric(planet: number, locationAvailable: boolean) {
+   return locationAvailable && planet === 1;
+ }
+@@ -181,10 +135,6 @@ function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope,
+   if (!time || !timezone) throw new Error("An exact date, time, and timezone are required for Agent View.");
+   return { date: parseLocalToUtc(date, time, timezone), precision: "exact" as const };
+ }
+-function julianDay(date: Date) {
+-  return Number((sweph as any).julday(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours() + date.getUTCMinutes() / 60, 1));
+-}
+-
+ // NOAA solar-calculator equations: apparent sunrise at solar zenith 90.833 degrees.
+ // Inputs are the LOCAL civil date and signed geographic coordinates (east positive).
+ // A missing sunrise (polar day/night) is an error, never a substituted angle.
+@@ -236,7 +186,7 @@ function automaticSunriseAnchor(latitude: number, longitude: number, event: Date
+     }
+   }
+   if (!sunrise) throw new Error("No preceding NOAA sunrise found; no fallback.");
+-  return { sunriseUtc: sunrise.toISOString(), sunriseSunXYZ: calculatedXYZ(julianDay(sunrise), 0).xyz };
++  return { sunriseUtc: sunrise.toISOString(), sunriseSunXYZ: ephemerisXYZ(julianDay(sunrise), 0).xyz };
+ }
+ function row(name: string, longitude: number, house: number, worldview: Worldview, ascendant: number | null, extra: Partial<ChartRow> = {}): ChartRow {
+   const dual = dualPlacement(longitude, ascendant, name) as DualPlacement;
+@@ -249,7 +199,7 @@ function fixedHouseRows(worldview: Worldview, ascendant: number | null) {
+ function moonRange(date: string): MoonUncertainty | undefined {
+   if (!date) return undefined;
+   const start = julianDay(new Date(`${date}T00:00:00.000Z`)); const end = julianDay(new Date(`${date}T23:59:59.000Z`));
+-  const from = safeCalc(start, 1).longitude; const to = safeCalc(end, 1).longitude;
++  const from = ephemerisXYZ(start, 1).longitude; const to = ephemerisXYZ(end, 1).longitude;
+   return { from, to, label: `${formatLongitude(from)} to ${formatLongitude(to)} possible on this date` };
+ }
+ 
+@@ -275,11 +225,11 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
+   const houses = fixedHouseRows(worldview, asc);
+   const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
+   const planetNames = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
+-  const movingBodies = planetNames.map((name, i) => { const xyz = input.xyzPositions?.[name]; const automatic = xyz ? undefined : calculatedXYZ(jd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: safeCalc(jd, i).speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, hasAgentLocation) ? topocentricMoonLongitude(jd, input.longitude, input.latitude, input.elevation ?? 0) : undefined; return row(name, p.longitude, houseFor(p.longitude), worldview, asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }), ...(worldview === "god" && name === "Moon" && input.birthTimeKnown === false ? { uncertainty: moonRange(input.date) } : {}) }); });
++  const movingBodies = planetNames.map((name, i) => { const xyz = input.xyzPositions?.[name]; const automatic = xyz ? undefined : ephemerisXYZ(jd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: automatic!.speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, hasAgentLocation) ? topocentricMoonLongitude(jd, input.longitude, input.latitude, input.elevation ?? 0) : undefined; return row(name, p.longitude, houseFor(p.longitude), worldview, asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }), ...(worldview === "god" && name === "Moon" && input.birthTimeKnown === false ? { uncertainty: moonRange(input.date) } : {}) }); });
+   const ascRow = asc == null ? null : row("Ascendant", asc, 1, worldview, asc);
+   const descLongitude = asc == null ? null : normalizeLongitude(asc + 180); const descendant = descLongitude == null ? null : row("Descendant", descLongitude, 7, worldview, asc);
+   const mcRow = mc == null ? null : row("Midheaven", mc, houseFor(mc), worldview, asc);
+-  const nodePosition = safeCalc(jd, 10).longitude; const northNode = row("North Node", nodePosition, houseFor(nodePosition), worldview, asc, { retrograde: true, speed: 0 }); const southNodePosition = normalizeLongitude(nodePosition + 180); const southNode = row("South Node", southNodePosition, houseFor(southNodePosition), worldview, asc, { retrograde: true, speed: 0 });
++  const nodePosition = ephemerisXYZ(jd, 10).longitude; const northNode = row("North Node", nodePosition, houseFor(nodePosition), worldview, asc, { retrograde: true, speed: 0 }); const southNodePosition = normalizeLongitude(nodePosition + 180); const southNode = row("South Node", southNodePosition, houseFor(southNodePosition), worldview, asc, { retrograde: true, speed: 0 });
+   const frozenStars = FIXED_STARS.map(([name, longitude]) => row(name, longitude, houseFor(longitude), worldview, asc));
+   const allPlacements = [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), ...(mcRow ? [mcRow] : []), northNode, southNode];
+   const godPlacements = allPlacements.map(placement => ({ ...placement, ...dualPlacement(placement.longitude, asc, placement.name) }));
+@@ -306,8 +256,8 @@ export async function calculateChart(rawInput: ChartInput): Promise<ChartResult>
+     : null;
+   const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitLocationResolved ? "transit-location" : "natal-location";
+   const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
+-  const transits: TransitRow[] = planetNames.map((name, i) => { const xyz = input.transitXYZPositions?.[name]; const automatic = xyz ? undefined : calculatedXYZ(transitJd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: safeCalc(transitJd, i).speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, transitLongitude, transitLatitude, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
+-  const transitNodePosition = safeCalc(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
++  const transits: TransitRow[] = planetNames.map((name, i) => { const xyz = input.transitXYZPositions?.[name]; const automatic = xyz ? undefined : ephemerisXYZ(transitJd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: automatic!.speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, transitLongitude, transitLatitude, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
++  const transitNodePosition = ephemerisXYZ(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
+   const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
+   const minorContactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = minorAspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
+   return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode), minorNatalContacts: minorContactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode), minorNatalContacts: minorContactsFor(transitSouthNode) }], validation };
+diff --git a/server/chartPageReading.ts b/server/chartPageReading.ts
+index 64bf833..b59581e 100644
+--- a/server/chartPageReading.ts
++++ b/server/chartPageReading.ts
+@@ -5,7 +5,7 @@ import {
+   placementMiniIdentity,
+ } from "../shared/placementMiniReadings";
+ import { z } from "zod";
+-import type { ChartResult, ChartRow } from "./astronomy";
++import type { ChartResult } from "./astronomy";
+ import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
+ import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+ import {
+@@ -14,7 +14,7 @@ import {
+ } from "./astrologyKnowledge/synthesis/readingBridge";
+ import { retrievePlacementDossier } from "./astrologyKnowledge/canon/retriever";
+ import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
+-import { buildPlanetPersonaMatrix, type PlanetPersonaTrait } from "../shared/planetPersonaMatrix";
++import { buildPlanetPersonaMatrix } from "../shared/planetPersonaMatrix";
+ import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
+ 
+ const summarySchema = z.object({
+diff --git a/server/ephemeris.ts b/server/ephemeris.ts
+new file mode 100644
+index 0000000..3685fc4
+--- /dev/null
++++ b/server/ephemeris.ts
+@@ -0,0 +1,47 @@
++import sweph from "sweph";
++import { normalizeLongitude } from "../shared/hybrid";
++
++// Geocentric equatorial Cartesian XYZ: Moshier (4), equatorial (2048), XYZ (4096).
++// Never request a sidereal or tropical zodiac conversion for planetary positions.
++const MOSHIER_FLAGS = 4;
++const EQUATORIAL_FLAG = 2048;
++const CARTESIAN_XYZ_FLAG = 4096;
++const SPEED_FLAG = 256;
++const TOPOCENTRIC_FLAG = 32768;
++const EQUATORIAL_XYZ_FLAGS = MOSHIER_FLAGS | EQUATORIAL_FLAG | CARTESIAN_XYZ_FLAG | SPEED_FLAG;
++export function ephemerisXYZ(jd: number, planet: number, extraFlags = 0) {
++  const result: any = (sweph as any).calc_ut(jd, planet, EQUATORIAL_XYZ_FLAGS | extraFlags);
++  const data = result?.data ?? result;
++  if (!data || ![data[0], data[1], data[2]].every((n: unknown) => typeof n === "number" && Number.isFinite(n)))
++    throw new Error("Ephemeris failed to return geocentric equatorial Cartesian XYZ coordinates.");
++  const xyz = { x: Number(data[0]), y: Number(data[1]), z: Number(data[2]) };
++  const longitude = longitudeFromXYZ(xyz);
++  // Cartesian velocity components are AU/day when SEFLG_SPEED is requested.
++  const velocity = [Number(data[3]), Number(data[4]), Number(data[5])];
++  const speed = velocity.every(Number.isFinite)
++    ? ((xyz.x * velocity[1] - xyz.y * velocity[0]) / (xyz.x * xyz.x + xyz.y * xyz.y)) * 180 / Math.PI
++    : 0;
++  return { xyz, longitude, speed, velocity };
++}
++/** Geocentric and observer-specific Moon coordinates must use the same equatorial XYZ axes. */
++export function topocentricMoonLongitude(jd: number, longitude: number, latitude: number, elevation = 0) {
++  const sw = sweph as any;
++  try {
++    sw.set_topo?.(longitude, latitude, elevation);
++    return ephemerisXYZ(jd, 1, TOPOCENTRIC_FLAG).longitude;
++  } finally {
++    sw.set_topo?.(0, 0, 0);
++  }
++}
++/** Longitude from externally supplied XYZ. The supplied frame must already be aligned to the fixed 360° zodiac. */
++export function longitudeFromXYZ(vector: { x: number; y: number; z: number }): number {
++  const { x, y, z } = vector;
++  if (![x, y, z].every(Number.isFinite) || Math.hypot(x, y) === 0) {
++    throw new Error("Invalid XYZ coordinates: finite values and nonzero XY radius required.");
++  }
++  return normalizeLongitude(Math.atan2(y, x) * 180 / Math.PI);
++}
++
++export function julianDay(date: Date) {
++  return Number((sweph as any).julday(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours() + date.getUTCMinutes() / 60, 1));
++}
+diff --git a/server/genesisBackup/adapter.ts b/server/genesisBackup/adapter.ts
+index b89ae6f..d2e83be 100644
+--- a/server/genesisBackup/adapter.ts
++++ b/server/genesisBackup/adapter.ts
+@@ -1,13 +1,11 @@
+ import type { ChartResult, ChartRow } from "../astronomy";
+ import {
+-  detectAllYogas,
+-  analyzePatterns,
+   runAstroReading,
+-  type PatternAnalysis,
+   type PlanetPlacement,
+   type ReadingResult,
+-  type YogaResult,
+-} from "./index";
++} from "./astroEngine";
++import { detectAllYogas, type YogaResult } from "./vedicYogaDetector";
++import { analyzePatterns, type PatternAnalysis } from "./patternEngine";
+ 
+ export type GenesisAstroPipelineResult = {
+   engine: "genesis-astro-engine";
+diff --git a/server/genesisBackup/astroEngine.ts b/server/genesisBackup/astroEngine.ts
+index ad6c2b8..576c0e3 100644
+--- a/server/genesisBackup/astroEngine.ts
++++ b/server/genesisBackup/astroEngine.ts
+@@ -736,10 +736,6 @@ export function runAstroReading(
+   };
+ }
+ 
+-export function ordinalExport(n: number): string {
+-  const s = ["th", "st", "nd", "rd"];
+-  const v = n % 100;
+-  return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
+-}
++export { ordinal as ordinalExport };
+ 
+ export { ordinal, planetTone, signFlavor };
+diff --git a/server/horary.ts b/server/horary.ts
+index bdc39ed..18fda4b 100644
+--- a/server/horary.ts
++++ b/server/horary.ts
+@@ -1,13 +1,12 @@
++import type { HoraryAspect, HoraryChart, HoraryInput, HoraryPlacement } from "./horaryTypes";
+ import { calculateMasterChart as calculateChart } from "./masterChart/entry";
+ import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+-import { type ChartInput } from "./astronomy";
+ import { withCurrentQuestion } from "./_core/conversation";
+ import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
+-import { normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
+-import type { FrameRelationship } from "./astrologyCore";
++import { normalizeLongitude, signAtLongitude as signOf } from "../shared/hybrid";
+ import { HORARY_TOPICS } from "../shared/horary";
+-import { calculateLookahead, type Lookahead } from "./horaryLookahead";
+-import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
++import { calculateLookahead } from "./horaryLookahead";
++import { calculateTraditionalHorary } from "./horaryTraditional";
+ import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever";
+ import { getPlanetInHouseKnowledge } from "./astrologyKnowledge/canon/planetInHouseInterpretations";
+ import { synthesizeHoraryWithGroq } from "./services/groqHoraryService";
+@@ -18,79 +17,9 @@ import {
+   type HoraryQuestionAnalysis,
+ } from "./horaryQuestionAnalyzer";
+ 
++export type { HoraryChart, HoraryInput } from "./horaryTypes";
+ export type { HoraryQuestionAnalysis, HoraryQuestionType } from "./horaryQuestionAnalyzer";
+ 
+-export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
+-  question: string;
+-  subject?: "querent" | "other";
+-  topicHouse?: number;
+-  /** House of the person asked about, counted from the querent. */
+-  subjectHouse?: number;
+-  /** Precomputed Step 1 question analysis (auto-determined when omitted). */
+-  questionAnalysis?: HoraryQuestionAnalysis;
+-  natal?: Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time">;
+-};
+-
+-type HoraryPlacement = {
+-  name: string;
+-  longitude: number;
+-  display: string;
+-  sign: string;
+-  house: number;
+-  retrograde: boolean;
+-  speed: number;
+-  godHouse?: number;
+-  agentHouse?: number;
+-  frameRelationship?: FrameRelationship;
+-};
+-
+-type HoraryAspect = {
+-  first: string;
+-  second: string;
+-  aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition";
+-  orb: number;
+-  phase: "applying" | "separating" | "unclear";
+-};
+-
+-export type HoraryChart = {
+-  question: string;
+-  questionAnalysis: HoraryQuestionAnalysis;
+-  subject: "querent" | "other";
+-  subjectHouse: number;
+-  subjectRuler: string;
+-  topicHouse: number;
+-  actualTopicHouse: number;
+-  topicLabel: string;
+-  additionalTopicHouses: Array<{
+-    relativeHouse: number;
+-    actualHouse: number;
+-    sign: string;
+-    ruler: string;
+-    label: string;
+-  }>;
+-  askedAt: string;
+-  location: string;
+-  timezone: string;
+-  houseSystem: "Equal House";
+-  ascendant: { longitude: number; display: string; sign: string };
+-  querentRuler: string;
+-  topicRuler: string;
+-  moon: HoraryPlacement;
+-  houses: Array<{ house: number; longitude: number; sign: string; ruler: string }>;
+-  placements: HoraryPlacement[];
+-  relevantAspects: HoraryAspect[];
+-  otherCloseAspects: HoraryAspect[];
+-  lookahead: Lookahead;
+-  natalChart?: Awaited<ReturnType<typeof calculateChart>>;
+-  transitChart: Awaited<ReturnType<typeof calculateChart>>;
+-  godChart: Awaited<ReturnType<typeof calculateChart>>;
+-  traditional: TraditionalHoraryEvidence;
+-  canonEvidenceText: string;
+-  evidenceText: string;
+-  judgmentEvidenceText: string;
+-  unifiedSynthesisSnapshotId?: string;
+-};
+-
+ const TRADITIONAL_RULERS: Record<string, string> = {
+   Aries: "Mars", Taurus: "Venus", Gemini: "Mercury", Cancer: "Moon",
+   Leo: "Sun", Virgo: "Mercury", Libra: "Venus", Scorpio: "Mars",
+@@ -101,10 +30,6 @@ const ASPECT_TARGETS: Array<[number, HoraryAspect["aspect"]]> = [
+   [0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"],
+ ];
+ const ASPECT_ORB_DEGREES = 5;
+-function signOf(longitude: number) {
+-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
+-}
+-
+ function ordinal(value: number) {
+   const remainder = value % 100;
+   const suffix = remainder >= 11 && remainder <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[value % 10] ?? "th";
+diff --git a/server/horaryLookahead.ts b/server/horaryLookahead.ts
+index 3e7a67a..6887302 100644
+--- a/server/horaryLookahead.ts
++++ b/server/horaryLookahead.ts
+@@ -1,4 +1,4 @@
+-import { ephemerisXYZ } from "./astronomy";
++import { ephemerisXYZ } from "./ephemeris";
+ import { normalizeLongitude } from "../shared/hybrid";
+ 
+ // Look-ahead for the horary chart: finds when aspects between the seven classical
+diff --git a/server/horaryTypes.ts b/server/horaryTypes.ts
+new file mode 100644
+index 0000000..c8b7af5
+--- /dev/null
++++ b/server/horaryTypes.ts
+@@ -0,0 +1,76 @@
++import type { ChartInput, ChartResult } from "./astronomy";
++import type { FrameRelationship } from "./astrologyCore";
++import type { Lookahead } from "./horaryLookahead";
++import type { TraditionalHoraryEvidence } from "./horaryTraditional";
++import type { HoraryQuestionAnalysis } from "./horaryQuestionAnalyzer";
++
++export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
++  question: string;
++  subject?: "querent" | "other";
++  topicHouse?: number;
++  /** House of the person asked about, counted from the querent. */
++  subjectHouse?: number;
++  /** Precomputed Step 1 question analysis (auto-determined when omitted). */
++  questionAnalysis?: HoraryQuestionAnalysis;
++  natal?: Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time">;
++};
++
++export type HoraryPlacement = {
++  name: string;
++  longitude: number;
++  display: string;
++  sign: string;
++  house: number;
++  retrograde: boolean;
++  speed: number;
++  godHouse?: number;
++  agentHouse?: number;
++  frameRelationship?: FrameRelationship;
++};
++
++export type HoraryAspect = {
++  first: string;
++  second: string;
++  aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition";
++  orb: number;
++  phase: "applying" | "separating" | "unclear";
++};
++
++export type HoraryChart = {
++  question: string;
++  questionAnalysis: HoraryQuestionAnalysis;
++  subject: "querent" | "other";
++  subjectHouse: number;
++  subjectRuler: string;
++  topicHouse: number;
++  actualTopicHouse: number;
++  topicLabel: string;
++  additionalTopicHouses: Array<{
++    relativeHouse: number;
++    actualHouse: number;
++    sign: string;
++    ruler: string;
++    label: string;
++  }>;
++  askedAt: string;
++  location: string;
++  timezone: string;
++  houseSystem: "Equal House";
++  ascendant: { longitude: number; display: string; sign: string };
++  querentRuler: string;
++  topicRuler: string;
++  moon: HoraryPlacement;
++  houses: Array<{ house: number; longitude: number; sign: string; ruler: string }>;
++  placements: HoraryPlacement[];
++  relevantAspects: HoraryAspect[];
++  otherCloseAspects: HoraryAspect[];
++  lookahead: Lookahead;
++  natalChart?: ChartResult;
++  transitChart: ChartResult;
++  godChart: ChartResult;
++  traditional: TraditionalHoraryEvidence;
++  canonEvidenceText: string;
++  evidenceText: string;
++  judgmentEvidenceText: string;
++  unifiedSynthesisSnapshotId?: string;
++};
+diff --git a/server/interpretation.ts b/server/interpretation.ts
+index 70debba..ae7b373 100644
+--- a/server/interpretation.ts
++++ b/server/interpretation.ts
+@@ -1,5 +1,4 @@
+ import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
+-import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
+ import type { Message } from "./_core/llm";
+ import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
+ import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
+@@ -13,9 +12,6 @@ import {
+   formatCompactEvidencePacket,
+   type AstrologyEvidencePacket,
+ } from "./astrologyKnowledge";
+-import { getDecanCanonByLongitude } from "./astrologyKnowledge/canon/decans36";
+-import { getManzilCanonByLongitude } from "./astrologyKnowledge/canon/manazil28";
+-import { getNakshatraCanonByLongitude } from "./astrologyKnowledge/canon/nakshatras27";
+ import { overlay as canonicalOverlay } from "../shared/hybrid";
+ import { buildMasterPipeline, formatCompactMasterGateContext } from "./master-pipeline";
+ 
+diff --git a/server/lifeStoryEngine.ts b/server/lifeStoryEngine.ts
+index fb5fee6..1dab63b 100644
+--- a/server/lifeStoryEngine.ts
++++ b/server/lifeStoryEngine.ts
+@@ -1,22 +1,10 @@
+ import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
+-import { noaaSunriseUtc, type ChartResult, type ChartRow } from "./astronomy";
+-import {
+-  normalizeLongitude,
+-  formatLongitude,
+-  ZODIAC_SIGNS,
+-  NAKSHATRAS,
+-  FIXED_STARS,
+-  overlay,
+-} from "../shared/hybrid";
+-import { calculateArabicLots, calculateLot, LOT_FORMULAS, type Sect } from "./utils/arabicLots";
++import { noaaSunriseUtc, type ChartResult } from "./astronomy";
++import { normalizeLongitude, formatLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
++import { calculateArabicLots, type Sect } from "./utils/arabicLots";
+ 
+-import { DOUBLE_LETTERS, SIMPLE_LETTERS, MOTHER_LETTERS } from "./astrologyKnowledge/canon/seferYetzirah";
+-import { DECAN_CANON_RECORDS } from "./astrologyKnowledge/canon/decans36";
+-import { MANZIL_CANON_RECORDS } from "./astrologyKnowledge/canon/manazil28";
+-import { CHINESE_MANSIONS } from "./astrologyKnowledge/canon/chineseMansions28";
+ import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
+ import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+-import { buildAstrologyEvidencePacket, formatEvidencePacket } from "./astrologyKnowledge/evidencePacket";
+ import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
+ 
+ export type LifeStageKey =
+diff --git a/server/masterChart/builder.ts b/server/masterChart/builder.ts
+index 31ad7f9..88b363f 100644
+--- a/server/masterChart/builder.ts
++++ b/server/masterChart/builder.ts
+@@ -20,6 +20,8 @@ import {
+   normalizeLongitude,
+   overlay,
+   ZODIAC_SIGNS,
++
++  signAtLongitude as getSign,
+ } from "../../shared/hybrid";
+ import {
+   calculateChartHermeticLots,
+@@ -126,10 +128,6 @@ export async function getMasterNatalChart(
+   }
+ }
+ 
+-function getSign(longitude: number): string {
+-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
+-}
+-
+ export async function buildUnifiedMasterChart(
+   input: MasterChartInput
+ ): Promise<UnifiedMasterChartSnapshot> {
+diff --git a/server/masterChart/entry.ts b/server/masterChart/entry.ts
+index d3c4f1e..957b14d 100644
+--- a/server/masterChart/entry.ts
++++ b/server/masterChart/entry.ts
+@@ -1,6 +1,6 @@
+ import type { ChartInput, ChartResult } from "../astronomy";
+ import { buildUnifiedMasterChart } from "./builder";
+-import { synthesizeMasterSnapshot } from "../astrologyKnowledge/synthesis/readingBridge";
++import { synthesizeSnapshotEvidence } from "../astrologyKnowledge/synthesis/snapshotEvidence";
+ 
+ /** Public chart production always binds the complete formation before returning. */
+ export async function calculateMasterChart(
+@@ -8,7 +8,7 @@ export async function calculateMasterChart(
+ ): Promise<ChartResult> {
+   const mode = input.readingScope ?? "combined";
+   const snapshot = await buildUnifiedMasterChart({ ...input, mode });
+-  const { canonicalChart, synthesis } = await synthesizeMasterSnapshot(
++  const { canonicalChart, synthesis } = await synthesizeSnapshotEvidence(
+     snapshot,
+     mode,
+     "Evaluate this chart's complete method formation before output."
+diff --git a/server/routers.ts b/server/routers.ts
+index 9dd6d9d..8c5a195 100644
+--- a/server/routers.ts
++++ b/server/routers.ts
+@@ -60,7 +60,6 @@ import { FULL_SYNTHESIS_STYLE } from "./master-interpreter";
+ import { runGenesisPatternPipeline } from "./genesisBackup/adapter";
+ import { calculateGenesisReadingMetrics } from "./genesisBackup/readingEngine";
+ import { buildUnifiedMasterChart, getMasterNatalChart } from "./masterChart/builder";
+-import { synthesizeMasterReading } from "./astrologyKnowledge/synthesis";
+ import { buildMasterPipeline } from "./master-pipeline";
+ import { buildMasterGameChart } from "./simulationLab/masterGameChart";
+ import { evaluatePlanetaryTeamHouses, predictSportsGame } from "./simulationLab/sportsPredictor";
+diff --git a/server/services/groqHoraryService.ts b/server/services/groqHoraryService.ts
+index 08fbc2a..42dde75 100644
+--- a/server/services/groqHoraryService.ts
++++ b/server/services/groqHoraryService.ts
+@@ -2,7 +2,7 @@ import { ENV } from "../_core/env";
+ import type { Message } from "../_core/llm";
+ import { runInterpretation } from "../astrologyKnowledge/synthesis/interpretationPipeline";
+ import type { SynthesisResult } from "../astrologyKnowledge/synthesis/types";
+-import type { HoraryChart } from "../horary";
++import type { HoraryChart } from "../horaryTypes";
+ 
+ export type GroqHoraryRequest = {
+   question: string;
+diff --git a/server/utils/patternMatcher.ts b/server/utils/patternMatcher.ts
+index 5301852..9d74613 100644
+--- a/server/utils/patternMatcher.ts
++++ b/server/utils/patternMatcher.ts
+@@ -1,4 +1,4 @@
+-import { normalizeLongitude, ZODIAC_SIGNS } from "../../shared/hybrid";
++import { normalizeLongitude } from "../../shared/hybrid";
+ import {
+   PatternRequestSchema,
+   type DiscoveredPattern,
+@@ -33,10 +33,6 @@ function angularDistance(a: number, b: number) {
+   return Math.min(delta, 360 - delta);
+ }
+ 
+-function signFor(longitude: number) {
+-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
+-}
+-
+ function canonicalPair(a: string, b: string) {
+   return [a, b].sort().join("|");
+ }
+diff --git a/shared/energyStarsAndLots.ts b/shared/energyStarsAndLots.ts
+index f1baa4f..3227dd2 100644
+--- a/shared/energyStarsAndLots.ts
++++ b/shared/energyStarsAndLots.ts
+@@ -1,5 +1,5 @@
+ import type { ChartResult, ChartRow } from "../server/astronomy";
+-import { FIXED_STARS, ZODIAC_SIGNS, formatLongitude, normalizeLongitude } from "./hybrid";
++import { FIXED_STARS, findBodyLongitude, ZODIAC_SIGNS, formatLongitude, normalizeLongitude } from "./hybrid";
+ import { ENERGY_ASPECT_FLOW, ENERGY_MAX_ORB, energyIntensity } from "./energyScoring";
+ 
+ const ROYAL_STARS = new Set(["Aldebaran", "Regulus", "Antares", "Fomalhaut"]);
+@@ -794,12 +794,7 @@ export function calculateEnergyStarsAndLots(
+     };
+   }
+ 
+-  const bodyLon = (name: string) => {
+-    const found = chart.movingBodies.find(b => b.name === name);
+-    return found && Number.isFinite(found.longitude)
+-      ? normalizeLongitude(found.longitude)
+-      : undefined;
+-  };
++  const bodyLon = (name: string) => findBodyLongitude(chart.movingBodies, name);
+   const sunLon = bodyLon("Sun")!;
+   const moonLon = bodyLon("Moon")!;
+   const mercuryLon = bodyLon("Mercury");
+diff --git a/shared/hybrid.ts b/shared/hybrid.ts
+index d6fa97b..c9f0739 100644
+--- a/shared/hybrid.ts
++++ b/shared/hybrid.ts
+@@ -51,6 +51,20 @@ export function overlay(longitude: number): Overlay {
+     chineseBoundaryModel: chinese.boundaryModel,
+   };
+ }
++export function signAtLongitude(longitude: number): string {
++  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
++}
++
++export function findBodyLongitude(
++  bodies: readonly { name: string; longitude: number }[],
++  name: string
++): number | undefined {
++  const body = bodies.find(candidate => candidate.name === name);
++  return body && Number.isFinite(body.longitude)
++    ? normalizeLongitude(body.longitude)
++    : undefined;
++}
++
+ export function formatLongitude(longitude: number) { const L = normalizeLongitude(longitude); const sign = ZODIAC_SIGNS[Math.floor(L / 30)]; const deg = L % 30; const d = Math.floor(deg); const m = Math.round((deg - d) * 60); return `${sign} ${String(d).padStart(2, "0")}°${String(m % 60).padStart(2, "0")}′`; }
+ export function normalizeLongitude(value: number) { const wrapped = value % 360; return wrapped < 0 ? wrapped + 360 : wrapped; }
+ 
+diff --git a/shared/masterPlanetPersonaConfig.ts b/shared/masterPlanetPersonaConfig.ts
+index ba84700..49e81cd 100644
+--- a/shared/masterPlanetPersonaConfig.ts
++++ b/shared/masterPlanetPersonaConfig.ts
+@@ -1,5 +1,5 @@
+ import type { ChartResult } from "../server/astronomy";
+-import { buildPlanetPersonaMatrix, type PlanetPersonaTrait } from "./planetPersonaMatrix";
++import { buildPlanetPersonaMatrix } from "./planetPersonaMatrix";
+ 
+ export const CORE_REQUESTED_ACTORS = [
+   "Sun",
+diff --git a/shared/planetPersonaMatrix.ts b/shared/planetPersonaMatrix.ts
+index 00e898d..3ca6fc2 100644
+--- a/shared/planetPersonaMatrix.ts
++++ b/shared/planetPersonaMatrix.ts
+@@ -1,4 +1,4 @@
+-import { aspectBetween, type ChartResult, type ChartRow } from "../server/astronomy";
++import { aspectBetween, type ChartResult } from "../server/astronomy";
+ import { placementRows } from "./placementMiniReadings";
+ import { retrievePlacementDossier } from "../server/astrologyKnowledge/canon/retriever";
+ import { calculateVedicStrength } from "../server/astrologyKnowledge/vedic/strength";

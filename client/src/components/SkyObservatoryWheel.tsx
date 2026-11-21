@@ -1,3 +1,4 @@
+import { polarPoint as polar } from "@/lib/chartGeometry";
 import { useEffect, useMemo, useState } from "react";
 import type { ChartResult, ChartRow } from "../../../server/astronomy";
 import { angularDistance } from "../../../server/astrologyCore";
@@ -6,6 +7,8 @@ import {
   normalizeLongitude,
   overlay,
   ZODIAC_SIGNS,
+
+  signAtLongitude,
 } from "../../../shared/hybrid";
 
 type AspectLayerFilter = "all" | "natal" | "transit" | "horary";
@@ -190,15 +193,7 @@ const TRADITIONAL_HOUSE_MEANINGS: Record<number, string> = {
 };
 
 function signOf(longitude: number): string {
-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)] ?? "Aries";
-}
-
-function polar(longitude: number, radius: number, center: number) {
-  const angle = ((longitude - 90) * Math.PI) / 180;
-  return {
-    x: center + Math.cos(angle) * radius,
-    y: center + Math.sin(angle) * radius,
-  };
+  return signAtLongitude(longitude) ?? "Aries";
 }
 
 function evaluateTraditionalPlacementRule(

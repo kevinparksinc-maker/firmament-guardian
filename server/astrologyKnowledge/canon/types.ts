@@ -1,4 +1,4 @@
-import type { Tradition } from "../types";
+import type { Tradition } from "../evidenceTypes";
 import type { PlanetInHouseKnowledgeRecord } from "./planetInHouseInterpretations";
 
 /**

@@ -1,13 +1,12 @@
+import type { HoraryAspect, HoraryChart, HoraryInput, HoraryPlacement } from "./horaryTypes";
 import { calculateMasterChart as calculateChart } from "./masterChart/entry";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
-import { type ChartInput } from "./astronomy";
 import { withCurrentQuestion } from "./_core/conversation";
 import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
-import { normalizeLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
-import type { FrameRelationship } from "./astrologyCore";
+import { normalizeLongitude, signAtLongitude as signOf } from "../shared/hybrid";
 import { HORARY_TOPICS } from "../shared/horary";
-import { calculateLookahead, type Lookahead } from "./horaryLookahead";
-import { calculateTraditionalHorary, type TraditionalHoraryEvidence } from "./horaryTraditional";
+import { calculateLookahead } from "./horaryLookahead";
+import { calculateTraditionalHorary } from "./horaryTraditional";
 import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever";
 import { getPlanetInHouseKnowledge } from "./astrologyKnowledge/canon/planetInHouseInterpretations";
 import { synthesizeHoraryWithGroq } from "./services/groqHoraryService";
@@ -18,78 +17,8 @@ import {
   type HoraryQuestionAnalysis,
 } from "./horaryQuestionAnalyzer";
 
+export type { HoraryChart, HoraryInput } from "./horaryTypes";
 export type { HoraryQuestionAnalysis, HoraryQuestionType } from "./horaryQuestionAnalyzer";
-
-export type HoraryInput = Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time"> & {
-  question: string;
-  subject?: "querent" | "other";
-  topicHouse?: number;
-  /** House of the person asked about, counted from the querent. */
-  subjectHouse?: number;
-  /** Precomputed Step 1 question analysis (auto-determined when omitted). */
-  questionAnalysis?: HoraryQuestionAnalysis;
-  natal?: Pick<ChartInput, "location" | "latitude" | "longitude" | "timezone" | "date" | "time">;
-};
-
-type HoraryPlacement = {
-  name: string;
-  longitude: number;
-  display: string;
-  sign: string;
-  house: number;
-  retrograde: boolean;
-  speed: number;
-  godHouse?: number;
-  agentHouse?: number;
-  frameRelationship?: FrameRelationship;
-};
-
-type HoraryAspect = {
-  first: string;
-  second: string;
-  aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition";
-  orb: number;
-  phase: "applying" | "separating" | "unclear";
-};
-
-export type HoraryChart = {
-  question: string;
-  questionAnalysis: HoraryQuestionAnalysis;
-  subject: "querent" | "other";
-  subjectHouse: number;
-  subjectRuler: string;
-  topicHouse: number;
-  actualTopicHouse: number;
-  topicLabel: string;
-  additionalTopicHouses: Array<{
-    relativeHouse: number;
-    actualHouse: number;
-    sign: string;
-    ruler: string;
-    label: string;
-  }>;
-  askedAt: string;
-  location: string;
-  timezone: string;
-  houseSystem: "Equal House";
-  ascendant: { longitude: number; display: string; sign: string };
-  querentRuler: string;
-  topicRuler: string;
-  moon: HoraryPlacement;
-  houses: Array<{ house: number; longitude: number; sign: string; ruler: string }>;
-  placements: HoraryPlacement[];
-  relevantAspects: HoraryAspect[];
-  otherCloseAspects: HoraryAspect[];
-  lookahead: Lookahead;
-  natalChart?: Awaited<ReturnType<typeof calculateChart>>;
-  transitChart: Awaited<ReturnType<typeof calculateChart>>;
-  godChart: Awaited<ReturnType<typeof calculateChart>>;
-  traditional: TraditionalHoraryEvidence;
-  canonEvidenceText: string;
-  evidenceText: string;
-  judgmentEvidenceText: string;
-  unifiedSynthesisSnapshotId?: string;
-};
 
 const TRADITIONAL_RULERS: Record<string, string> = {
   Aries: "Mars", Taurus: "Venus", Gemini: "Mercury", Cancer: "Moon",
@@ -101,10 +30,6 @@ const ASPECT_TARGETS: Array<[number, HoraryAspect["aspect"]]> = [
   [0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"],
 ];
 const ASPECT_ORB_DEGREES = 5;
-function signOf(longitude: number) {
-  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
-}
-
 function ordinal(value: number) {
   const remainder = value % 100;
   const suffix = remainder >= 11 && remainder <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[value % 10] ?? "th";

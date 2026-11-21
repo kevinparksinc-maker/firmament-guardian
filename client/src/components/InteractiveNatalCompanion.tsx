@@ -1,20 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  Sparkles,
-  Send,
-  User,
-  Bot,
-  RotateCcw,
-  Compass,
-  Heart,
-  Briefcase,
-  Shield,
-  HelpCircle,
-  Clock,
-  ChevronRight,
-  Copy,
-  Check,
-} from "lucide-react";
+import { Sparkles, Send, User, Bot, RotateCcw, Compass, Heart, Briefcase, Shield, Clock, ChevronRight, Copy, Check } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
 import { Streamdown } from "streamdown";
