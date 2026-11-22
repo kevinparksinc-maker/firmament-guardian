@@ -1,5 +1,6 @@
 import { invokeLLM } from "../../_core/llm";
 import { stringifyEvidence } from "./evidenceTransport";
+import { READING_BEHAVIOR_DIRECTIVE } from "../../master-interpreter";
 import type { SynthesisResult } from "./types";
 
 type Request = Parameters<typeof invokeLLM>[0];
@@ -360,6 +361,16 @@ export async function runInterpretation(
     // at index 1. Some JSON routes require that stable contract. All providers
     // collect system-role messages independently of their position.
     messages.splice(index, 0, sharedContract, dossier);
+  }
+  // Apply the behavior contract to every route, including placement-reference,
+  // while avoiding duplicate instructions in routes using the Master Interpreter.
+  const alreadyUsesReadingBehavior = messages.some(message =>
+    message.role === "system" &&
+    typeof message.content === "string" &&
+    message.content.includes("NON-NEGOTIABLE SPECIFICITY FILTER — KILL IT")
+  );
+  if (!alreadyUsesReadingBehavior) {
+    messages.unshift({ role: "system", content: READING_BEHAVIOR_DIRECTIVE });
   }
   const response = await invokeLLM({ ...request, messages });
   const finish = response.choices?.[0]?.finish_reason;

@@ -1,7 +1,7 @@
 import type { Message } from "./_core/llm";
 import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
-import { PSYCHOLOGICAL_PORTRAIT_PROMPT } from "./master-interpreter";
+import { MASTER_INTERPRETER_PROMPT } from "./master-interpreter";
 import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
 import type { ChartResult } from "./astronomy";
 import {
@@ -17,7 +17,7 @@ export interface CompanionChatResponse {
   focusedPlacements: string[];
 }
 
-const COMPANION_CONSTITUTION = `${PSYCHOLOGICAL_PORTRAIT_PROMPT}
+const COMPANION_CONSTITUTION = `${MASTER_INTERPRETER_PROMPT}
 
 INTERACTIVE CONVERSATION RULES:
 - You are walking through the reader's chart in direct conversation. Answer their exact question first, drawing on the full calculated dossier silently.

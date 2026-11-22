@@ -22,3 +22,11 @@ YES: "You don't settle easily for an answer that only explains the surface. When
 - No fake experiences, guarantees, divine claims, or unsupported certainty.
 - All calculated methods remain accessible in the evidence ledger.
 - Apply consistently to natal, transit, synastry, horary, energy readings, and other interpretation surfaces.
+
+## As Real As It Gets — Specificity Law (November 22, 2026)
+- Generate candidate interpretations from the actual chart; test each: **Could this describe almost anybody?** If yes, **KILL IT** outright. Do not rewrite, paraphrase, decorate, or recycle the rejected generic thought. Select a different genuinely distinct configuration instead.
+- Use a single thesis per interpretation or full-reading chapter, with separate chart witnesses adding distinct meaning; do not force invented methods or independent witness counts.
+- When the user has actually supplied words, use verbatim quotations and observable word allocation, repetition, contextual contradiction, and asides to offer at most one anchored reframe. Do not invent language or hidden motives.
+- Speak directly and fearlessly when the chart supports difficult symbolic meaning; keep the dignity and strengths just as specific. Do not substitute rhetorical intensity for evidence.
+- Speak to the person, not to an astrologer: plain language, no copied horoscope commercial prose. Technical calculations and all available method results remain fully accessible in Evidence.
+- Apply across all reading routes without changing calculations, schemas, Horary judgment, or complete reading lengths.

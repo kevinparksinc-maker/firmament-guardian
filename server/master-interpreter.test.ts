@@ -6,7 +6,7 @@ vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
 import { askHost } from "./host";
 import { followUp, generateChapter } from "./interpretation";
 import { calculateChart, type ChartResult } from "./astronomy";
-import { MASTER_INTERPRETER_PROMPT, FULL_SYNTHESIS_STYLE, DEEP_SYNTHESIS_METHOD, buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { MASTER_INTERPRETER_PROMPT, FULL_SYNTHESIS_STYLE, DEEP_SYNTHESIS_METHOD, MINI_SYNTHESIS_STYLE, READING_BEHAVIOR_DIRECTIVE, buildAstrologyInterpreterSystem } from "./master-interpreter";
 
 let chart: ChartResult;
 beforeAll(async () => {
@@ -36,6 +36,12 @@ describe("Master Interpreter prompt coverage", () => {
   it("keeps the current replacement interpretation contract and domain instructions", () => {
     expect(MASTER_INTERPRETER_PROMPT).toContain("psychological astrologer and narrative writer for The Absolute");
     expect(MASTER_INTERPRETER_PROMPT).toContain("Use the full chart silently");
+    expect(MASTER_INTERPRETER_PROMPT).toContain(READING_BEHAVIOR_DIRECTIVE);
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("IF YES — KILL IT");
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("DO NOT rewrite it");
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("Could this describe almost anybody?");
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("VERBATIM");
+    expect(MINI_SYNTHESIS_STYLE).toContain(READING_BEHAVIOR_DIRECTIVE);
     expect(MASTER_INTERPRETER_PROMPT).toContain("Write the life the reader recognizes");
     expect(MASTER_INTERPRETER_PROMPT).toContain("Give natural gifts the same weight as difficult patterns");
     expect(MASTER_INTERPRETER_PROMPT).toContain("Use short, bold section titles specific to this reader and topic");

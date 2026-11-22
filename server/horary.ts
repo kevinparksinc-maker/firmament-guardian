@@ -11,6 +11,7 @@ import { retrieveChartCanonDossier } from "./astrologyKnowledge/canon/retriever"
 import { getPlanetInHouseKnowledge } from "./astrologyKnowledge/canon/planetInHouseInterpretations";
 import { synthesizeHoraryWithGroq } from "./services/groqHoraryService";
 import { scrubLeaks } from "./astrologyKnowledge/synthesis/narrative";
+import { READING_BEHAVIOR_DIRECTIVE } from "./master-interpreter";
 import {
   analyzeHoraryQuestionHeuristic,
   analyzeHoraryQuestionWithAI,
@@ -404,6 +405,10 @@ Write the reading in clear, grounded, direct 2026 English—as a perceptive life
 - Let difficult truths—including the person's own part in conflict or repeated mistakes—stand honestly alongside real strengths, always showing why the chart leads there, and never invent personal events or medical diagnoses.`;
 
 const HORARY_SYSTEM = `${HORARY_FULL_SYNTHESIS_STYLE}
+
+${READING_BEHAVIOR_DIRECTIVE}
+
+HORARY OVERRIDE: Preserve the traditional judgment and exactly four required Horary sections. The specificity filter improves spoken insight, not the computed verdict; never fabricate evidence or personal language.
 
 THE ABSOLUTE — MASTER HORARY INTERPRETER
 CALCULATE DEEPLY. JUDGE HIERARCHICALLY. INTERPRET HUMANLY.
