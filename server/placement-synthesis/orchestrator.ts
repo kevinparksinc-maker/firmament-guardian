@@ -45,6 +45,11 @@ ${packet.convergences.length ? packet.convergences.join("\n") : "None returned."
 CROSS-METHOD CONTRADICTIONS:
 ${packet.contradictions.length ? packet.contradictions.join("\n") : "None returned."}
 
+SILENT SPECIFICITY SELECTION BEFORE WRITING:
+- Construct multiple distinct candidate conclusions from actually reported placements and intersecting method results. For each ask: "Could this describe almost anybody?" If yes, KILL that entire candidate, without rephrasing or recycling its generic premise.
+- Select one genuinely chart-distinct controlling thesis corroborated by materially different calculated witnesses; if none exists, report the evidence gap rather than manufacturing a personality reading. Citation IDs must identify actual supporting evidence, not decorate a stock claim.
+- Only after this selection may you write reader-facing prose.
+
 Write two flowing second-person paragraphs in plainspoken, recognizable everyday language. Translate converging layers into one coherent insight and show how conflicting pulls take turns in ordinary life: what you do, what you are protecting or trying to get, what comes naturally that others rely on you for, and what that pattern costs you. Keep ALL astrology terminology out of the two paragraphs—never name planets, zodiac signs, houses, degrees, aspects, lunar mansions, bounds, faces, or Lots. Do not output bullet lists, headings, method inventories, or invented events/diagnoses/motives. Return one claim per line with a suffix [evidence: id1, id2]. For every time-specific claim use [timing: activation-id, other-id] and include a calculated placement activation ID. Use a single blank line between the two groups of claims. These suffixes are private annotations stripped before display.`;
 }
 

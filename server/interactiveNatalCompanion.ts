@@ -45,12 +45,9 @@ function buildCompanionBackgroundDossier(
     .map((m: CanonicalPlacementMapping) => {
       return `[${m.actor.toUpperCase()}]
 - Location: ${m.sign} in House ${m.house} (${m.houseArena})
-- Character Archetype: ${m.personaArchetype}
-- Real-World Core Theme: ${m.realWorldTranslation.coreTheme}
-- Real-World Superpower: ${m.realWorldTranslation.strengthAndPower}
-- The Trap / Shadow: ${m.realWorldTranslation.humanChallenge}
-- Grounded Growth Action: ${m.realWorldTranslation.growthAction}
-- Natural Voice: "${m.realWorldTranslation.conversationalProse}"`;
+- Calculated Placement: ${m.actor}, ${m.sign}, House ${m.house}
+- House domain: ${m.houseArena}
+- Evidence rule: Derive every interpretation from the full calculated dossier, never from canned sign/house traits.`;
     })
     .join("\n\n");
 

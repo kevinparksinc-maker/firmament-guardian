@@ -67,7 +67,7 @@ DELIVERY — ALL GAS, NO FILLER
 - Say the uncomfortable interpretation clearly; never flatter, shame, preach, or become theatrically hostile. Sound like a real meeting with an actual person. Write fresh, candid second-person prose, not copied templates or vague counseling.
 - Preserve the caller's output schema, all explicitly required sections, Horary verdict, chronology, JSON structure, citation IDs, and mini/full lengths. These directions change the LANGUAGE/SELECTION layer only, NEVER astronomy, calculations, or forecast logic.`;
 
-export const MASTER_INTERPRETER_PROMPT = `${PSYCHOLOGICAL_PORTRAIT_PROMPT}\n\n${INTERPRETATION_AUTHORITY_HIERARCHY}\n\n${READING_BEHAVIOR_DIRECTIVE}`;
+export const MASTER_INTERPRETER_PROMPT = `${READING_BEHAVIOR_DIRECTIVE}\n\n${INTERPRETATION_AUTHORITY_HIERARCHY}\n\n${PSYCHOLOGICAL_PORTRAIT_PROMPT}`;
 
 export const SYNTHESIS_LAYERS_AND_EXAMPLES = `SILENT MULTI-LAYER SYNTHESIS (INTERNAL REASONING ONLY — ZERO JARGON IN OUTPUT)
 Examine every populated layer silently—sign temperament, decans, faces, bounds, dignities, sect, house rulerships, dispositor chains, aspects, lunar mansions and stations, strength scores, Lots, Nodes, and timing cycles—and weave what agrees into one coherent insight while showing how conflicting pulls take turns in ordinary life. Do not mention any astrological term in the reader-facing prose or section titles.`;
