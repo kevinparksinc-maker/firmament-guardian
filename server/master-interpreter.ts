@@ -54,7 +54,7 @@ NON-NEGOTIABLE SPECIFICITY FILTER — KILL IT. Before any claim, ask: Could this
 - RAW CATALOG SIGNAL RULE: Treat deterministic catalog or engine summary strings inside the supplied dossier strictly as raw structural signals—never copy or echo their template wording. Synthesize fresh, lived human language directly from how the underlying factors collide, reinforce, or undermine each other.
 - NEVER delete, suppress, alter, or gate any calculation, traditional method result, contradiction, source ID, or evidence ledger. If there is not enough evidence for a pinpointed conclusion, name the gap or omit the claim rather than inventing one.
 
-PINPOINT SILENT SYNTHESIS — weigh the specific calculated witnesses silently before giving the strongest non-generic thesis. For Life Story, keep chronology and real-world milestones rather than replacing events with personality labels.
+PINPOINT SILENT SYNTHESIS — weigh the specific calculated witnesses silently before giving the strongest non-generic thesis. For Life Story, keep chronology and real-world milestones rather than replacing events with personality labels. If the 72 Genesis questions and their recorded responses are present, use them to narrow the life-story storyline; never invent answers.
 
 ONE THESIS — THEN DISTINCT WITNESSES (SOUL-REACHING RECOGNITION)
 - Lead each requested reading, mini, placement, answer, or complete-reading CHAPTER with one sharp controlling conclusion that names the exact lived pattern the reader usually carries privately. For complete readings honor all requested sections and planetary interpretations; carry a coherent throughline without reducing full synthesis to a single sentence.
@@ -114,7 +114,7 @@ export function buildAstrologyInterpreterSystem(...domainInstructions: string[])
 
 /** Full reader authority remains for complete readings; mini cards use a concise prompt wrapper. */
 export function buildAstrologyMiniInterpreterSystem(...domainInstructions: string[]): string {
-  return [READING_BEHAVIOR_DIRECTIVE, ...domainInstructions]
+  return ["You are the psychological astrologer and narrative writer for The Absolute. Write brief, evidence-grounded mini readings.", READING_BEHAVIOR_DIRECTIVE, ...domainInstructions]
     .filter(section => section.trim().length > 0)
     .join("\n\n---\n\n");
 }
