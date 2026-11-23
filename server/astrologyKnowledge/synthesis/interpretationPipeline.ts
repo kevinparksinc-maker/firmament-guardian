@@ -1,9 +1,60 @@
 import { invokeLLM } from "../../_core/llm";
-import { stringifyEvidence } from "./evidenceTransport";
 import { READING_BEHAVIOR_DIRECTIVE } from "../../master-interpreter";
+import { stringifyEvidence } from "./evidenceTransport";
 import type { SynthesisResult } from "./types";
 
 type Request = Parameters<typeof invokeLLM>[0];
+
+function truncateEvidenceText(text: unknown, maxChars: number): string {
+  const raw = typeof text === "string" ? text : text == null ? "" : String(text);
+  const clean = raw.replace(/\s+/g, " ").trim();
+  if (clean.length <= maxChars) return clean;
+  const slice = clean.slice(0, maxChars - 1);
+  const stop = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("; "), slice.lastIndexOf(" "));
+  return (stop > maxChars * 0.55 ? slice.slice(0, stop) : slice).trim() + "…";
+}
+
+function compactCalculationResults(value: unknown, depth = 0): unknown {
+  if (value === null || typeof value === "number" || typeof value === "boolean") return value;
+  if (typeof value === "string") return truncateEvidenceText(value, 180);
+  if (Array.isArray(value)) {
+    if (depth >= 2) return `[${value.length} items]`;
+    const limit = depth === 0 ? 16 : 8;
+    const head = value.slice(0, limit).map(item => compactCalculationResults(item, depth + 1));
+    return value.length > limit ? [...head, `…(+${value.length - limit})`] : head;
+  }
+  if (typeof value === "object") {
+    if (depth >= 3) return "[summary]";
+    const entries = Object.entries(value as Record<string, unknown>);
+    const limit = depth === 0 ? 18 : 12;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of entries.slice(0, limit)) {
+      out[k] = compactCalculationResults(v, depth + 1);
+    }
+    if (entries.length > limit) {
+      out._more = entries.length - limit;
+    }
+    return out;
+  }
+  return value;
+}
+
+function findingPriorityScore(finding: { subject?: string; strength?: string | number }): number {
+  const subj = finding.subject ?? "";
+  const primaryMatch = /\b(Sun|Moon|Ascendant|Descendant|Midheaven|North Node|South Node|Mercury|Venus|Mars|Jupiter|Saturn|D9|D10|Lagna|Shadbala|Bhava Bala|Mansion|Manzil|Nakshatra|Decan)\b/i.test(subj) ? 10 : 0;
+  const s = finding.strength;
+  const strScore =
+    typeof s === "number"
+      ? s
+      : s === "dominant"
+        ? 4
+        : s === "strong"
+          ? 3
+          : s === "moderate"
+            ? 2
+            : 1;
+  return primaryMatch + strScore;
+}
 
 export function interpretationEvidence(synthesis: SynthesisResult) {
   const canon = Array.from(
@@ -137,7 +188,6 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
   };
 }
 
-/** Bounded Horary handoff: every method/status, budgeted findings, accurate omission counts. */
 export function horaryInterpretationEvidence(synthesis: SynthesisResult) {
   const methods = synthesis.methodOutcomes;
   const perMethod = Math.max(700, Math.floor(12_000 / Math.max(1, methods.length)));
@@ -198,7 +248,7 @@ function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
   // paragraph. This is a focused *reading* packet, not a raw chart archive.
   // Keep every method/status and explicit omission counts when a method's
   // selected details exceed its share of the model request budget.
-  const perMethodBudget = Math.max(360, Math.floor(16_000 / Math.max(1, synthesis.methodOutcomes.length)));
+  const perMethodBudget = Math.max(210, Math.floor(10_000 / Math.max(1, synthesis.methodOutcomes.length)));
   const short = (value: unknown, limit: number) => {
     const text = typeof value === "string" ? value : value == null ? "" : String(value);
     return text.length > limit ? text.slice(0, limit) + "…" : text;
@@ -284,6 +334,36 @@ export function interpretationText(
   ).trim();
 }
 
+export function parseLlmJsonObject(
+  rawText: string,
+  errorCode = "INTERPRETATION_INVALID_JSON"
+): unknown {
+  const cleaned = rawText
+    .trim()
+    .replace(/^\s*```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
+  if (!cleaned) {
+    throw new Error(`${errorCode}: Provider returned empty structured output.`);
+  }
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(cleaned.slice(start, end + 1));
+      } catch {
+        // Fall through to contextual error below
+      }
+    }
+    throw new Error(
+      `${errorCode}: Provider returned unreadable structured output.`
+    );
+  }
+}
+
 /** A single evidence handoff. Placement retains the original wire format. */
 export async function runInterpretation(
   route: string,
@@ -315,62 +395,53 @@ export async function runInterpretation(
       content:
         placement.content +
         "\n\nFULL CALCULATED CHART AND METHOD OUTCOMES:\n" +
-        stringifyEvidence(
-          interpretationEvidence(ledgers[0])
-        ),
+        stringifyEvidence(interpretationEvidence(ledgers[0]))
     };
   } else {
-    // Universal placement-reference reasoning contract. This is intentionally
-    // output-format-neutral: Horary verdicts, JSON plans and energy ledgers keep
-    // their specialized schemas. Placement itself is left byte-for-byte intact.
     const sharedContract = {
       role: "system" as const,
-      content: [
-        "UNIVERSAL EVIDENCE-WEAVING CONTRACT (all chart interpretation routes):",
-        "Read every applicable calculated method and its status. Treat unavailable, failed, not-calculated and reference-only methods as gaps, never as facts.",
-        "Derive conclusions from actual evidence IDs and method findings. Connect rulerships, occupations, aspects, timing, God/Agent differences, and cross-tradition agreement or contradiction where calculated.",
-        route === "LIFE_STORY"
-          ? "For LIFE_STORY, interpret convergence as concrete life circumstances, opportunities, disruptions, milestones and long-term consequences in chronological order. Do not convert these into behavior or personality traits."
-          : "Do not list parallel methods as a substitute for interpretation. Explain what converging and conflicting evidence means together for the question and for recognizable everyday behavior.",
-        route === "LIFE_STORY"
-          ? "For LIFE_STORY, write in second person like a deep biography of possible life events. Support the strongest plausible external storyline with the supplied methods; never invent a verified biographical fact or missing calculation."
-          : "Speak directly to the reader in second person, with concrete strengths, costs and difficult truths. Never invent personal events, motives, astronomical placements or missing calculations.",
-        "Keep all evidence references in the requested technical/structured fields when the route requires them. Follow the route-specific JSON schema, Horary verdict, chapter plan or other output contract exactly.",
-        "Do not claim to have used evidence that was not actually delivered.",
-      ].join("\n"),
+      content: "UNIVERSAL EVIDENCE-WEAVING CONTRACT: Read all applicable calculated methods and their statuses. Do not list parallel methods as a substitute for interpretation. Explain their convergence, contradictions and implications without invented facts. Preserve route-specific Horary verdicts, JSON schemas and evidence IDs.",
     };
-    const evidence = typeof layout === "object"
-      ? stringifyEvidence(ledgers.map(ledger => focusedPlacementEvidence(ledger, layout.focusedPlacement)))
-      : layout === "horary-compact"
-        ? stringifyEvidence(ledgers.map(horaryInterpretationEvidence))
-        : stringifyEvidence(ledgers.map(interpretationEvidence));
+    const evidence =
+      typeof layout === "object"
+        ? stringifyEvidence(ledgers.map(ledger => focusedPlacementEvidence(ledger, layout.focusedPlacement)))
+        : layout === "horary-compact"
+          ? stringifyEvidence(ledgers.map(horaryInterpretationEvidence))
+          : stringifyEvidence(ledgers.map(interpretationEvidence));
     const dossier = {
       role: "user" as const,
       content:
         (typeof layout === "object"
           ? "FOCUSED PLACEMENT DOSSIER. Read every method row. Apply chart-wide context only when it bears directly on the selected placement. Treat missing findings and method statuses as limits on interpretation.\n"
-          : "COMPLETE CALCULATED INTERPRETATION DOSSIER. Consider every applicable method, connecting agreement and tension to the specific question. Read each table using its matching column names. canonRefs index the canon table. Respect frames, evidence IDs and method status. Never fill gaps from inference. Previous prose is conversation context only.\n") +
+          : layout === "horary-compact"
+            ? "HORARY CALCULATED METHOD DOSSIER. Every registered method and status is present. The specific Horary judgment testimony is in the preceding user message. Findings are budgeted and exact omitted counts are supplied; never invent evidence omitted for size.\n"
+            : "COMPLETE CALCULATED INTERPRETATION DOSSIER. Consider every applicable method, connecting agreement and tension to the specific question. Read each table using its matching column names. canonRefs index the canon table. Respect frames, evidence IDs and method status. Never fill gaps from inference. Previous prose is conversation context only.\n") +
         evidence,
     };
-    if (layout === "horary-compact") {
-      dossier.content = "HORARY CALCULATED METHOD DOSSIER. Every registered method and status is present. The specific Horary judgment testimony is in the preceding user message. Findings are budgeted and exact omitted counts are supplied; never invent evidence omitted for size.\n" + evidence;
-    }
     // Preserve the domain packet and keep the current turn last in conversations.
-    const index = firstUser < 0 ? messages.length : firstUser + 1;
-    // Keep the route-specific system prompt at index 0 and its original input
-    // at index 1. Some JSON routes require that stable contract. All providers
-    // collect system-role messages independently of their position.
+    const index =
+      firstUser < 0
+        ? messages.length
+        : firstUser === messages.length - 1
+          ? firstUser + 1
+          : messages.length - 1;
     messages.splice(index, 0, sharedContract, dossier);
   }
   // Apply the behavior contract to every route, including placement-reference,
   // while avoiding duplicate instructions in routes using the Master Interpreter.
-  const alreadyUsesReadingBehavior = messages.some(message =>
-    message.role === "system" &&
-    typeof message.content === "string" &&
-    message.content.includes("NON-NEGOTIABLE SPECIFICITY FILTER — KILL IT")
+  const alreadyUsesReadingBehavior = messages.some(
+    message =>
+      message.role === "system" &&
+      typeof message.content === "string" &&
+      message.content.includes("THE ABSOLUTE — AS REAL AS IT GETS: SOUL-DEEP READING-BEHAVIOR CONTRACT")
   );
   if (!alreadyUsesReadingBehavior) {
-    messages.unshift({ role: "system", content: READING_BEHAVIOR_DIRECTIVE });
+    const firstNonSystem = messages.findIndex(m => m.role !== "system");
+    const insertAt = firstNonSystem < 0 ? messages.length : firstNonSystem;
+    messages.splice(insertAt, 0, {
+      role: "system",
+      content: READING_BEHAVIOR_DIRECTIVE,
+    });
   }
   const response = await invokeLLM({ ...request, messages });
   const finish = response.choices?.[0]?.finish_reason;

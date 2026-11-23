@@ -7,7 +7,7 @@ import {
 import { z } from "zod";
 import type { ChartResult } from "./astronomy";
 import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
-import { buildAstrologyInterpreterSystem } from "./master-interpreter";
+import { buildAstrologyMiniInterpreterSystem } from "./master-interpreter";
 import {
   synthesizeChartForReading,
   synthesizeMasterSnapshot,
@@ -359,7 +359,7 @@ async function generatePlacementParagraphs(
   packets: ReturnType<typeof buildPlacementPackets>,
   synthesis: SynthesisResult
 ): Promise<ChartPageReading> {
-  const instruction = buildAstrologyInterpreterSystem(
+  const instruction = buildAstrologyMiniInterpreterSystem(
     `Write only the requested placement readings in candid, plainspoken, intimate second-person prose ("you / your"). Read the entire calculated packet silently and weave converging layers into one grounded everyday insight, giving natural gifts the same weight as difficult patterns.
 Return JSON {"placements":[{"name":"Sun","paragraph":"...","evidenceIds":["..."],"layerIds":["..."]}]}.
 REQUIREMENTS:
