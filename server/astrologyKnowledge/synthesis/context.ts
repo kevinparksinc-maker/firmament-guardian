@@ -1,5 +1,4 @@
 import { stringifyEvidence } from "./evidenceTransport";
-import { INTERPRETATION_AUTHORITY_HIERARCHY } from "../../master-interpreter";
 import type { SynthesisResult } from "./types";
 
 /** Lossless text/source interning keeps ALL judged findings within the interpreter packet. */
@@ -90,7 +89,6 @@ export function packSynthesis(synthesis: SynthesisResult) {
 export function formatSynthesisContext(synthesis: SynthesisResult) {
   return [
     "UNIFIED MASTER SYNTHESIS — CALCULATED METHOD FINDINGS AND CANON RULE APPLICATIONS",
-    INTERPRETATION_AUTHORITY_HIERARCHY,
     "The authoritative inputs are sourceSnapshot, calculatedMethodOutcomes, fullMethodOutcomes and fullCanonApplications. Read every supplied calculation and outcome, including findings whose rule-based interpretation failed. The compact rows below are an additional view, never a selection gate. Rows use judgmentColumns. In judgmentParts, a number means the exact textTable entry; strings are literal text. Concatenate the parts IN ORDER to read the full judgment. sourceRefs index canonApplications. ALL judgments are retained; these references only avoid repeated text. Cite the original evidence ID strings, never the numeric text/source references.",
     "Each judgment already applies its specific Canon to its actual findings. Reconcile their support, pressure and conditions using WHAT → WHY → HOW → CONSEQUENCE → MEANING. Reconcile the raw calculations and Canon directly when a rule-based judgment is incomplete. Preserve method execution statuses; do not invent a calculation that is absent.",
     "Unprefixed evidence belongs to the base chart. transit: identifies the separate event sky. chartScope identifies natal/event independently of God/Agent/shared frame. God House sectors are fixed background fields; Agent houses follow the real local horizon. Divisional and timing results seeded from an event are event-model results, never a person's natal biography.",
@@ -142,7 +140,7 @@ function selectRepresentativeFindings<T extends { subject: string; strength?: st
   if (findings.length <= limit) return findings;
 
   // Keep highest-strength and core luminary/angle subjects first.
-  const priorityRe = /\b(Sun|Moon|Ascendant|Midheaven|North Node|Mercury|Venus|Mars|Jupiter|Saturn|D9|D10|Lagna)\b/i;
+  const priorityRe = /\b(Sun|Moon|Ascendant|Descendant|Midheaven|North Node|South Node|Mercury|Venus|Mars|Jupiter|Saturn|D9|D10|Lagna|Shadbala|Bhava Bala|Mansion|Manzil|Nakshatra|Decan)\b/i;
   const sorted = [...findings].sort((a, b) => {
     const aPri = priorityRe.test(a.subject) ? 1 : 0;
     const bPri = priorityRe.test(b.subject) ? 1 : 0;
@@ -153,22 +151,21 @@ function selectRepresentativeFindings<T extends { subject: string; strength?: st
 }
 
 /**
- * Compact LLM packet (~12k-20k tokens vs ~555k tokens in packSynthesis).
- * Drops duplicate fullMethodOutcomes/sourceSnapshot/audit blobs and bounds high-cardinality
- * tables (D2-D60 vargas, 57 transit essays) while preserving method IDs. Evidence IDs and text are summarized; coverage below reports omissions. The complete interpretation dossier is authoritative.
+ * Compact LLM packet preserving all method IDs, evidence IDs, Canon rules,
+ * and sufficient finding depth across every calculated system.
  */
 export function packCompactSynthesisForLLM(
   synthesis: SynthesisResult,
   options: CompactSynthesisOptions = {}
 ) {
   const opts = {
-    maxJudgmentChars: options.maxJudgmentChars ?? 135,
-    maxVargaRows: options.maxVargaRows ?? 4,
-    maxTransitRows: options.maxTransitRows ?? 12,
-    maxHouseRows: options.maxHouseRows ?? 8,
-    maxOtherRows: options.maxOtherRows ?? 6,
+    maxJudgmentChars: options.maxJudgmentChars ?? 300,
+    maxVargaRows: options.maxVargaRows ?? 8,
+    maxTransitRows: options.maxTransitRows ?? 16,
+    maxHouseRows: options.maxHouseRows ?? 12,
+    maxOtherRows: options.maxOtherRows ?? 12,
   };
-  const preserveFullMethodRegistry = options.preserveFullMethodRegistry ?? false;
+  const preserveFullMethodRegistry = options.preserveFullMethodRegistry ?? true;
 
   const allSources = Array.from(
     new Map(
@@ -209,24 +206,55 @@ export function packCompactSynthesisForLLM(
     ? fullSourceIndex
     : new Map(sources.map((rule, index) => [`${rule.ruleId}:${rule.sourceTitle ?? ""}`, index]));
 
+  const findingsTotal = rawOutcomes.reduce((n, item) => n + item.outcome.findingJudgments.length, 0);
+  const findingsIncluded = rawOutcomes.reduce((n, item) => n + item.selected.length, 0);
+  const omittedFindings = rawOutcomes.reduce(
+    (n, item) => n + item.outcome.findingJudgments.length - item.selected.length,
+    0
+  );
+  const shortenedJudgments = rawOutcomes.reduce(
+    (n, item) =>
+      n +
+      item.selected.filter(
+        f => f.judgment.replace(/\s+/g, " ").trim().length > opts.maxJudgmentChars
+      ).length,
+    0
+  );
+  const truncated =
+    rawOutcomes.some(
+      item =>
+        item.selected.length < item.outcome.findingJudgments.length ||
+        item.selected.some(
+          f =>
+            f.judgment.replace(/\s+/g, " ").trim().length > opts.maxJudgmentChars ||
+            f.evidenceIds.length > 5
+        )
+    ) ||
+    synthesis.methodFindings.some(
+      method => preserveFullMethodRegistry && method.evidenceIds.length > 24
+    ) ||
+    synthesis.contradictionsAndTensions.length > 8 ||
+    synthesis.themes.length > 12 ||
+    synthesis.themes
+      .slice(0, 12)
+      .some(theme => theme.humanTheme.replace(/\s+/g, " ").trim().length > 240);
+
   return {
     snapshotId: synthesis.snapshotId,
     coverage: {
-      summaryOnly: true,
-      findingsTotal: rawOutcomes.reduce((n, item) => n + item.outcome.findingJudgments.length, 0),
-      findingsIncluded: rawOutcomes.reduce((n, item) => n + item.selected.length, 0),
-      omittedFindings: rawOutcomes.reduce((n, item) => n + item.outcome.findingJudgments.length - item.selected.length, 0),
-      shortenedJudgments: rawOutcomes.reduce((n, item) => n + item.selected.filter(f => f.judgment.replace(/\s+/g, " ").trim().length > opts.maxJudgmentChars).length, 0),
-      truncated: rawOutcomes.some(item => item.selected.length < item.outcome.findingJudgments.length || item.selected.some(f => f.judgment.replace(/\s+/g, " ").trim().length > opts.maxJudgmentChars || f.evidenceIds.length > 3))
-        || synthesis.methodFindings.some(method => preserveFullMethodRegistry && method.evidenceIds.length > 16)
-        || synthesis.contradictionsAndTensions.length > 6 || synthesis.themes.length > 10
-        || synthesis.themes.slice(0, 10).some(theme => theme.humanTheme.replace(/\s+/g, " ").trim().length > 160),
+      summaryOnly: truncated,
+      findingsTotal,
+      findingsIncluded,
+      omittedFindings,
+      shortenedJudgments,
+      truncated,
+      upstreamAuditPassed: synthesis.qualityAudit?.passed ?? null,
     },
     methodFindings: (synthesis.methodFindings ?? []).map(({ findings: _raw, ...metadata }) => {
       if (preserveFullMethodRegistry) {
         return {
           ...metadata,
-          evidenceIds: (metadata.evidenceIds ?? []).slice(0, 16),
+          evidenceIds: (metadata.evidenceIds ?? []).slice(0, 24),
         };
       }
       return {
@@ -254,7 +282,7 @@ export function packCompactSynthesisForLLM(
       findingJudgments: selected.map(f => [
         f.subject,
         truncateSentence(f.judgment ?? "", opts.maxJudgmentChars),
-        (f.evidenceIds ?? []).slice(0, 3),
+        (f.evidenceIds ?? []).slice(0, 5),
         Array.from(
           new Set(
             (f.rules ?? []).map(rule =>
@@ -268,10 +296,10 @@ export function packCompactSynthesisForLLM(
       ]),
     })),
     canonApplications: sources,
-    contradictionsAndTensions: (synthesis.contradictionsAndTensions ?? []).slice(0, 6),
-    themes: (synthesis.themes ?? []).slice(0, 10).map(theme => ({
+    contradictionsAndTensions: (synthesis.contradictionsAndTensions ?? []).slice(0, 8),
+    themes: (synthesis.themes ?? []).slice(0, 12).map(theme => ({
       id: theme.id,
-      humanTheme: truncateSentence(theme.humanTheme, 160),
+      humanTheme: truncateSentence(theme.humanTheme, 240),
     })),
     ...(synthesis.timingOverview ? { timingOverview: synthesis.timingOverview } : {}),
   };
@@ -283,9 +311,7 @@ export function formatCompactSynthesisContext(
 ) {
   return [
     "UNIFIED MASTER SYNTHESIS — COMPACT METHOD FINDINGS AND CANON APPLICATIONS",
-    INTERPRETATION_AUTHORITY_HIERARCHY,
     "Rows use judgmentColumns ([subject, judgment, evidenceIds, sourceRefs, valence, strength, frame]). sourceRefs index canonApplications. Preserve method execution statuses, separate natal (unprefixed) from event (transit:), and separate God House sectors from Agent local horizon houses. Cite original evidence ID strings, never sourceRef integers.",
     JSON.stringify(packCompactSynthesisForLLM(synthesis, options)),
   ].join("\n");
 }
-
