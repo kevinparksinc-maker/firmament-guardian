@@ -248,7 +248,7 @@ function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
   // paragraph. This is a focused *reading* packet, not a raw chart archive.
   // Keep every method/status and explicit omission counts when a method's
   // selected details exceed its share of the model request budget.
-  const perMethodBudget = Math.max(240, Math.floor(12_000 / Math.max(1, synthesis.methodOutcomes.length)));
+  const perMethodBudget = Math.max(210, Math.floor(10_000 / Math.max(1, synthesis.methodOutcomes.length)));
   const short = (value: unknown, limit: number) => {
     const text = typeof value === "string" ? value : value == null ? "" : String(value);
     return text.length > limit ? text.slice(0, limit) + "…" : text;
