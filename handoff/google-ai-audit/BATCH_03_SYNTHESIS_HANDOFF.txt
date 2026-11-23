@@ -1,0 +1,1228 @@
+THE ABSOLUTE — COMPLETE, PASTE-READY SOURCE CODE
+BATCH 3 — synthesizer.ts + context.ts + readingBridge.ts + interpretationPipeline.ts
+Repository: https://github.com/kevinparksinc-maker/firmament-guardian
+Pinned exact source commit: 884d669a1deae3e2b7c3857ad5f5e4a641a79838
+Do not paste separator headers into TypeScript source files.
+
+========================================================================================
+FILE 1 OF 4 — ORIGINAL PATH: server/astrologyKnowledge/synthesis/synthesizer.ts
+SOURCE BLOB SHA: 0186ee18592d6de9517856892077d9868567adb2
+========================================================================================
+
+import type {
+  SynthesisInput,
+  SynthesisResult,
+} from "./types";
+import { extractPropositionsFromMethodOutcomes } from "./normalizer";
+import { clusterPropositionsIntoThemes } from "./clustering";
+import { buildMethodOutcomes } from "./methodOutcomes";
+
+export async function synthesizeMasterReading(
+  input: SynthesisInput
+): Promise<SynthesisResult> {
+  const { snapshot, readingMode } = input;
+
+  // 1. Extract normalized propositions across all available traditions and methods
+  const suppliedCanon = input.canonApplications ?? [];
+  const methodOutcomes = buildMethodOutcomes(snapshot, suppliedCanon);
+  const canonApplications = Array.from(
+    new Map(
+      [...suppliedCanon, ...methodOutcomes.flatMap(outcome => outcome.canonApplications)].map(
+        rule => [rule.canonEvidenceId, rule]
+      )
+    ).values()
+  );
+  const propositions = extractPropositionsFromMethodOutcomes(methodOutcomes);
+
+  // 2. Cluster into human domain themes and reconcile tensions
+  const { themes, tensions } = clusterPropositionsIntoThemes(propositions);
+
+  // 3. Evidence-led synthesis. Never substitute generic personality prose for findings.
+  const question = input.userQuestion?.trim() || "the chart's overall configuration";
+  const relevantDomains: Record<string, string[]> = {
+    relationships: ["relationship", "marriage", "partner", "love"],
+    resources_wealth: ["money", "wealth", "finance", "income", "career pay"],
+    purpose_work: ["career", "work", "purpose", "job", "business"],
+    family_home: ["family", "home", "parent", "child"],
+    timing: ["when", "timing", "today", "transit", "future"],
+    energy_wellbeing: ["energy", "health", "wellbeing"],
+    autonomy_power: ["power", "conflict", "control", "courage"],
+  };
+  const query = question.toLowerCase();
+  const prioritized = Object.entries(relevantDomains)
+    .filter(([, terms]) => terms.some(term => query.includes(term)))
+    .map(([domain]) => domain);
+  const strengthWeight = { dominant: 4, strong: 3, moderate: 2, subtle: 1 };
+  const signal = (theme: (typeof themes)[number]) =>
+    Math.max(
+      0,
+      ...propositions
+        .filter(p => theme.linkedPropositionIds.includes(p.id))
+        .map(p => strengthWeight[p.strength])
+    );
+  const orderedThemes = [...themes].sort(
+    (a, b) =>
+      (prioritized.includes(b.domain) ? 1 : 0) - (prioritized.includes(a.domain) ? 1 : 0) ||
+      signal(b) - signal(a)
+  );
+  const methodFindings = snapshot.methodExecutionLedger.map(layer => {
+    const raw = layer.results;
+    const entries = Array.isArray(raw)
+      ? raw.map((value, index) => [String(index + 1), value] as const)
+      : raw && typeof raw === "object"
+        ? Object.entries(raw)
+        : raw == null
+          ? []
+          : [["result", raw] as const];
+    const findings = entries.map(([label, value]) => ({
+      label,
+      details: typeof value === "string" ? value : JSON.stringify(value) ?? String(value),
+    }));
+    return {
+      id: layer.id,
+      name: layer.name,
+      tradition: layer.tradition,
+      status: layer.status,
+      frame: layer.frame,
+      evidenceIds: layer.evidenceIds,
+      sourceIds: layer.sourceIds,
+      resultCount: findings.length,
+      findings,
+      ...(layer.notes ? { notes: layer.notes } : {}),
+    };
+  });
+  const methodCounts = snapshot.methodExecutionLedger.map(
+    layer =>
+      `${layer.name}: ${layer.status}${Array.isArray(layer.results) ? ` (${layer.results.length} results)` : ""}`
+  );
+  const isInternal = !question || /^(Compact|the chart's|Placement summaries|Synastry:)/i.test(question);
+  const activeMethodCount = methodOutcomes.filter(
+    outcome => outcome.status === "interpreted" || outcome.findingJudgments.length > 0
+  ).length;
+  const dominantConclusion = orderedThemes.length
+    ? isInternal
+      ? `The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. ${orderedThemes
+          .slice(0, 3)
+          .map(theme => theme.primaryConclusion)
+          .join(" ")}`
+      : `Regarding your inquiry ("${question}"): The celestial configuration is most clearly expressed through ${orderedThemes[0].humanTheme}. ${orderedThemes
+          .slice(0, 3)
+          .map(theme => theme.primaryConclusion)
+          .join(" ")}`
+    : activeMethodCount > 0
+      ? `Unclustered method outcomes are active across ${activeMethodCount} layer(s), though 0 cross-domain themes were clustered.`
+      : `The celestial configuration currently shows no qualifying interpreted method outcomes.`;
+
+  // The complete recorded results remain in the propositions and snapshot.
+  // Emit each computed finding so no doctrine disappears behind a generic summary.
+  const integratedNarrative: string[] = [
+    `Method inventory (every recorded layer): ${methodCounts.join("; ")}.`,
+    ...methodOutcomes.map(
+      outcome =>
+        `METHOD OUTCOME [${outcome.methodId}] scope=${outcome.chartScope} frame=${outcome.frame} status=${outcome.status}. Interpretation: ${outcome.interpretation} Judgment: ${outcome.judgment} Contribution: ${outcome.contribution} Evidence: ${outcome.evidenceIds.join(", ") || "none"}. Limitations: ${outcome.strengthAndLimitations.join(" | ") || "none"}.`
+    ),
+    ...canonApplications.map(
+      application =>
+        `Canon rule applied to ${application.subject}: [${application.ruleId}] ${application.statement} Source: ${application.sourceTitle}. Matched calculation evidence: ${application.calculationEvidenceIds.join(", ")}.`
+    ),
+    ...orderedThemes.map(
+      theme =>
+        `${theme.humanTheme}. WHAT: ${theme.primaryConclusion} WHY/HOW: ${theme.whyHow} CONSEQUENCE: ${theme.consequences} MEANING: ${theme.deeperMeaning} Evidence: ${theme.evidenceIds.join(", ")}.`
+    ),
+    ...propositions
+      .filter(p => p.id.startsWith("prop-method-"))
+      .map(
+        p =>
+          `[${p.tradition} / ${p.causalMechanism}] ${p.plainLanguageMeaning} [Evidence: ${p.supportingEvidenceIds.join(", ")}]`
+      ),
+  ];
+
+  // 5. Build Evidence Trace Map (mapping every theme to its underlying evidence IDs)
+  const evidenceTraceMap: Record<string, string[]> = {};
+  for (const theme of themes) {
+    evidenceTraceMap[theme.id] = theme.evidenceIds;
+  }
+  evidenceTraceMap["dominant-conclusion"] = orderedThemes[0]?.evidenceIds ?? [];
+
+  // 6. Summarize Method Ledger
+  const ledger = snapshot.methodExecutionLedger;
+  const methodLedgerSummary = {
+    totalEvaluated: ledger.length,
+    computedWithResult: ledger.filter(l => l.status === "computed-with-result").length,
+    referenceOnly: ledger.filter(l => l.status === "reference-only").length,
+    notApplicable: ledger.filter(l => l.status === "not-applicable").length,
+    failed: ledger.filter(l => l.status === "failed").length,
+  };
+
+  // 7. Evidence coverage audit. Do not claim a perfect score without checking.
+  const expectedEvidenceIds = new Set(
+    ledger.filter(l => l.status === "computed-with-result").flatMap(l => l.evidenceIds)
+  );
+  // Only evidence actually incorporated into a synthesized theme counts as interpreted.
+  // Inventory-only ledger entries cannot inflate the interpretation coverage score.
+  const tracedEvidenceIds = new Set(themes.flatMap(theme => theme.evidenceIds));
+  const missingEvidenceIds = Array.from(expectedEvidenceIds).filter(
+    id => !tracedEvidenceIds.has(id)
+  );
+  const computedLayers = ledger.filter(l => l.status === "computed-with-result");
+  const interpretedMethodIds = new Set(
+    methodOutcomes
+      .filter(
+        outcome =>
+          outcome.status === "interpreted" &&
+          outcome.findingJudgments.every(finding =>
+            themes.some(theme => theme.linkedPropositionIds.includes(finding.id))
+          )
+      )
+      .map(outcome => outcome.methodId)
+  );
+  const uninterpretedMethods = computedLayers.filter(
+    layer => !interpretedMethodIds.has(layer.id)
+  );
+  const linkedPropositionIds = new Set(themes.flatMap(theme => theme.linkedPropositionIds));
+  const interpretedCanonEvidenceIds = new Set(
+    propositions
+      .filter(proposition => linkedPropositionIds.has(proposition.id))
+      .flatMap(proposition =>
+        (proposition.canonApplications ?? []).map(application => application.canonEvidenceId)
+      )
+  );
+  const missingCanonApplications = canonApplications.filter(
+    application =>
+      application.confidence !== "reference-only" &&
+      !interpretedCanonEvidenceIds.has(application.canonEvidenceId)
+  );
+  const incompleteMethodOutcomes = methodOutcomes.filter(outcome => outcome.status === "failed");
+  const groundedRatio =
+    expectedEvidenceIds.size === 0
+      ? 1
+      : (expectedEvidenceIds.size - missingEvidenceIds.length) / expectedEvidenceIds.size;
+  const qualityAudit = {
+    groundedRatio,
+    unsupportedClaims: [
+      ...incompleteMethodOutcomes.map(
+        outcome => `Method judgment failed: ${outcome.methodId}: ${outcome.interpretation}`
+      ),
+      ...missingEvidenceIds.map(id => `Not incorporated into interpreted themes: ${id}`),
+      ...uninterpretedMethods.map(
+        layer => `Computed method missing from interpreted themes: ${layer.id}`
+      ),
+      ...missingCanonApplications.map(
+        application =>
+          `Canon rule not applied to an interpreted proposition: ${application.ruleId} (${application.canonEvidenceId})`
+      ),
+    ],
+    passed:
+      missingEvidenceIds.length === 0 &&
+      uninterpretedMethods.length === 0 &&
+      missingCanonApplications.length === 0 &&
+      incompleteMethodOutcomes.length === 0,
+  };
+  // Report method coverage explicitly; reference-only or unavailable layers are never
+  // described as calculated. The raw evidence remains available in the snapshot.
+  integratedNarrative.push(
+    `Calculation coverage: ${ledger.filter(l => l.status === "computed-with-result").length} methods returned results, ${methodLedgerSummary.referenceOnly} are reference-only, ${methodLedgerSummary.notApplicable} are not applicable, and ${methodLedgerSummary.failed} failed. ${missingEvidenceIds.length === 0 ? "All recorded computed evidence IDs are incorporated into interpreted themes." : `${missingEvidenceIds.length} computed evidence IDs are not incorporated into interpreted themes.`}`
+  );
+  integratedNarrative.push(
+    missingCanonApplications.length === 0
+      ? `Canon coverage: ${canonApplications.length} retrieved rule applications are linked to interpreted chart propositions.`
+      : `Canon coverage incomplete: ${missingCanonApplications.length} retrieved rule applications are not linked to interpreted chart propositions.`
+  );
+
+  return {
+    sourceSnapshot: snapshot,
+    snapshotId: snapshot.snapshotId,
+    mode: readingMode,
+    dominantConclusion,
+    integratedNarrative,
+    methodFindings,
+    methodOutcomes,
+    methodOutcomeAudit: {
+      complete: incompleteMethodOutcomes.length === 0,
+      incompleteMethodIds: incompleteMethodOutcomes.map(outcome => outcome.methodId),
+    },
+    themes,
+    contradictionsAndTensions: tensions,
+    timingOverview:
+      readingMode === "transit" || readingMode === "combined"
+        ? {
+            activeWindow: snapshot.transit?.transitInstantUtc ?? "Transit moment not supplied",
+            turningPoints: snapshot.transit?.aspectsToNatal?.length
+              ? snapshot.transit.aspectsToNatal
+                  .map(
+                    contact =>
+                      `${contact.transitBody} ${contact.aspect} natal ${contact.natalBody} (orb ${Number(contact.orb).toFixed(2)}°)`
+                  )
+                  .slice(0, 24)
+              : [
+                  "No calculated natal transit contacts available; peak and easing times are not established.",
+                ],
+          }
+        : undefined,
+    methodLedgerSummary,
+    evidenceTraceMap,
+    canonApplications,
+    qualityAudit,
+  };
+}
+
+END ORIGINAL PATH: server/astrologyKnowledge/synthesis/synthesizer.ts
+
+========================================================================================
+FILE 2 OF 4 — ORIGINAL PATH: server/astrologyKnowledge/synthesis/context.ts
+SOURCE BLOB SHA: 07819e0195af1d9d727978ec86932b197a35c91c
+========================================================================================
+
+import { stringifyEvidence } from "./evidenceTransport";
+import type { SynthesisResult } from "./types";
+
+/** Lossless text/source interning keeps ALL judged findings within the interpreter packet. */
+export function packSynthesis(synthesis: SynthesisResult) {
+  const split = (text: string) => text.split(/(?<=[.!?])(?=\s)/);
+  const counts = new Map<string, number>();
+  for (const outcome of synthesis.methodOutcomes)
+    for (const finding of outcome.findingJudgments)
+      for (const part of split(finding.judgment))
+        counts.set(part, (counts.get(part) ?? 0) + 1);
+  const textTable = Array.from(counts.entries())
+    .filter(([part, count]) => part.length >= 80 && count > 1)
+    .map(([part]) => part);
+  const textIndex = new Map(textTable.map((part, index) => [part, index]));
+  const sources = Array.from(
+    new Map(
+      synthesis.canonApplications.map(rule => [
+        `${rule.ruleId}:${rule.sourceTitle}`,
+        {
+          ruleId: rule.ruleId,
+          sourceId: rule.sourceId,
+          sourceTitle: rule.sourceTitle,
+          confidence: rule.confidence,
+        },
+      ])
+    ).values()
+  );
+  const sourceIndex = new Map(
+    sources.map((rule, index) => [`${rule.ruleId}:${rule.sourceTitle}`, index])
+  );
+  return {
+    snapshotId: synthesis.snapshotId,
+    sourceSnapshot: synthesis.sourceSnapshot,
+    calculatedMethodOutcomes: synthesis.sourceSnapshot?.methodExecutionLedger,
+    fullMethodOutcomes: synthesis.methodOutcomes,
+    fullCanonApplications: synthesis.canonApplications,
+    qualityAudit: synthesis.qualityAudit,
+    methodLedgerSummary: synthesis.methodLedgerSummary,
+    methodOutcomeAudit: synthesis.methodOutcomeAudit,
+    methodFindings: synthesis.methodFindings.map(
+      ({ findings: _raw, ...metadata }) => metadata
+    ),
+    judgmentColumns: [
+      "subject",
+      "judgmentParts",
+      "evidenceIds",
+      "sourceRefs",
+      "valence",
+      "strength",
+      "frame",
+      "limitation",
+      "findingId",
+    ],
+    textTable,
+    methodOutcomes: synthesis.methodOutcomes.map(outcome => ({
+      methodId: outcome.methodId,
+      methodName: outcome.methodName,
+      chartScope: outcome.chartScope,
+      frame: outcome.frame,
+      status: outcome.status,
+      findingJudgments:
+        outcome.findingJudgments.map(f => [
+              f.subject,
+              split(f.judgment).map(part => textIndex.get(part) ?? part),
+              f.evidenceIds,
+              Array.from(
+                new Set(
+                  f.rules.map(rule =>
+                    sourceIndex.get(`${rule.ruleId}:${rule.sourceTitle}`)
+                  )
+                )
+              ),
+              f.valence,
+              f.strength,
+              f.frame ?? outcome.frame,
+              f.limitation ?? null,
+              f.id,
+            ]),
+      limitations: outcome.strengthAndLimitations,
+    })),
+    canonApplications: sources,
+    themes: synthesis.themes.map(theme => ({
+      id: theme.id,
+      humanTheme: theme.humanTheme,
+    })),
+  };
+}
+export function formatSynthesisContext(synthesis: SynthesisResult) {
+  return [
+    "UNIFIED MASTER SYNTHESIS — CALCULATED METHOD FINDINGS AND CANON RULE APPLICATIONS",
+    "The authoritative inputs are sourceSnapshot, calculatedMethodOutcomes, fullMethodOutcomes and fullCanonApplications. Read every supplied calculation and outcome, including findings whose rule-based interpretation failed. The compact rows below are an additional view, never a selection gate. Rows use judgmentColumns. In judgmentParts, a number means the exact textTable entry; strings are literal text. Concatenate the parts IN ORDER to read the full judgment. sourceRefs index canonApplications. ALL judgments are retained; these references only avoid repeated text. Cite the original evidence ID strings, never the numeric text/source references.",
+    "Each judgment already applies its specific Canon to its actual findings. Reconcile their support, pressure and conditions using WHAT → WHY → HOW → CONSEQUENCE → MEANING. Reconcile the raw calculations and Canon directly when a rule-based judgment is incomplete. Preserve method execution statuses; do not invent a calculation that is absent.",
+    "Unprefixed evidence belongs to the base chart. transit: identifies the separate event sky. chartScope identifies natal/event independently of God/Agent/shared frame. God House sectors are fixed background fields; Agent houses follow the real local horizon. Divisional and timing results seeded from an event are event-model results, never a person's natal biography.",
+    "Every applicable method's judgment must be considered. Preserve disagreements and source limitations. Use each method’s recorded status and supplied Canon to distinguish calculated activations from reference material. Use the recorded Shadbala and Bhava Bala component totals, adequacy, house lord delivery and relative rankings to qualify the interpretation. Capacity is distinct from favorable outcome; preserve the supplied fixed-XYZ/Equal-House and motion/calendar variants. Never invent scores when their method status is unavailable.",
+    stringifyEvidence(packSynthesis(synthesis)),
+  ].join("\n");
+}
+
+export type CompactSynthesisOptions = {
+  maxJudgmentChars?: number;
+  maxVargaRows?: number;
+  maxTransitRows?: number;
+  maxHouseRows?: number;
+  maxOtherRows?: number;
+  /** Keep all methodFindings metadata & canonApplications (used by energyReading). */
+  preserveFullMethodRegistry?: boolean;
+};
+
+function truncateSentence(text: string, maxChars: number): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= maxChars) return clean;
+  const slice = clean.slice(0, maxChars - 1);
+  const lastStop = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("; "), slice.lastIndexOf(" "));
+  return (lastStop > maxChars * 0.55 ? slice.slice(0, lastStop) : slice).trim() + "…";
+}
+
+function strengthRank(strength: string | number | undefined): number {
+  if (typeof strength === "number") return strength;
+  switch (strength) {
+    case "dominant": return 4;
+    case "strong": return 3;
+    case "moderate": return 2;
+    case "subtle": return 1;
+    default: return 0;
+  }
+}
+
+function selectRepresentativeFindings<T extends { subject: string; strength?: string | number }>(
+  methodId: string,
+  findings: T[],
+  opts: Required<Omit<CompactSynthesisOptions, "preserveFullMethodRegistry">>
+): T[] {
+  const baseId = methodId.replace(/^transit:/, "");
+  let limit = opts.maxOtherRows;
+  if (baseId === "vedic-vargas-divisional") limit = opts.maxVargaRows;
+  else if (baseId === "transit-activation-layer") limit = opts.maxTransitRows;
+  else if (baseId === "western-houses-and-angles") limit = opts.maxHouseRows;
+
+  if (findings.length <= limit) return findings;
+
+  // Keep highest-strength and core luminary/angle subjects first.
+  const priorityRe = /\b(Sun|Moon|Ascendant|Descendant|Midheaven|North Node|South Node|Mercury|Venus|Mars|Jupiter|Saturn|D9|D10|Lagna|Shadbala|Bhava Bala|Mansion|Manzil|Nakshatra|Decan)\b/i;
+  const sorted = [...findings].sort((a, b) => {
+    const aPri = priorityRe.test(a.subject) ? 1 : 0;
+    const bPri = priorityRe.test(b.subject) ? 1 : 0;
+    if (bPri !== aPri) return bPri - aPri;
+    return strengthRank(b.strength) - strengthRank(a.strength);
+  });
+  return sorted.slice(0, limit);
+}
+
+/**
+ * Compact LLM packet preserving all method IDs, evidence IDs, Canon rules,
+ * and sufficient finding depth across every calculated system.
+ */
+export function packCompactSynthesisForLLM(
+  synthesis: SynthesisResult,
+  options: CompactSynthesisOptions = {}
+) {
+  const opts = {
+    maxJudgmentChars: options.maxJudgmentChars ?? 300,
+    maxVargaRows: options.maxVargaRows ?? 8,
+    maxTransitRows: options.maxTransitRows ?? 16,
+    maxHouseRows: options.maxHouseRows ?? 12,
+    maxOtherRows: options.maxOtherRows ?? 12,
+  };
+  const preserveFullMethodRegistry = options.preserveFullMethodRegistry ?? true;
+
+  const allSources = Array.from(
+    new Map(
+      (synthesis.canonApplications ?? []).map(rule => [
+        `${rule.ruleId}:${rule.sourceTitle ?? ""}`,
+        {
+          ruleId: rule.ruleId,
+          ...(rule.sourceId ? { sourceId: rule.sourceId } : {}),
+          ...(rule.sourceTitle ? { sourceTitle: rule.sourceTitle } : {}),
+          ...(rule.confidence ? { confidence: rule.confidence } : {}),
+        },
+      ])
+    ).values()
+  );
+  const fullSourceIndex = new Map(
+    allSources.map((rule, index) => [`${rule.ruleId}:${rule.sourceTitle ?? ""}`, index])
+  );
+
+  const usedSourceKeys = new Set<string>();
+  const rawOutcomes = (synthesis.methodOutcomes ?? []).map(outcome => {
+    const selected = selectRepresentativeFindings(
+      outcome.methodId,
+      outcome.findingJudgments ?? [],
+      opts
+    );
+    for (const f of selected) {
+      for (const rule of f.rules ?? []) {
+        usedSourceKeys.add(`${rule.ruleId}:${rule.sourceTitle ?? ""}`);
+      }
+    }
+    return { outcome, selected };
+  });
+
+  const sources = preserveFullMethodRegistry
+    ? allSources
+    : allSources.filter(s => usedSourceKeys.has(`${s.ruleId}:${s.sourceTitle ?? ""}`));
+  const activeSourceIndex = preserveFullMethodRegistry
+    ? fullSourceIndex
+    : new Map(sources.map((rule, index) => [`${rule.ruleId}:${rule.sourceTitle ?? ""}`, index]));
+
+  const findingsTotal = rawOutcomes.reduce((n, item) => n + item.outcome.findingJudgments.length, 0);
+  const findingsIncluded = rawOutcomes.reduce((n, item) => n + item.selected.length, 0);
+  const omittedFindings = rawOutcomes.reduce(
+    (n, item) => n + item.outcome.findingJudgments.length - item.selected.length,
+    0
+  );
+  const shortenedJudgments = rawOutcomes.reduce(
+    (n, item) =>
+      n +
+      item.selected.filter(
+        f => f.judgment.replace(/\s+/g, " ").trim().length > opts.maxJudgmentChars
+      ).length,
+    0
+  );
+  const truncated =
+    rawOutcomes.some(
+      item =>
+        item.selected.length < item.outcome.findingJudgments.length ||
+        item.selected.some(
+          f =>
+            f.judgment.replace(/\s+/g, " ").trim().length > opts.maxJudgmentChars ||
+            f.evidenceIds.length > 5
+        )
+    ) ||
+    synthesis.methodFindings.some(
+      method => preserveFullMethodRegistry && method.evidenceIds.length > 24
+    ) ||
+    synthesis.contradictionsAndTensions.length > 8 ||
+    synthesis.themes.length > 12 ||
+    synthesis.themes
+      .slice(0, 12)
+      .some(theme => theme.humanTheme.replace(/\s+/g, " ").trim().length > 240);
+
+  return {
+    snapshotId: synthesis.snapshotId,
+    coverage: {
+      summaryOnly: truncated,
+      findingsTotal,
+      findingsIncluded,
+      omittedFindings,
+      shortenedJudgments,
+      truncated,
+      upstreamAuditPassed: synthesis.qualityAudit?.passed ?? null,
+    },
+    methodFindings: (synthesis.methodFindings ?? []).map(({ findings: _raw, ...metadata }) => {
+      if (preserveFullMethodRegistry) {
+        return {
+          ...metadata,
+          evidenceIds: (metadata.evidenceIds ?? []).slice(0, 24),
+        };
+      }
+      return {
+        id: metadata.id,
+        status: metadata.status,
+        frame: metadata.frame,
+      };
+    }),
+    judgmentColumns: [
+      "subject",
+      "judgment",
+      "evidenceIds",
+      "sourceRefs",
+      "valence",
+      "strength",
+      "frame",
+    ],
+    methodOutcomes: rawOutcomes.map(({ outcome, selected }) => ({
+      methodId: outcome.methodId,
+      methodName: outcome.methodName,
+      chartScope: outcome.chartScope,
+      frame: outcome.frame,
+      status: outcome.status,
+      findingCountTotal: outcome.findingJudgments?.length ?? 0,
+      findingJudgments: selected.map(f => [
+        f.subject,
+        truncateSentence(f.judgment ?? "", opts.maxJudgmentChars),
+        (f.evidenceIds ?? []).slice(0, 5),
+        Array.from(
+          new Set(
+            (f.rules ?? []).map(rule =>
+              activeSourceIndex.get(`${rule.ruleId}:${rule.sourceTitle ?? ""}`)
+            )
+          )
+        ).filter((idx): idx is number => typeof idx === "number"),
+        f.valence,
+        f.strength,
+        f.frame ?? outcome.frame,
+      ]),
+    })),
+    canonApplications: sources,
+    contradictionsAndTensions: (synthesis.contradictionsAndTensions ?? []).slice(0, 8),
+    themes: (synthesis.themes ?? []).slice(0, 12).map(theme => ({
+      id: theme.id,
+      humanTheme: truncateSentence(theme.humanTheme, 240),
+    })),
+    ...(synthesis.timingOverview ? { timingOverview: synthesis.timingOverview } : {}),
+  };
+}
+
+export function formatCompactSynthesisContext(
+  synthesis: SynthesisResult,
+  options?: CompactSynthesisOptions
+) {
+  return [
+    "UNIFIED MASTER SYNTHESIS — COMPACT METHOD FINDINGS AND CANON APPLICATIONS",
+    "Rows use judgmentColumns ([subject, judgment, evidenceIds, sourceRefs, valence, strength, frame]). sourceRefs index canonApplications. Preserve method execution statuses, separate natal (unprefixed) from event (transit:), and separate God House sectors from Agent local horizon houses. Cite original evidence ID strings, never sourceRef integers.",
+    JSON.stringify(packCompactSynthesisForLLM(synthesis, options)),
+  ].join("\n");
+}
+
+END ORIGINAL PATH: server/astrologyKnowledge/synthesis/context.ts
+
+========================================================================================
+FILE 3 OF 4 — ORIGINAL PATH: server/astrologyKnowledge/synthesis/readingBridge.ts
+SOURCE BLOB SHA: 7d6e9ded3a9f89ca4408fe6a2f301b158c9f44e5
+========================================================================================
+
+import { createHash } from "node:crypto";
+import { formatSynthesisContext } from "./context";
+import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
+import type { ChartResult } from "../../astronomy";
+import {
+  buildUnifiedMasterChart,
+  getMasterNatalChart,
+} from "../../masterChart/builder";
+import { synthesizeSnapshotEvidence } from "./snapshotEvidence";
+import type { SynthesisResult } from "./types";
+
+/** All ordinary chart readings enter through the same calculated method ledger. */
+async function synthesizeChartForReadingUncached(
+  chart: ChartResult,
+  mode: "natal" | "transit" | "combined",
+  question: string
+): Promise<{
+  snapshot: UnifiedMasterChartSnapshot;
+  synthesis: SynthesisResult;
+  context: string;
+  canonicalChart: ChartResult;
+}> {
+  const input = {
+    ...chart.input,
+    worldview: chart.worldview,
+    mode,
+    instantUtc: chart.utc,
+    ...(mode === "natal" ? {} : { transitInstantUtc: chart.transitDate }),
+  };
+  if (
+    !input.date ||
+    (chart.worldview !== "god" &&
+      (!input.location ||
+        !input.time ||
+        !input.timezone ||
+        !Number.isFinite(input.latitude) ||
+        !Number.isFinite(input.longitude)))
+  ) {
+    throw new Error(
+      "MASTER_INPUT_MISSING: Resolved chart date, time, coordinates and timezone are required; no substitute data is used."
+    );
+  }
+  const snapshot =
+    mode === "natal" && chart.worldview === "agent-vs-god"
+      ? await getMasterNatalChart(input)
+      : await buildUnifiedMasterChart(input);
+  // Do not silently interpret a second chart if an earlier client chart differs.
+  for (const body of chart.movingBodies) {
+    const canonical = snapshot.baseCelestialState.planets.find(
+      row => row.name === body.name
+    );
+    if (!canonical)
+      throw new Error(
+        `Master Chart is missing ${body.name}; cannot synthesize a divergent reading.`
+      );
+    const difference = Math.abs(
+      ((canonical.longitude - body.longitude + 540) % 360) - 180
+    );
+    if (difference > 0.01)
+      throw new Error(
+        `Master Chart mismatch for ${body.name}: ${difference.toFixed(4)}°. Refresh the chart before reading.`
+      );
+  }
+  const angularDifference = (a: number, b: number) =>
+    Math.abs(((a - b + 540) % 360) - 180);
+  if (
+    chart.ascendant &&
+    (!snapshot.baseCelestialState.ascendant ||
+      angularDifference(
+        snapshot.baseCelestialState.ascendant.longitude,
+        chart.ascendant.longitude
+      ) > 0.01)
+  ) {
+    throw new Error(
+      "Master Chart Ascendant mismatch. Refresh the chart before reading."
+    );
+  }
+  if (
+    chart.houses.length !== (snapshot.natal?.houses ?? []).length ||
+    chart.houses.some(
+      (cusp, index) =>
+        angularDifference(cusp, snapshot.natal!.houses[index]) > 0.01
+    )
+  ) {
+    throw new Error(
+      "Master Chart equal-house cusp mismatch. Refresh the chart before reading."
+    );
+  }
+  if (
+    mode !== "natal" &&
+    chart.transits.length > 0 !== Boolean(snapshot.transit?.planets.length)
+  ) {
+    throw new Error(
+      "Master Chart transit coverage mismatch. Refresh the chart before reading."
+    );
+  }
+  if (mode !== "natal" && chart.transits.length) {
+    for (const transit of chart.transits) {
+      const canonical = snapshot.transit?.planets.find(
+        row => row.name === transit.name
+      );
+      if (
+        !canonical ||
+        angularDifference(canonical.longitude, transit.longitude) > 0.01
+      ) {
+        throw new Error(
+          `Master Chart transit mismatch for ${transit.name}. Refresh the chart before reading.`
+        );
+      }
+    }
+  }
+  return synthesizeMasterSnapshot(snapshot, mode, question);
+}
+
+/** Assemble reading context from a server-created snapshot without recalculating it. */
+export async function synthesizeMasterSnapshot(
+  snapshot: UnifiedMasterChartSnapshot,
+  mode: "natal" | "transit" | "combined",
+  question: string
+) {
+  const result = await synthesizeSnapshotEvidence(snapshot, mode, question);
+  return { ...result, context: formatSynthesisContext(result.synthesis) };
+}
+
+// Reuse concurrent/repeated reads of the exact same source chart and question.
+// Client-supplied method bindings are never trusted as calculation evidence.
+const verifiedReadings = new Map<
+  string,
+  {
+    expiresAt: number;
+    promise: ReturnType<typeof synthesizeChartForReadingUncached>;
+  }
+>();
+export async function synthesizeChartForReading(
+  chart: ChartResult,
+  mode: "natal" | "transit" | "combined",
+  question: string
+) {
+  const { methodBindings: _ignored, ...source } = chart;
+  const key = createHash("sha256")
+    .update(JSON.stringify({ source, mode, question }))
+    .digest("hex");
+  const cached = verifiedReadings.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.promise;
+  const promise = synthesizeChartForReadingUncached(chart, mode, question);
+  verifiedReadings.set(key, { expiresAt: Date.now() + 60_000, promise });
+  while (verifiedReadings.size > 8)
+    verifiedReadings.delete(verifiedReadings.keys().next().value!);
+  try {
+    return await promise;
+  } catch (error) {
+    if (verifiedReadings.get(key)?.promise === promise)
+      verifiedReadings.delete(key);
+    throw error;
+  }
+}
+
+END ORIGINAL PATH: server/astrologyKnowledge/synthesis/readingBridge.ts
+
+========================================================================================
+FILE 4 OF 4 — ORIGINAL PATH: server/astrologyKnowledge/synthesis/interpretationPipeline.ts
+SOURCE BLOB SHA: 9f7200ec9c2790b83d9d6d56e66f779692db8892
+========================================================================================
+
+import { invokeLLM } from "../../_core/llm";
+import { READING_BEHAVIOR_DIRECTIVE } from "../../master-interpreter";
+import { stringifyEvidence } from "./evidenceTransport";
+import type { SynthesisResult } from "./types";
+
+type Request = Parameters<typeof invokeLLM>[0];
+
+function truncateEvidenceText(text: unknown, maxChars: number): string {
+  const raw = typeof text === "string" ? text : text == null ? "" : String(text);
+  const clean = raw.replace(/\s+/g, " ").trim();
+  if (clean.length <= maxChars) return clean;
+  const slice = clean.slice(0, maxChars - 1);
+  const stop = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("; "), slice.lastIndexOf(" "));
+  return (stop > maxChars * 0.55 ? slice.slice(0, stop) : slice).trim() + "…";
+}
+
+function compactCalculationResults(value: unknown, depth = 0): unknown {
+  if (value === null || typeof value === "number" || typeof value === "boolean") return value;
+  if (typeof value === "string") return truncateEvidenceText(value, 180);
+  if (Array.isArray(value)) {
+    if (depth >= 2) return `[${value.length} items]`;
+    const limit = depth === 0 ? 16 : 8;
+    const head = value.slice(0, limit).map(item => compactCalculationResults(item, depth + 1));
+    return value.length > limit ? [...head, `…(+${value.length - limit})`] : head;
+  }
+  if (typeof value === "object") {
+    if (depth >= 3) return "[summary]";
+    const entries = Object.entries(value as Record<string, unknown>);
+    const limit = depth === 0 ? 18 : 12;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of entries.slice(0, limit)) {
+      out[k] = compactCalculationResults(v, depth + 1);
+    }
+    if (entries.length > limit) {
+      out._more = entries.length - limit;
+    }
+    return out;
+  }
+  return value;
+}
+
+function findingPriorityScore(finding: { subject?: string; strength?: string | number }): number {
+  const subj = finding.subject ?? "";
+  const primaryMatch = /\b(Sun|Moon|Ascendant|Descendant|Midheaven|North Node|South Node|Mercury|Venus|Mars|Jupiter|Saturn|D9|D10|Lagna|Shadbala|Bhava Bala|Mansion|Manzil|Nakshatra|Decan)\b/i.test(subj) ? 10 : 0;
+  const s = finding.strength;
+  const strScore =
+    typeof s === "number"
+      ? s
+      : s === "dominant"
+        ? 4
+        : s === "strong"
+          ? 3
+          : s === "moderate"
+            ? 2
+            : 1;
+  return primaryMatch + strScore;
+}
+
+export function interpretationEvidence(synthesis: SynthesisResult) {
+  const canon = Array.from(
+    new Map(
+      [
+        ...synthesis.canonApplications,
+        ...synthesis.methodOutcomes.flatMap(method =>
+          method.findingJudgments.flatMap(finding => finding.rules)
+        ),
+      ].map(rule => [rule.canonEvidenceId, rule])
+    ).values()
+  );
+  const canonIndex = new Map(
+    canon.map((rule, index) => [rule.canonEvidenceId, index])
+  );
+  return {
+    snapshotId: synthesis.snapshotId,
+    scope: synthesis.mode,
+    coverage: {
+      methodsTotal: synthesis.methodOutcomes.length,
+      methodsIncluded: synthesis.methodOutcomes.length,
+      findingsTotal: synthesis.methodOutcomes.reduce((n, method) => n + method.findingJudgments.length, 0),
+      findingsIncluded: synthesis.methodOutcomes.reduce((n, method) => n + method.findingJudgments.length, 0),
+      omittedFindings: 0,
+      truncated: false,
+    },
+    methodColumns: [
+      "id",
+      "name",
+      "tradition",
+      "chartScope",
+      "frame",
+      "outcomeStatus",
+      "limitations",
+      "judgmentFailure",
+      "findingJudgments",
+      "calculatedFindings",
+    ],
+    findingColumns: [
+      "id",
+      "subject",
+      "domain",
+      "judgment",
+      "mechanism",
+      "valence",
+      "strength",
+      "evidenceIds",
+      "canonRefs",
+      "frame",
+      "limitation",
+    ],
+    methods: synthesis.methodOutcomes.map(method => [
+      method.methodId,
+      method.methodName,
+      method.tradition,
+      method.chartScope,
+      method.frame,
+      method.status,
+      method.strengthAndLimitations,
+      method.status === "failed" ? method.interpretation : null,
+      method.findingJudgments.map(finding => [
+        finding.id,
+        finding.subject,
+        finding.domain,
+        finding.judgment,
+        finding.mechanism,
+        finding.valence,
+        finding.strength,
+        finding.evidenceIds,
+        finding.rules.map(rule => canonIndex.get(rule.canonEvidenceId)),
+        finding.frame ?? method.frame,
+        finding.limitation ?? null,
+      ]),
+      method.calculatedFindings,
+    ]),
+    calculationColumns: [
+      "id",
+      "executionStatus",
+      "results",
+      "evidenceIds",
+      "prerequisites",
+      "sourceIds",
+      "technique",
+      "errorCode",
+      "notes",
+    ],
+    calculations: synthesis.sourceSnapshot.methodExecutionLedger.map(method => [
+      method.id,
+      method.status,
+      method.results,
+      method.evidenceIds,
+      method.prerequisites,
+      method.sourceIds,
+      method.technique,
+      method.errorCode ?? null,
+      method.notes ?? null,
+    ]),
+    canonColumns: [
+      "id",
+      "ruleId",
+      "sourceId",
+      "sourceTitle",
+      "technique",
+      "subject",
+      "statement",
+      "calculationEvidenceIds",
+      "confidence",
+      "implementationStatus",
+    ],
+    canon: canon.map(rule => [
+      rule.canonEvidenceId,
+      rule.ruleId,
+      rule.sourceId,
+      rule.sourceTitle,
+      rule.technique,
+      rule.subject,
+      rule.statement,
+      rule.calculationEvidenceIds,
+      rule.confidence,
+      rule.implementationStatus ?? null,
+    ]),
+    convergences: synthesis.themes.map(theme => ({
+      id: theme.id,
+      theme: theme.humanTheme,
+      conclusion: theme.primaryConclusion,
+      convergence: theme.convergenceAssessment,
+      evidenceIds: theme.evidenceIds,
+    })),
+    tensions: synthesis.contradictionsAndTensions,
+    timing: synthesis.timingOverview,
+  };
+}
+
+export function horaryInterpretationEvidence(synthesis: SynthesisResult) {
+  const methods = synthesis.methodOutcomes;
+  const perMethod = Math.max(700, Math.floor(12_000 / Math.max(1, methods.length)));
+  let findingsIncluded = 0, findingsTotal = 0, calculationsIncluded = 0, calculationsTotal = 0;
+  const compactMethods = methods.map(method => {
+    let left = perMethod;
+    const judgments: unknown[] = [], calculations: unknown[] = [];
+    findingsTotal += method.findingJudgments.length;
+    calculationsTotal += method.calculatedFindings.length;
+    for (const finding of method.findingJudgments) {
+      const item = [finding.id, finding.subject, String(finding.judgment ?? "").slice(0, 175),
+        String(finding.mechanism ?? "").slice(0, 110), finding.valence, finding.strength,
+        finding.evidenceIds.slice(0, 4)];
+      const size = JSON.stringify(item).length;
+      if (size > left) break;
+      judgments.push(item); left -= size; findingsIncluded++;
+    }
+    for (const finding of method.calculatedFindings) {
+      const item = [finding.evidenceId, String(finding.label ?? "").slice(0, 95),
+        JSON.stringify(finding.calculatedValue ?? null).slice(0, 140)];
+      const size = JSON.stringify(item).length;
+      if (size > left) break;
+      calculations.push(item); left -= size; calculationsIncluded++;
+    }
+    return { id: method.methodId, name: method.methodName, tradition: method.tradition,
+      scope: method.chartScope, frame: method.frame, status: method.status,
+      limitation: String(method.strengthAndLimitations ?? "").slice(0, 220),
+      findingsTotal: method.findingJudgments.length, findingsIncluded: judgments.length,
+      calculationsTotal: method.calculatedFindings.length, calculationsIncluded: calculations.length,
+      judgments, calculations };
+  });
+  return { snapshotId: synthesis.snapshotId, scope: synthesis.mode,
+    coverage: { methodsTotal: methods.length, methodsIncluded: compactMethods.length,
+      findingsTotal, findingsIncluded, omittedFindings: findingsTotal - findingsIncluded,
+      calculationsTotal, calculationsIncluded, omittedCalculations: calculationsTotal - calculationsIncluded,
+      detailsCompacted: true,
+      note: "Every method and status is included; individual findings are budgeted with explicit omissions. Full evidence remains in the chart ledger." },
+    methodExecution: synthesis.sourceSnapshot.methodExecutionLedger.map(entry => [
+      entry.id, entry.status, entry.errorCode ?? null,
+    ]),
+    judgmentColumns: ["findingId","subject","judgment","mechanism","valence","strength","evidenceIds"],
+    calculationColumns: ["evidenceId","label","calculatedValue"],
+    methods: compactMethods,
+    convergences: synthesis.themes.slice(0, 8).map(theme => ({
+      theme: theme.humanTheme, conclusion: theme.primaryConclusion,
+    })),
+  };
+}
+
+function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
+  // A contact has two bodies. Keep both sides' method findings while
+  // excluding unrelated chart-wide content from the provider payload.
+  // The separator is internal and comes from canonical chart body names.
+  const bodyPatterns = focus.split("|").map(name => name.trim()).filter(Boolean)
+    .map(name => new RegExp(`(?:^|[^a-z])${name.toLowerCase().replaceAll(" ", "[-_ ]")}(?:$|[^a-z])`, "i"));
+  const matchesBody = (value: string) => bodyPatterns.some(pattern => pattern.test(value));
+  // Complete method coverage is not the same as resending every unrelated
+  // paragraph. This is a focused *reading* packet, not a raw chart archive.
+  // Keep every method/status and explicit omission counts when a method's
+  // selected details exceed its share of the model request budget.
+  const perMethodBudget = Math.max(210, Math.floor(10_000 / Math.max(1, synthesis.methodOutcomes.length)));
+  const short = (value: unknown, limit: number) => {
+    const text = typeof value === "string" ? value : value == null ? "" : String(value);
+    return text.length > limit ? text.slice(0, limit) + "…" : text;
+  };
+  let omittedJudgments = 0;
+  let omittedCalculations = 0;
+  const methods = synthesis.methodOutcomes.map(method => {
+    const namedCalculations = new Set(method.calculatedFindings
+      .filter(finding => matchesBody(finding.label) || matchesBody(finding.evidenceId))
+      .map(finding => finding.evidenceId));
+    const judgments = method.findingJudgments.filter(finding =>
+      matchesBody(finding.subject) ||
+      finding.evidenceIds.some(id => matchesBody(id) || namedCalculations.has(id))
+    );
+    const citedIds = new Set(judgments.flatMap(finding => finding.evidenceIds));
+    const calculations = method.calculatedFindings.filter(finding =>
+      namedCalculations.has(finding.evidenceId) || citedIds.has(finding.evidenceId)
+    );
+    const selectedJudgments: unknown[] = [];
+    const selectedCalculations: unknown[] = [];
+    let used = 0;
+    const add = (destination: unknown[], value: unknown) => {
+      const size = JSON.stringify(value).length;
+      if (used + size > perMethodBudget) return false;
+      destination.push(value);
+      used += size;
+      return true;
+    };
+    // Direct, calculated judgments take precedence over long nested objects.
+    for (const finding of judgments) {
+      const item = [
+        finding.id, finding.subject,
+        short(finding.judgment, 240), short(finding.mechanism, 160),
+        finding.evidenceIds, finding.limitation ?? null,
+      ];
+      if (!add(selectedJudgments, item)) omittedJudgments++;
+    }
+    for (const finding of calculations) {
+      const item = [
+        finding.evidenceId, finding.label,
+        short(finding.calculatedValue, 220),
+      ];
+      if (!add(selectedCalculations, item)) omittedCalculations++;
+    }
+    return [
+      method.methodId, method.methodName, method.status, method.frame,
+      selectedJudgments, selectedCalculations,
+      { selected: [selectedJudgments.length, selectedCalculations.length],
+        omitted: [judgments.length - selectedJudgments.length, calculations.length - selectedCalculations.length] },
+    ];
+  });
+  return {
+    snapshotId: synthesis.snapshotId,
+    focus,
+    coverage: {
+      methodsTotal: synthesis.methodOutcomes.length,
+      methodsIncluded: methods.length,
+      omittedJudgments,
+      omittedCalculations,
+      detailsCompacted: true,
+      note: "Every method and status is included. Only focus-linked judgments and calculations are summarized. Omitted detail counts are explicit; full calculated evidence remains available in the technical ledger.",
+    },
+    methodColumns: ["id", "name", "status", "frame", "focusedJudgments", "focusedCalculations", "detailCounts"],
+    judgmentColumns: ["id", "subject", "judgment", "mechanism", "evidenceIds", "limitation"],
+    focusedCalculationColumns: ["id", "label", "calculatedValue"],
+    methods,
+    calculationColumns: ["id", "executionStatus"],
+    calculations: synthesis.sourceSnapshot.methodExecutionLedger.map(method => [method.id, method.status]),
+  };
+}
+
+export function interpretationText(
+  response: Awaited<ReturnType<typeof invokeLLM>>
+) {
+  const content = response.choices?.[0]?.message?.content;
+  return (
+    typeof content === "string"
+      ? content
+      : (content ?? [])
+          .filter(part => part.type === "text")
+          .map(part => part.text)
+          .join("")
+  ).trim();
+}
+
+export function parseLlmJsonObject(
+  rawText: string,
+  errorCode = "INTERPRETATION_INVALID_JSON"
+): unknown {
+  const cleaned = rawText
+    .trim()
+    .replace(/^\s*```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
+  if (!cleaned) {
+    throw new Error(`${errorCode}: Provider returned empty structured output.`);
+  }
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(cleaned.slice(start, end + 1));
+      } catch {
+        // Fall through to contextual error below
+      }
+    }
+    throw new Error(
+      `${errorCode}: Provider returned unreadable structured output.`
+    );
+  }
+}
+
+/** A single evidence handoff. Placement retains the original wire format. */
+export async function runInterpretation(
+  route: string,
+  synthesis: SynthesisResult | readonly SynthesisResult[],
+  request: Request,
+  layout: "complete" | "placement-reference" | "horary-compact" | { focusedPlacement: string } = "complete"
+) {
+  const ledgers = (
+    Array.isArray(synthesis) ? synthesis : [synthesis]
+  ) as readonly SynthesisResult[];
+  if (!ledgers.length)
+    throw new Error(
+      `${route}_EVIDENCE_MISSING: No calculated synthesis was provided.`
+    );
+  const messages = [...request.messages];
+  const firstUser = messages.findIndex(message => message.role === "user");
+  if (layout === "placement-reference") {
+    const placement = messages[firstUser];
+    if (
+      ledgers.length !== 1 ||
+      !placement ||
+      typeof placement.content !== "string"
+    )
+      throw new Error(
+        "PLACEMENT_SYNTHESIS_EVIDENCE_MISSING: Expected one placement packet."
+      );
+    messages[firstUser] = {
+      ...placement,
+      content:
+        placement.content +
+        "\n\nFULL CALCULATED CHART AND METHOD OUTCOMES:\n" +
+        stringifyEvidence(interpretationEvidence(ledgers[0]))
+    };
+  } else {
+    const sharedContract = {
+      role: "system" as const,
+      content: "UNIVERSAL EVIDENCE-WEAVING CONTRACT: Read all applicable calculated methods and their statuses. Do not list parallel methods as a substitute for interpretation. Explain their convergence, contradictions and implications without invented facts. Preserve route-specific Horary verdicts, JSON schemas and evidence IDs.",
+    };
+    const evidence =
+      typeof layout === "object"
+        ? stringifyEvidence(ledgers.map(ledger => focusedPlacementEvidence(ledger, layout.focusedPlacement)))
+        : layout === "horary-compact"
+          ? stringifyEvidence(ledgers.map(horaryInterpretationEvidence))
+          : stringifyEvidence(ledgers.map(interpretationEvidence));
+    const dossier = {
+      role: "user" as const,
+      content:
+        (typeof layout === "object"
+          ? "FOCUSED PLACEMENT DOSSIER. Read every method row. Apply chart-wide context only when it bears directly on the selected placement. Treat missing findings and method statuses as limits on interpretation.\n"
+          : layout === "horary-compact"
+            ? "HORARY CALCULATED METHOD DOSSIER. Every registered method and status is present. The specific Horary judgment testimony is in the preceding user message. Findings are budgeted and exact omitted counts are supplied; never invent evidence omitted for size.\n"
+            : "COMPLETE CALCULATED INTERPRETATION DOSSIER. Consider every applicable method, connecting agreement and tension to the specific question. Read each table using its matching column names. canonRefs index the canon table. Respect frames, evidence IDs and method status. Never fill gaps from inference. Previous prose is conversation context only.\n") +
+        evidence,
+    };
+    // Preserve the domain packet and keep the current turn last in conversations.
+    const index =
+      firstUser < 0
+        ? messages.length
+        : firstUser === messages.length - 1
+          ? firstUser + 1
+          : messages.length - 1;
+    messages.splice(index, 0, sharedContract, dossier);
+  }
+  // Apply the behavior contract to every route, including placement-reference,
+  // while avoiding duplicate instructions in routes using the Master Interpreter.
+  const alreadyUsesReadingBehavior = messages.some(
+    message =>
+      message.role === "system" &&
+      typeof message.content === "string" &&
+      message.content.includes("THE ABSOLUTE — AS REAL AS IT GETS: SOUL-DEEP READING-BEHAVIOR CONTRACT")
+  );
+  if (!alreadyUsesReadingBehavior) {
+    const firstNonSystem = messages.findIndex(m => m.role !== "system");
+    const insertAt = firstNonSystem < 0 ? messages.length : firstNonSystem;
+    messages.splice(insertAt, 0, {
+      role: "system",
+      content: READING_BEHAVIOR_DIRECTIVE,
+    });
+  }
+  const response = await invokeLLM({ ...request, messages });
+  const finish = response.choices?.[0]?.finish_reason;
+  if (
+    finish &&
+    !["stop", "end_turn", "stop_sequence", "completed"].includes(
+      finish.toLowerCase()
+    )
+  )
+    throw new Error(
+      `${route}_INCOMPLETE: The provider truncated or stopped the interpretation (${finish}).`
+    );
+  if (!interpretationText(response))
+    throw new Error(
+      `${route}_EMPTY: The interpretation service returned no reading.`
+    );
+  return response;
+}
+
+END ORIGINAL PATH: server/astrologyKnowledge/synthesis/interpretationPipeline.ts

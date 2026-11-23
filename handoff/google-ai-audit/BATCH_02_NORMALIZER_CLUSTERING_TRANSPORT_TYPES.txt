@@ -1,0 +1,552 @@
+THE ABSOLUTE — COMPLETE, PASTE-READY SOURCE CODE
+BATCH 2 — normalizer.ts + clustering.ts + evidenceTransport.ts + types.ts
+Repository: https://github.com/kevinparksinc-maker/firmament-guardian
+Pinned exact source commit: 884d669a1deae3e2b7c3857ad5f5e4a641a79838
+Do not paste separator headers into TypeScript source files.
+
+========================================================================================
+FILE 1 OF 4 — ORIGINAL PATH: server/astrologyKnowledge/synthesis/normalizer.ts
+SOURCE BLOB SHA: d0e4df5e63094525abb19f17c8de6bae6369fbe5
+========================================================================================
+
+import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
+import type {
+  CanonRuleApplication,
+  InterpretedProposition,
+  MethodOutcome,
+} from "./types";
+import { buildMethodOutcomes } from "./methodOutcomes";
+
+/** Retained for diagnostic callers; never used as a substitute for interpretation. */
+export function describeComputedFinding(value: unknown): string {
+  if (value == null) return "No finding value supplied";
+  if (typeof value !== "object") return String(value);
+  if (Array.isArray(value))
+    return value.map(describeComputedFinding).join("; ");
+  return Object.entries(value)
+    .filter(([, v]) => v != null)
+    .map(
+      ([k, v]) =>
+        `${k.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ")}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`
+    )
+    .join("; ");
+}
+
+/** The only interpretation input to clustering is a successfully applied method judgment. */
+export function extractPropositionsFromMethodOutcomes(
+  outcomes: MethodOutcome[]
+): InterpretedProposition[] {
+  return outcomes
+    .filter(outcome => outcome.status === "interpreted")
+    .flatMap(outcome =>
+      outcome.findingJudgments.map(finding => ({
+        id: finding.id,
+        themeTitle: `${outcome.chartScope === "event" ? "Event · " : ""}${finding.subject} · ${outcome.methodName}`,
+        plainLanguageMeaning: finding.judgment,
+        domain: finding.domain,
+        causalMechanism: finding.mechanism,
+        valence: finding.valence,
+        strength: finding.strength,
+        tradition: outcome.tradition,
+        frame: finding.frame ?? outcome.frame,
+        supportingEvidenceIds: finding.evidenceIds,
+        opposingEvidenceIds: [],
+        sourceDoctrineIds: Array.from(
+          new Set(finding.rules.map(rule => rule.sourceId))
+        ),
+        canonRuleIds: Array.from(
+          new Set(finding.rules.map(rule => rule.ruleId))
+        ),
+        canonApplications: finding.rules.map(rule => ({
+          canonEvidenceId: rule.canonEvidenceId,
+          ruleId: rule.ruleId,
+          sourceTitle: rule.sourceTitle,
+          statement: rule.statement,
+        })),
+      }))
+    );
+}
+
+/** Compatibility entry point, routed through the same handlers rather than raw normalization. */
+export function extractPropositionsFromSnapshot(
+  snapshot: UnifiedMasterChartSnapshot,
+  canonApplications: CanonRuleApplication[] = []
+): InterpretedProposition[] {
+  return extractPropositionsFromMethodOutcomes(
+    buildMethodOutcomes(snapshot, canonApplications)
+  );
+}
+
+END ORIGINAL PATH: server/astrologyKnowledge/synthesis/normalizer.ts
+
+========================================================================================
+FILE 2 OF 4 — ORIGINAL PATH: server/astrologyKnowledge/synthesis/clustering.ts
+SOURCE BLOB SHA: f17aeb6f4df5e6ff8ca3d661f7680727f5005987
+========================================================================================
+
+import type { HumanDomain, InterpretedProposition, SynthesizedTheme } from "./types";
+
+/**
+ * Evidence-first synthesis. Every computed proposition is retained, while
+ * meaningful interactions receive explicit support, tension, and weighting.
+ * These are traditional chart interpretations, not assertions of life events.
+ */
+const DOMAIN_TITLES: Record<HumanDomain, string> = {
+  identity: "Identity, Temperament & Self-Knowledge",
+  purpose_work: "Purpose, Vocation & Gifts",
+  relationships: "Relationships & Alliances",
+  resources_wealth: "Resources, Wealth & Material Life",
+  family_home: "Family, Roots & Home",
+  autonomy_power: "Will, Courage & Power",
+  energy_wellbeing: "Vitality, Habits & Wellbeing",
+  choices_obstacles: "Challenges, Choices & Character",
+  timing: "Timing, Transits & Turning Points",
+};
+
+const STRENGTH: Record<InterpretedProposition["strength"], number> = {
+  dominant: 4, strong: 3, moderate: 2, subtle: 1,
+};
+
+const unique = (items: string[]): string[] => Array.from(new Set(items));
+const evidence = (items: InterpretedProposition[]): string[] =>
+  unique(items.flatMap(item => item.supportingEvidenceIds));
+
+function weight(item: InterpretedProposition): number {
+  return STRENGTH[item.strength] + Math.min(item.supportingEvidenceIds.length, 5) * 0.2;
+}
+
+function describe(item: InterpretedProposition): string {
+  return `[${item.tradition}; ${item.frame}; ${item.strength}; ${item.valence}] ${item.themeTitle}: ${item.plainLanguageMeaning} Traditional mechanism: ${item.causalMechanism}. Evidence: ${item.supportingEvidenceIds.join(", ") || "not identified"}.`;
+}
+
+const MAX_PER_SIDE = 2;
+
+function plainPlacementLabel(item: InterpretedProposition): string {
+  // Strip module suffixes ("· Ptolemaic Aspects & Orbs") and event prefixes
+  const rawSubject = item.themeTitle
+    .replace(/^Event\s*·\s*/i, "")
+    .split(/\s+·\s+/)[0]
+    .trim();
+
+  // Make astronomical/vedic subjects concise and natural for general readers
+  if (/^SAV\s+/i.test(rawSubject)) {
+    return `${rawSubject.replace(/^SAV\s+/i, "")} sign support`;
+  }
+  if (/^(D\d+)\s+(.+)$/i.test(rawSubject)) {
+    const [, div, body] = rawSubject.match(/^(D\d+)\s+(.+)$/i)!;
+    const divLabel = div === "D9" ? "Navamsha (D9)" : div === "D10" ? "Dashamsha (D10)" : div;
+    return `${body} in ${divLabel}`;
+  }
+  return rawSubject
+    .replace(/\bconjunction\b/gi, "conjunct")
+    .replace(/\bsemisextile\b/gi, "semisextile")
+    .replace(/–/g, " with ");
+}
+
+function summarizeInsight(item: InterpretedProposition): string {
+  const cleaned = item.plainLanguageMeaning
+    .replace(/\[(?:TRADITION|MODERN_SYNTHESIS[^\]]*)[^\]]*\]\s*/gi, "")
+    .replace(/\b(?:Psychological dynamic|Healthy expression|Defensive risk under pressure|Psychological field)\s*:\s*/gi, "")
+    .replace(/\([^)]*(?:deg|orb|virupas|rupas|evaluated|configured flow|source)[^)]*\)/gi, "")
+    .trim();
+  const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0] ?? cleaned;
+  return firstSentence.length > 180 ? `${firstSentence.slice(0, 177).trim()}…` : firstSentence;
+}
+
+export function clusterPropositionsIntoThemes(
+  propositions: InterpretedProposition[]
+): {
+  themes: SynthesizedTheme[];
+  tensions: Array<{ polarities: string; reconciliation: string; evidenceIds: string[] }>;
+} {
+  const groups = new Map<HumanDomain, InterpretedProposition[]>();
+  for (const proposition of propositions) {
+    const group = groups.get(proposition.domain) ?? [];
+    group.push(proposition);
+    groups.set(proposition.domain, group);
+  }
+
+  const order: HumanDomain[] = [
+    "identity", "purpose_work", "autonomy_power", "resources_wealth",
+    "relationships", "choices_obstacles", "family_home", "energy_wellbeing", "timing",
+  ];
+
+  const themes: SynthesizedTheme[] = [];
+  const tensions: Array<{ polarities: string; reconciliation: string; evidenceIds: string[] }> = [];
+  const citedAcrossReading = new Set<string>();
+
+  for (const domain of order) {
+    const group = groups.get(domain);
+    if (!group?.length) continue;
+
+    const ordered = [...group].sort((a, b) => weight(b) - weight(a));
+    const leading = ordered[0];
+    const supportive = ordered.filter(p => p.valence === "supportive");
+    const difficult = ordered.filter(p => p.valence === "challenging" || p.valence === "transformative");
+    const traditions = unique(ordered.map(p => p.tradition));
+    const allEvidence = evidence(ordered);
+    const combined = ordered.map(describe);
+
+    // Pick at most MAX_PER_SIDE fresh placements per polarity, never citing the same placement twice across the reading
+    const pickFresh = (items: InterpretedProposition[]): Array<{ item: InterpretedProposition; label: string }> => {
+      const picked: Array<{ item: InterpretedProposition; label: string }> = [];
+      const seenHere = new Set<string>();
+      for (const item of items) {
+        const label = plainPlacementLabel(item);
+        const key = label.toLowerCase();
+        if (seenHere.has(key) || citedAcrossReading.has(key)) continue;
+        seenHere.add(key);
+        citedAcrossReading.add(key);
+        picked.push({ item, label });
+        if (picked.length >= MAX_PER_SIDE) break;
+      }
+      return picked;
+    };
+
+    const fav = pickFresh(supportive);
+    const chal = pickFresh(difficult);
+
+    // Distinct techniques are presented as separate witnesses, not assumed
+    // to independently validate one another simply by sharing a domain.
+    const corroborationLevel: SynthesizedTheme["convergenceAssessment"]["corroborationLevel"] =
+      traditions.length >= 2 ? "strong-corroboration"
+      : ordered.length >= 2 ? "moderate-reinforcement" : "singular";
+
+    // Group shared evidence once instead of repeating every pair of witnesses.
+    const witnesses = new Map<string, InterpretedProposition[]>();
+    for (const item of ordered) for (const id of item.supportingEvidenceIds) {
+      const entries = witnesses.get(id) ?? [];
+      entries.push(item);
+      witnesses.set(id, entries);
+    }
+    const relationships = Array.from(witnesses.entries())
+      .filter(([, items]) => items.length > 1)
+      .map(([id, items]) => `${id} links ${unique(items.map(item => plainPlacementLabel(item))).join("; ")}. These share one calculated condition and are not independent confirmations.`);
+
+    const opposing = supportive.length > 0 && difficult.length > 0;
+    const favLabelText = fav.map(f => f.label).join(" and ");
+    const chalLabelText = chal.map(c => c.label).join(" and ");
+
+    const supportLine = fav.length
+      ? `What supports you: ${summarizeInsight(fav[0].item)} (${favLabelText}).`
+      : "";
+    const frictionLine = chal.length
+      ? `Where the friction is: ${summarizeInsight(chal[0].item)} (${chalLabelText}).`
+      : "";
+
+    const reconciliation =
+      fav.length && chal.length
+        ? `${supportLine} ${frictionLine}`
+        : supportLine || frictionLine || summarizeInsight(leading);
+
+    if (opposing && (fav.length > 0 || chal.length > 0)) {
+      const polarityHeading =
+        fav.length && chal.length
+          ? `${DOMAIN_TITLES[domain]} (${favLabelText} vs. ${chalLabelText})`
+          : `${DOMAIN_TITLES[domain]} (${favLabelText || chalLabelText})`;
+      tensions.push({
+        polarities: polarityHeading,
+        reconciliation,
+        evidenceIds: evidence([...fav.map(f => f.item), ...chal.map(c => c.item)]),
+      });
+    }
+
+    const consequenceParts = [
+      ...supportive.map(p => `Available strength — ${plainPlacementLabel(p)}: ${summarizeInsight(p)} Evidence: ${p.supportingEvidenceIds.join(", ")}`),
+      ...difficult.map(p => `Pressure to manage — ${plainPlacementLabel(p)}: ${summarizeInsight(p)} Evidence: ${p.supportingEvidenceIds.join(", ")}`),
+    ];
+    if (!consequenceParts.length) consequenceParts.push(...ordered.map(p => `${p.plainLanguageMeaning} Evidence: ${p.supportingEvidenceIds.join(", ")}`));
+
+    themes.push({
+      id: `theme-${domain}`,
+      humanTheme: DOMAIN_TITLES[domain],
+      domain,
+      primaryConclusion: `${plainPlacementLabel(leading)}: ${summarizeInsight(leading)}`,
+      whyHow: [
+        `Primary mechanism: ${leading.causalMechanism}.`,
+        ...combined,
+        ...relationships.map(r => `CROSS-METHOD CONNECTION: ${r}`),
+      ].join("\n"),
+      concreteManifestations: ordered.slice(0, 4).map(p =>
+        `${plainPlacementLabel(p)}: ${p.plainLanguageMeaning} Evidence: ${p.supportingEvidenceIds.join(", ")}`
+      ),
+      consequences: consequenceParts.join("\n"),
+      deeperMeaning: `Symbolic interpretation of ${DOMAIN_TITLES[domain]}: ${reconciliation}`,
+      convergenceAssessment: {
+        independentTraditions: traditions,
+        corroborationLevel,
+        tensions: opposing && reconciliation ? [reconciliation] : [],
+        reconciliation,
+      },
+      linkedPropositionIds: ordered.map(p => p.id),
+      evidenceIds: allEvidence,
+    });
+  }
+
+  return { themes, tensions };
+}
+
+END ORIGINAL PATH: server/astrologyKnowledge/synthesis/clustering.ts
+
+========================================================================================
+FILE 3 OF 4 — ORIGINAL PATH: server/astrologyKnowledge/synthesis/evidenceTransport.ts
+SOURCE BLOB SHA: f01aaf28c86cfe44df95f30e40eb9e393c891d2e
+========================================================================================
+
+/** Intern repeated values without dropping or shortening any evidence. */
+export function encodeEvidence(value: unknown) {
+  const counts = new Map<string, number>();
+  const partsOf = (text: string) => text.split(/(?<=[.!?\n])(?=\s)/);
+  const jsonValue = (text: string): object | undefined => {
+    if (text.length < 100 || !/^[\[{]/.test(text)) return undefined;
+    try {
+      const parsed = JSON.parse(text);
+      return parsed && typeof parsed === "object" && JSON.stringify(parsed) === text ? parsed : undefined;
+    } catch { return undefined; }
+  };
+  const visit = (node: unknown): void => {
+    if (node === null || typeof node !== "object" && typeof node !== "string") return;
+    const key = JSON.stringify(node);
+    if (key.length >= 100) counts.set(key, (counts.get(key) ?? 0) + 1);
+    if (typeof node === "string") {
+      const parsed = jsonValue(node);
+      if (parsed) { visit(parsed); return; }
+      const parts = partsOf(node);
+      if (parts.length > 1) for (const part of parts) {
+        const partKey = JSON.stringify(part);
+        if (partKey.length >= 100) counts.set(partKey, (counts.get(partKey) ?? 0) + 1);
+      }
+    }
+    if (Array.isArray(node)) node.forEach(visit);
+    else if (typeof node === "object") Object.values(node).forEach(visit);
+  };
+  // Normalize undefined and other JSON-only details exactly once.
+  const source: unknown = JSON.parse(JSON.stringify(value));
+  visit(source);
+  const references: unknown[] = [];
+  const indices = new Map<string, number>();
+  const encode = (node: unknown, inline = false, fragment = false): unknown => {
+    if (node === null || typeof node !== "object" && typeof node !== "string") return node;
+    const key = JSON.stringify(node);
+    if (!inline && (counts.get(key) ?? 0) > 1) {
+      let index = indices.get(key);
+      if (index === undefined) {
+        index = references.length;
+        indices.set(key, index);
+        references.push(null);
+        references[index] = encode(node, true, fragment);
+      }
+      return { $evidenceRef: index };
+    }
+    if (Array.isArray(node)) return node.map(item => encode(item));
+    if (typeof node === "object") return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, encode(v)]));
+    if (typeof node === "string" && !fragment) {
+      const parsed = jsonValue(node);
+      if (parsed) return { $evidenceJson: encode(parsed) };
+      const parts = partsOf(node);
+      if (parts.length > 1 && parts.some(part => (counts.get(JSON.stringify(part)) ?? 0) > 1))
+        return { $evidenceText: parts.map(part => encode(part, false, true)) };
+    }
+    return node;
+  };
+  const data = encode(source);
+  return {
+    evidenceFormat: "Lossless shared references. Replace every object containing only $evidenceRef with references[index], recursively. For $evidenceText, resolve each array element and concatenate IN ORDER. $evidenceJson contains the parsed value of a JSON string: resolve it and read it as the original calculated data. References may contain further references. All complete text, calculations, outcomes and Canon are retained. References are storage aliases, not evidence IDs or a ranking.",
+    data,
+    references,
+  };
+}
+
+export function decodeEvidence(packet: ReturnType<typeof encodeEvidence>): unknown {
+  const decode = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(decode);
+    if (node && typeof node === "object") {
+      const object = node as Record<string, unknown>;
+      if (Object.keys(object).length === 1 && typeof object.$evidenceRef === "number")
+        return decode(packet.references[object.$evidenceRef]);
+      if (Object.keys(object).length === 1 && Array.isArray(object.$evidenceText))
+        return object.$evidenceText.map(decode).join("");
+      if (Object.keys(object).length === 1 && "$evidenceJson" in object)
+        return JSON.stringify(decode(object.$evidenceJson));
+      return Object.fromEntries(Object.entries(object).map(([k, v]) => [k, decode(v)]));
+    }
+    return node;
+  };
+  return decode(packet.data);
+}
+
+export function stringifyEvidence(value: unknown): string {
+  return JSON.stringify(encodeEvidence(value));
+}
+
+END ORIGINAL PATH: server/astrologyKnowledge/synthesis/evidenceTransport.ts
+
+========================================================================================
+FILE 4 OF 4 — ORIGINAL PATH: server/astrologyKnowledge/synthesis/types.ts
+SOURCE BLOB SHA: 34af9debe798ce13d933d9c2673a7e0b0e978173
+========================================================================================
+
+import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
+
+export interface CanonRuleApplication {
+  canonEvidenceId: string;
+  ruleId: string;
+  sourceId: string;
+  sourceTitle: string;
+  technique: string;
+  subject: string;
+  statement: string;
+  calculationEvidenceIds: string[];
+  confidence: "high" | "moderate" | "low" | "reference-only";
+  implementationStatus?: "implemented" | "incomplete";
+}
+
+export type HumanDomain =
+  | "identity"
+  | "purpose_work"
+  | "relationships"
+  | "resources_wealth"
+  | "family_home"
+  | "autonomy_power"
+  | "energy_wellbeing"
+  | "choices_obstacles"
+  | "timing";
+
+export interface SynthesisInput {
+  snapshot: UnifiedMasterChartSnapshot;
+  readingMode: "natal" | "transit" | "combined";
+  userQuestion?: string;
+  canonApplications?: CanonRuleApplication[];
+}
+
+export type MethodOutcomeStatus =
+  | "interpreted"
+  | "reference-only"
+  | "not-applicable"
+  | "failed"
+  | "no-result";
+
+export interface MethodOutcomeFinding {
+  evidenceId: string;
+  label: string;
+  calculatedValue: string;
+}
+
+export interface FindingJudgment {
+  frame?: "god" | "agent" | "shared" | "transit";
+  id: string;
+  subject: string;
+  domain: HumanDomain;
+  judgment: string;
+  mechanism: string;
+  valence: InterpretedProposition["valence"];
+  strength: InterpretedProposition["strength"];
+  evidenceIds: string[];
+  rules: CanonRuleApplication[];
+  limitation?: string;
+}
+
+export interface MethodOutcome {
+  methodId: string;
+  methodName: string;
+  tradition: string;
+  chartScope: "natal" | "event";
+  frame: "god" | "agent" | "shared" | "transit";
+  status: MethodOutcomeStatus;
+  calculatedFindings: MethodOutcomeFinding[];
+  findingJudgments: FindingJudgment[];
+  canonApplications: CanonRuleApplication[];
+  interpretation: string;
+  judgment: string;
+  contribution: string;
+  evidenceIds: string[];
+  strengthAndLimitations: string[];
+  missingCanon: boolean;
+}
+
+export interface InterpretedProposition {
+  id: string;
+  themeTitle: string;
+  plainLanguageMeaning: string;
+  domain: HumanDomain;
+  causalMechanism: string; // e.g., "Mars in 10th House trine Sun"
+  valence: "supportive" | "challenging" | "transformative" | "neutral";
+  strength: "dominant" | "strong" | "moderate" | "subtle";
+  tradition: string; // "Hellenistic", "Vedic Jyotish", "Babylonian Fixed Stars", "Arabic Lots", "Kabbalah", etc.
+  frame: "god" | "agent" | "shared" | "transit";
+  supportingEvidenceIds: string[];
+  opposingEvidenceIds: string[];
+  sourceDoctrineIds: string[];
+  canonRuleIds?: string[];
+  canonApplications?: Array<Pick<CanonRuleApplication, "canonEvidenceId" | "ruleId" | "sourceTitle" | "statement">>;
+}
+
+export interface SynthesizedTheme {
+  id: string;
+  humanTheme: string;
+  domain: HumanDomain;
+  primaryConclusion: string;
+  whyHow: string;
+  concreteManifestations: string[];
+  consequences: string;
+  deeperMeaning: string;
+  timing?: {
+    onset?: string;
+    peak?: string;
+    easing?: string;
+    notes?: string;
+  };
+  convergenceAssessment: {
+    independentTraditions: string[];
+    corroborationLevel:
+      | "unanimous"
+      | "strong-corroboration"
+      | "moderate-reinforcement"
+      | "singular";
+    tensions: string[];
+    reconciliation: string;
+  };
+  linkedPropositionIds: string[];
+  evidenceIds: string[];
+}
+
+export interface SynthesisResult {
+  /** Complete calculation snapshot for the AI evidence packet. */
+  sourceSnapshot: UnifiedMasterChartSnapshot;
+  snapshotId: string;
+  mode: "natal" | "transit" | "combined";
+  dominantConclusion: string;
+  integratedNarrative: string[];
+  methodFindings: Array<{ id: string; name: string; tradition: string; status: string; frame: string; evidenceIds: string[]; sourceIds: string[]; resultCount: number; findings: Array<{ label: string; details: string }>; notes?: string }>;
+  methodOutcomes: MethodOutcome[];
+  themes: SynthesizedTheme[];
+  contradictionsAndTensions: Array<{
+    polarities: string;
+    reconciliation: string;
+    evidenceIds: string[];
+  }>;
+  timingOverview?: {
+    activeWindow: string;
+    turningPoints: string[];
+  };
+  methodLedgerSummary: {
+    totalEvaluated: number;
+    computedWithResult: number;
+    referenceOnly: number;
+    notApplicable: number;
+    failed: number;
+  };
+  evidenceTraceMap: Record<string, string[]>;
+  canonApplications: CanonRuleApplication[];
+  methodOutcomeAudit: {
+    complete: boolean;
+    incompleteMethodIds: string[];
+  };
+  qualityAudit: {
+    groundedRatio: number; // 1.0 (100% of claims grounded in evidence IDs)
+    unsupportedClaims: string[];
+    passed: boolean;
+  };
+}
+
+END ORIGINAL PATH: server/astrologyKnowledge/synthesis/types.ts
