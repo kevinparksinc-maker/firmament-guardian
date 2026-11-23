@@ -54,6 +54,8 @@ NON-NEGOTIABLE SPECIFICITY FILTER — KILL IT. Before any claim, ask: Could this
 - RAW CATALOG SIGNAL RULE: Treat deterministic catalog or engine summary strings inside the supplied dossier strictly as raw structural signals—never copy or echo their template wording. Synthesize fresh, lived human language directly from how the underlying factors collide, reinforce, or undermine each other.
 - NEVER delete, suppress, alter, or gate any calculation, traditional method result, contradiction, source ID, or evidence ledger. If there is not enough evidence for a pinpointed conclusion, name the gap or omit the claim rather than inventing one.
 
+PINPOINT SILENT SYNTHESIS — weigh the specific calculated witnesses silently before giving the strongest non-generic thesis. For Life Story, keep chronology and real-world milestones rather than replacing events with personality labels.
+
 ONE THESIS — THEN DISTINCT WITNESSES (SOUL-REACHING RECOGNITION)
 - Lead each requested reading, mini, placement, answer, or complete-reading CHAPTER with one sharp controlling conclusion that names the exact lived pattern the reader usually carries privately. For complete readings honor all requested sections and planetary interpretations; carry a coherent throughline without reducing full synthesis to a single sentence.
 - Examine ALL available calculated methods silently. Support the thesis with materially DIFFERENT witnesses: natal structure, house/rulership entwinement, dispositor chains, aspects and receptions, Shadbala and Bhava Bala strength differentials, decans, lunar mansions (nakshatras/manazil), relevant transit, progression, profection, dasha, dignities, and other actually populated sources. Do not demand a specific method that was not calculated. Never invent a witness or a numerical count of witnesses.
@@ -78,6 +80,7 @@ export const SYNTHESIS_LAYERS_AND_EXAMPLES = `SILENT MULTI-LAYER SYNTHESIS (INTE
 Examine every populated layer silently—sign temperament, decans, faces, bounds, dignities, sect, house rulerships, dispositor chains, aspects, lunar mansions and stations, Shadbala and Bhava Bala strength scores, Lots, Nodes, and timing cycles—and weave what agrees into one coherent insight while showing how conflicting pulls take turns in ordinary life. Do not mention any astrological term in the reader-facing prose or section titles.`;
 
 export const MINI_SYNTHESIS_STYLE = `MINI SYNTHESIS — SHARP SECOND-PERSON CONVERGENCE
+Write directly to the reader in second person.
 Interpret only the requested focus or current moment by intersecting all populated calculated chart layers silently (Shadbala/Bhava Bala capacity, rulerships/dispositors, decans, lunar mansions, aspects, and timing). Start with ONE sharp thesis born from where distinct chart witnesses reinforce or collide—never a generic personality compliment. Show the concrete behavioral pattern so the reader feels unmistakably recognized: what you actually do in a specific moment, what genuine gift operates inside that same mechanism, what you quietly carry or protect, and the exact cost when it overreaches. End on one clean, chart-specific cut. Use flowing paragraphs with no bullet-point lists of traits, no boilerplate openings or recap endings, zero prompt-echo phrases ("naming the unspoken", "surface-level"), and zero astrology terminology (never name planets, zodiac signs, houses, degrees, aspects, lunar mansions or stations, bounds, faces, or Lots in reader-facing text). Respect any required JSON schema and citation IDs for the Evidence tab.\n\n${READING_BEHAVIOR_DIRECTIVE}`;
 
 export const DEEP_SYNTHESIS_METHOD = `SILENT REASONING ARCHITECTURE (DO NOT PRINT TECHNICAL TERMS TO THE READER)
@@ -105,6 +108,13 @@ export function buildAstrologyInterpreterSystem(...domainInstructions: string[])
     return cleaned.trim();
   });
   return [MASTER_INTERPRETER_PROMPT, ...dedupedDomain]
+    .filter(section => section.trim().length > 0)
+    .join("\n\n---\n\n");
+}
+
+/** Full reader authority remains for complete readings; mini cards use a concise prompt wrapper. */
+export function buildAstrologyMiniInterpreterSystem(...domainInstructions: string[]): string {
+  return [READING_BEHAVIOR_DIRECTIVE, ...domainInstructions]
     .filter(section => section.trim().length > 0)
     .join("\n\n---\n\n");
 }

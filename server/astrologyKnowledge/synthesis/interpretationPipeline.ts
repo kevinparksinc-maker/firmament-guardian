@@ -1,6 +1,5 @@
 import { invokeLLM } from "../../_core/llm";
 import { READING_BEHAVIOR_DIRECTIVE } from "../../master-interpreter";
-import { packCompactSynthesisForLLM } from "./context";
 import { stringifyEvidence } from "./evidenceTransport";
 import type { SynthesisResult } from "./types";
 
@@ -58,76 +57,29 @@ function findingPriorityScore(finding: { subject?: string; strength?: string | n
 }
 
 export function interpretationEvidence(synthesis: SynthesisResult) {
-  const selectedFindingsByMethod = new Map<
-    string,
-    SynthesisResult["methodOutcomes"][number]["findingJudgments"]
-  >();
-
-  for (const method of synthesis.methodOutcomes) {
-    const findings = method.findingJudgments ?? [];
-    const baseId = method.methodId.replace(/^transit:/, "");
-    const maxForMethod =
-      baseId === "transit-activation-layer"
-        ? 14
-        : baseId === "vedic-vargas-divisional"
-          ? 8
-          : 12;
-    const picked =
-      findings.length <= maxForMethod
-        ? findings
-        : [...findings]
-            .sort((a, b) => findingPriorityScore(b) - findingPriorityScore(a))
-            .slice(0, maxForMethod);
-    selectedFindingsByMethod.set(`${method.methodId}:${method.frame}`, picked);
-  }
-
-  const canonMap = new Map<
-    string,
-    SynthesisResult["canonApplications"][number]
-  >();
-  for (const findings of Array.from(selectedFindingsByMethod.values())) {
-    for (const finding of findings) {
-      for (const rule of (finding.rules ?? []).slice(0, 3)) {
-        if (!canonMap.has(rule.canonEvidenceId)) {
-          canonMap.set(rule.canonEvidenceId, rule);
-        }
-      }
-    }
-  }
-  for (const rule of synthesis.canonApplications) {
-    if (canonMap.size >= 48) break;
-    if (!canonMap.has(rule.canonEvidenceId)) {
-      canonMap.set(rule.canonEvidenceId, rule);
-    }
-  }
-  const canon = Array.from(canonMap.values());
+  const canon = Array.from(
+    new Map(
+      [
+        ...synthesis.canonApplications,
+        ...synthesis.methodOutcomes.flatMap(method =>
+          method.findingJudgments.flatMap(finding => finding.rules)
+        ),
+      ].map(rule => [rule.canonEvidenceId, rule])
+    ).values()
+  );
   const canonIndex = new Map(
     canon.map((rule, index) => [rule.canonEvidenceId, index])
   );
-
-  const findingsTotal = synthesis.methodOutcomes.reduce(
-    (n, method) => n + method.findingJudgments.length,
-    0
-  );
-  const findingsIncluded = synthesis.methodOutcomes.reduce((n, method) => {
-    const picked =
-      selectedFindingsByMethod.get(`${method.methodId}:${method.frame}`) ??
-      method.findingJudgments;
-    return n + picked.length;
-  }, 0);
-
   return {
     snapshotId: synthesis.snapshotId,
     scope: synthesis.mode,
     coverage: {
       methodsTotal: synthesis.methodOutcomes.length,
       methodsIncluded: synthesis.methodOutcomes.length,
-      findingsTotal,
-      findingsIncluded,
-      omittedFindings: Math.max(0, findingsTotal - findingsIncluded),
-      truncated: findingsIncluded < findingsTotal,
-      canonTotal: synthesis.canonApplications.length,
-      canonIncluded: canon.length,
+      findingsTotal: synthesis.methodOutcomes.reduce((n, method) => n + method.findingJudgments.length, 0),
+      findingsIncluded: synthesis.methodOutcomes.reduce((n, method) => n + method.findingJudgments.length, 0),
+      omittedFindings: 0,
+      truncated: false,
     },
     methodColumns: [
       "id",
@@ -139,6 +91,7 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
       "limitations",
       "judgmentFailure",
       "findingJudgments",
+      "calculatedFindings",
     ],
     findingColumns: [
       "id",
@@ -153,50 +106,30 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
       "frame",
       "limitation",
     ],
-    methods: synthesis.methodOutcomes.map(method => {
-      const picked =
-        selectedFindingsByMethod.get(`${method.methodId}:${method.frame}`) ??
-        method.findingJudgments;
-      const limitations =
-        method.status === "failed" || method.status === "reference-only"
-          ? Array.isArray(method.strengthAndLimitations)
-            ? method.strengthAndLimitations
-                .slice(0, 2)
-                .map(entry => truncateEvidenceText(entry, 140))
-                .filter(Boolean)
-            : method.strengthAndLimitations
-              ? [truncateEvidenceText(method.strengthAndLimitations, 140)]
-              : []
-          : [];
-      return [
-        method.methodId,
-        method.methodName,
-        method.tradition,
-        method.chartScope,
-        method.frame,
-        method.status,
-        limitations,
-        method.status === "failed"
-          ? truncateEvidenceText(method.interpretation ?? "", 180)
-          : null,
-        picked.map(finding => [
-          finding.id,
-          finding.subject,
-          finding.domain,
-          truncateEvidenceText(finding.judgment ?? "", 320),
-          truncateEvidenceText(finding.mechanism ?? "", 240),
-          finding.valence,
-          finding.strength,
-          (finding.evidenceIds ?? []).slice(0, 4),
-          (finding.rules ?? [])
-            .slice(0, 3)
-            .map(rule => canonIndex.get(rule.canonEvidenceId))
-            .filter((idx): idx is number => typeof idx === "number"),
-          finding.frame ?? method.frame,
-          finding.limitation ? truncateEvidenceText(finding.limitation, 120) : null,
-        ]),
-      ];
-    }),
+    methods: synthesis.methodOutcomes.map(method => [
+      method.methodId,
+      method.methodName,
+      method.tradition,
+      method.chartScope,
+      method.frame,
+      method.status,
+      method.strengthAndLimitations,
+      method.status === "failed" ? method.interpretation : null,
+      method.findingJudgments.map(finding => [
+        finding.id,
+        finding.subject,
+        finding.domain,
+        finding.judgment,
+        finding.mechanism,
+        finding.valence,
+        finding.strength,
+        finding.evidenceIds,
+        finding.rules.map(rule => canonIndex.get(rule.canonEvidenceId)),
+        finding.frame ?? method.frame,
+        finding.limitation ?? null,
+      ]),
+      method.calculatedFindings,
+    ]),
     calculationColumns: [
       "id",
       "executionStatus",
@@ -211,13 +144,13 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
     calculations: synthesis.sourceSnapshot.methodExecutionLedger.map(method => [
       method.id,
       method.status,
-      compactCalculationResults(method.results),
-      (method.evidenceIds ?? []).slice(0, 4),
+      method.results,
+      method.evidenceIds,
       method.prerequisites,
       method.sourceIds,
       method.technique,
       method.errorCode ?? null,
-      method.notes ? truncateEvidenceText(method.notes, 140) : null,
+      method.notes ?? null,
     ]),
     canonColumns: [
       "id",
@@ -235,22 +168,22 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
       rule.canonEvidenceId,
       rule.ruleId,
       rule.sourceId,
-      truncateEvidenceText(rule.sourceTitle ?? "", 48),
+      rule.sourceTitle,
       rule.technique,
       rule.subject,
-      truncateEvidenceText(rule.statement ?? "", 260),
-      (rule.calculationEvidenceIds ?? []).slice(0, 3),
+      rule.statement,
+      rule.calculationEvidenceIds,
       rule.confidence,
       rule.implementationStatus ?? null,
     ]),
-    convergences: synthesis.themes.slice(0, 10).map(theme => ({
+    convergences: synthesis.themes.map(theme => ({
       id: theme.id,
-      theme: truncateEvidenceText(theme.humanTheme ?? "", 200),
-      conclusion: truncateEvidenceText(theme.primaryConclusion ?? "", 260),
+      theme: theme.humanTheme,
+      conclusion: theme.primaryConclusion,
       convergence: theme.convergenceAssessment,
-      evidenceIds: (theme.evidenceIds ?? []).slice(0, 6),
+      evidenceIds: theme.evidenceIds,
     })),
-    tensions: synthesis.contradictionsAndTensions.slice(0, 8),
+    tensions: synthesis.contradictionsAndTensions,
     timing: synthesis.timingOverview,
   };
 }
@@ -315,7 +248,7 @@ function focusedPlacementEvidence(synthesis: SynthesisResult, focus: string) {
   // paragraph. This is a focused *reading* packet, not a raw chart archive.
   // Keep every method/status and explicit omission counts when a method's
   // selected details exceed its share of the model request budget.
-  const perMethodBudget = Math.max(360, Math.floor(16_000 / Math.max(1, synthesis.methodOutcomes.length)));
+  const perMethodBudget = Math.max(240, Math.floor(12_000 / Math.max(1, synthesis.methodOutcomes.length)));
   const short = (value: unknown, limit: number) => {
     const text = typeof value === "string" ? value : value == null ? "" : String(value);
     return text.length > limit ? text.slice(0, limit) + "…" : text;
@@ -462,18 +395,13 @@ export async function runInterpretation(
       content:
         placement.content +
         "\n\nFULL CALCULATED CHART AND METHOD OUTCOMES:\n" +
-        stringifyEvidence(
-          packCompactSynthesisForLLM(ledgers[0], {
-            maxJudgmentChars: 240,
-            maxVargaRows: 4,
-            maxTransitRows: 8,
-            maxHouseRows: 6,
-            maxOtherRows: 8,
-            preserveFullMethodRegistry: true,
-          })
-        ),
+        stringifyEvidence(interpretationEvidence(ledgers[0]))
     };
   } else {
+    const sharedContract = {
+      role: "system" as const,
+      content: "UNIVERSAL EVIDENCE-WEAVING CONTRACT: Read all applicable calculated methods and their statuses. Do not list parallel methods as a substitute for interpretation. Explain their convergence, contradictions and implications without invented facts. Preserve route-specific Horary verdicts, JSON schemas and evidence IDs.",
+    };
     const evidence =
       typeof layout === "object"
         ? stringifyEvidence(ledgers.map(ledger => focusedPlacementEvidence(ledger, layout.focusedPlacement)))
@@ -497,7 +425,7 @@ export async function runInterpretation(
         : firstUser === messages.length - 1
           ? firstUser + 1
           : messages.length - 1;
-    messages.splice(index, 0, dossier);
+    messages.splice(index, 0, sharedContract, dossier);
   }
   // Apply the behavior contract to every route, including placement-reference,
   // while avoiding duplicate instructions in routes using the Master Interpreter.
