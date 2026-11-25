@@ -116,8 +116,8 @@ export function buildWholeChartPlacementIndex(chart: ChartResult, synthesis: Syn
     placements: packets.map(p => ({
       body: p.name,
       position: p.facts[0].value,
-      findingIds: [...new Set(p.judgments.map(j => j.findingId))],
-      methodIds: [...new Set(p.judgments.map(j => j.methodId))],
+      findingIds: Array.from(new Set(p.judgments.map(j => j.findingId))),
+      methodIds: Array.from(new Set(p.judgments.map(j => j.methodId))),
       canon: p.canon,
     })),
     chartWideOrUnlinkedFindingIds: synthesis.methodOutcomes.flatMap(m =>
