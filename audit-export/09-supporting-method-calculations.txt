@@ -1,0 +1,1813 @@
+THE ABSOLUTE — SOURCE AUDIT: 09-supporting-method-calculations.txt
+Source snapshot: 5e1cd90d29f4c3c092e5e252ceb8eedbccc98bc2
+Draft repair PR #84. Not merged or live-verified.
+Source bodies copied verbatim.
+Missing sources: none
+
+
+================================================================================
+FILE: server/astrologyKnowledge/vedic/strength.ts
+BLOB SHA: 2948c063de83930bd61a9fb7ef9f9047ad3c0256
+================================================================================
+import { ephemerisXYZ } from "../../ephemeris";
+import sweph from "sweph";
+import {
+  noaaSunriseUtc,
+  type ChartResult,
+} from "../../astronomy";
+import {
+  normalizeLongitude as norm,
+  ZODIAC_SIGNS,
+} from "../../../shared/hybrid";
+import { vargaPlacement } from "./vargas";
+
+/** Independently implemented mathematical rules; sources and selected variants are public.
+ * BPHS 26 (degree Drishti), 27 (strength); Maitreya's documented calendar convention.
+ * The Absolute retains its supplied XYZ projection and sunrise/equal-house geometry.
+ * No tropical/sidereal re-casting, ayanamsha, J2000 wheel anchor or coordinate tilt is applied.
+ */
+export const STRENGTH_VERSION = "bphs-fixed-xyz-strength-v1";
+export const STRENGTH_SOURCES = [
+  {
+    title: "Brihat Parashara Hora Shastra, chapter 26",
+    url: "https://vedicpupil.in/library/books/brihat-parashara-hora-shastra/chapter-26",
+  },
+  {
+    title: "Brihat Parashara Hora Shastra, chapter 27",
+    url: "https://vedicpupil.in/library/books/brihat-parashara-hora-shastra/chapter-27",
+  },
+  {
+    title: "Maitreya: calendar/Hora convention",
+    url: "https://saravali.github.io/astrology/hora_calculation.html",
+  },
+  {
+    title: "Swiss Ephemeris: Cartesian velocity and orbital anomalies",
+    url: "https://www.astro.com/swisseph/swephprg.htm",
+  },
+];
+export const CLASSICAL = [
+  "Sun",
+  "Moon",
+  "Mars",
+  "Mercury",
+  "Jupiter",
+  "Venus",
+  "Saturn",
+] as const;
+export type Graha = (typeof CLASSICAL)[number];
+const IDS: Record<Graha, number> = {
+  Sun: 0,
+  Moon: 1,
+  Mars: 4,
+  Mercury: 2,
+  Jupiter: 5,
+  Venus: 3,
+  Saturn: 6,
+};
+export const REQUIRED: Record<Graha, number> = {
+  Sun: 390,
+  Moon: 360,
+  Mars: 300,
+  Mercury: 420,
+  Jupiter: 390,
+  Venus: 330,
+  Saturn: 300,
+};
+const EXALT: Record<Graha, number> = {
+  Sun: 10,
+  Moon: 33,
+  Mars: 298,
+  Mercury: 165,
+  Jupiter: 95,
+  Venus: 357,
+  Saturn: 200,
+};
+const LORDS: Graha[] = [
+  "Mars",
+  "Venus",
+  "Mercury",
+  "Moon",
+  "Sun",
+  "Mercury",
+  "Venus",
+  "Mars",
+  "Jupiter",
+  "Saturn",
+  "Saturn",
+  "Jupiter",
+];
+const MOOLA: Record<Graha, number> = {
+  Sun: 4,
+  Moon: 1,
+  Mars: 0,
+  Mercury: 5,
+  Jupiter: 8,
+  Venus: 6,
+  Saturn: 10,
+};
+const FRIENDS: Record<Graha, Graha[]> = {
+  Sun: ["Moon", "Mars", "Jupiter"],
+  Moon: ["Sun", "Mercury"],
+  Mars: ["Sun", "Moon", "Jupiter"],
+  Mercury: ["Sun", "Venus"],
+  Jupiter: ["Sun", "Moon", "Mars"],
+  Venus: ["Mercury", "Saturn"],
+  Saturn: ["Mercury", "Venus"],
+};
+const ENEMIES: Record<Graha, Graha[]> = {
+  Sun: ["Venus", "Saturn"],
+  Moon: [],
+  Mars: ["Mercury"],
+  Mercury: ["Moon"],
+  Jupiter: ["Mercury", "Venus"],
+  Venus: ["Sun", "Moon"],
+  Saturn: ["Sun", "Moon", "Mars"],
+};
+const WEEK: Graha[] = [
+  "Sun",
+  "Moon",
+  "Mars",
+  "Mercury",
+  "Jupiter",
+  "Venus",
+  "Saturn",
+];
+const HORA: Graha[] = [
+  "Saturn",
+  "Jupiter",
+  "Mars",
+  "Sun",
+  "Venus",
+  "Mercury",
+  "Moon",
+];
+const angle = (a: number, b: number) => Math.min(norm(a - b), norm(b - a));
+const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+const mod = (n: number, d: number) => ((n % d) + d) % d;
+const sign = (n: number) => Math.floor(norm(n) / 30);
+const rad = Math.PI / 180;
+const assert = (ok: unknown, message: string): void => {
+  if (!ok) throw new Error(`VEDIC_STRENGTH_INPUT: ${message}`);
+};
+export const STRENGTH_VARIANT = {
+  frame:
+    "The Absolute supplied equatorial XYZ longitudes; no zodiac conversion",
+  houses:
+    "Supplied equal-house anchors used as Bhava reference points; not Sripati cusps",
+  saptavarga:
+    "BPHS 45/30/20/15/10/4/2; moolatrikona by sign in each division; temporary friendship from D1",
+  drekkana: "BPHS 27.6: male first, neutral second, female third",
+  paksha:
+    "BPHS 27.10–11: Moon/Mercury/Jupiter/Venus receive phase/3; other three receive its complement",
+  drik: "BPHS degree-aspect replacements; signed quarter benefic-minus-malefic, no Western orb cutoff",
+  meanMotion:
+    "BPHS continuous Cheshta Kendra; osculating mean anomaly rotated in the date's heliocentric equatorial XYZ plane, not ancient mean-motion tables",
+  ayana:
+    "Kranti from supplied XYZ Z component; traditional 24° normalization; this does not rotate the chart",
+  calendar:
+    "Maitreya year/month lords; sunrise weekday; unequal seasonal day/night Horas",
+  war: "BPHS 27.20: eligible nonluminary pairs within 1°, higher wrapped longitude wins; transfer absolute pre-war Kala difference, simultaneous adjustments",
+  bhava:
+    "BPHS 27.26–31: lord + direction + degree aspects + occupancy + rising-type time adjustment",
+  twilight:
+    "One-ghati (24-minute) interval either side of sunrise or sunset; explicit implementation convention",
+} as const;
+
+/** Degree aspect strength, BPHS 26.6–12. No Western square/trine polarity is used. */
+export function sphutaDrishti(source: Graha, from: number, to: number): number {
+  const d = norm(to - from),
+    r = d % 30,
+    band = Math.floor(d / 30);
+  if (source === "Saturn") {
+    if (band === 1) return 2 * r;
+    if (band === 2) return 60 - r / 2;
+    if (band === 8) return 30 + r;
+    if (band === 9) return 60 - 2 * r;
+  }
+  if (source === "Mars") {
+    if (band === 2) return 15 + 1.5 * r;
+    if (band === 3 || band === 7) return 60 - r;
+    if (band === 6) return 60;
+  }
+  if (source === "Jupiter") {
+    if (band === 3 || band === 7) return 45 + r / 2;
+    if (band === 4 || band === 8) return 60 - 2 * r;
+  }
+  if (d < 30 || d >= 300) return 0;
+  if (d < 60) return (d - 30) / 2;
+  if (d < 90) return d - 45;
+  if (d < 120) return (120 - d) / 2 + 30;
+  if (d < 150) return 150 - d;
+  if (d < 180) return 2 * (d - 150);
+  return (300 - d) / 2;
+}
+export function uchchaBala(body: Graha, longitude: number) {
+  return angle(longitude, norm(EXALT[body] + 180)) / 3;
+}
+export function digBala(body: Graha, longitude: number, houses: number[]) {
+  const weak: Record<Graha, number> = {
+    Sun: 4,
+    Mars: 4,
+    Moon: 10,
+    Venus: 10,
+    Mercury: 7,
+    Jupiter: 7,
+    Saturn: 1,
+  };
+  return angle(longitude, houses[weak[body] - 1]) / 3;
+}
+/** The three missing Saptavarga projections are local derivatives, not new skies. */
+export function strengthVargaSign(longitude: number, division: number): number {
+  const s = sign(longitude),
+    degree = norm(longitude) % 30;
+  if (division === 1) return s;
+  if (division === 2 || division === 3 || division === 9)
+    return vargaPlacement(longitude, `D${division}` as "D2" | "D3" | "D9")
+      .signIndex;
+  if (division === 7)
+    return (s + (s % 2 === 0 ? 0 : 6) + Math.floor(degree / (30 / 7))) % 12;
+  if (division === 12) return (s + Math.floor(degree / 2.5)) % 12;
+  if (division === 30) {
+    const bounds = s % 2 === 0 ? [5, 10, 18, 25, 30] : [5, 12, 20, 25, 30];
+    const signs = s % 2 === 0 ? [0, 10, 8, 2, 6] : [1, 5, 11, 9, 7];
+    return signs[bounds.findIndex(end => degree < end)];
+  }
+  throw new Error(`Unsupported strength division D${division}`);
+}
+export function saptavargajaBala(
+  body: Graha,
+  positions: Record<Graha, number>
+) {
+  return [1, 2, 3, 7, 9, 12, 30].map(division => {
+    const s = strengthVargaSign(positions[body], division),
+      lord = LORDS[s];
+    let relation = "",
+      value: number;
+    if (s === MOOLA[body]) {
+      value = 45;
+      relation = "moolatrikona";
+    } else if (lord === body) {
+      value = 30;
+      relation = "own sign";
+    } else {
+      const natural = FRIENDS[body].includes(lord)
+        ? 1
+        : ENEMIES[body].includes(lord)
+          ? -1
+          : 0;
+      const offset = mod(sign(positions[lord]) - sign(positions[body]), 12) + 1;
+      const temporary = [2, 3, 4, 10, 11, 12].includes(offset) ? 1 : -1;
+      const compound = natural + temporary;
+      value = (
+        { "2": 20, "1": 15, "0": 10, "-1": 4, "-2": 2 } as Record<
+          string,
+          number
+        >
+      )[String(compound)];
+      relation = (
+        {
+          "2": "great friend",
+          "1": "friend",
+          "0": "neutral",
+          "-1": "enemy",
+          "-2": "great enemy",
+        } as Record<string, string>
+      )[String(compound)];
+    }
+    return {
+      division: `D${division}`,
+      sign: ZODIAC_SIGNS[s],
+      lord,
+      relation,
+      virupas: value,
+    };
+  });
+}
+export function ayanaBala(body: Graha, declination: number) {
+  // Classical declination approximation has a 24° normalizing amplitude.
+  const signed =
+    body === "Mercury"
+      ? Math.abs(declination)
+      : ["Moon", "Saturn"].includes(body)
+        ? -declination
+        : declination;
+  return (30 * (24 + signed)) / 24;
+}
+function temporal(chart: ChartResult) {
+  const t = Date.parse(chart.utc),
+    latitude = chart.input.latitude,
+    longitude = chart.input.longitude;
+  assert(
+    Number.isFinite(t) &&
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude),
+    "Resolved instant and observer coordinates required."
+  );
+  const base = Date.UTC(
+    new Date(t).getUTCFullYear(),
+    new Date(t).getUTCMonth(),
+    new Date(t).getUTCDate()
+  );
+  const candidates = [-2, -1, 0, 1, 2]
+    .map(offset => {
+      const date = new Date(base + offset * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      return {
+        rise: noaaSunriseUtc(date, latitude, longitude).getTime(),
+        set: noaaSunriseUtc(date, latitude, longitude, true).getTime(),
+      };
+    })
+    .sort((a, b) => a.rise - b.rise);
+  const index = candidates.findIndex(
+    (v, i) => v.rise <= t && candidates[i + 1]?.rise > t
+  );
+  assert(index >= 0, "Sunrise interval unavailable.");
+  const current = candidates[index],
+    next = candidates[index + 1];
+  const day = t < current.set,
+    phase = day
+      ? (t - current.rise) / (current.set - current.rise)
+      : (t - current.set) / (next.rise - current.set);
+  const third = Math.min(2, Math.floor(phase * 3));
+  const thirdLord: Graha = (
+    day ? ["Mercury", "Sun", "Saturn"] : ["Moon", "Venus", "Mars"]
+  )[third] as Graha;
+  const dateParts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: chart.input.timezone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    })
+      .formatToParts(new Date(current.rise))
+      .map(p => [p.type, p.value])
+  );
+  const year = Number(dateParts.year),
+    month = Number(dateParts.month),
+    date = Number(dateParts.day);
+  const weekday = new Date(Date.UTC(year, month - 1, date)).getUTCDay(),
+    dayLord = WEEK[weekday];
+  const horaIndex = (day ? 0 : 12) + Math.min(11, Math.floor(phase * 12));
+  const horaLord = HORA[(HORA.indexOf(dayLord) + horaIndex) % 7];
+  const noon = (current.rise + current.set) / 2;
+  const solarHours = mod(12 + (t - noon) / 3600000, 24);
+  return {
+    sunriseUtc: new Date(current.rise).toISOString(),
+    sunsetUtc: new Date(current.set).toISOString(),
+    nextSunriseUtc: new Date(next.rise).toISOString(),
+    day,
+    third: third + 1,
+    thirdLord,
+    dayLord,
+    horaLord,
+    hora: horaIndex + 1,
+    yearLord: WEEK[mod((year + 3) * 3, 7)],
+    monthLord: WEEK[mod((12 * year + month + 6) * 2, 7)],
+    solarHours,
+    twilight:
+      Math.min(
+        Math.abs(t - current.rise),
+        Math.abs(t - current.set),
+        Math.abs(t - next.rise)
+      ) <=
+      24 * 60000,
+  };
+}
+
+/** Pure continuous Cheshta formula. Use a circular midpoint across the 0° seam. */
+export function cheshtaKendra(
+  body: Graha,
+  trueLongitude: number,
+  meanLongitude: number,
+  sunMean: number
+) {
+  const inner = body === "Mercury" || body === "Venus";
+  const mean = inner ? sunMean : meanLongitude,
+    apex = inner ? meanLongitude : sunMean;
+  const midpoint = norm(mean + (norm(trueLongitude - mean + 180) - 180) / 2);
+  return angle(apex, midpoint) / 3;
+}
+function meanOrbitalLongitude(jd: number, id: number) {
+  // M and true anomaly are scalar angles in the orbital plane; none of the
+  // orbital-element ecliptic longitudes are used as chart coordinates.
+  const orbit = sweph.get_orbital_elements(jd + sweph.deltat(jd), id, 4);
+  assert(
+    orbit.flag >= 0 && orbit.data?.slice(6, 8).every(Number.isFinite),
+    `Orbital anomalies missing for ${id}.`
+  );
+  const { xyz, velocity } = ephemerisXYZ(jd, id, 8 | 16);
+  const r = [xyz.x, xyz.y, xyz.z],
+    v = velocity;
+  const h = [
+    r[1] * v[2] - r[2] * v[1],
+    r[2] * v[0] - r[0] * v[2],
+    r[0] * v[1] - r[1] * v[0],
+  ];
+  const length = Math.hypot(...h);
+  assert(length > 0, "Orbital normal cannot be zero.");
+  const n = h.map(x => x / length),
+    d = (orbit.data[6] - orbit.data[7]) * rad;
+  const cross = [
+      n[1] * r[2] - n[2] * r[1],
+      n[2] * r[0] - n[0] * r[2],
+      n[0] * r[1] - n[1] * r[0],
+    ],
+    dot = sum(n.map((x, i) => x * r[i]));
+  const rotated = r.map(
+    (x, i) =>
+      x * Math.cos(d) + cross[i] * Math.sin(d) + n[i] * dot * (1 - Math.cos(d))
+  );
+  return norm(Math.atan2(rotated[1], rotated[0]) / rad);
+}
+export function calculateVedicStrength(chart: ChartResult) {
+  assert(
+    chart.ascendant &&
+      chart.houses.length === 12 &&
+      chart.houses.every(Number.isFinite),
+    "A known local Ascendant and 12 Equal Houses are required."
+  );
+  assert(
+    chart.input.birthTimeKnown !== false,
+    "Verified birth time required for strengths."
+  );
+  const rows = Object.fromEntries(
+    CLASSICAL.map(body => [body, chart.movingBodies.find(p => p.name === body)])
+  );
+  for (const body of CLASSICAL)
+    assert(
+      rows[body] && Number.isFinite(rows[body]!.longitude) && rows[body]!.xyz,
+      `${body} position/XYZ missing.`
+    );
+  const positions = Object.fromEntries(
+    CLASSICAL.map(p => [p, rows[p]!.longitude])
+  ) as Record<Graha, number>;
+  const time = temporal(chart),
+    phase = angle(positions.Moon, positions.Sun) / 3;
+  const waxing = norm(positions.Moon - positions.Sun) <= 180;
+  const mercuryMalefic = chart.movingBodies
+    .concat([chart.northNode, chart.southNode])
+    .some(
+      p =>
+        ["Sun", "Mars", "Saturn", "North Node", "South Node"].includes(
+          p.name
+        ) && sign(p.longitude) === sign(positions.Mercury)
+    );
+  const benefic = (p: Graha) =>
+    ["Jupiter", "Venus"].includes(p) ||
+    (p === "Moon" && waxing) ||
+    (p === "Mercury" && !mercuryMalefic);
+  const sunMean = norm(meanOrbitalLongitude(chart.julianDay, 14) + 180);
+  const records = CLASSICAL.map(body => {
+    const row = rows[body]!,
+      house = row.agentHouse ?? row.house,
+      longitude = row.longitude;
+    const xyz = row.xyz!,
+      declination = Math.atan2(xyz.z, Math.hypot(xyz.x, xyz.y)) / rad;
+    const vargas = saptavargajaBala(body, positions),
+      uccha = uchchaBala(body, longitude);
+    const parity = (s: number) =>
+      ["Moon", "Venus"].includes(body) ? s % 2 === 1 : s % 2 === 0;
+    const ojayugma =
+      (parity(sign(longitude)) ? 15 : 0) +
+      (parity(strengthVargaSign(longitude, 9)) ? 15 : 0);
+    const kendra = [1, 4, 7, 10].includes(house)
+      ? 60
+      : [2, 5, 8, 11].includes(house)
+        ? 30
+        : 15;
+    const decan = Math.floor((norm(longitude) % 30) / 10),
+      gender = ["Sun", "Mars", "Jupiter"].includes(body)
+        ? 0
+        : ["Mercury", "Saturn"].includes(body)
+          ? 1
+          : 2;
+    const drekkana = decan === gender ? 15 : 0,
+      sthana =
+        uccha + sum(vargas.map(v => v.virupas)) + ojayugma + kendra + drekkana;
+    const dig = digBala(body, longitude, chart.houses),
+      ayana = ayanaBala(body, declination);
+    const dayStrength = 60 - Math.abs(time.solarHours - 12) * 5;
+    const nathonnata =
+      body === "Mercury"
+        ? 60
+        : ["Sun", "Jupiter", "Venus"].includes(body)
+          ? dayStrength
+          : 60 - dayStrength;
+    const paksha = ["Moon", "Mercury", "Jupiter", "Venus"].includes(body)
+      ? phase
+      : 60 - phase;
+    const kalaParts = {
+      nathonnata,
+      paksha,
+      tribhaga: body === "Jupiter" || body === time.thirdLord ? 60 : 0,
+      varsha: body === time.yearLord ? 15 : 0,
+      masa: body === time.monthLord ? 30 : 0,
+      dina: body === time.dayLord ? 45 : 0,
+      hora: body === time.horaLord ? 60 : 0,
+      ayana,
+      yuddha: 0,
+    };
+    const aspectContributions = CLASSICAL.filter(p => p !== body).map(
+      source => {
+        const raw = sphutaDrishti(source, positions[source], longitude);
+        return {
+          source,
+          rawVirupas: raw,
+          benefic: benefic(source),
+          signedVirupas: ((benefic(source) ? 1 : -1) * raw) / 4,
+        };
+      }
+    );
+    const mean = ["Sun", "Moon"].includes(body)
+      ? null
+      : meanOrbitalLongitude(chart.julianDay, IDS[body]);
+    const cheshta =
+      body === "Sun"
+        ? ayana
+        : body === "Moon"
+          ? paksha
+          : cheshtaKendra(body, longitude, mean!, sunMean);
+    const naisargika =
+      ((8 -
+        [
+          "Sun",
+          "Moon",
+          "Venus",
+          "Jupiter",
+          "Mercury",
+          "Mars",
+          "Saturn",
+        ].indexOf(body) -
+        1) *
+        60) /
+      7;
+    return {
+      body,
+      longitude,
+      sign: ZODIAC_SIGNS[sign(longitude)],
+      house,
+      declination,
+      components: {
+        sthana,
+        dig,
+        kala: sum(Object.values(kalaParts)),
+        cheshta,
+        naisargika,
+        drik: sum(aspectContributions.map(a => a.signedVirupas)),
+      },
+      sthanaParts: {
+        uccha,
+        saptavargaja: sum(vargas.map(v => v.virupas)),
+        ojayugma,
+        kendra,
+        drekkana,
+      },
+      vargas,
+      kalaParts,
+      aspectContributions,
+      motionInputs: {
+        trueLongitude: longitude,
+        meanLongitude: mean,
+        sunMeanLongitude: sunMean,
+      },
+      war: [] as Array<{ other: Graha; winner: Graha; adjustment: number }>,
+      totalVirupas: 0,
+      rupas: 0,
+      requiredVirupas: REQUIRED[body],
+      adequacyRatio: 0,
+      rank: 0,
+      ownedHouses: chart.houses.flatMap((cusp, i) =>
+        LORDS[sign(cusp)] === body ? [i + 1] : []
+      ),
+    };
+  });
+  // Compute every pair from immutable pre-war values; preserve zero-sum transfer.
+  const prewar = new Map(records.map(p => [p.body, p.components.kala]));
+  for (let i = 2; i < records.length; i++)
+    for (let j = i + 1; j < records.length; j++) {
+      const a = records[i],
+        b = records[j],
+        separation = angle(a.longitude, b.longitude);
+      if (separation >= 1) continue;
+      const forward = norm(b.longitude - a.longitude),
+        winner = forward < 180 ? b : a,
+        loser = winner === a ? b : a;
+      const transfer = Math.abs(prewar.get(a.body)! - prewar.get(b.body)!);
+      winner.kalaParts.yuddha += transfer;
+      loser.kalaParts.yuddha -= transfer;
+      winner.war.push({
+        other: loser.body,
+        winner: winner.body,
+        adjustment: transfer,
+      });
+      loser.war.push({
+        other: winner.body,
+        winner: winner.body,
+        adjustment: -transfer,
+      });
+    }
+  for (const p of records) {
+    p.components.kala = sum(Object.values(p.kalaParts));
+    p.totalVirupas = sum(Object.values(p.components));
+    p.rupas = p.totalVirupas / 60;
+    p.adequacyRatio = p.totalVirupas / p.requiredVirupas;
+    assert(Number.isFinite(p.totalVirupas), `${p.body} total is invalid.`);
+  }
+  const ranked = [...records].sort((a, b) => b.adequacyRatio - a.adequacyRatio);
+  records.forEach(p => (p.rank = ranked.findIndex(r => r.body === p.body) + 1));
+  const byBody = new Map(records.map(p => [p.body, p]));
+  const bhavas = chart.houses.map((cusp, i) => {
+    const house = i + 1,
+      s = sign(cusp),
+      degree = norm(cusp) % 30,
+      lord = LORDS[s],
+      lordRecord = byBody.get(lord)!;
+    const human = [2, 5, 6, 10].includes(s) || (s === 8 && degree < 15);
+    const quadruped =
+      [0, 1, 4].includes(s) ||
+      (s === 8 && degree >= 15) ||
+      (s === 9 && degree < 15);
+    const weakHouse = human ? 7 : quadruped ? 4 : [3, 7].includes(s) ? 1 : 10;
+    const direction = angle(cusp, chart.houses[weakHouse - 1]) / 3;
+    const aspectContributions = CLASSICAL.map(source => {
+      const raw = sphutaDrishti(source, positions[source], cusp);
+      const scale = ["Mercury", "Jupiter"].includes(source) ? 1 : 0.25;
+      return {
+        source,
+        rawVirupas: raw,
+        benefic: benefic(source),
+        signedVirupas: (benefic(source) ? 1 : -1) * raw * scale,
+      };
+    });
+    const occupants = records.filter(p => p.house === house).map(p => p.body);
+    const occupancy =
+      (occupants.some(p => ["Mercury", "Jupiter"].includes(p)) ? 60 : 0) -
+      (occupants.some(p => ["Sun", "Mars", "Saturn"].includes(p)) ? 60 : 0);
+    const head = [2, 4, 5, 6, 7, 10].includes(s),
+      both = s === 11;
+    const risingType =
+      (both && time.twilight) || (!both && !time.twilight && head === time.day)
+        ? 15
+        : 0;
+    const components = {
+      lord: lordRecord.totalVirupas,
+      direction,
+      aspect: sum(aspectContributions.map(a => a.signedVirupas)),
+      occupancy,
+      risingType,
+    };
+    const totalVirupas = sum(Object.values(components));
+    assert(Number.isFinite(totalVirupas), `House ${house} total invalid.`);
+    return {
+      house,
+      cusp,
+      sign: ZODIAC_SIGNS[s],
+      lord,
+      lordAdequacy: lordRecord.adequacyRatio,
+      lordDeliveryHouse: lordRecord.house,
+      components,
+      totalVirupas,
+      rupas: totalVirupas / 60,
+      rank: 0,
+      relativeSupport: "" as
+        "above-chart-average" | "below-chart-average" | "at-chart-average" | "",
+      occupants,
+      aspectContributions,
+    };
+  });
+  const average = sum(bhavas.map(h => h.totalVirupas)) / 12,
+    houseRank = [...bhavas].sort((a, b) => b.totalVirupas - a.totalVirupas);
+  bhavas.forEach(h => {
+    h.rank = houseRank.findIndex(v => v.house === h.house) + 1;
+    h.relativeSupport =
+      h.totalVirupas > average
+        ? "above-chart-average"
+        : h.totalVirupas < average
+          ? "below-chart-average"
+          : "at-chart-average";
+  });
+  return {
+    version: STRENGTH_VERSION,
+    coordinateVariant: STRENGTH_VARIANT,
+    sources: STRENGTH_SOURCES,
+    units: "virupas; 60 virupas = 1 rupa",
+    instantUtc: chart.utc,
+    temporal: time,
+    planets: records,
+    houses: bhavas,
+    houseAverageVirupas: average,
+  };
+}
+export type VedicStrength = ReturnType<typeof calculateVedicStrength>;
+
+
+================================================================================
+FILE: server/astrologyKnowledge/vedic/timingAndAshtakavarga.ts
+BLOB SHA: fa5c597b875d127a0757e2bb4ff21f1b635b6934
+================================================================================
+import type { ChartResult } from "../../astronomy";
+import { normalizeLongitude, ZODIAC_SIGNS, NAKSHATRAS } from "../../../shared/hybrid";
+import type { EvidenceItem, SourceTrace } from "../types";
+
+const ORDER = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"] as const;
+const YEARS: Record<(typeof ORDER)[number], number> = { Ketu:7, Venus:20, Sun:6, Moon:10, Mars:7, Rahu:18, Jupiter:16, Saturn:19, Mercury:17 };
+
+const CLASSICAL = ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn"] as const;
+type Classical = (typeof CLASSICAL)[number];
+type Contributor = Classical | "Lagna";
+type BinduTable = Record<Classical, Record<Contributor, number[]>>;
+
+// Parashari benefic houses, counted inclusively from each contributor's sign.
+const BENEFIC_PLACES: BinduTable = {
+ Sun:{Sun:[1,2,4,7,8,9,10,11],Moon:[3,6,10,11],Mars:[1,2,4,7,8,9,10,11],Mercury:[3,5,6,9,10,11,12],Jupiter:[5,6,9,11],Venus:[6,7,12],Saturn:[1,2,4,7,8,9,10,11],Lagna:[3,4,6,10,11,12]},
+ Moon:{Sun:[3,6,7,8,10,11],Moon:[1,3,6,7,10,11],Mars:[2,3,5,6,9,10,11],Mercury:[1,3,4,5,7,8,10,11],Jupiter:[1,4,7,8,10,11,12],Venus:[3,4,5,7,9,10,11],Saturn:[3,5,6,11],Lagna:[3,6,10,11]},
+ Mars:{Sun:[3,5,6,10,11],Moon:[3,6,11],Mars:[1,2,4,7,8,10,11],Mercury:[3,5,6,11],Jupiter:[6,10,11,12],Venus:[6,8,11,12],Saturn:[1,4,7,8,9,10,11],Lagna:[1,3,6,10,11]},
+ Mercury:{Sun:[5,6,9,11,12],Moon:[2,4,6,8,10,11],Mars:[1,2,4,7,8,9,10,11],Mercury:[1,3,5,6,9,10,11,12],Jupiter:[6,8,11,12],Venus:[1,2,3,4,5,8,9,11],Saturn:[1,2,4,7,8,9,10,11],Lagna:[1,2,4,6,8,10,11]},
+ Jupiter:{Sun:[1,2,3,4,7,8,9,10,11],Moon:[2,5,7,9,11],Mars:[1,2,4,7,8,10,11],Mercury:[1,2,4,5,6,9,10,11],Jupiter:[1,2,3,4,7,8,10,11],Venus:[2,5,6,9,10,11],Saturn:[3,5,6,12],Lagna:[1,2,4,5,6,7,9,10,11]},
+ Venus:{Sun:[8,11,12],Moon:[1,2,3,4,5,8,9,11,12],Mars:[3,5,6,9,11,12],Mercury:[3,5,6,9,11],Jupiter:[5,8,9,10,11],Venus:[1,2,3,4,5,8,9,10,11],Saturn:[3,4,5,8,9,10,11],Lagna:[1,2,3,4,5,8,9,11]},
+ Saturn:{Sun:[1,2,4,7,8,10,11],Moon:[3,6,11],Mars:[3,5,6,10,11,12],Mercury:[6,8,9,10,11,12],Jupiter:[5,6,11,12],Venus:[6,11,12],Saturn:[3,5,6,11],Lagna:[1,3,4,6,10,11]},
+};
+const EXPECTED_TOTALS: Record<Classical, number> = {Sun:48,Moon:49,Mars:39,Mercury:54,Jupiter:56,Venus:52,Saturn:39};
+const TRACE = (technique: string, ruleId: string): SourceTrace => ({
+ sourceId:"local-vedic-rules", tradition:"vedic", technique, sourceTitle:"Firmament Vedic calculation layer",
+ retrievedAt:new Date().toISOString(), ruleId, confidence:"high",
+ calculationSettings:{coordinateFrame:"firmament-fixed-tropical",ephemeris:"Swiss Ephemeris Moshier",yearLengthDays:365.25},
+});
+function fixedFirmamentPosition(longitude:number) {
+ if (!Number.isFinite(longitude)) throw new Error("Invalid tropical longitude.");
+ return {longitude:normalizeLongitude(longitude),frameOffset:0};
+}
+function signIndex(longitude:number){return Math.floor(normalizeLongitude(longitude)/30);}
+function dayNumber(date:Date){return date.getTime()/86400000;}
+function dateLabel(days:number){return new Date(days*86400000).toISOString().slice(0,10);}
+function subperiods(start:number,end:number,lord:(typeof ORDER)[number]){
+ const index=ORDER.indexOf(lord); const years=(end-start)/365.25; let cursor=start;
+ return ORDER.map((_,offset)=>{const child=ORDER[(index+offset)%9];const next=cursor+years*YEARS[child]/120*365.25;const item={lord:child,start:cursor,end:next};cursor=next;return item;});
+}
+function activePeriod<T extends {start:number;end:number}>(items:T[],now:number){return items.find(item=>now>=item.start&&now<item.end);}
+function dashaEvidence(chart:ChartResult,frameOffset:number,moon:number,asOf:Date):EvidenceItem[]{
+ if(chart.input.birthTimeKnown===false||!chart.input.time||!chart.input.timezone) return [{
+  id:"vedic-dasha-time-uncertain",tradition:"vedic",category:"uncertainty",technique:"dasha",subject:"Vimshottari Dasha",
+  statement:"Vimshottari periods were not asserted because birth time is date-only or marked unknown. The Moon's fixed-Firmament position and Dasha balance can change within the day; provide a verified birth time for an exact timeline.",
+  concepts:["dasha","birth-time-uncertain"],polarity:"neutral",strength:0,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:TRACE("dasha","vedic-dasha-architecture"),
+ }];
+ const birth=dayNumber(new Date(chart.utc)); const size=360/27; const starIndex=Math.floor(moon/size); const progressed=moon-starIndex*size;
+ const firstLord=ORDER[starIndex%9]; const balance=(size-progressed)/size*YEARS[firstLord]; const elapsed=YEARS[firstLord]-balance;
+ let cursor=birth-elapsed*365.25; const timeline:Array<{lord:(typeof ORDER)[number];start:number;end:number}>=[];
+ for(let i=0;i<18;i++){const lord=ORDER[(ORDER.indexOf(firstLord)+i)%9];const end=cursor+YEARS[lord]*365.25;timeline.push({lord,start:cursor,end});cursor=end;}
+ const now=dayNumber(asOf); const active=activePeriod(timeline,now); const details=[
+  "Firmament fixed Moon "+moon.toFixed(4)+"°; fixed stellar reference offset 0°.",
+  "Birth Nakshatra "+NAKSHATRAS[starIndex]+"; starting Mahadasha "+firstLord+".",
+  "Balance at birth "+balance.toFixed(3)+" years using a 365.25-day year."
+ ];
+ if(active){
+  const ads=subperiods(active.start,active.end,active.lord);const ad=activePeriod(ads,now);const pds=ad?subperiods(ad.start,ad.end,ad.lord):[];const pd=activePeriod(pds,now);
+  details.push("Current Mahadasha: "+active.lord+" ("+dateLabel(active.start)+"–"+dateLabel(active.end)+").");
+  if(ad) details.push("Current Antardasha: "+active.lord+"/"+ad.lord+" ("+dateLabel(ad.start)+"–"+dateLabel(ad.end)+").");
+  if(ad&&pd) details.push("Current Pratyantardasha: "+active.lord+"/"+ad.lord+"/"+pd.lord+" ("+dateLabel(pd.start)+"–"+dateLabel(pd.end)+").");
+  const next=timeline.find(item=>item.start>now);if(next)details.push("Next Mahadasha: "+next.lord+", beginning "+dateLabel(next.start)+".");
+ } else details.push("Current date falls outside the two full 120-year Vimshottari cycles generated; no current period is claimed.");
+ return [{id:"vedic-vimshottari-dasha",tradition:"vedic",category:"calculated-fact",technique:"dasha",subject:"Vimshottari Dasha",statement:details.join(" "),concepts:["dasha","vimshottari",NAKSHATRAS[starIndex].toLowerCase(),firstLord.toLowerCase()],polarity:"neutral",strength:1,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("dasha","vedic-dasha-architecture"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,firmamentMoonDegrees:Number(moon.toFixed(6)),birthNakshatra:NAKSHATRAS[starIndex],yearLengthDays:365.25,subperiods:"proportional 120-year Vimshottari cycle"}}}];
+}
+function ashtakavargaEvidence(positions:Record<Classical,number>,asc:number,frameOffset:number):EvidenceItem[]{
+ const contributorSigns:Record<Contributor,number>={Lagna:signIndex(asc),...Object.fromEntries(CLASSICAL.map(p=>[p,signIndex(positions[p])])) as Record<Classical,number>};
+ const bav={} as Record<Classical,number[]>;
+ for(const target of CLASSICAL){
+  const scores=Array(12).fill(0) as number[];
+  for(const contributor of [...CLASSICAL,"Lagna"] as Contributor[]) for(const house of BENEFIC_PLACES[target][contributor]) scores[(contributorSigns[contributor]+house-1)%12]++;
+  const total=scores.reduce((a,b)=>a+b,0);
+  if(total!==EXPECTED_TOTALS[target]) return [{id:"vedic-ashtakavarga-checksum-failed",tradition:"vedic",category:"uncertainty",technique:"ashtakavarga",subject:"Ashtakavarga",statement:"Ashtakavarga withheld because "+target+" BAV checksum was "+total+", expected "+EXPECTED_TOTALS[target]+". No scores are passed to the interpreter.",concepts:["ashtakavarga","validation-failed"],polarity:"neutral",strength:0,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:TRACE("ashtakavarga","vedic-ashtakavarga-classical")}];
+  bav[target]=scores;
+ }
+ const sav=Array(12).fill(0) as number[];for(const p of CLASSICAL)bav[p].forEach((score,i)=>sav[i]+=score);
+ if(sav.reduce((a,b)=>a+b,0)!==337) return [{id:"vedic-ashtakavarga-sav-checksum-failed",tradition:"vedic",category:"uncertainty",technique:"ashtakavarga",subject:"Ashtakavarga",statement:"Sarvashtakavarga checksum failed; no scores are passed to the interpreter.",concepts:["ashtakavarga","validation-failed"],polarity:"neutral",strength:0,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:TRACE("ashtakavarga","vedic-ashtakavarga-classical")}];
+ const ranked=sav.map((score,i)=>({sign:ZODIAC_SIGNS[i],score}));const high=[...ranked].sort((a,b)=>b.score-a.score).slice(0,3);const low=[...ranked].sort((a,b)=>a.score-b.score).slice(0,3);
+ const parts=["Firmament fixed, unreduced Parashari Bhinnashtakavarga and Sarvashtakavarga; fixed stellar reference offset 0°.","SAV total checksum 337 bindus.","Highest SAV signs: "+high.map(x=>x.sign+" "+x.score).join(", ")+".","Lowest SAV signs: "+low.map(x=>x.sign+" "+x.score).join(", ")+".",...CLASSICAL.map(p=>p+" BAV total "+bav[p].reduce((a,b)=>a+b,0)+": "+bav[p].map((score,i)=>ZODIAC_SIGNS[i]+" "+score).join(", ")+".")];
+ return [{id:"vedic-ashtakavarga-bav-sav",tradition:"vedic",category:"calculated-fact",technique:"ashtakavarga",subject:"Bhinnashtakavarga and Sarvashtakavarga",statement:parts.join(" "),concepts:["ashtakavarga","bhinnashtakavarga","sarvashtakavarga","bindu-scores"],polarity:"neutral",strength:1,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:{...TRACE("ashtakavarga","vedic-ashtakavarga-classical"),calculationSettings:{coordinateFrame:"firmament-fixed-tropical",frameOffsetDegrees:0,system:"Parashari unreduced BAV/SAV",excludedContributors:["Rahu","Ketu"],checksums:{Sun:48,Moon:49,Mars:39,Mercury:54,Jupiter:56,Venus:52,Saturn:39,SAV:337}}}}];
+}
+export function resolveVedicTimingAndAshtakavarga(chart:ChartResult, asOf:Date = timingInstant(chart)):EvidenceItem[]{
+ if(!Number.isFinite(chart.julianDay)||!chart.utc) return [{id:"vedic-advanced-no-epoch",tradition:"vedic",category:"uncertainty",technique:"dasha-ashtakavarga",subject:"Dasha and Ashtakavarga",statement:"Dasha and Ashtakavarga were not calculated because the chart has no valid birth epoch.",concepts:["dasha","ashtakavarga","unavailable"],polarity:"neutral",strength:0,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:TRACE("dasha-ashtakavarga","vedic-dasha-architecture")}];
+ let dasha:EvidenceItem[]=[];
+ let moonSidereal:{longitude:number;frameOffset:number};
+ try {
+  const moon=chart.movingBodies.find(row=>row.name==="Moon");if(!moon)throw new Error("Natal Moon is missing.");
+  moonSidereal=fixedFirmamentPosition(moon.longitude);
+  dasha=dashaEvidence(chart,moonSidereal.frameOffset,moonSidereal.longitude,asOf);
+ } catch(error) {
+  return [{id:"vedic-dasha-calculation-error",tradition:"vedic",category:"uncertainty",technique:"dasha",subject:"Vimshottari Dasha",statement:"Vimshottari calculation failed safely: "+(error instanceof Error?error.message:String(error))+". No inferred timing is supplied.",concepts:["dasha","calculation-error"],polarity:"neutral",strength:0,ruleId:"vedic-dasha-architecture",sourceId:"local-vedic-rules",sourceTrace:TRACE("dasha","vedic-dasha-architecture")}];
+ }
+ const asc=chart.ascendant;
+ if(!asc||!Number.isFinite(asc.longitude)) return [...dasha,{id:"vedic-ashtakavarga-no-ascendant",tradition:"vedic",category:"uncertainty",technique:"ashtakavarga",subject:"Ashtakavarga",statement:"Ashtakavarga requires a usable birth Ascendant/Lagna. This chart has no calculated Ascendant, so no BAV/SAV scores are asserted.",concepts:["ashtakavarga","lagna-unavailable"],polarity:"neutral",strength:0,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:TRACE("ashtakavarga","vedic-ashtakavarga-classical")}];
+ try {
+  const sidAsc=fixedFirmamentPosition(asc.longitude);const positions={} as Record<Classical,number>;
+  for(const p of CLASSICAL){const row=chart.movingBodies.find(item=>item.name===p);if(!row)throw new Error("Required classical position "+p+" is missing.");positions[p]=fixedFirmamentPosition(row.longitude).longitude;}
+  return [...dasha,...ashtakavargaEvidence(positions,sidAsc.longitude,sidAsc.frameOffset)];
+ } catch(error) {
+  return [...dasha,{id:"vedic-ashtakavarga-calculation-error",tradition:"vedic",category:"uncertainty",technique:"ashtakavarga",subject:"Ashtakavarga",statement:"Ashtakavarga calculation failed safely: "+(error instanceof Error?error.message:String(error))+". No inferred score is supplied.",concepts:["ashtakavarga","calculation-error"],polarity:"neutral",strength:0,ruleId:"vedic-ashtakavarga-classical",sourceId:"local-vedic-rules",sourceTrace:TRACE("ashtakavarga","vedic-ashtakavarga-classical")}];
+ }
+}
+
+/** Structured, deterministic Vimshottari periods for the visual timeline.
+ * Uses the same Moon, nakshatra order, balance, and 365.25-day year
+ * as dashaEvidence; no additional ephemeris or Ascendant calculation.
+ */
+export function buildVimshottariTimeline(chart: ChartResult, asOf: Date = new Date()) {
+  if (chart.input.birthTimeKnown === false || !chart.input.time || !chart.input.timezone)
+    return { available: false as const, reason: "A verified birth time and timezone are required for an exact Dasha timeline." };
+  const moon = chart.movingBodies.find(row => row.name === "Moon");
+  const birth = Date.parse(chart.utc);
+  if (!moon || !Number.isFinite(moon.longitude) || !Number.isFinite(birth))
+    return { available: false as const, reason: "The natal Moon or birth epoch is missing." };
+  const longitude = normalizeLongitude(moon.longitude);
+  const span = 360 / 27;
+  const starIndex = Math.floor(longitude / span);
+  const firstLord = ORDER[starIndex % 9];
+  const balanceYears = (1 - (longitude - starIndex * span) / span) * YEARS[firstLord];
+  const birthDay = birth / 86400000;
+  let cursor = birthDay - (YEARS[firstLord] - balanceYears) * 365.25;
+  const now = asOf.getTime() / 86400000;
+  const periods = Array.from({ length: 18 }, (_, index) => {
+    const lord = ORDER[(ORDER.indexOf(firstLord) + index) % 9];
+    const start = cursor;
+    const end = start + YEARS[lord] * 365.25;
+    cursor = end;
+    const antardashas = subperiods(start, end, lord).map(ad => ({
+      lord: ad.lord, start: dateLabel(ad.start), end: dateLabel(ad.end),
+      active: now >= ad.start && now < ad.end,
+      pratyantardashas: subperiods(ad.start, ad.end, ad.lord).map(pd => ({
+        lord: pd.lord, start: dateLabel(pd.start), end: dateLabel(pd.end),
+        active: now >= pd.start && now < pd.end,
+      })),
+    }));
+    return { lord, start: dateLabel(start), end: dateLabel(end),
+      active: now >= start && now < end, antardashas };
+  });
+  return {
+    available: true as const, coordinateFrame: "guardian-fixed-zero-reference" as const,
+    moonLongitude: longitude, birthNakshatra: NAKSHATRAS[starIndex],
+    startingLord: firstLord, balanceYears, asOf: asOf.toISOString(),
+    periods, yearLengthDays: 365.25,
+  };
+}
+
+export function timingInstant(chart: ChartResult) {
+  return new Date(chart.input.chartRole === "event" ? chart.utc : chart.transitDate || chart.utc);
+}
+
+/** Structured values retained by the method ledger; never inferred from prose by the reader. */
+export function timingMethodCalculations(chart: ChartResult) {
+  const asOf = timingInstant(chart);
+  const timeline = buildVimshottariTimeline(chart, asOf);
+  const activeLords: Array<{level:string;lord:string;start:string;end:string}> = [];
+  if (timeline.available) {
+    const maha = timeline.periods.find(period => period.active);
+    if (maha) {
+      activeLords.push({level:"Mahadasha",lord:maha.lord,start:maha.start,end:maha.end});
+      const antar=maha.antardashas.find(period=>period.active);
+      if (antar) {
+        activeLords.push({level:"Antardasha",lord:antar.lord,start:antar.start,end:antar.end});
+        const praty=antar.pratyantardashas.find(period=>period.active);
+        if (praty) activeLords.push({level:"Pratyantardasha",lord:praty.lord,start:praty.start,end:praty.end});
+      }
+    }
+  }
+  return { dasha:{available:timeline.available,asOf:asOf.toISOString(),activeLords}, ashtakavarga:getAshtakavargaVisual(chart) };
+}
+
+/** Visual BAV/SAV output from the same evidence engine used by synthesis.
+ * No separate bindu calculation or alternative coordinate conversion.
+ */
+export function getAshtakavargaVisual(chart: ChartResult) {
+  const evidence = resolveVedicTimingAndAshtakavarga(chart);
+  const result = evidence.find(item => item.id === "vedic-ashtakavarga-bav-sav");
+  if (!result) return {
+    available: false as const,
+    reason: evidence.find(item => item.technique === "ashtakavarga")?.statement ?? "Ashtakavarga has no validated result.",
+  };
+  const bav = CLASSICAL.map(planet => {
+    const segment = result.statement.split(planet + " BAV total ")[1];
+    if (!segment) throw new Error("Missing " + planet + " BAV in canonical evidence.");
+    const scores = segment.split(".")[0].split(": ")[1];
+    if (!scores) throw new Error("Missing " + planet + " BAV scores.");
+    const bySign = scores.split(", ").map(part => Number(part.trim().split(" ").at(-1)));
+    if (bySign.length !== 12 || bySign.some(n => !Number.isInteger(n)))
+      throw new Error("Malformed " + planet + " BAV evidence.");
+    return { planet, scores: bySign, total: bySign.reduce((a, b) => a + b, 0) };
+  });
+  const sav = ZODIAC_SIGNS.map((sign, i) => ({
+    sign, score: bav.reduce((sum, row) => sum + row.scores[i], 0),
+  }));
+  if (sav.reduce((sum, row) => sum + row.score, 0) !== 337)
+    throw new Error("Ashtakavarga visual checksum differs from canonical evidence.");
+  return { available: true as const, bav, sav, total: 337, evidenceId: result.id };
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/vedic/divisionalCharts.ts
+BLOB SHA: e84bdcf003575e83ac3a1c87c092db25c8562185
+================================================================================
+import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+import { vargaPlacement, type Varga } from "./vargas";
+
+/**
+ * Divisional charts are transformations of ONE natal D1 chart, never new
+ * astronomical observations or independent birth times.
+ *
+ * D1: original longitude and original equal-house cusps.
+ * D2: two 15-degree Horas, classical Sun/Leo and Moon/Cancer assignment.
+ * D3: three 10-degree Drekkana sections, 1st/5th/9th signs.
+ * D9: nine 3°20' sections, movable/fixed/dual starting signs.
+ * D10: ten 3-degree sections, odd signs from self, even from ninth.
+ *
+ * The sign assignments come from vargaPlacement. A divisional degree is
+ * the position within a division scaled to 30 degrees. Divisional equal
+ * houses are projected from the divisional Ascendant, not reused from D1.
+ * These are Guardian fixed-frame divisional projections, NOT silently
+ * Lahiri-converted Jyotish charts.
+ */
+export type Division = "D1" | Varga;
+export type NatalPoint = { name: string; longitude: number };
+export type DivisionalPlacement = {
+  body: string; longitude: number; sign: string; signIndex: number;
+  house: number; sourceLongitude: number; sourceSign: string;
+  divisionPart: number; formula: string;
+};
+const definitions: Record<Division, { name: string; purpose: string; formula: string }> = {
+  D1: { name: "Rashi", purpose: "Natal foundation: the whole birth chart", formula: "Use the original natal longitude and Ascendant without subdivision." },
+  D2: { name: "Hora", purpose: "Traditional resources and material sustenance", formula: "30° sign / 2 = 15°; odd signs: Sun Hora then Moon Hora; even signs: Moon Hora then Sun Hora; Sun = Leo, Moon = Cancer." },
+  D3: { name: "Drekkana", purpose: "Siblings, initiative and courage", formula: "30° sign / 3 = 10°; map successive parts to the 1st, 5th, and 9th signs from the natal sign." },
+  D9: { name: "Navamsha", purpose: "Dharma, relationships and deeper planetary condition", formula: "30° sign / 9 = 3°20′; movable signs start in themselves, fixed signs in the ninth sign, dual signs in the fifth; advance one sign per part." },
+  D10: { name: "Dashamsha", purpose: "Vocation and public activity", formula: "30° sign / 10 = 3°; odd signs start in themselves, even signs in the ninth sign; advance one sign per part." },
+};
+const houseFrom = (longitude: number, asc: number) =>
+  Math.floor(normalizeLongitude(longitude - asc) / 30) + 1;
+
+function project(longitude: number, division: Division) {
+  const original = normalizeLongitude(longitude);
+  if (division === "D1") return {
+    longitude: original, signIndex: Math.floor(original / 30),
+    part: 1, sourceSign: ZODIAC_SIGNS[Math.floor(original / 30)],
+  };
+  const result = vargaPlacement(original, division);
+  const partWidth = 30 / Number(division.slice(1));
+  // Preserve the fractional position within the selected divisional section.
+  const scaledDegree = result.degreeInPart / partWidth * 30;
+  return {
+    longitude: normalizeLongitude(result.signIndex * 30 + scaledDegree),
+    signIndex: result.signIndex,
+    part: result.part,
+    sourceSign: result.sourceSign,
+  };
+}
+
+export function buildDivisionalCharts(input: {
+  ascendantLongitude: number;
+  planets: NatalPoint[];
+  d1HouseCusps?: number[];
+}) {
+  if (!Number.isFinite(input.ascendantLongitude) ||
+      input.planets.some(p => !Number.isFinite(p.longitude))) {
+    throw new Error("Divisional charts require finite natal Ascendant and planetary longitudes.");
+  }
+  const divisions: Division[] = ["D1", "D2", "D3", "D9", "D10"];
+  return divisions.map(division => {
+    const asc = project(input.ascendantLongitude, division);
+    const houseCusps = division === "D1" && input.d1HouseCusps?.length === 12
+      ? input.d1HouseCusps.map(normalizeLongitude)
+      : Array.from({ length: 12 }, (_, i) => normalizeLongitude(asc.longitude + 30 * i));
+    const placements: DivisionalPlacement[] = input.planets.map(planet => {
+      const p = project(planet.longitude, division);
+      return {
+        body: planet.name,
+        longitude: p.longitude,
+        sign: ZODIAC_SIGNS[p.signIndex],
+        signIndex: p.signIndex,
+        house: houseFrom(p.longitude, houseCusps[0]),
+        sourceLongitude: normalizeLongitude(planet.longitude),
+        sourceSign: p.sourceSign,
+        divisionPart: p.part,
+        formula: definitions[division].formula,
+      };
+    });
+    return {
+      division,
+      name: definitions[division].name,
+      purpose: definitions[division].purpose,
+      formula: definitions[division].formula,
+      coordinateFrame: "guardian-fixed-zero-reference" as const,
+      ascendant: {
+        longitude: asc.longitude,
+        sign: ZODIAC_SIGNS[asc.signIndex],
+        signIndex: asc.signIndex,
+        sourceLongitude: normalizeLongitude(input.ascendantLongitude),
+        divisionPart: asc.part,
+      },
+      houses: houseCusps.map((cusp, i) => ({
+        house: i + 1,
+        cusp,
+        sign: ZODIAC_SIGNS[Math.floor(cusp / 30)],
+        planets: placements.filter(p => p.house === i + 1).map(p => p.body),
+      })),
+      placements,
+      chartLayout: "north-indian-diamond" as const,
+      houseSystem: "equal-house-from-divisional-ascendant" as const,
+      evidence: "Derived exclusively from the authoritative natal D1 input; not a second ephemeris calculation.",
+    };
+  });
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/vedic/vargas.ts
+BLOB SHA: e06314088b85a6be06c066b1ed275c90afc4e3a0
+================================================================================
+import { normalizeLongitude, ZODIAC_SIGNS } from "../../../shared/hybrid";
+import type { ChartResult } from "../../astronomy";
+import type { EvidenceItem } from "../types";
+
+/** Explicit traditional Parashari variants, applied to supplied fixed-frame longitude.
+ * These are NOT automatically Lahiri-sidereal vargas; the underlying chart supplies
+ * tropical/geocentric longitudes in Guardian's fixed-zero reference.
+ * A sidereal conversion needs to be made upstream if genuine Jyotish D charts are desired.
+ */
+export type Varga = "D2"|"D3"|"D9"|"D10";
+export function vargaPlacement(longitude:number, division:Varga) {
+ const lon=normalizeLongitude(longitude), sign=Math.floor(lon/30), degree=lon%30;
+ const n=Number(division.slice(1)), part=Math.min(n-1,Math.floor(degree/(30/n)));
+ let result:number;
+ if(division==="D2"){ // classical Parashari Sun/Moon Hora: odd signs Sun first
+  const sunHora=(sign%2===0)===(part===0);
+  result=sunHora?4:3; // Leo/Cancer
+ }else if(division==="D3"){
+  result=(sign+4*part)%12; // 1st, 5th, 9th from sign
+ }else if(division==="D9"){
+  // Movable: same sign, fixed: ninth sign, dual: fifth sign.
+  const start=sign%3===0?sign:sign%3===1?(sign+8)%12:(sign+4)%12;
+  result=(start+part)%12;
+ }else{
+  // D10: odd signs from own sign; even signs from ninth.
+  result=((sign%2===0?sign:(sign+8)%12)+part)%12;
+ }
+ return {division,part:part+1,sourceSign:ZODIAC_SIGNS[sign],sign:ZODIAC_SIGNS[result],signIndex:result,degreeInPart:degree-part*(30/n),coordinateFrame:"guardian-fixed-zero-reference" as const};
+}
+export function resolveVargaEvidence(chart:ChartResult):EvidenceItem[]{
+ const coordinateFrame="guardian-fixed-zero-reference" as const;
+ const rows=[...chart.movingBodies,chart.ascendant,chart.northNode,chart.southNode].filter((r):r is NonNullable<typeof r>=>r !== null && r !== undefined && Number.isFinite(r.longitude));
+ const trace=(division:Varga)=>({sourceId:"local-vedic-rules",tradition:"vedic" as const,technique:"varga",sourceTitle:"Parashari varga mapping (explicit variant); Guardian fixed-background coordinates, not Lahiri sidereal",retrievedAt:new Date().toISOString(),ruleId:"vedic-varga-architecture",confidence:"moderate" as const,calculationSettings:{division,coordinateFrame,ayanamsaDegrees:0,siderealConversionApplied:false}});
+ return (["D2","D3","D9","D10"] as const).flatMap(division=>rows.map(row=>{
+  const v=vargaPlacement(row.longitude,division);
+  return {id:`vedic-varga-${division}-${row.name.toLowerCase().replace(/\s+/g,"-")}`,tradition:"vedic" as const,category:"deterministic-rule" as const,technique:"varga",subject:row.name,
+   statement:`[${division} · ${coordinateFrame}] ${row.name} at ${row.display}: fixed-frame longitude ${normalizeLongitude(row.longitude).toFixed(5)}°, source sign ${v.sourceSign}, division ${v.part}/${Number(division.slice(1))}, derived ${v.sign}. No Lahiri offset applied.`, 
+   concepts:["varga",division.toLowerCase(),row.name.toLowerCase(),v.sign.toLowerCase()],polarity:"neutral" as const,sourceId:"local-vedic-rules",sourceTrace:trace(division)};
+ }));
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/vedic/vedicChartsService.ts
+BLOB SHA: a815fdfa2ff763b92f1046dbc8eb591e015cd5bd
+================================================================================
+import type { UnifiedMasterChartSnapshot } from "../../masterChart/types";
+import { buildDivisionalCharts, type Division } from "./divisionalCharts";
+
+/**
+ * VEDIC CHART READER — one authoritative saved natal chart, many derived charts.
+ *
+ * This service does not accept a birth date, time, coordinates or an ephemeris.
+ * It does not calculate sunrise, planetary positions or the natal Ascendant.
+ * The profile repository must supply its already-calculated Master Natal
+ * Snapshot. The five charts are mathematical projections of THAT snapshot.
+ *
+ * D1: preserve natal longitude, Ascendant and 12 equal-house cusps.
+ * D2: divide signs into 2 × 15° Hora sections (Sun/Leo, Moon/Cancer).
+ * D3: divide signs into 3 × 10° Drekkana sections (1st/5th/9th).
+ * D9: divide signs into 9 × 3°20′ Navamsha sections (modality starts).
+ * D10: divide signs into 10 × 3° Dashamsha sections (odd/even starts).
+ *
+ * All D2-D10 planets and divisional Ascendants are transformed from natal
+ * longitude; divisional houses are projected from the transformed Ascendant.
+ * This is the application's explicit fixed-frame variant, not an implicit
+ * Lahiri conversion. A D-chart is NOT a second astronomical birth chart.
+ *
+ * Display consumers receive chartLayout = north-indian-diamond, house cusps,
+ * numbered houses, Ascendant, placements, house assignments and formula
+ * traces. Interpretations must consume these computed results, not guess.
+ */
+export function vedicChartsFromMasterNatal(snapshot: UnifiedMasterChartSnapshot) {
+  if (snapshot.inputs.mode !== "natal") {
+    throw new Error("Vedic divisional charts require the authoritative natal snapshot, not a transit chart.");
+  }
+  const state = snapshot.baseCelestialState;
+  if (!state?.ascendant || !Array.isArray(state.planets) || state.houses?.length !== 12) {
+    throw new Error("Master natal chart is missing its Ascendant, planets or 12 houses.");
+  }
+  const charts = buildDivisionalCharts({
+    ascendantLongitude: state.ascendant.longitude,
+    planets: [
+      ...state.planets.map(p => ({ name: p.name, longitude: p.longitude })),
+      { name: state.northNode.name, longitude: state.northNode.longitude },
+      { name: state.southNode.name, longitude: state.southNode.longitude },
+    ],
+    d1HouseCusps: state.houses.map(h => h.cusp),
+  });
+  return {
+    sourceSnapshotId: snapshot.snapshotId,
+    source: "profile-master-natal" as const,
+    astronomicalRecalculation: false as const,
+    charts,
+    byDivision: Object.fromEntries(charts.map(chart => [chart.division, chart])) as Record<Division, (typeof charts)[number]>,
+  };
+}
+
+/**
+ * The caller owns the profile persistence/cache. Fetch the existing snapshot;
+ * do not call getMasterNatalChart() or calculateChart() from this service.
+ */
+export async function loadProfileVedicCharts(
+  profileId: string,
+  loadSavedNatalSnapshot: (profileId: string) => Promise<UnifiedMasterChartSnapshot | null>,
+) {
+  const snapshot = await loadSavedNatalSnapshot(profileId);
+  if (!snapshot) throw new Error("Saved profile natal chart not found. Generate and save D1 before requesting Vargas.");
+  return vedicChartsFromMasterNatal(snapshot);
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/vedic/index.ts
+BLOB SHA: 712e40b6398d6aa6e11359f0e79b0ffd614eb5a0
+================================================================================
+import { chartRows } from "../chartRows";
+import type { ChartResult } from "../../astronomy";
+import {
+  NAKSHATRAS,
+  ZODIAC_SIGNS,
+  normalizeLongitude,
+} from "../../../shared/hybrid";
+import { sourceById } from "../registry";
+import type { EvidenceItem, KnowledgePlan, SourceTrace } from "../types";
+import { resolveVedicTimingAndAshtakavarga } from "./timingAndAshtakavarga";
+
+const RULERS: Record<string, string> = {
+  Aries: "Mars",
+  Taurus: "Venus",
+  Gemini: "Mercury",
+  Cancer: "Moon",
+  Leo: "Sun",
+  Virgo: "Mercury",
+  Libra: "Venus",
+  Scorpio: "Mars",
+  Sagittarius: "Jupiter",
+  Capricorn: "Saturn",
+  Aquarius: "Saturn",
+  Pisces: "Jupiter",
+};
+const VEDIC_TRACE = (
+  technique: string,
+  ruleId: string,
+  sourceId = "local-vedic-rules"
+): SourceTrace => ({
+  sourceId,
+  tradition: "vedic",
+  technique,
+  sourceTitle: sourceById(sourceId)?.name ?? sourceId,
+  sourceUrl: sourceById(sourceId)?.url,
+  retrievedAt: new Date().toISOString(),
+  ruleId,
+  confidence: sourceId === "tvam-jyotish" ? "reference-only" : "high",
+});
+const FACT_TRACE: SourceTrace = {
+  sourceId: "firmament-ephemeris",
+  tradition: "firmament",
+  technique: "calculation",
+  sourceTitle: "Firmament local ephemeris",
+  retrievedAt: new Date().toISOString(),
+  confidence: "high",
+};
+function nakshatra(longitude: number) {
+  const size = 360 / 27;
+  const index = Math.floor(normalizeLongitude(longitude) / size);
+  const within = normalizeLongitude(longitude) - index * size;
+  return {
+    name: NAKSHATRAS[index],
+    pada: Math.floor(within / (size / 4)) + 1,
+    start: index * size,
+    end: (index + 1) * size,
+  };
+}
+export function resolveVedicEvidence(
+  chart: ChartResult,
+  plan: KnowledgePlan
+): EvidenceItem[] {
+  const all = chartRows(chart).filter(row => Number.isFinite(row.longitude));
+  const asc =
+    chart.ascendant && Number.isFinite(chart.ascendant.longitude)
+      ? chart.ascendant
+      : undefined;
+  const evidence: EvidenceItem[] = [];
+  for (const row of all) {
+    const n = nakshatra(row.longitude);
+    const sign = ZODIAC_SIGNS[Math.floor(row.longitude / 30)];
+    if (
+      plan.subjects.some(subject =>
+        row.name
+          .toLowerCase()
+          .includes(subject.toLowerCase().replace("natal-", ""))
+      ) ||
+      ["Sun", "Moon", "Jupiter", "Saturn", "Ascendant"].includes(row.name)
+    ) {
+      evidence.push({
+        id: `vedic-nakshatra-${row.name}`,
+        tradition: "vedic",
+        category: "deterministic-rule",
+        technique: "nakshatra",
+        subject: row.name,
+        statement: `${row.name} crosses ${n.name}, pada ${n.pada}, from ${n.start.toFixed(2)}° to ${n.end.toFixed(2)}° on the fixed 0° Aries background.`,
+        concepts: [
+          "lunar-mansion",
+          n.name.toLowerCase(),
+          `pada-${n.pada}`,
+          sign.toLowerCase(),
+        ],
+        polarity: "neutral",
+        strength: 0.8,
+        ruleId: "vedic-nakshatra-27",
+        sourceId: "firmament-architecture",
+        sourceTrace: VEDIC_TRACE(
+          "nakshatra",
+          "vedic-nakshatra-27",
+          "firmament-architecture"
+        ),
+      });
+      if (asc) {
+        const ascSign = ZODIAC_SIGNS[Math.floor(asc.longitude / 30)];
+        const houseLord =
+          RULERS[
+            ZODIAC_SIGNS[(Math.floor(asc.longitude / 30) + row.house - 1) % 12]
+          ];
+        evidence.push({
+          id: `vedic-house-lord-${row.name}`,
+          tradition: "vedic",
+          category: "deterministic-rule",
+          technique: "house-lord",
+          subject: row.name,
+          statement: `From the ${ascSign} Ascendant, ${row.name} is placed in house ${row.house}; the sign governing that house is ruled by ${houseLord}.`,
+          concepts: [
+            `house-${row.house}`,
+            "house-lord",
+            houseLord.toLowerCase(),
+          ],
+          polarity: "neutral",
+          strength: 0.65,
+          ruleId: "vedic-house-lords",
+          sourceId: "local-vedic-rules",
+          sourceTrace: VEDIC_TRACE("house-lord", "vedic-house-lords"),
+        });
+      }
+    }
+  }
+  for (const row of all) {
+    if (!["Mars", "Jupiter", "Saturn"].includes(row.name)) continue;
+    const offsets =
+      row.name === "Mars"
+        ? [4, 7, 8]
+        : row.name === "Jupiter"
+          ? [5, 7, 9]
+          : [3, 7, 10];
+    for (const offset of offsets) {
+      const target = ((row.house - 1 + offset - 1) % 12) + 1;
+      evidence.push({
+        id: `vedic-drishti-${row.name}-${target}`,
+        tradition: "vedic",
+        category: "deterministic-rule",
+        technique: "drishti",
+        subject: row.name,
+        statement: `Traditional ${row.name} graha drishti reaches house ${target} from its supplied house ${row.house}.`,
+        concepts: ["drishti", row.name.toLowerCase(), `house-${target}`],
+        polarity: row.name === "Jupiter" ? "supportive" : "pressured",
+        strength: 0.6,
+        ruleId: "vedic-graha-drishti",
+        sourceId: "local-vedic-rules",
+        sourceTrace: VEDIC_TRACE("drishti", "vedic-graha-drishti"),
+      });
+    }
+  }
+  if (plan.includeDivisionalCharts.length)
+    evidence.push({
+      id: "vedic-varga-status",
+      tradition: "vedic",
+      category: "uncertainty",
+      technique: "varga",
+      subject: plan.includeDivisionalCharts.join(","),
+      statement: `${plan.includeDivisionalCharts.join(" and ")} was requested, but chart-specific divisional positions are not enabled; no varga conclusion is made.`,
+      concepts: ["varga", "incomplete"],
+      polarity: "neutral",
+      strength: 0,
+      ruleId: "vedic-varga-architecture",
+      sourceId: "local-vedic-rules",
+      sourceTrace: VEDIC_TRACE("varga", "vedic-varga-architecture"),
+    });
+  // Advanced Vedic timing and strength are calculated in one auditable layer.
+  // The layer emits explicit uncertainty evidence when required birth data is missing.
+  evidence.push(...resolveVedicTimingAndAshtakavarga(chart));
+  return evidence;
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/arabic/index.ts
+BLOB SHA: 3f4dde808ccee224d77eeb9d3575b32ad081f7f1
+================================================================================
+import { chartRows } from "../chartRows";
+import type { ChartResult, ChartRow } from "../../astronomy";
+import { overlay, MANAZIL, normalizeLongitude } from "../../../shared/hybrid";
+import { calculateArabicLots } from "../../utils/arabicLots";
+import { majorLongitudeContact } from "../canon/fixedStarsAndLots";
+import { sourceById } from "../registry";
+import type { EvidenceItem, KnowledgePlan, SourceTrace } from "../types";
+
+const trace = (
+  technique: string,
+  ruleId: string,
+  sourceId = "local-arabic-rules"
+): SourceTrace => ({
+  sourceId,
+  tradition: "arabic",
+  technique,
+  sourceTitle: sourceById(sourceId)?.name ?? sourceId,
+  sourceUrl: sourceById(sourceId)?.url,
+  retrievedAt: new Date().toISOString(),
+  ruleId,
+  confidence: sourceId === "canopy-arabian" ? "reference-only" : "high",
+});
+const factTrace: SourceTrace = {
+  sourceId: "firmament-ephemeris",
+  tradition: "firmament",
+  technique: "calculation",
+  sourceTitle: "Firmament local ephemeris",
+  retrievedAt: new Date().toISOString(),
+  confidence: "high",
+};
+function manzil(longitude: number) {
+  const index = Math.floor(normalizeLongitude(longitude) / (360 / 28));
+  return {
+    name: MANAZIL[index],
+    start: index * (360 / 28),
+    end: (index + 1) * (360 / 28),
+  };
+}
+export function resolveArabicEvidence(
+  chart: ChartResult,
+  plan: KnowledgePlan
+): EvidenceItem[] {
+  const all = chartRows(chart).filter(row => Number.isFinite(row.longitude));
+  const evidence: EvidenceItem[] = [];
+  for (const row of all) {
+    const ov = overlay(row.longitude);
+    const m = manzil(row.longitude);
+    if (
+      row.name === "Moon" ||
+      row.name === "Ascendant" ||
+      plan.subjects.some(subject =>
+        row.name.toLowerCase().includes(subject.toLowerCase())
+      )
+    )
+      evidence.push({
+        id: `arabic-manzil-${row.name}`,
+        tradition: "arabic",
+        category: "deterministic-rule",
+        technique: "manzil",
+        subject: row.name,
+        statement: `${row.name} is in ${m.name}, bounded by ${m.start.toFixed(2)}°–${m.end.toFixed(2)}°; the same longitude overlays ${ov.decan}.`,
+        concepts: ["manzil", m.name.toLowerCase(), "lunar-layer"],
+        polarity: "neutral",
+        strength: 0.75,
+        ruleId: "arabic-manazil-28",
+        sourceId: "firmament-architecture",
+        sourceTrace: trace(
+          "manzil",
+          "arabic-manazil-28",
+          "firmament-architecture"
+        ),
+      });
+  }
+  const sun = all.find(row => row.name === "Sun");
+  const moon = all.find(row => row.name === "Moon");
+  const ascendant = all.find(row => row.name === "Ascendant");
+  if (chart.agentViewAvailable && ascendant && sun && moon) {
+    const sect = sun.house >= 7 ? "day" : "night";
+    evidence.push({
+      id: "arabic-sect",
+      tradition: "arabic",
+      category: "deterministic-rule",
+      technique: "sect",
+      subject: "chart",
+      statement: `The chart is treated as a ${sect} chart because the Sun is in house ${sun.house}; sect is preserved as an Arabic doctrine, not blended into Western dignity.`,
+      concepts: ["sect", sect],
+      polarity: "neutral",
+      strength: 0.8,
+      ruleId: "arabic-day-sect",
+      sourceId: "local-arabic-rules",
+      sourceTrace: trace("sect", "arabic-day-sect"),
+    });
+    const lots = calculateArabicLots({
+      ascendant: ascendant.longitude,
+      venus: all.find(row => row.name === "Venus")?.longitude,
+      mercury: all.find(row => row.name === "Mercury")?.longitude,
+      sun: sun.longitude,
+      moon: moon.longitude,
+      sect,
+    });
+    for (const [name, longitude] of Object.entries(lots)) {
+      const m = manzil(longitude);
+      const formulaBodies = [
+        "Ascendant", "Sun", "Moon",
+        ...(name === "eros" ? ["Venus"] : name === "necessity" ? ["Mercury"] : []),
+      ];
+      const angles = [chart.descendant, chart.midheaven].filter((row): row is ChartRow => Boolean(row));
+      const contacts = [...all, ...angles].flatMap(row => {
+        const contact = majorLongitudeContact(row.longitude, longitude, 5);
+        return contact ? [{ body: row.name, ...contact }] : [];
+      });
+      const lot: EvidenceItem = {
+        id: `arabic-lot-${name}`,
+        tradition: "arabic",
+        category: "deterministic-rule",
+        technique: "lots",
+        subject: name,
+        statement: `Lot of ${name[0].toUpperCase() + name.slice(1)} calculates to ${longitude.toFixed(4)}° in ${m.name} using ${sect} sect and ${formulaBodies.join(", ")}.`,
+        concepts: ["lot", name, m.name.toLowerCase(), ...formulaBodies.map(body => body.toLowerCase())],
+        polarity: "neutral",
+        strength: 0.85,
+        ruleId: "arabic-lots",
+        sourceId: "local-arabic-rules",
+        sourceTrace: trace("lots", "arabic-lots"),
+      };
+      evidence.push(lot);
+      for (const { body, aspect, orbDeg } of contacts) {
+        evidence.push({
+          ...lot,
+          id: `${lot.id}-${body.toLowerCase()}`,
+          subject: body,
+          concepts: ["lot", name, aspect],
+          statement: `${lot.statement} ${body} contacts this Lot by ${aspect} at ${orbDeg}° orb.`,
+        });
+      }
+    }
+  } else
+    evidence.push({
+      id: "arabic-lots-uncertain",
+      tradition: "arabic",
+      category: "uncertainty",
+      technique: "lots",
+      subject: "fortune-spirit",
+      statement:
+        "Fortune and Spirit were not calculated because a local Ascendant and both luminaries are required.",
+      concepts: ["lots", "incomplete"],
+      polarity: "neutral",
+      strength: 0,
+      ruleId: "arabic-lots",
+      sourceId: "local-arabic-rules",
+      sourceTrace: trace("lots", "arabic-lots"),
+    });
+  if (plan.includeTiming)
+    evidence.push({
+      id: "arabic-hours-status",
+      tradition: "arabic",
+      category: "uncertainty",
+      technique: "planetary-hours",
+      subject: "timing",
+      statement:
+        "Planetary hours are not calculated without local sunrise and sunset inputs.",
+      concepts: ["planetary-hours", "incomplete"],
+      polarity: "neutral",
+      strength: 0,
+      ruleId: "arabic-planetary-hours",
+      sourceId: "canopy-arabian",
+      sourceTrace: trace(
+        "planetary-hours",
+        "arabic-planetary-hours",
+        "canopy-arabian"
+      ),
+    });
+  return evidence;
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/western/index.ts
+BLOB SHA: 5ca5baf212cf8946f5cea33780c29dbed1c2e68f
+================================================================================
+import type { ChartResult, ChartRow } from "../../astronomy";
+import { detectWesternAspects } from "../../utils/patternMatcher";
+import { sourceById, ASTROLOGY_RULES } from "../registry";
+import type { EvidenceItem, KnowledgePlan, SourceTrace } from "../types";
+
+const RULERS: Record<string, string> = {
+  Aries: "Mars",
+  Taurus: "Venus",
+  Gemini: "Mercury",
+  Cancer: "Moon",
+  Leo: "Sun",
+  Virgo: "Mercury",
+  Libra: "Venus",
+  Scorpio: "Mars",
+  Sagittarius: "Jupiter",
+  Capricorn: "Saturn",
+  Aquarius: "Saturn",
+  Pisces: "Jupiter",
+};
+const EXALTATIONS: Record<string, string> = {
+  Sun: "Aries",
+  Moon: "Taurus",
+  Mercury: "Virgo",
+  Venus: "Pisces",
+  Mars: "Capricorn",
+  Jupiter: "Cancer",
+  Saturn: "Libra",
+};
+const FALLS: Record<string, string> = {
+  Sun: "Libra",
+  Moon: "Scorpio",
+  Mercury: "Pisces",
+  Venus: "Virgo",
+  Mars: "Cancer",
+  Jupiter: "Capricorn",
+  Saturn: "Aries",
+};
+const DIGNITY_RULE = ASTROLOGY_RULES.find(
+  rule => rule.id === "western-dignity-basic"
+)!;
+const TRACE: SourceTrace = {
+  sourceId: DIGNITY_RULE.sourceId,
+  tradition: "western",
+  technique: DIGNITY_RULE.technique,
+  sourceTitle: sourceById(DIGNITY_RULE.sourceId)?.name ?? DIGNITY_RULE.sourceId,
+  retrievedAt: new Date().toISOString(),
+  ruleId: DIGNITY_RULE.id,
+  confidence: "high",
+};
+const factTrace: SourceTrace = {
+  sourceId: "firmament-ephemeris",
+  tradition: "firmament",
+  technique: "calculation",
+  sourceTitle: "Firmament local ephemeris",
+  retrievedAt: new Date().toISOString(),
+  confidence: "high",
+};
+
+function rows(chart: ChartResult): ChartRow[] {
+  return [
+    ...chart.movingBodies,
+    chart.ascendant,
+    chart.descendant,
+    chart.midheaven,
+    chart.northNode,
+    chart.southNode,
+  ].filter((row): row is ChartRow => Boolean(row));
+}
+function sign(row: ChartRow) {
+  return typeof row.display === "string"
+    ? row.display.split(" ")[0]
+    : "unknown";
+}
+function selected(row: ChartRow, plan: KnowledgePlan) {
+  return (
+    plan.subjects.some(subject =>
+      row.name
+        .toLowerCase()
+        .includes(subject.toLowerCase().replace("-house", ""))
+    ) ||
+    ["Sun", "Moon", "Ascendant", "Saturn", "Jupiter", "Venus"].includes(
+      row.name
+    )
+  );
+}
+
+export function resolveWesternEvidence(
+  chart: ChartResult,
+  plan: KnowledgePlan
+): EvidenceItem[] {
+  const placements = rows(chart).filter(row => Number.isFinite(row.longitude));
+  const evidence: EvidenceItem[] = placements
+    .filter(row => selected(row, plan))
+    .map(row => ({
+      id: `western-fact-${row.name}`,
+      tradition: "firmament",
+      category: "calculated-fact",
+      technique: "calculation",
+      subject: row.name,
+      statement: `${row.name} is at ${row.display}, in displayed house ${row.house}${row.agentHouse == null ? "" : ` and Agent House ${row.agentHouse}`}.`,
+      concepts: [row.name.toLowerCase(), `house-${row.house}`],
+      polarity: "neutral",
+      strength: 1,
+      sourceId: factTrace.sourceId,
+      sourceTrace: factTrace,
+    }));
+  for (const row of placements.filter(row => selected(row, plan))) {
+    const rowSign = sign(row);
+    const ruler = RULERS[rowSign];
+    const condition =
+      EXALTATIONS[row.name] === rowSign
+        ? "exalted"
+        : FALLS[row.name] === rowSign
+          ? "debilitated"
+          : ruler === row.name
+            ? "in its domicile"
+            : "without a basic domicile or exaltation condition";
+    evidence.push({
+      id: `western-dignity-${row.name}`,
+      tradition: "western",
+      category: "deterministic-rule",
+      technique: "dignity",
+      subject: row.name,
+      statement: `${row.name} in ${rowSign} is ${condition}; ${rowSign} is ruled by ${ruler}.`,
+      concepts: ["condition", condition, rowSign.toLowerCase()],
+      polarity:
+        condition === "debilitated"
+          ? "pressured"
+          : condition === "exalted" || condition === "in its domicile"
+            ? "supportive"
+            : "neutral",
+      strength: 0.7,
+      ruleId: DIGNITY_RULE.id,
+      sourceId: TRACE.sourceId,
+      sourceTrace: TRACE,
+    });
+  }
+  const aspectRows = placements.filter(
+    row => row.name !== "Ascendant" || chart.agentViewAvailable
+  );
+  for (const aspect of detectWesternAspects(
+    aspectRows.map(row => ({
+      planet: row.name,
+      longitude: row.longitude,
+      house: row.house,
+    }))
+  )) {
+    evidence.push({
+      id: `western-aspect-${aspect.planetA}-${aspect.planetB}-${aspect.type}`,
+      tradition: "western",
+      category: "deterministic-rule",
+      technique: "aspects",
+      subject: `${aspect.planetA}-${aspect.planetB}`,
+      statement: `${aspect.planetA} ${aspect.type} ${aspect.planetB} within ${aspect.orb.toFixed(2)}° using the unified five-degree Firmament relationship rule.`,
+      concepts: [
+        aspect.type,
+        aspect.planetA.toLowerCase(),
+        aspect.planetB.toLowerCase(),
+        ...aspect.themes,
+      ],
+      polarity: ["square", "opposition"].includes(aspect.type)
+        ? "pressured"
+        : "supportive",
+      strength: aspect.strength,
+      ruleId: "western-5-degree-geometry",
+      sourceId: "firmament-architecture",
+      sourceTrace: {
+        sourceId: "firmament-architecture",
+        tradition: "firmament",
+        technique: "aspects",
+        sourceTitle: "Firmament architecture",
+        retrievedAt: new Date().toISOString(),
+        ruleId: "western-5-degree-geometry",
+        confidence: "high",
+      },
+    });
+  }
+  return evidence;
+}
+
+
+================================================================================
+FILE: server/utils/arabicLots.ts
+BLOB SHA: af1ebaf52873fdfe79703457c19a7094ed91b31d
+================================================================================
+import { normalizeLongitude } from "../../shared/hybrid";
+import { ArabicSnapshotSchema, type ArabicSnapshot } from "../patterns/types";
+
+export type Sect = "day" | "night";
+export type LotFormula = { name: string; add: string; subtract: string };
+
+export type LotInputs = {
+  ascendant: number;
+  sun: number;
+  moon: number;
+  venus?: number;
+  mercury?: number;
+  mars?: number;
+  jupiter?: number;
+  sect: Sect;
+};
+
+export const LOT_FORMULAS: Record<string, LotFormula> = {
+  fortune: { name: "Lot of Fortune", add: "moon", subtract: "sun" },
+  spirit: { name: "Lot of Spirit", add: "sun", subtract: "moon" },
+  eros: { name: "Lot of Eros", add: "venus", subtract: "spirit" },
+  necessity: { name: "Lot of Necessity", add: "fortune", subtract: "mercury" },
+};
+
+function requireValue(inputs: Record<string, number | undefined>, key: string) {
+  const value = inputs[key];
+  if (value == null || !Number.isFinite(value))
+    throw new Error(`Arabic Lot calculation requires ${key}.`);
+  return normalizeLongitude(value);
+}
+
+/**
+ * Calculates a traditional Lot from Ascendant + addend - subtractend.
+ * Fortune and Spirit swap their luminary order by sect; callers may pass an
+ * explicit formula for other Lots so the convention remains visible and testable.
+ */
+export function calculateLot(inputs: LotInputs, formula: LotFormula): number {
+  const values: Record<string, number | undefined> = {
+    ascendant: inputs.ascendant,
+    sun: inputs.sun,
+    moon: inputs.moon,
+    venus: inputs.venus,
+    mercury: inputs.mercury,
+    mars: inputs.mars,
+    jupiter: inputs.jupiter,
+  };
+  if (formula.add === "spirit")
+    values.spirit = calculateSectLot(inputs, LOT_FORMULAS.spirit);
+  if (formula.add === "fortune")
+    values.fortune = calculateSectLot(inputs, LOT_FORMULAS.fortune);
+  if (formula.subtract === "spirit")
+    values.spirit = values.spirit ?? calculateSectLot(inputs, LOT_FORMULAS.spirit);
+  if (formula.subtract === "fortune")
+    values.fortune =
+      values.fortune ?? calculateSectLot(inputs, LOT_FORMULAS.fortune);
+  return normalizeLongitude(
+    requireValue(values, "ascendant") +
+      requireValue(values, formula.add) -
+      requireValue(values, formula.subtract)
+  );
+}
+
+function calculateSectLot(inputs: LotInputs, formula: LotFormula): number {
+  const { add, subtract } = formula;
+  return calculateLot(inputs, inputs.sect === "day" ? formula : { ...formula, add: subtract, subtract: add });
+}
+
+export function calculateArabicLots(inputs: LotInputs): Record<string, number> {
+  const results: Record<string, number> = {
+    fortune: calculateSectLot(inputs, LOT_FORMULAS.fortune),
+    spirit: calculateSectLot(inputs, LOT_FORMULAS.spirit),
+  };
+  if (Number.isFinite(inputs.venus))
+    results.eros = calculateSectLot(inputs, LOT_FORMULAS.eros);
+  if (Number.isFinite(inputs.mercury))
+    results.necessity = calculateSectLot(inputs, LOT_FORMULAS.necessity);
+  return Object.fromEntries(
+    Object.entries(results).map(([name, longitude]) => [
+      name,
+      Number(longitude.toFixed(6)),
+    ])
+  );
+}
+
+export interface ArabicProvider {
+  readonly name: string;
+  getAnalysis(input: LotInputs): Promise<ArabicSnapshot>;
+}
+
+export class MockArabicProvider implements ArabicProvider {
+  readonly name = "mock-canopy";
+  async getAnalysis(input: LotInputs): Promise<ArabicSnapshot> {
+    return ArabicSnapshotSchema.parse({
+      provider: this.name,
+      lots: calculateArabicLots(input),
+      signals: [],
+    });
+  }
+}
+
+
+================================================================================
+FILE: server/chartBriefing.ts
+BLOB SHA: 2bf872fa66d162bb704759133a74e94e36ac0967
+================================================================================
+import type { ChartResult } from "./astronomy";
+import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
+
+/** Audio reads the same AI synthesis as the chart, never rule-template prose. */
+export async function buildChartBriefing(chart: ChartResult) {
+  const question = "Explain the selected chart’s integrated patterns, mechanisms, strengths and challenges as a complete personal reading suitable for listening.";
+  const { synthesis } = await synthesizeChartForReading(chart, chart.readingScope, question);
+  const narrated = await narrateMasterSynthesis(synthesis, question);
+  return {
+    snapshotId: synthesis.snapshotId,
+    chapters: narrated.narrative.sections.map(section => ({
+      id: section.id,
+      title: section.title,
+      subtitle: "Your integrated chart reading",
+      text: section.text,
+      evidenceIds: synthesis.sourceSnapshot.methodExecutionLedger.flatMap(layer => layer.evidenceIds),
+    })),
+  };
+}
+
