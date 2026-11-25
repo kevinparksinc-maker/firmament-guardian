@@ -1,0 +1,2470 @@
+THE ABSOLUTE — SOURCE AUDIT: 04-calculation-and-registry.txt
+Source snapshot: 5e1cd90d29f4c3c092e5e252ceb8eedbccc98bc2
+Draft repair PR #84. Not merged or live-verified.
+Source bodies copied verbatim.
+Missing sources: none
+
+
+================================================================================
+FILE: server/masterChart/builder.ts
+BLOB SHA: 88b363f877b5615c724c954635c76abfe8bc682c
+================================================================================
+import { PLANET_CANON_RECORDS } from "../astrologyKnowledge/canon/planetsAndSigns";
+import { SUMERIAN_CELESTIAL_ASSOCIATIONS, SUMERIAN_CELESTIAL_SOURCE_ID, ENLIL_HISTORICAL_NOTE } from "../astrologyKnowledge/canon/sumerianCelestial";
+import { detectAllYogas } from "../genesisBackup/vedicYogaDetector";
+import { calculateEnergyRead, ENERGY_ASPECT_FLOW } from "../../shared/energyScoring";
+import { registeredMethodLedger } from "./registry";
+import { calculateVedicStrength, STRENGTH_VERSION } from "../astrologyKnowledge/vedic/strength";
+import { localDateTime } from "../../shared/transitTime";
+import { createMasterChartDataBus } from "./chartDataBus";
+import { buildDivisionalCharts } from "../astrologyKnowledge/vedic/divisionalCharts";
+import crypto from "crypto";
+import {
+  calculateChart,
+  aspectBetween,
+  minorAspectBetween,
+  type ChartResult,
+  type ChartRow,
+} from "../astronomy";
+import {
+  formatLongitude,
+  normalizeLongitude,
+  overlay,
+  ZODIAC_SIGNS,
+
+  signAtLongitude as getSign,
+} from "../../shared/hybrid";
+import {
+  calculateChartHermeticLots,
+  FIXED_STAR_CANON_RECORDS,
+  majorLongitudeContact,
+} from "../astrologyKnowledge/canon/fixedStarsAndLots";
+import { getNakshatraCanonByLongitude } from "../astrologyKnowledge/canon/nakshatras27";
+import { getManzilCanonByLongitude } from "../astrologyKnowledge/canon/manazil28";
+import {
+  CHINESE_MANSIONS,
+  CHINESE_MANSION_HISTORICAL_SOURCE,
+} from "../astrologyKnowledge/canon/chineseMansions28";
+import { getDecanCanonByLongitude, elementalDecanTeaching } from "../astrologyKnowledge/canon/decans36";
+import {
+  resolveVedicTimingAndAshtakavarga,
+  timingMethodCalculations,
+} from "../astrologyKnowledge/vedic/timingAndAshtakavarga";
+import { seferYetzirahEvidence } from "../astrologyKnowledge/canon/seferYetzirah";
+import { runGenesisPatternPipeline } from "../genesisBackup/adapter";
+import type {
+  LayerRecord,
+  MasterChartInput,
+  UnifiedMasterChartSnapshot,
+} from "./types";
+
+function godFrameContacts(body: ChartResult["transits"][number]) {
+  return { ...body,
+    natalContacts: body.natalContacts.filter(contact => !["Ascendant", "Descendant"].includes(contact.natalName)),
+    minorNatalContacts: body.minorNatalContacts.filter(contact => !["Ascendant", "Descendant"].includes(contact.natalName)),
+  };
+}
+
+function computeSnapshotId(input: MasterChartInput, version: string): string {
+  const content = JSON.stringify({
+    location: input.location,
+    lat: input.latitude,
+    lon: input.longitude,
+    tz: input.timezone,
+    d: input.date,
+    t: input.time,
+    tl: input.transitLocation ?? "",
+    tlat: input.transitLatitude ?? null,
+    tlon: input.transitLongitude ?? null,
+    ttz: input.transitTimezone ?? "",
+    td: input.transitDate ?? "",
+    tt: input.transitTime ?? "",
+    instant: input.transitInstantUtc ?? "",
+    baseInstant: input.instantUtc ?? "",
+    birthTimeKnown: input.birthTimeKnown, chartRole: input.chartRole, elevation: input.elevation,
+    m: input.mode ?? "natal",
+    w: input.worldview ?? "agent-vs-god",
+    sunriseAnchor: input.sunriseAnchor ?? null,
+    transitSunriseAnchor: input.transitSunriseAnchor ?? null,
+    xyz: input.xyzPositions ? Object.entries(input.xyzPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
+    transitXYZ: input.transitXYZPositions ? Object.entries(input.transitXYZPositions).sort(([a], [b]) => a.localeCompare(b)) : null,
+    role: input.chartRole ?? "natal",
+    v: version,
+  });
+  return "umc-" + crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
+}
+
+// Reuse the same versioned natal foundation across reading requests in this
+// server process. Event/transit snapshots are deliberately never cached here.
+// A bounded cache prevents unbounded growth; persistence is a separate concern.
+const NATAL_CACHE_LIMIT = 64;
+const natalSnapshotCache = new Map<string, Promise<UnifiedMasterChartSnapshot>>();
+
+export async function getMasterNatalChart(
+  input: MasterChartInput
+): Promise<UnifiedMasterChartSnapshot> {
+  const natalInput: MasterChartInput = {
+    ...input,
+    mode: "natal",
+    worldview: "agent-vs-god",
+    transitDate: undefined,
+    transitTime: undefined,
+    transitInstantUtc: undefined,
+    transitLocation: undefined,
+    transitLatitude: undefined,
+    transitLongitude: undefined,
+    transitTimezone: undefined,
+    transitSunriseAnchor: undefined,
+    transitXYZPositions: undefined,
+  };
+  const key = computeSnapshotId(natalInput, "firmament-master-2026.3");
+  const cached = natalSnapshotCache.get(key);
+  if (cached) {
+    natalSnapshotCache.delete(key);
+    natalSnapshotCache.set(key, cached);
+    return cached;
+  }
+  const pending = buildUnifiedMasterChart(natalInput);
+  natalSnapshotCache.set(key, pending);
+  while (natalSnapshotCache.size > NATAL_CACHE_LIMIT) {
+    const oldest = natalSnapshotCache.keys().next().value;
+    if (oldest === undefined) break;
+    natalSnapshotCache.delete(oldest);
+  }
+  try {
+    return await pending;
+  } catch (error) {
+    if (natalSnapshotCache.get(key) === pending) natalSnapshotCache.delete(key);
+    throw error;
+  }
+}
+
+export async function buildUnifiedMasterChart(
+  input: MasterChartInput
+): Promise<UnifiedMasterChartSnapshot> {
+  const mode = input.mode ?? "natal";
+  const engineVersion = "firmament-master-2026.3";
+  const createdAtUtc = new Date().toISOString();
+
+  // 1. Calculate authoritative base celestial state using established astronomy engine
+  const chart: ChartResult = await calculateChart({
+    location: input.location,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    timezone: input.timezone,
+    date: input.date,
+    time: input.time,
+    transitDate: input.transitDate,
+    transitTime: input.transitTime,
+    transitInstantUtc: input.transitInstantUtc,
+    instantUtc: input.instantUtc,
+    birthTimeKnown: input.birthTimeKnown, chartRole: input.chartRole, elevation: input.elevation,
+    transitLocation: input.transitLocation,
+    transitLatitude: input.transitLatitude,
+    transitLongitude: input.transitLongitude,
+    transitTimezone: input.transitTimezone,
+    readingScope: mode,
+    // The snapshot contains BOTH frames; calculate the available local anchor
+    // even when the requested display is God View. Project the display below.
+    worldview: input.worldview === "god" && input.birthTimeKnown !== false && input.location && input.time && input.timezone && Number.isFinite(input.latitude) && Number.isFinite(input.longitude) ? "agent-vs-god" : input.worldview ?? "agent-vs-god",
+    xyzPositions: input.xyzPositions,
+    transitXYZPositions: input.transitXYZPositions,
+    sunriseAnchor: input.sunriseAnchor,
+    transitSunriseAnchor: input.transitSunriseAnchor,
+  });
+
+  const snapshotId = computeSnapshotId({ ...input, instantUtc: chart.utc,
+    ...(mode === "natal" ? { transitInstantUtc: undefined } : { transitInstantUtc: chart.transitDate }) }, engineVersion);
+
+  // Distribute one validated astronomical state to every registered layer.
+  // A missing Ascendant or required body is a hard error, never a zero-degree fallback.
+  const chartData = createMasterChartDataBus(chart);
+  const basePlanets = chartData.planets;
+  const frameworkPlacements = [...basePlanets, chart.northNode, chart.southNode,
+    ...[chart.ascendant, chart.descendant, chart.midheaven].filter((row): row is ChartRow => Boolean(row))];
+  const baseHouses = chartData.houses.map((cusp, idx) => ({
+    house: idx + 1,
+    sign: getSign(cusp),
+    cusp,
+    degreeDisplay: formatLongitude(cusp),
+  }));
+  const ascendant = chartData.ascendant;
+
+  // 2. Build God View (fixed Aries 1 - Pisces 12 cosmic frame) and Agent View (geocentric equal house from Ascendant)
+  const godPlacements = basePlanets.map(p => {
+    const norm = normalizeLongitude(p.longitude);
+    const godHouse = Math.floor(norm / 30) + 1;
+    return {
+      body: p.name,
+      longitude: p.longitude,
+      display: p.display,
+      godHouse,
+      sign: getSign(p.longitude),
+    };
+  });
+
+  const agentPlacements = (ascendant ? basePlanets : []).map(p => {
+    return {
+      body: p.name,
+      longitude: p.longitude,
+      display: p.display,
+      agentHouse: p.agentHouse ?? p.house,
+      sign: getSign(p.longitude),
+    };
+  });
+
+  const frameRelationships = basePlanets
+    .filter(p => p.frameRelationship)
+    .map(p => ({
+      body: p.name,
+      longitude: p.longitude,
+      display: p.display,
+      godHouse: p.godHouse ?? (Math.floor(normalizeLongitude(p.longitude) / 30) + 1),
+      agentHouse: p.agentHouse ?? p.house,
+      relationship: `${p.frameRelationship!.type}: ${p.frameRelationship!.translation}`,
+    }));
+
+  // 3. Assemble the complete registered method formation.
+  const layers: Record<string, LayerRecord> = {};
+
+  // Layer 1: Western Planets & Signs
+  layers["western-planets-and-signs"] = {
+    id: "western-planets-and-signs",
+    tradition: "hellenistic",
+    technique: "planetary-longitudes-and-signs",
+    name: "Western Classical Longitudes & Signs",
+    status: "computed-with-result",
+    frame: "shared",
+    prerequisites: ["swiss-ephemeris-base"],
+    calculationVersion: engineVersion,
+    evidenceIds: basePlanets.map(p => `planet-${p.name.toLowerCase()}`),
+    sourceIds: ["ptolemy-tetrabiblos-1"],
+    results: basePlanets.map(p => ({
+      name: p.name,
+      longitude: p.longitude,
+      display: p.display,
+      sign: getSign(p.longitude),
+      retrograde: p.retrograde,
+      speed: p.speed,
+      overlay: p.overlay,
+    })),
+  };
+
+  // Sumerian historical celestial associations, not an invented natal algorithm.
+  const sumerianResults = basePlanets
+    .filter(p => Object.prototype.hasOwnProperty.call(SUMERIAN_CELESTIAL_ASSOCIATIONS, p.name))
+    .map(p => ({
+      body: p.name,
+      display: p.display,
+      longitude: p.longitude,
+      sign: getSign(p.longitude),
+      house: p.agentHouse ?? p.house,
+      association: SUMERIAN_CELESTIAL_ASSOCIATIONS[p.name as keyof typeof SUMERIAN_CELESTIAL_ASSOCIATIONS],
+    }));
+  layers["sumerian-celestial-foundations"] = {
+    id: "sumerian-celestial-foundations",
+    tradition: "sumerian",
+    technique: "attested-sun-moon-venus-symbolic-associations",
+    name: "Sumerian Celestial Foundations",
+    status: sumerianResults.length === 3 ? "computed-with-result" : "failed",
+    frame: "shared",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: sumerianResults.map(p => `sumerian-${p.body.toLowerCase()}`),
+    sourceIds: [SUMERIAN_CELESTIAL_SOURCE_ID],
+    results: sumerianResults,
+    notes: `Historical correspondences with an explicitly modern interpretive lens; not a recovered horoscope algorithm. ${ENLIL_HISTORICAL_NOTE}`,
+    ...(sumerianResults.length !== 3 ? { errorCode: "SUMERIAN_MISSING_CALCULATED_BODY" } : {}),
+  };
+
+  // Layer 2: Western Houses & Angles
+  layers["western-houses-and-angles"] = {
+    id: "western-houses-and-angles",
+    tradition: "hellenistic",
+    technique: "equal-houses-and-cardinal-angles",
+    name: "12 Equal Houses & Horizon Angles",
+    status: ascendant ? "computed-with-result" : "not-applicable",
+    notes: ascendant ? undefined : "God View has no observer-specific Ascendant or local equal houses; the fixed zodiac sectors remain in God View.",
+    frame: "agent",
+    prerequisites: ["topocentric-ascendant"],
+    calculationVersion: engineVersion,
+    evidenceIds: ascendant ? [
+      "angle-ascendant",
+      "angle-descendant",
+      ...chart.houses.map((_, i) => `house-${i + 1}`),
+    ] : [],
+    sourceIds: ["hellenistic-equal-houses"],
+    results: {
+      ascendant,
+      descendant: chart.descendant,
+      houses: baseHouses,
+    },
+  };
+
+  // Layer 3: Western Aspects & Orbs
+  const majorAspects = chart.movingBodies.flatMap(p1 =>
+    chart.movingBodies.filter(p2 => p1.name < p2.name).map(p2 => {
+      const contact = aspectBetween(p1.longitude, p2.longitude) || minorAspectBetween(p1.longitude, p2.longitude);
+      if (!contact) return null;
+      const diff = Math.abs(normalizeLongitude(p1.longitude) - normalizeLongitude(p2.longitude));
+      return {
+        body1: p1.name, body2: p2.name,
+        aspect: contact.aspect[0].toUpperCase() + contact.aspect.slice(1),
+        angle: Math.round((diff > 180 ? 360 - diff : diff) * 100) / 100,
+        orb: Math.round(contact.orb * 100) / 100,
+        nature: ENERGY_ASPECT_FLOW[contact.aspect] === -1 ? "friction" : "harmony",
+      };
+    }).filter((a): a is NonNullable<typeof a> => a !== null)
+  );
+
+  layers["western-aspects-and-orbs"] = {
+    id: "western-aspects-and-orbs",
+    tradition: "hellenistic",
+    technique: "ptolemaic-aspects",
+    name: "Ptolemaic Aspects & Orbs",
+    status: majorAspects.length > 0 ? "computed-with-result" : "computed-no-result",
+    frame: "shared",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: majorAspects.map(a => `aspect-${a.body1}-${a.aspect}-${a.body2}`.toLowerCase()),
+    sourceIds: ["ptolemy-aspect-orbs"],
+    results: majorAspects,
+  };
+
+  // Layer 4: Western Essential Dignities
+  const rulershipMap: Record<string, string> = {
+    Aries: "Mars", Taurus: "Venus", Gemini: "Mercury", Cancer: "Moon",
+    Leo: "Sun", Virgo: "Mercury", Libra: "Venus", Scorpio: "Mars",
+    Sagittarius: "Jupiter", Capricorn: "Saturn", Aquarius: "Saturn", Pisces: "Jupiter",
+  };
+  const exaltationMap: Record<string, string> = {
+    Aries: "Sun", Taurus: "Moon", Cancer: "Jupiter", Virgo: "Mercury",
+    Capricorn: "Mars", Pisces: "Venus",
+  };
+  const dignities = basePlanets.map(p => {
+    const sign = getSign(p.longitude);
+    const isDomicile = rulershipMap[sign] === p.name;
+    const isExalted = exaltationMap[sign] === p.name;
+    let status = "Peregrine";
+    if (isDomicile) status = "Domicile (Ruler)";
+    else if (isExalted) status = "Exaltation";
+    else if (PLANET_CANON_RECORDS[p.name]?.rulerships.detriments.includes(sign)) status = "Detriment";
+    else if (PLANET_CANON_RECORDS[p.name]?.rulerships.fallSign === sign) status = "Fall";
+    return {
+      body: p.name,
+      sign,
+      dignity: status,
+      rulerOfSign: rulershipMap[sign],
+    };
+  });
+
+  layers["western-essential-dignities"] = {
+    id: "western-essential-dignities",
+    tradition: "hellenistic",
+    technique: "essential-dignities",
+    name: "Essential Dignities & Sign Rulerships",
+    status: "computed-with-result",
+    frame: "shared",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: dignities.map(d => `dignity-${d.body.toLowerCase().replace(/\s+/g, "-")}`),
+    sourceIds: ["dorotheus-carmen-astrologicum"],
+    results: dignities,
+  };
+
+  // Layer 5: Fixed Stars & Royal Watchers
+  const royalStarContacts = chart.frozenStars.map(fs => {
+    const activationOrbDegrees = FIXED_STAR_CANON_RECORDS.find(star => star.name === fs.name)?.isRoyalStar ? 5 : 2;
+    const contacts = frameworkPlacements.flatMap(placement => {
+      const contact = majorLongitudeContact(placement.longitude, fs.longitude, activationOrbDegrees);
+      return contact ? [{
+        body: placement.name,
+        aspect: contact.aspect,
+        orb: contact.orbDeg,
+        isConjunction: contact.aspect === "conjunction",
+      }] : [];
+    });
+    return {
+      name: fs.name,
+      fixedLongitude: fs.longitude,
+      display: fs.display,
+      contacts,
+      activationOrbDegrees,
+      reading: `Permanent stellar anchor. Historical interpretation follows the star-specific Canon.`,
+    };
+  });
+
+  layers["fixed-stars-royal-watchers"] = {
+    id: "fixed-stars-royal-watchers",
+    tradition: "babylonian",
+    technique: "fixed-stars-and-royal-watchers",
+    name: "Polaris-Centered Firmament & Royal Watchers",
+    status: "computed-with-result",
+    frame: "god",
+    prerequisites: ["firmament-fixed-frame"],
+    calculationVersion: engineVersion,
+    evidenceIds: royalStarContacts.map(s => `star-${s.name.toLowerCase()}`),
+    sourceIds: ["ptolemy-fixed-stars", "babylonian-mul-apin"],
+    results: royalStarContacts,
+  };
+
+  // Layer 6: Arabic & Hermetic Lots
+  const sunRow = basePlanets.find(p => p.name === "Sun");
+  const isDayChart = sunRow ? sunRow.house >= 7 && sunRow.house <= 12 : true;
+  const lotsArray = calculateChartHermeticLots(chart, isDayChart);
+  const calculatedLots = lotsArray.map(item => ({
+    key: item.lot.id,
+    name: item.lot.name,
+    longitude: item.longitude,
+    display: item.display,
+    sign: item.sign,
+    house: item.house,
+    formula: isDayChart ? item.lot.dayFormula : item.lot.nightFormula,
+  }));
+
+  layers["arabic-hermetic-lots"] = {
+    id: "arabic-hermetic-lots",
+    tradition: "arabic-persian",
+    technique: "hermetic-lots-arabic-parts",
+    name: "Hermetic Lots (Fortune, Spirit, Eros, Necessity)",
+    status: !ascendant ? "not-applicable" : calculatedLots.length > 0 ? "computed-with-result" : "computed-no-result",
+    notes: ascendant ? undefined : "Hermetic Lots require a local Ascendant.",
+    frame: "agent",
+    prerequisites: ["western-houses-and-angles", "western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: calculatedLots.map(l => `lot-${l.key.toLowerCase()}`),
+    sourceIds: ["paulus-alexandrinus-ch23", "al-biruni-astrology"],
+    results: calculatedLots,
+  };
+
+  // Layer 7: Arabic Lunar Manazil (28 Mansions)
+  const manazilResults = frameworkPlacements.map(p => {
+    const canon = getManzilCanonByLongitude(p.longitude);
+    return {
+      body: p.name,
+      longitude: p.longitude,
+      manzilNumber: canon.index,
+      transliteration: canon.name,
+      meaning: canon.englishTranslation,
+      traditionalQuality: canon.traditionalQuality,
+    };
+  });
+
+  layers["arabic-lunar-manazil"] = {
+    id: "arabic-lunar-manazil",
+    tradition: "arabic-persian",
+    technique: "28-lunar-manazil",
+    name: "Arabic 28 Manazil al-Qamar",
+    status: "computed-with-result",
+    frame: "shared",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: manazilResults.map(m => `manzil-${m.body.toLowerCase().replace(/\s+/g, "-")}-${m.manzilNumber}`),
+    sourceIds: ["al-sufi-book-of-fixed-stars"],
+    results: manazilResults,
+  };
+
+  // Layer 8: Vedic Nakshatras & Padas (27 Lunar Mansions)
+  const nakshatraResults = frameworkPlacements.map(p => {
+    const canon = getNakshatraCanonByLongitude(p.longitude);
+    return {
+      body: p.name,
+      longitude: p.longitude,
+      nakshatraNumber: canon.nakshatra.index,
+      name: canon.nakshatra.name,
+      pada: canon.pada.pada,
+      rulingDeity: canon.nakshatra.deity,
+      planetaryLord: canon.nakshatra.vimshottariRuler,
+      shakti: canon.nakshatra.shakti,
+      purushartha: canon.nakshatra.motivationPuruSharthas,
+    };
+  });
+
+  layers["vedic-nakshatras-and-padas"] = {
+    id: "vedic-nakshatras-and-padas",
+    tradition: "vedic",
+    technique: "27-nakshatras-and-padas",
+    name: "Vedic 27 Nakshatras & Padas",
+    status: "computed-with-result",
+    frame: "shared",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: nakshatraResults.map(n => `nakshatra-${n.body.toLowerCase().replace(/\s+/g, "-")}-${n.nakshatraNumber}`),
+    sourceIds: ["taittiriya-samhita", "surya-siddhanta"],
+    results: nakshatraResults,
+  };
+
+  // Layer 9: Complete deterministic D1/D2/D3/D9/D10 chart data.
+  // Every divisional chart derives from the same natal Ascendant and planets.
+  const vargaResults = ascendant ? buildDivisionalCharts({
+    ascendantLongitude: ascendant.longitude,
+    planets: [
+      ...basePlanets.map(p => ({ name: p.name, longitude: p.longitude })),
+      { name: chart.northNode.name, longitude: chart.northNode.longitude },
+      { name: chart.southNode.name, longitude: chart.southNode.longitude },
+    ],
+    d1HouseCusps: chart.houses,
+  }) : [];
+
+  layers["vedic-vargas-divisional"] = {
+    id: "vedic-vargas-divisional",
+    tradition: "vedic",
+    technique: "parashari-divisional-vargas",
+    name: "Vedic Divisional Charts (D1, D2, D3, D9 Navamsha, D10)",
+    status: ascendant ? "computed-with-result" : "not-applicable",
+    notes: ascendant ? undefined : "Divisional house charts require a known Ascendant; no substitute anchor is used.",
+    frame: "agent",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: vargaResults.map(v => `varga-${v.division.toLowerCase()}`),
+    sourceIds: ["brihat-parashara-hora-shastra"],
+    results: vargaResults,
+  };
+
+  // Layer 10: Vedic Timing & Ashtakavarga
+  let timingResult: ReturnType<typeof resolveVedicTimingAndAshtakavarga> = [];
+  let timingError: string | undefined;
+  try {
+    timingResult = ascendant && input.birthTimeKnown !== false ? resolveVedicTimingAndAshtakavarga(chart) : [];
+  } catch (err) {
+    timingError = err instanceof Error ? err.message : String(err);
+  }
+  // Uncertainty and calculation-error evidence is not a successful calculation.
+  const timingHasFailure = timingResult.some(item =>
+    item.category === "uncertainty" || item.id.includes("calculation-error") ||
+    item.id.includes("checksum-failed")
+  );
+
+  const timingData = timingResult.length && !timingError && !timingHasFailure ? timingMethodCalculations(chart) : undefined;
+  layers["vedic-dasha-and-ashtakavarga"] = {
+    id: "vedic-dasha-and-ashtakavarga",
+    tradition: "vedic",
+    technique: "vimshottari-dasha-and-ashtakavarga",
+    name: "Vimshottari Dasha Lords & Ashtakavarga Bindus",
+    status: !ascendant || input.birthTimeKnown === false ? "not-applicable" : timingError || timingHasFailure ? "failed" : timingResult.length > 0 ? "computed-with-result" : "computed-no-result",
+    frame: "agent",
+    prerequisites: ["vedic-nakshatras-and-padas"],
+    calculationVersion: engineVersion,
+    evidenceIds: timingResult.map(t => t.id),
+    sourceIds: ["brihat-parashara-dasha-system"],
+    errorCode: timingError ? "VEDIC_TIMING_EXCEPTION" : timingHasFailure ? "VEDIC_TIMING_UNAVAILABLE_OR_INVALID" : undefined,
+    notes: timingError ?? (!ascendant || input.birthTimeKnown === false ? "The combined Dasha/Ashtakavarga adapter requires a known birth time and local Lagna; these results are not asserted for an unlocated or date-only sky." : undefined),
+    results: timingResult.map(item => ({ ...item,
+      calculation: timingData?.[item.technique as "dasha" | "ashtakavarga"],
+    })),
+  };
+
+  // The same numerical strength calculation feeds both independent methods.
+  const strengthApplicable = Boolean(ascendant && input.birthTimeKnown !== false);
+  let strength: ReturnType<typeof calculateVedicStrength> | undefined;
+  let strengthError: string | undefined;
+  if (strengthApplicable) {
+    try { strength = calculateVedicStrength(chart); }
+    catch (error) { strengthError = error instanceof Error ? error.message : String(error); }
+  }
+  for (const [id, name, results, evidenceIds] of [
+    ["vedic-shadbala", "Shadbala · Sixfold Planetary Strength", strength?.planets, strength?.planets.map(p => `shadbala-${p.body.toLowerCase()}`)],
+    ["vedic-bhava-bala", "Bhava Bala · Twelve House Strengths", strength?.houses, strength?.houses.map(h => `bhava-bala-house-${h.house}`)],
+  ] as const) layers[id] = {
+    id, name, tradition:"vedic", technique:id === "vedic-shadbala" ? "bphs-sixfold-shadbala" : "bphs-bhava-adhipati-dig-drishti",
+    status: !strengthApplicable ? "not-applicable" : strengthError ? "failed" : "computed-with-result",
+    frame:"agent", prerequisites:["western-planets-and-signs","western-houses-and-angles"],
+    calculationVersion:STRENGTH_VERSION, results:results ?? [], evidenceIds:evidenceIds ?? [],
+    sourceIds:["brihat-parashara-hora-shastra-26-27"],
+    ...(strengthError ? {errorCode:"VEDIC_STRENGTH_FAILED"} : {}),
+    notes: !strengthApplicable ? "A known local Ascendant and birth time are required for numerical strength." : strengthError ?? `BPHS formulas applied to The Absolute's supplied XYZ and Equal Houses. Selected variants: ${JSON.stringify(strength!.coordinateVariant)}. Sources: ${JSON.stringify(strength!.sources)}. Temporal inputs: ${JSON.stringify(strength!.temporal)}`,
+  };
+
+  // Layer 11: Vedic Graha Drishti (Special Aspects)
+  const classicalDrishtiPlanets = new Set(["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]);
+  const drishtiAspects = basePlanets.flatMap(p => {
+    if (!classicalDrishtiPlanets.has(p.name)) return [];
+    const pSignIndex = Math.floor(normalizeLongitude(p.longitude) / 30);
+    const offsets = [7,
+      ...(p.name === "Mars" ? [4, 8] : []),
+      ...(p.name === "Jupiter" ? [5, 9] : []),
+      ...(p.name === "Saturn" ? [3, 10] : []),
+    ];
+    return offsets.map(offset => ({
+      planet: p.name,
+      targetSign: ZODIAC_SIGNS[(pSignIndex + offset - 1) % 12],
+      targetHouseOffset: offset,
+      type: offset === 7 ? "7th Drishti (Opposition)" : `${offset}th Special Drishti`,
+    }));
+  });
+
+  layers["vedic-graha-drishti"] = {
+    id: "vedic-graha-drishti",
+    tradition: "vedic",
+    technique: "graha-drishti-special-aspects",
+    name: "Vedic Graha Drishti (Mars 4/8, Jupiter 5/9, Saturn 3/10)",
+    status: drishtiAspects.length > 0 ? "computed-with-result" : "computed-no-result",
+    frame: "shared",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: drishtiAspects.map(d => `drishti-${d.planet.toLowerCase()}-${d.targetHouseOffset}`),
+    sourceIds: ["parashari-drishti-canon"],
+    results: drishtiAspects,
+  };
+
+  // Layer 12: Chinese Lunar Mansions (28 Xiu)
+  layers["chinese-lunar-mansions-xiu"] = {
+    id: "chinese-lunar-mansions-xiu",
+    tradition: "chinese",
+    technique: "28-xiu-four-symbols",
+    name: "Chinese 28 Xiu & 4 Directional Animal Symbols",
+    status: "reference-only",
+    frame: "shared",
+    prerequisites: [],
+    calculationVersion: engineVersion,
+    evidenceIds: CHINESE_MANSIONS.map(m => `xiu-${m.index}-${m.pinyin.toLowerCase()}`),
+    sourceIds: [CHINESE_MANSION_HISTORICAL_SOURCE.title],
+    notes: "Historical determinative equatorial star catalog preserved as reference. Individual personal chart placements are not asserted without pre-calculated unequal ancient sector boundaries.",
+    results: {
+      source: CHINESE_MANSION_HISTORICAL_SOURCE,
+      mansionsCount: CHINESE_MANSIONS.length,
+      sampleMansions: CHINESE_MANSIONS.slice(0, 7),
+    },
+  };
+
+  // Layer 13: Elemental-family decans (separate from Chaldean faces)
+  const decanResults = frameworkPlacements.map(p => {
+    const canon = getDecanCanonByLongitude(p.longitude);
+    return {
+      body: p.name,
+      longitude: p.longitude,
+      decanIndex: canon.index,
+      sign: canon.sign,
+      elementalFamilySign: elementalDecanTeaching(canon).subSign,
+      elementalFamilyRuler: canon.triplicitySubRuler,
+      traditionalTitle: elementalDecanTeaching(canon).label,
+      behavioralNuance: elementalDecanTeaching(canon).statement,
+      chaldeanReference: { label: canon.label, title: canon.traditionalTitle },
+      reading: `${p.name} in ${canon.sign}, decan ${canon.index}: ${elementalDecanTeaching(canon).statement} Elemental-family ruler: ${canon.triplicitySubRuler}. This is the decan-layer interpretation to be reconciled with the planet\'s house, aspects, dignities, and other natal testimony.`,
+    };
+  });
+
+  layers["elemental-decans"] = {
+    id: "elemental-decans",
+    tradition: "hellenistic",
+    technique: "36-elemental-family-decans",
+    name: "36 Elemental Decans & Faces (10° Divisions)",
+    status: "computed-with-result",
+    frame: "shared",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: decanResults.map(d => `decan-${d.body.toLowerCase().replace(/\s+/g, "-")}-${d.decanIndex}`),
+    sourceIds: ["firmament-elemental-family-decans", "planetary-sign-canon"],
+    results: decanResults,
+  };
+
+  // Layer 14: Kabbalah & Sefer Yetzirah
+  const syEvidence = seferYetzirahEvidence(chart, "natal");
+  layers["kabbalah-sefer-yetzirah"] = {
+    id: "kabbalah-sefer-yetzirah",
+    tradition: "kabbalah",
+    technique: "sefer-yetzirah-32-paths-and-letters",
+    name: "Sefer Yetzirah 32 Paths, 7 Doubles & Contraries",
+    status: syEvidence.length > 0 ? "computed-with-result" : "computed-no-result",
+    frame: "shared",
+    prerequisites: ["western-planets-and-signs"],
+    calculationVersion: engineVersion,
+    evidenceIds: syEvidence.map(e => e.id),
+    sourceIds: ["sefer-yetzirah-westcott-recension"],
+    results: syEvidence,
+  };
+
+  // Layer 15: Genesis Behavioral Patterns & Yogas
+  let genesisResult: any = null;
+  let genesisError: string | null = null;
+  try {
+    genesisResult = runGenesisPatternPipeline({ ...chart, readingScope: "natal", transits: [] });
+  } catch (err) {
+    genesisError = err instanceof Error ? err.message : String(err);
+  }
+
+  layers["genesis-behavioral-patterns"] = {
+    id: "genesis-behavioral-patterns",
+    tradition: "genesis",
+    technique: "genesis-pattern-engine-and-yogas",
+    name: "Genesis Behavioral Patterns & Vedic Yogas",
+    status: genesisError ? "failed" : genesisResult?.analysis ? "computed-with-result" : "computed-no-result",
+    frame: chart.agentViewAvailable ? "agent" : "god",
+    prerequisites: ["western-aspects-and-orbs", "western-houses-and-angles"],
+    calculationVersion: engineVersion,
+    evidenceIds: ["genesis-patterns-core", "genesis-yogas"],
+    sourceIds: ["genesis-symbolic-engine"],
+    results: genesisResult?.analysis ? { ...genesisResult.analysis,
+      yogas: chart.ascendant ? detectAllYogas(basePlanets.map(p=>({name:p.name,sign:getSign(p.longitude),house:p.agentHouse??p.house,degree:p.longitude%30}))) : [],
+      yogaScope: chart.ascendant ? "Hamsa Yoga conditions in the configured local sub-engine" : "No local Yoga judgment without an Ascendant",
+    } : null,
+    ...(genesisError ? { errorCode: "GENESIS_PIPELINE_FAILED", notes: genesisError } : {}),
+  };
+
+  // Layer 16: Transit Activation Layer (when mode is transit or combined)
+  if (mode === "transit" || mode === "combined") {
+    const transitAspects = (calculateEnergyRead(input.worldview === "god" ? { ...chart, transits: chart.transits.map(godFrameContacts) } : chart)?.contacts ?? []).map(contact => ({
+      transitBody: contact.transit, natalBody: contact.natal,
+      aspect: contact.aspect[0].toUpperCase() + contact.aspect.slice(1),
+      orb: contact.orb, nature: contact.flow === -1 ? "friction" as const : "harmonic" as const,
+      intensity: contact.intensity, stars: contact.stars, natalStars: contact.natalStars,
+      majorFactor: contact.majorFactor, strength: contact.strength,
+    }));
+
+    layers["transit-activation-layer"] = {
+      id: "transit-activation-layer",
+      tradition: "firmament",
+      technique: "transit-to-natal-activation",
+      name: "Active Transits & Dynamic Orbs",
+      status: transitAspects.length > 0 ? "computed-with-result" : "computed-no-result",
+      frame: "transit",
+      prerequisites: ["western-planets-and-signs"],
+      calculationVersion: engineVersion,
+      evidenceIds: transitAspects.map(t => `transit-${t.transitBody}-${t.aspect}-${t.natalBody}`.toLowerCase()),
+      sourceIds: ["firmament-transit-weather"],
+      results: transitAspects,
+    };
+  } else {
+    layers["transit-activation-layer"] = {
+      id: "transit-activation-layer",
+      tradition: "firmament",
+      technique: "transit-to-natal-activation",
+      name: "Active Transits & Dynamic Orbs",
+      status: "not-applicable",
+      frame: "transit",
+      prerequisites: [],
+      calculationVersion: engineVersion,
+      evidenceIds: [],
+      sourceIds: [],
+      notes: "Mode is natal-only; transit layer is dormant until transit moment is requested.",
+    };
+  }
+
+  // 4. Assemble Method Execution Ledger and Validation Summary
+  // Validate registered layer output contracts before publishing the snapshot.
+  // Reference-only and mode-inapplicable layers retain their explicit statuses.
+  const expectedPlanetCount = basePlanets.length;
+  const requiredArrayCounts: Record<string, number> = {
+    "western-planets-and-signs": expectedPlanetCount,
+    "arabic-lunar-manazil": frameworkPlacements.length,
+    "vedic-nakshatras-and-padas": frameworkPlacements.length,
+    "elemental-decans": frameworkPlacements.length,
+  };
+  for (const [layerId, expectedCount] of Object.entries(requiredArrayCounts)) {
+    const layer = layers[layerId];
+    if (!layer) continue;
+    if (!Array.isArray(layer.results) || layer.results.length !== expectedCount) {
+      layer.status = "failed";
+      layer.errorCode = "MASTER_CHART_LAYER_OUTPUT_COUNT_MISMATCH";
+      layer.notes = `Expected ${expectedCount} planetary records; received ${Array.isArray(layer.results) ? layer.results.length : "non-array"}.`;
+    }
+  }
+  const housesLayer = layers["western-houses-and-angles"];
+  if (housesLayer && baseHouses.length !== 12) {
+    housesLayer.status = "failed";
+    housesLayer.errorCode = "MASTER_CHART_HOUSE_COUNT_MISMATCH";
+  }
+  const methodExecutionLedger = registeredMethodLedger(layers);
+  const computedWithResultCount = methodExecutionLedger.filter(
+    l => l.status === "computed-with-result"
+  ).length;
+  const failedMethods = methodExecutionLedger.filter(l => l.status === "failed");
+  const unavailableMethods = methodExecutionLedger.filter(l =>
+    l.status === "not-implemented" || l.status === "reference-only"
+  );
+  const methodWarnings = unavailableMethods.map(l =>
+    `${l.name}: ${l.status}. ${l.notes ?? "No executable calculation was recorded."}`
+  );
+
+  const snapshot: UnifiedMasterChartSnapshot = {
+    snapshotId,
+    schemaVersion: "1.0.0",
+    createdAtUtc,
+    inputs: {
+      // Birth coordinates and timestamps are not profile IDs. Identity is supplied
+      // only when an authenticated profile registry is connected.
+      profileIds: [],
+      eventInstantUtc: chart.utc,
+      timezone: input.timezone,
+      locationContext: {
+        location: input.location,
+        latitude: input.latitude,
+        longitude: input.longitude,
+      },
+      mode,
+      chartRole: input.chartRole ?? "natal",
+    },
+    frameConfig: {
+      zodiacMode: "fixed-cartesian-xyz",
+      firmamentAnchorVersion: "sunrise-xyz-15deg-hour-v1",
+      firmamentCenter: "polaris-centered-firmament-dome",
+      obliquityMode: "zero-tilt-xy-projection",
+      precessionMode: "none-user-frame-fixed-anchor",
+      houseSystem: "topocentric-equal-house-ascendant",
+      engineVersion,
+    },
+    baseCelestialState: {
+      julianDay: chart.julianDay,
+      utc: chart.utc,
+      ascendant,
+      midheaven: chart.midheaven,
+      descendant: chart.descendant,
+      northNode: chart.northNode,
+      southNode: chart.southNode,
+      planets: [...basePlanets],
+      houses: baseHouses,
+    },
+    godView: {
+      description: "Polaris-centered firmament dome with a fixed Aries 1 to Pisces 12 background and Cartesian XYZ planetary projection",
+      cosmicFrame: "fixed-aries-1-to-pisces-12",
+      polarisCenter: true,
+      placements: godPlacements,
+    },
+    agentView: {
+      description: "Geocentric planetary longitudes with a separate topocentric lunar correction and Equal House cusps anchored directly to the rising Ascendant degree",
+      ascendantAnchor: ascendant?.display ?? "Unavailable: God View has no local Ascendant",
+      houseSystem: "topocentric-equal-house-from-ascendant",
+      placements: agentPlacements,
+      frameRelationships,
+    },
+    natal: input.worldview === "god" ? {
+      ...chart,
+      input: { ...chart.input, worldview: "god" },
+      worldview: "god",
+      agentViewAvailable: false,
+      ascendant: null,
+      descendant: null,
+      midheaven: null,
+      houses: Array.from({ length: 12 }, (_, i) => i * 30),
+      movingBodies: chart.movingBodies.map(body => ({ ...body, house: body.godHouse ?? Math.floor(normalizeLongitude(body.longitude) / 30) + 1 })),
+      frozenStars: chart.frozenStars.map(body => ({ ...body, house: body.godHouse ?? Math.floor(normalizeLongitude(body.longitude) / 30) + 1 })),
+      northNode: { ...chart.northNode, house: chart.northNode.godHouse ?? Math.floor(normalizeLongitude(chart.northNode.longitude) / 30) + 1 },
+      southNode: { ...chart.southNode, house: chart.southNode.godHouse ?? Math.floor(normalizeLongitude(chart.southNode.longitude) / 30) + 1 },
+      transitHouseFrame: "god-fixed",
+      transits: chart.transits.map(body => ({ ...godFrameContacts(body), house: body.godHouse ?? Math.floor(normalizeLongitude(body.longitude) / 30) + 1 })),
+    } : chart,
+    transit: mode === "transit" || mode === "combined"
+      ? {
+          transitInstantUtc: chart.transitDate ?? chart.utc,
+          planets: chart.transits ?? [],
+          aspectsToNatal: (layers["transit-activation-layer"].results as any) ?? [],
+        }
+      : undefined,
+    layers,
+    methodExecutionLedger,
+    validation: {
+      // Keep validation.complete conservative: reference-only canon remains
+      // disclosed as incomplete in the snapshot contract. The interpretation
+      // gate separately distinguishes that status from failed calculations.
+      complete: failedMethods.length === 0 && unavailableMethods.length === 0,
+      errors: failedMethods.map(l => `${l.name}: ${l.errorCode ?? "calculation failed"}`),
+      warnings: methodWarnings,
+      totalMethods: methodExecutionLedger.length,
+      computedWithResultCount,
+    },
+  };
+
+  if (snapshot.transit) {
+    const timezone = input.transitTimezone || input.timezone;
+    const local = localDateTime(new Date(chart.transitDate), timezone);
+    const event = await buildUnifiedMasterChart({
+      ...input,
+      location: input.transitLocation || (input.worldview === "god" ? "" : input.location),
+      latitude: input.transitLatitude ?? input.latitude,
+      longitude: input.transitLongitude ?? input.longitude,
+      timezone, date: local.date, time: local.time, instantUtc: chart.transitDate,
+      mode: "natal", birthTimeKnown: true, chartRole: "event",
+      xyzPositions: input.transitXYZPositions,
+      sunriseAnchor: input.transitSunriseAnchor,
+      transitDate: undefined, transitTime: undefined, transitInstantUtc: undefined,
+      transitLocation: undefined, transitLatitude: undefined, transitLongitude: undefined,
+      transitTimezone: undefined, transitXYZPositions: undefined, transitSunriseAnchor: undefined,
+    });
+    // An event sky carries the full formation, independently from the natal sky.
+    // Its cycle/varga results describe the event model, never a person's birth history.
+    for (const transit of chart.transits) {
+      const body = [...event.baseCelestialState.planets, event.baseCelestialState.northNode, event.baseCelestialState.southNode].find(row => row.name === transit.name);
+      if (!body || Math.abs(((body.longitude - transit.longitude + 540) % 360) - 180) > 0.00001)
+        throw new Error(`TRANSIT_FRAMEWORK_MISMATCH: ${transit.name} differs from the event chart.`);
+    }
+    snapshot.transit.framework = event;
+  }
+  return Object.freeze(snapshot);
+}
+
+
+================================================================================
+FILE: server/masterChart/chartDataBus.ts
+BLOB SHA: 67b24f0175f307915d9fdfc84b530111e1d4d9d8
+================================================================================
+import type { ChartResult, ChartRow } from "../astronomy";
+
+/**
+ * Single, read-only distribution contract for all Master Chart calculation layers.
+ * The astronomy engine calculates once; layer adapters consume this shared context.
+ * Never mutate the source chart or independently recalculate its positions here.
+ */
+export interface MasterChartDataBus {
+  readonly chart: ChartResult;
+  readonly planets: readonly ChartRow[];
+  readonly houses: readonly number[];
+  readonly ascendant: ChartRow | null;
+  readonly sun: ChartRow;
+  readonly moon: ChartRow;
+  readonly transits: readonly ChartRow[];
+}
+
+/** Fail explicitly instead of substituting a fabricated angle or body position. */
+export function createMasterChartDataBus(chart: ChartResult): MasterChartDataBus {
+  const ascendant = chart.ascendant;
+  if (chart.worldview !== "god" && (!ascendant || !Number.isFinite(ascendant.longitude))) {
+    throw new Error("MASTER_CHART_MISSING_ASCENDANT");
+  }
+  if (chart.houses.length !== 12 || chart.houses.some(h => !Number.isFinite(h))) {
+    throw new Error("MASTER_CHART_INVALID_HOUSES");
+  }
+  const sun = chart.movingBodies.find(p => p.name === "Sun");
+  const moon = chart.movingBodies.find(p => p.name === "Moon");
+  if (!sun || !Number.isFinite(sun.longitude)) throw new Error("MASTER_CHART_MISSING_SUN");
+  if (!moon || !Number.isFinite(moon.longitude)) throw new Error("MASTER_CHART_MISSING_MOON");
+  return Object.freeze({
+    chart,
+    planets: chart.movingBodies,
+    houses: chart.houses,
+    ascendant,
+    sun,
+    moon,
+    transits: chart.transits ?? [],
+  });
+}
+
+
+================================================================================
+FILE: server/masterChart/entry.ts
+BLOB SHA: 957b14d7b506923d68e1c9bedae52b5a4ea88aac
+================================================================================
+import type { ChartInput, ChartResult } from "../astronomy";
+import { buildUnifiedMasterChart } from "./builder";
+import { synthesizeSnapshotEvidence } from "../astrologyKnowledge/synthesis/snapshotEvidence";
+
+/** Public chart production always binds the complete formation before returning. */
+export async function calculateMasterChart(
+  input: ChartInput
+): Promise<ChartResult> {
+  const mode = input.readingScope ?? "combined";
+  const snapshot = await buildUnifiedMasterChart({ ...input, mode });
+  const { canonicalChart, synthesis } = await synthesizeSnapshotEvidence(
+    snapshot,
+    mode,
+    "Evaluate this chart's complete method formation before output."
+  );
+  return {
+    ...canonicalChart,
+    methodBindings: {
+      snapshotId: snapshot.snapshotId,
+      base: snapshot.methodExecutionLedger,
+      transit: snapshot.transit?.framework?.methodExecutionLedger ?? [],
+      synthesisAudit: {
+        passed: synthesis.qualityAudit.passed,
+        groundedRatio: synthesis.qualityAudit.groundedRatio,
+        canonApplicationCount: synthesis.canonApplications.length,
+      },
+    },
+  };
+}
+
+
+================================================================================
+FILE: server/masterChart/registry.ts
+BLOB SHA: 41715bf55e821a2ac4948e7ec46ba0872d2e5e3f
+================================================================================
+import type { LayerRecord } from "./types";
+
+/** Every chart evaluates this same formation; scope changes results, not membership. */
+export const MASTER_METHOD_IDS = [
+  "western-planets-and-signs",
+  "sumerian-celestial-foundations",
+  "western-houses-and-angles",
+  "western-aspects-and-orbs",
+  "western-essential-dignities",
+  "fixed-stars-royal-watchers",
+  "arabic-hermetic-lots",
+  "arabic-lunar-manazil",
+  "vedic-nakshatras-and-padas",
+  "vedic-vargas-divisional",
+  "vedic-dasha-and-ashtakavarga",
+  "vedic-graha-drishti",
+  "vedic-shadbala",
+  "vedic-bhava-bala",
+  "chinese-lunar-mansions-xiu",
+  "elemental-decans",
+  "kabbalah-sefer-yetzirah",
+  "genesis-behavioral-patterns",
+  "transit-activation-layer",
+] as const;
+
+export function registeredMethodLedger(
+  layers: Record<string, LayerRecord>
+): LayerRecord[] {
+  const missing = MASTER_METHOD_IDS.filter(id => !layers[id]);
+  const extra = Object.keys(layers).filter(
+    id => !(MASTER_METHOD_IDS as readonly string[]).includes(id)
+  );
+  if (missing.length || extra.length)
+    throw new Error(
+      `MASTER_METHOD_REGISTRY_MISMATCH: missing=${missing.join(",")}; unregistered=${extra.join(",")}`
+    );
+  return MASTER_METHOD_IDS.map(id => layers[id]);
+}
+
+
+================================================================================
+FILE: server/masterChart/types.ts
+BLOB SHA: 4ce6a9b1c7b2a4e4cb5f37f95d3ebf8f4f1a5c05
+================================================================================
+import type { ChartResult, ChartRow } from "../astronomy";
+
+export type LayerStatus =
+  | "computed-with-result"
+  | "computed-no-result"
+  | "not-applicable"
+  | "not-implemented"
+  | "reference-only"
+  | "failed";
+
+export type ProjectionFrame =
+  | "god"
+  | "agent"
+  | "shared"
+  | "natal"
+  | "transit"
+  | "cross-chart";
+
+export interface LayerRecord<T = unknown> {
+  id: string;
+  tradition:
+    | "hellenistic"
+    | "vedic"
+    | "babylonian"
+    | "sumerian"
+    | "arabic-persian"
+    | "chinese"
+    | "kabbalah"
+    | "genesis"
+    | "firmament";
+  technique: string;
+  name: string;
+  status: LayerStatus;
+  frame: ProjectionFrame;
+  results?: T;
+  evidenceIds: string[];
+  sourceIds: string[];
+  prerequisites: string[];
+  calculationVersion: string;
+  errorCode?: string;
+  notes?: string;
+}
+
+export interface MasterChartInput {
+  location: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  date: string;
+  time: string;
+  transitLocation?: string;
+  transitLatitude?: number;
+  transitLongitude?: number;
+  transitTimezone?: string;
+  transitDate?: string;
+  transitTime?: string;
+  transitInstantUtc?: string;
+  instantUtc?: string;
+  birthTimeKnown?: boolean;
+  chartRole?: "natal" | "event";
+  elevation?: number;
+  mode?: "natal" | "transit" | "combined";
+  worldview?: "god" | "agent" | "agent-vs-god";
+  sunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: { x: number; y: number; z: number } };
+  transitSunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: { x: number; y: number; z: number } };
+  xyzPositions?: Record<string, { x: number; y: number; z: number }>;
+  transitXYZPositions?: Record<string, { x: number; y: number; z: number }>;
+}
+
+export interface UnifiedMasterChartSnapshot {
+  snapshotId: string;
+  schemaVersion: "1.0.0";
+  createdAtUtc: string;
+  inputs: {
+    profileIds: string[];
+    eventInstantUtc: string;
+    timezone: string;
+    locationContext: {
+      location: string;
+      latitude: number;
+      longitude: number;
+    };
+    mode: "natal" | "transit" | "combined";
+    chartRole?: "natal" | "event";
+  };
+  frameConfig: {
+    zodiacMode: "fixed-cartesian-xyz";
+    firmamentAnchorVersion: "sunrise-xyz-15deg-hour-v1";
+    firmamentCenter: "polaris-centered-firmament-dome";
+    obliquityMode: "zero-tilt-xy-projection";
+    precessionMode: "none-user-frame-fixed-anchor";
+    houseSystem: "topocentric-equal-house-ascendant";
+    engineVersion: "firmament-master-2026.3";
+  };
+  baseCelestialState: {
+    julianDay: number;
+    utc: string;
+    ascendant: ChartRow | null;
+    midheaven?: ChartRow | null;
+    descendant?: ChartRow | null;
+    northNode: ChartRow;
+    southNode: ChartRow;
+    planets: ChartRow[];
+    houses: Array<{ house: number; sign: string; cusp: number; degreeDisplay: string }>;
+  };
+  godView: {
+    description: string;
+    cosmicFrame: "fixed-aries-1-to-pisces-12";
+    polarisCenter: true;
+    placements: Array<{
+      body: string;
+      longitude: number;
+      display: string;
+      godHouse: number;
+      sign: string;
+    }>;
+  };
+  agentView: {
+    description: string;
+    ascendantAnchor: string;
+    houseSystem: "topocentric-equal-house-from-ascendant";
+    placements: Array<{
+      body: string;
+      longitude: number;
+      display: string;
+      agentHouse: number;
+      sign: string;
+    }>;
+    frameRelationships: Array<{
+      body: string;
+      longitude: number;
+      display: string;
+      godHouse: number;
+      agentHouse: number;
+      relationship: string;
+    }>;
+  };
+  natal?: ChartResult;
+  transit?: {
+    transitInstantUtc: string;
+    planets: ChartRow[];
+    /** Same registered methods evaluated independently for the event sky. */
+    framework?: UnifiedMasterChartSnapshot;
+    aspectsToNatal: Array<{
+      transitBody: string;
+      natalBody: string;
+      aspect: string;
+      orb: number;
+      nature: "harmonic" | "friction" | "dynamic";
+    }>;
+  };
+  layers: Record<string, LayerRecord>;
+  methodExecutionLedger: LayerRecord[];
+  validation: {
+    complete: boolean;
+    errors: string[];
+    warnings: string[];
+    totalMethods: number;
+    computedWithResultCount: number;
+  };
+}
+
+export function getLayer<T = unknown>(
+  snapshot: UnifiedMasterChartSnapshot,
+  layerId: string
+): LayerRecord<T> | undefined {
+  return snapshot.layers[layerId] as LayerRecord<T> | undefined;
+}
+
+export function getEvidence(
+  snapshot: UnifiedMasterChartSnapshot,
+  evidenceId: string
+): LayerRecord | undefined {
+  return snapshot.methodExecutionLedger.find(l =>
+    l.evidenceIds.includes(evidenceId)
+  );
+}
+
+export function getModeView(
+  snapshot: UnifiedMasterChartSnapshot,
+  mode: "god" | "agent" | "shared"
+) {
+  if (mode === "god") return snapshot.godView;
+  if (mode === "agent") return snapshot.agentView;
+  return { godView: snapshot.godView, agentView: snapshot.agentView };
+}
+
+/** Calculated results travel with every published chart; no recursive ChartResult copies. */
+export interface MasterMethodBindings {
+  snapshotId: string;
+  base: LayerRecord[];
+  transit: LayerRecord[];
+  synthesisAudit: { passed: boolean; groundedRatio: number; canonApplicationCount: number };
+}
+
+
+================================================================================
+FILE: server/astronomy.ts
+BLOB SHA: d5146852ad88eaf11f8d178a2602145d84733400
+================================================================================
+import { ephemerisXYZ, julianDay, longitudeFromXYZ, topocentricMoonLongitude } from "./ephemeris";
+export { ephemerisXYZ, longitudeFromXYZ } from "./ephemeris";
+import { knownCity } from "../shared/profileLocations";
+import { ascendantFromSunrise, type FixedVector } from "./sunriseAscendant";
+import tzLookup from "tz-lookup";
+import { FIXED_STARS, formatLongitude, normalizeLongitude, overlay, type Overlay } from "../shared/hybrid";
+import { agentHouseFor, angularDistance, dualPlacement, equalHouseCusps, godHouseFor, type FrameRelationship, type ReadingScope, type Worldview, type DualPlacement } from "./astrologyCore";
+
+export type ChartInput = {
+  location: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  date: string;
+  time: string;
+  transitLocation?: string;
+  transitLatitude?: number;
+  transitLongitude?: number;
+  transitTimezone?: string;
+  transitDate?: string;
+  transitTime?: string;
+  transitInstantUtc?: string;
+  instantUtc?: string;
+  worldview?: Worldview;
+  readingScope?: ReadingScope;
+  birthTimeKnown?: boolean;
+  chartRole?: "natal" | "event";
+  elevation?: number;
+  /** Verified historical sunrise anchor in the fixed EQUATORIAL frame. Optional until provider validation is complete. */
+  sunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: FixedVector };
+  transitSunriseAnchor?: { sunriseUtc: string; sunriseSunXYZ: FixedVector };
+  /** External Cartesian coordinates in the canonical fixed zodiac plane; x points at 0° Aries, y at 90° Cancer. */
+  xyzPositions?: Record<string, { x: number; y: number; z: number }>;
+  /** Optional independently sampled transit vectors at the transit instant. */
+  transitXYZPositions?: Record<string, { x: number; y: number; z: number }>;
+};
+
+export type MoonUncertainty = { from: number; to: number; label: string };
+export type MomentPrecision = "exact" | "date-only-reference";
+export type TransitHouseFrame = "transit-location" | "natal-location" | "god-fixed";
+export type ChartRow = {
+  name: string;
+  /** Canonical geocentric longitude, shared by the God and Agent house frames. */
+  longitude: number;
+  /** Observer-specific (parallax-corrected) longitude. Present for the Moon only, and only when a location is resolved. */
+  topocentricLongitude?: number;
+  xyz?: { x: number; y: number; z: number };
+  coordinateSource?: "external-xyz" | "swiss-ephemeris";
+  display: string;
+  house: number;
+  godHouse?: number;
+  agentHouse?: number;
+  royalStarContacts?: DualPlacement["royalStarContacts"];
+  frameRelationship?: FrameRelationship;
+  retrograde?: boolean;
+  speed?: number;
+  overlay: Overlay;
+  uncertainty?: MoonUncertainty;
+};
+export type TransitContact = { natalName: string; aspect: "conjunction" | "sextile" | "square" | "trine" | "opposition"; orb: number };
+export type MinorTransitContact = { natalName: string; aspect: "sextile" | "semisextile" | "semisquare" | "quincunx"; orb: number; weightMultiplier: 0.5; classification: "flow" | "friction" };
+export type TransitRow = ChartRow & { natalContacts: TransitContact[]; minorNatalContacts: MinorTransitContact[] };
+export type ChartResult = {
+  methodBindings?: import("./masterChart/types").MasterMethodBindings;
+  input: ChartInput;
+  worldview: Worldview;
+  readingScope: ReadingScope;
+  agentViewAvailable: boolean;
+  utc: string;
+  julianDay: number;
+  ascendant: ChartRow | null;
+  descendant: ChartRow | null;
+  midheaven: ChartRow | null;
+  northNode: ChartRow;
+  southNode: ChartRow;
+  houses: number[];
+  movingBodies: ChartRow[];
+  frozenStars: ChartRow[];
+  godPlacements: Array<ChartRow & DualPlacement>;
+  transitDate: string;
+  momentPrecision: MomentPrecision;
+  transitHouseFrame: TransitHouseFrame;
+  transits: TransitRow[];
+  validation: { passed: boolean; notes: string[] };
+};
+
+export function parseLocalToUtc(date: string, time: string, timezone: string) {
+  const [y, m, d] = date.split("-").map(Number); const [hh, mm] = time.split(":").map(Number);
+  const wallKey = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")} ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const naive = Date.UTC(y, m - 1, d, hh, mm); const candidates = new Set<number>();
+  for (let delta = -36; delta <= 36; delta += 0.25) { const candidate = new Date(naive + delta * 3_600_000); const parts = formatter.formatToParts(candidate); const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value])); const key = `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}`; if (key === wallKey) candidates.add(candidate.getTime()); }
+  if (candidates.size === 0) throw new Error("That local time does not exist in the selected timezone, usually because of a daylight-saving transition.");
+  if (candidates.size > 1) throw new Error("That local time is ambiguous in the selected timezone because the clock repeated; choose a different minute.");
+  return new Date(Array.from(candidates)[0]);
+}
+
+function planetaryTopocentric(planet: number, locationAvailable: boolean) {
+  return locationAvailable && planet === 1;
+}
+export function aspectBetween(a: number, b: number): { aspect: TransitContact["aspect"]; orb: number } | null {
+  // angularDistance correctly wraps across 0°/360° (for example, 359° and 1° are 2° apart).
+  const separation = angularDistance(a, b); const targets: Array<[number, TransitContact["aspect"]]> = [[0, "conjunction"], [60, "sextile"], [90, "square"], [120, "trine"], [180, "opposition"]];
+  const best = targets.map(([target, aspect]) => ({ aspect, orb: Math.abs(separation - target) })).sort((x, y) => x.orb - y.orb)[0]; return best && best.orb <= 5 ? best : null;
+}
+/** The three minor aspects complete the balanced eight-aspect Energy Read.
+ * A pair may have at most one scored aspect; minor contacts are calculated
+ * only when the pair has no major contact.
+ */
+export function minorAspectBetween(a: number, b: number): Omit<MinorTransitContact, "natalName"> | null {
+  if (aspectBetween(a, b)) return null;
+  const separation = angularDistance(a, b);
+  const targets = [
+    { target: 30, aspect: "semisextile" as const, classification: "flow" as const },
+    { target: 45, aspect: "semisquare" as const, classification: "friction" as const },
+    { target: 150, aspect: "quincunx" as const, classification: "friction" as const },
+  ];
+  const best = targets.map(({ target, aspect, classification }) => ({ aspect, classification, orb: Math.abs(separation - target) }))
+    .filter(contact => contact.orb <= 5)
+    .sort((a, b) => a.orb - b.orb)[0];
+  return best ? { ...best, weightMultiplier: 0.5 } : null;
+}
+function momentFor(input: ChartInput, worldview: Worldview, scope: ReadingScope, transit = false) {
+  const exactInstant = transit ? input.transitInstantUtc : input.instantUtc;
+  if (exactInstant) {
+    const instant = new Date(exactInstant);
+    if (!Number.isFinite(instant.getTime())) throw new Error("Invalid calculated UTC instant.");
+    return { date: instant, precision: "exact" as const };
+  }
+  const date = transit ? input.transitDate : input.date;
+  const time = transit ? input.transitTime : input.time;
+  const timezone = transit ? input.transitTimezone : input.timezone;
+  if (!date) return { date: new Date(), precision: "exact" as const };
+  if (worldview === "god" && (!time || (!transit && input.birthTimeKnown === false))) return { date: new Date(`${date}T12:00:00.000Z`), precision: "date-only-reference" as const };
+  if (!time || !timezone) throw new Error("An exact date, time, and timezone are required for Agent View.");
+  return { date: parseLocalToUtc(date, time, timezone), precision: "exact" as const };
+}
+// NOAA solar-calculator equations: apparent sunrise at solar zenith 90.833 degrees.
+// Inputs are the LOCAL civil date and signed geographic coordinates (east positive).
+// A missing sunrise (polar day/night) is an error, never a substituted angle.
+class UndefinedSolarEvent extends Error {}
+
+export function noaaSunriseUtc(localDate: string, latitude: number, longitude: number, setting = false): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate) || !Number.isFinite(latitude) || Math.abs(latitude) > 90 || !Number.isFinite(longitude) || Math.abs(longitude) > 180)
+    throw new Error("Valid local date and coordinates required for NOAA sunrise.");
+  const midnight = Date.parse(localDate + "T00:00:00.000Z");
+  if (!Number.isFinite(midnight)) throw new Error("Invalid local sunrise date.");
+  const rad = Math.PI / 180;
+  const jd0 = midnight / 86400000 + 2440587.5;
+  const solar = (jd: number) => {
+    const t = (jd - 2451545) / 36525;
+    const l0 = ((280.46646 + t * (36000.76983 + t * 0.0003032)) % 360 + 360) % 360;
+    const m = (357.52911 + t * (35999.05029 - 0.0001537 * t)) * rad;
+    const ecc = 0.016708634 - t * (0.000042037 + 0.0000001267 * t);
+    const c = Math.sin(m) * (1.914602 - t * (0.004817 + 0.000014 * t)) + Math.sin(2 * m) * (0.019993 - 0.000101 * t) + Math.sin(3 * m) * 0.000289;
+    const trueLong = l0 + c;
+    const omega = (125.04 - 1934.136 * t) * rad;
+    const lambda = (trueLong - 0.00569 - 0.00478 * Math.sin(omega)) * rad;
+    const obliq0 = 23 + (26 + (21.448 - t * (46.815 + t * (0.00059 - t * 0.001813))) / 60) / 60;
+    const obliq = (obliq0 + 0.00256 * Math.cos(omega)) * rad;
+    const decl = Math.asin(Math.sin(obliq) * Math.sin(lambda));
+    const y = Math.tan(obliq / 2) ** 2;
+    const l = l0 * rad;
+    const eqtime = 4 * (180 / Math.PI) * (y * Math.sin(2 * l) - 2 * ecc * Math.sin(m) + 4 * ecc * y * Math.sin(m) * Math.cos(2 * l) - 0.5 * y * y * Math.sin(4 * l) - 1.25 * ecc * ecc * Math.sin(2 * m));
+    const cosH = (Math.cos(90.833 * rad) - Math.sin(latitude * rad) * Math.sin(decl)) / (Math.cos(latitude * rad) * Math.cos(decl));
+    if (!Number.isFinite(cosH) || cosH < -1 || cosH > 1) throw new UndefinedSolarEvent("NOAA sunrise undefined for this location/date; no fallback.");
+    return 720 - 4 * (longitude + (setting ? -1 : 1) * Math.acos(cosH) / rad) - eqtime;
+  };
+  let minutes = solar(jd0 + 0.5);
+  minutes = solar(jd0 + minutes / 1440);
+  return new Date(midnight + minutes * 60000);
+}
+function automaticSunriseAnchor(latitude: number, longitude: number, event: Date) {
+  // NOAA's civil-date calculation can cross a UTC day at eastern/western
+  // longitudes. Select the latest real sunrise before the exact event,
+  // rather than assuming its input timezone is the observer's civil day.
+  const day = Date.UTC(event.getUTCFullYear(), event.getUTCMonth(), event.getUTCDate());
+  let sunrise: Date | undefined;
+  for (const offset of [-1, 0, 1]) {
+    const date = new Date(day + offset * 86400000).toISOString().slice(0, 10);
+    try {
+      const candidate = noaaSunriseUtc(date, latitude, longitude);
+      if (candidate <= event && (!sunrise || candidate > sunrise)) sunrise = candidate;
+    } catch (error) {
+      if (!(error instanceof UndefinedSolarEvent)) throw error;
+    }
+  }
+  if (!sunrise) throw new Error("No preceding NOAA sunrise found; no fallback.");
+  return { sunriseUtc: sunrise.toISOString(), sunriseSunXYZ: ephemerisXYZ(julianDay(sunrise), 0).xyz };
+}
+function row(name: string, longitude: number, house: number, worldview: Worldview, ascendant: number | null, extra: Partial<ChartRow> = {}): ChartRow {
+  const dual = dualPlacement(longitude, ascendant, name) as DualPlacement;
+  return { name, longitude, display: formatLongitude(longitude), house, godHouse: dual.godHouse, ...(dual.agentHouse == null ? {} : { agentHouse: dual.agentHouse }), ...(dual.frameRelationship ? { frameRelationship: dual.frameRelationship } : {}), royalStarContacts: dual.royalStarContacts, overlay: overlay(longitude), ...extra };
+}
+function fixedHouseRows(worldview: Worldview, ascendant: number | null) {
+  const houses = worldview === "god" ? Array.from({ length: 12 }, (_, index) => index * 30) : equalHouseCusps(ascendant ?? 0);
+  return houses;
+}
+function moonRange(date: string): MoonUncertainty | undefined {
+  if (!date) return undefined;
+  const start = julianDay(new Date(`${date}T00:00:00.000Z`)); const end = julianDay(new Date(`${date}T23:59:59.000Z`));
+  const from = ephemerisXYZ(start, 1).longitude; const to = ephemerisXYZ(end, 1).longitude;
+  return { from, to, label: `${formatLongitude(from)} to ${formatLongitude(to)} possible on this date` };
+}
+
+export async function calculateChart(rawInput: ChartInput): Promise<ChartResult> {
+  const worldview: Worldview = rawInput.worldview ?? "agent"; const readingScope: ReadingScope = rawInput.readingScope ?? "combined";
+  // Natal-only readings never use transit fields, so stale or half-filled form values are ignored.
+  const input: ChartInput = readingScope === "natal"
+    ? { ...rawInput, transitLocation: undefined, transitLatitude: undefined, transitLongitude: undefined, transitTimezone: undefined, transitDate: undefined, transitTime: undefined }
+    : rawInput;
+  const agentViewAvailable = worldview !== "god" && Boolean(input.time && input.timezone && input.location);
+  if (worldview !== "god" && !agentViewAvailable) throw new Error("Agent View requires birth location, date, time, and timezone.");
+  if (worldview === "god" && readingScope !== "transit" && !input.date) throw new Error("God View Natal readings require a birth date; birth time and location are optional.");
+  const natalMoment = momentFor(input, worldview, readingScope); const utcDate = natalMoment.date; const jd = julianDay(utcDate);
+  if (worldview !== "god" && (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || Math.abs(input.latitude) > 90 || Math.abs(input.longitude) > 180))
+    throw new Error("Master Celestial: valid birth coordinates are required. No default Ascendant.");
+  const hasAgentLocation = worldview !== "god" && Number.isFinite(input.latitude) && Number.isFinite(input.longitude);
+  const natalSunrise = hasAgentLocation ? input.sunriseAnchor ?? automaticSunriseAnchor(input.latitude, input.longitude, utcDate) : null;
+  const asc = hasAgentLocation
+    ? ascendantFromSunrise({ ...natalSunrise!, eventUtc: utcDate.toISOString(), latitude: input.latitude }).ascendant
+    : null;
+  // MC requires a separately verified fixed-frame meridian solver. Never substitute Swiss houses_ex.
+  const mc: number | null = null;
+  const houses = fixedHouseRows(worldview, asc);
+  const houseFor = (longitude: number) => worldview === "god" ? godHouseFor(longitude) : agentHouseFor(longitude, asc ?? 0);
+  const planetNames = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
+  const movingBodies = planetNames.map((name, i) => { const xyz = input.xyzPositions?.[name]; const automatic = xyz ? undefined : ephemerisXYZ(jd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: automatic!.speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, hasAgentLocation) ? topocentricMoonLongitude(jd, input.longitude, input.latitude, input.elevation ?? 0) : undefined; return row(name, p.longitude, houseFor(p.longitude), worldview, asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }), ...(worldview === "god" && name === "Moon" && input.birthTimeKnown === false ? { uncertainty: moonRange(input.date) } : {}) }); });
+  const ascRow = asc == null ? null : row("Ascendant", asc, 1, worldview, asc);
+  const descLongitude = asc == null ? null : normalizeLongitude(asc + 180); const descendant = descLongitude == null ? null : row("Descendant", descLongitude, 7, worldview, asc);
+  const mcRow = mc == null ? null : row("Midheaven", mc, houseFor(mc), worldview, asc);
+  const nodePosition = ephemerisXYZ(jd, 10).longitude; const northNode = row("North Node", nodePosition, houseFor(nodePosition), worldview, asc, { retrograde: true, speed: 0 }); const southNodePosition = normalizeLongitude(nodePosition + 180); const southNode = row("South Node", southNodePosition, houseFor(southNodePosition), worldview, asc, { retrograde: true, speed: 0 });
+  const frozenStars = FIXED_STARS.map(([name, longitude]) => row(name, longitude, houseFor(longitude), worldview, asc));
+  const allPlacements = [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), ...(mcRow ? [mcRow] : []), northNode, southNode];
+  const godPlacements = allPlacements.map(placement => ({ ...placement, ...dualPlacement(placement.longitude, asc, placement.name) }));
+  // Source calculation success is distinct from an optional historical reference fixture.
+  // Actual ephemeris failures throw during chart construction; test fixtures verify Dallas separately.
+  const validation = { passed: true, notes: [
+    "Planetary positions are computed from geocentric equatorial Cartesian XYZ (Moshier, equatorial, XYZ, speed); the zero direction is the ephemeris equatorial X axis at the observation date. No sidereal flag or Aldebaran subtraction is applied.",
+    ...(input.sunriseAnchor ? ["Natal sunrise XYZ anchor supplied by caller; independent historical-source verification is not recorded."] : []),
+    "Natal Ascendant: NOAA apparent sunrise calculated from birth date/location, Sun equatorial XYZ sampled at sunrise, plus elapsed rotation at exactly 15 degrees per hour. No fallback.",
+    "Transit Ascendant: NOAA apparent sunrise and equatorial Sun XYZ calculated automatically for the transit location. No fallback.",
+    input.xyzPositions ? "Supplied XYZ vectors override matching natal planetary longitudes in the fixed 360° plane; missing bodies retain Swiss Ephemeris positions." : "Planetary angles are geocentric equatorial XY angles; Moon also has a separate topocentric equatorial correction.",
+  ] };
+  const transitCoordinatesPresent = [input.transitLatitude, input.transitLongitude].some(value => value !== undefined && Number.isFinite(value));
+  const transitInputsPresent = Boolean(input.transitDate?.trim() || input.transitTime?.trim() || input.transitTimezone?.trim() || input.transitLocation?.trim() || transitCoordinatesPresent);
+  const transitLocationResolved = worldview !== "god" && Boolean(input.transitLocation?.trim() && input.transitTimezone?.trim() && Number.isFinite(input.transitLatitude) && Number.isFinite(input.transitLongitude));
+  if (worldview !== "god" && transitInputsPresent && !transitLocationResolved) throw new Error("Transit location must be resolved before calculating transit houses.");
+  const transitMoment = momentFor(input, worldview, readingScope, true); const transitDate = transitMoment.date; const transitJd = julianDay(transitDate);
+  const transitHasLocation = worldview !== "god" && (transitLocationResolved || hasAgentLocation);
+  const transitLatitude = transitLocationResolved ? input.transitLatitude! : input.latitude;
+  const transitLongitude = transitLocationResolved ? input.transitLongitude! : input.longitude;
+  const transitSunrise = transitHasLocation ? input.transitSunriseAnchor ?? automaticSunriseAnchor(transitLatitude, transitLongitude, transitDate) : null;
+  const transitAsc = transitHasLocation
+    ? ascendantFromSunrise({ ...transitSunrise!, eventUtc: transitDate.toISOString(), latitude: transitLatitude }).ascendant
+    : null;
+  const transitHouseFrame: TransitHouseFrame = worldview === "god" ? "god-fixed" : transitLocationResolved ? "transit-location" : "natal-location";
+  const natalTargets = worldview === "god" ? [] : [...movingBodies, ...(ascRow ? [ascRow] : []), ...(descendant ? [descendant] : []), northNode, southNode];
+  const transits: TransitRow[] = planetNames.map((name, i) => { const xyz = input.transitXYZPositions?.[name]; const automatic = xyz ? undefined : ephemerisXYZ(transitJd, i); const p = xyz ? { longitude: longitudeFromXYZ(xyz), speed: 0 } : { longitude: automatic!.longitude, speed: automatic!.speed }; const topocentricLongitude = !xyz && planetaryTopocentric(i, transitHasLocation) ? topocentricMoonLongitude(transitJd, transitLongitude, transitLatitude, input.elevation ?? 0) : undefined; const contacts = natalTargets.flatMap(natal => { const found = aspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const minorNatalContacts = natalTargets.flatMap(natal => { const found = minorAspectBetween(p.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; }); const house = worldview === "god" ? godHouseFor(p.longitude) : agentHouseFor(p.longitude, transitAsc ?? asc ?? 0); return { ...row(name, p.longitude, house, worldview, transitAsc ?? asc, { retrograde: xyz ? undefined : p.speed < 0, speed: xyz ? undefined : p.speed, coordinateSource: xyz ? "external-xyz" : "swiss-ephemeris", xyz: xyz ?? automatic!.xyz, ...(topocentricLongitude == null ? {} : { topocentricLongitude }) }), natalContacts: contacts, minorNatalContacts }; });
+  const transitNodePosition = ephemerisXYZ(transitJd, 10).longitude; const transitNorthNode = row("North Node", transitNodePosition, worldview === "god" ? godHouseFor(transitNodePosition) : agentHouseFor(transitNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 }); const transitSouthNodePosition = normalizeLongitude(transitNodePosition + 180); const transitSouthNode = row("South Node", transitSouthNodePosition, worldview === "god" ? godHouseFor(transitSouthNodePosition) : agentHouseFor(transitSouthNodePosition, transitAsc ?? asc ?? 0), worldview, transitAsc ?? asc, { retrograde: true, speed: 0 });
+  const contactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = aspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
+  const minorContactsFor = (transit: ChartRow) => natalTargets.flatMap(natal => { const found = minorAspectBetween(transit.longitude, natal.longitude); return found ? [{ natalName: natal.name, ...found }] : []; });
+  return { input, worldview, readingScope, agentViewAvailable, utc: utcDate.toISOString(), julianDay: jd, ascendant: ascRow, descendant, midheaven: mcRow, northNode, southNode, houses, movingBodies, frozenStars, godPlacements, transitDate: transitDate.toISOString(), momentPrecision: transitMoment.precision, transitHouseFrame, transits: [...transits, { ...transitNorthNode, natalContacts: contactsFor(transitNorthNode), minorNatalContacts: minorContactsFor(transitNorthNode) }, { ...transitSouthNode, natalContacts: contactsFor(transitSouthNode), minorNatalContacts: minorContactsFor(transitSouthNode) }], validation };
+}
+
+export async function geocodeLocation(query: string) {
+  const normalizedQuery = query.trim();
+  const preset = knownCity(normalizedQuery);
+  if (preset) return { label: preset.label, latitude: preset.latitude, longitude: preset.longitude, timezone: preset.timezone };
+  // Resolve explicit US state names within the United States rather than accepting an unrelated worldwide first match.
+  const explicitlyUS = /\b(?:USA|United States|Texas|Nevada|California|Florida|New York|Illinois|Arizona|Colorado)\b/i.test(normalizedQuery);
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5${explicitlyUS ? "&countrycodes=us" : ""}&q=${encodeURIComponent(normalizedQuery)}`;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: { "User-Agent": "Bible Believers AstrologyHybridZodiac/1.0", Accept: "application/json" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!response.ok) throw new Error(`geocoder returned ${response.status}`);
+      const data: any[] = await response.json();
+      if (!data[0]) throw new Error("No matching place found.");
+      const item = data.find(candidate => !explicitlyUS || candidate.address?.country_code === "us");
+      if (!item) throw new Error("No matching place found in the specified country. Please enter city, state and country.");
+      const lat = Number(item.lat); const lon = Number(item.lon); const timezone = tzLookup(lat, lon); return { label: item.display_name, latitude: lat, longitude: lon, timezone };
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+  if (lastError instanceof Error && lastError.message === "No matching place found.") throw lastError;
+  throw new Error("Location search is temporarily unavailable. Please try the pin again in a moment.");
+}
+
+
+export async function reverseGeocodeLocation(latitude: number, longitude: number) {
+  const timezone = tzLookup(latitude, longitude);
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: { "User-Agent": "Bible Believers AstrologyHybridZodiac/1.0", Accept: "application/json" },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (response.ok) {
+        const data: any = await response.json();
+        const address = data.address || {};
+        const city = address.city || address.town || address.village || address.municipality || address.county || "";
+        const state = address.state || address.region || "";
+        const country = address.country || "";
+        const parts = [city, state, country].filter(Boolean);
+        const label = parts.length > 0 ? parts.join(", ") : (data.display_name?.split(",").slice(0, 3).join(",") || `GPS (${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°)`);
+        return { label, latitude, longitude, timezone };
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+  return {
+    label: `GPS (${latitude.toFixed(3)}°, ${longitude.toFixed(3)}°)`,
+    latitude,
+    longitude,
+    timezone,
+  };
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/registry.ts
+BLOB SHA: 4c0a5704b34c132c4e8e5b67e3ae89bd6187343d
+================================================================================
+import type { AstrologyRule, AstrologySource } from "./types";
+
+export const ASTROLOGY_SOURCES: AstrologySource[] = [
+  {
+    id: "firmament-ephemeris",
+    name: "Firmament local ephemeris",
+    tradition: "firmament",
+    authorityType: "calculation",
+    status: "active",
+    capabilities: ["canonical-longitude", "houses", "transits", "fixed-stars"],
+  },
+  {
+    id: "firmament-architecture",
+    name: "Firmament architecture",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "5-degree-relationships",
+      "god-view",
+      "agent-view",
+      "nakshatra-overlay",
+      "manzil-overlay",
+    ],
+  },
+  {
+    id: "local-western-rules",
+    name: "Firmament Western rule set",
+    tradition: "western",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "planets",
+      "signs",
+      "houses",
+      "aspects",
+      "dignity",
+      "transits",
+    ],
+  },
+  {
+    id: "genesis-pattern-rules",
+    name: "Genesis local pattern engine",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "configurable-aspects",
+      "transit-to-natal-aspects",
+      "stelliums",
+      "grand-trines",
+      "t-squares",
+      "dignity",
+      "house-emphasis",
+      "archetypes",
+      "signatures",
+    ],
+  },
+  {
+    id: "genesis-astro-engine",
+    name: "Genesis Astro Engine",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "placement-parser",
+      "transits",
+      "sade-sati",
+      "moon-phase",
+      "mind-soul-spirit",
+      "pillar-scoring",
+      "yogas",
+    ],
+  },
+  {
+    id: "genesis-pattern-engine-original",
+    name: "Genesis Pattern Engine v2.0",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "full-aspect-detection",
+      "transit-to-natal-aspects",
+      "stelliums",
+      "grand-trines",
+      "t-squares",
+      "planetary-strength",
+      "archetypes",
+      "signatures",
+    ],
+  },
+  {
+    id: "firmament-behavioral-intelligence",
+    name: "Firmament Human Behavior & Life-Event Pattern Intelligence",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "behavioral-patterns",
+      "7-channel-evidence-convergence",
+      "5-level-confidence-hierarchy",
+      "trigger-motivation-response-cycles",
+      "behavioral-polarities",
+      "life-event-signatures",
+      "event-sequence-chains",
+    ],
+  },
+  {
+    id: "firmament-canon-knowledge",
+    name: "Firmament Structured Traditional Knowledge Canon",
+    tradition: "firmament",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "planets-canon",
+      "signs-canon",
+      "houses-canon",
+      "egyptian-and-ptolemaic-bounds",
+      "dorothean-triplicities",
+      "36-decans",
+      "28-manazil",
+      "27-nakshatras-108-padas",
+      "royal-and-fixed-stars",
+      "hermetic-lots",
+      "horary-mechanisms",
+      "god-to-agent-translation",
+    ],
+  },
+  {
+    id: "local-vedic-rules",
+    name: "Firmament Vedic rule set",
+    tradition: "vedic",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "d1",
+      "house-lords",
+      "nakshatra",
+      "drishti",
+      "varga-architecture",
+      "vimshottari-dasha",
+      "ashtakavarga-bav-sav",
+    ],
+  },
+  {
+    id: "tvam-jyotish",
+    name: "Tvam Jyotish",
+    tradition: "vedic",
+    authorityType: "reference",
+    url: "https://apps.apple.com/us/app/tvam-jyotish-vedic-astrology/id1449579147",
+    status: "reference-only",
+    capabilities: [
+      "planet-analysis",
+      "nakshatra",
+      "yoga",
+      "varga",
+      "dasha",
+      "sade-sati",
+    ],
+  },
+  {
+    id: "local-arabic-rules",
+    name: "Firmament Arabic rule set",
+    tradition: "arabic",
+    authorityType: "tradition",
+    status: "active",
+    capabilities: [
+      "sect",
+      "whole-sign-houses",
+      "lots",
+      "manazil",
+      "planetary-hours",
+      "twelfth-parts",
+    ],
+  },
+  {
+    id: "canopy-arabian",
+    name: "Canopy: Arabian Astrology",
+    tradition: "arabic",
+    authorityType: "reference",
+    url: "https://play.google.com/store/apps/details?id=stellarappsllc.com.canopy",
+    status: "reference-only",
+    capabilities: [
+      "planetary-hours",
+      "manazil",
+      "dignity",
+      "lots",
+      "fixed-stars",
+      "transits",
+    ],
+  },
+  {
+    id: "astrology-api",
+    name: "Astrology-API.io",
+    tradition: "vedic",
+    authorityType: "api",
+    url: "https://astrology-api.io",
+    status: "reference-only",
+    capabilities: ["positions", "houses", "drishti", "varga", "transits"],
+  },
+];
+
+export const ASTROLOGY_RULES: AstrologyRule[] = [
+  {
+    id: "western-5-degree-geometry",
+    tradition: "western",
+    technique: "aspects",
+    subject: "planetary-relationship",
+    kind: "deterministic-rule",
+    sourceId: "firmament-architecture",
+    status: "implemented",
+    statement:
+      "Unified Firmament relationships use a maximum five-degree orb with proximity weighting.",
+  },
+  {
+    id: "western-dignity-basic",
+    tradition: "western",
+    technique: "dignity",
+    subject: "planet",
+    kind: "deterministic-rule",
+    sourceId: "local-western-rules",
+    status: "implemented",
+    statement:
+      "Basic domicile, exaltation, fall, and detriment conditions are resolved from the supplied sign.",
+  },
+  {
+    id: "genesis-pattern-engine",
+    tradition: "firmament",
+    technique: "pattern-recognition",
+    subject: "chart",
+    kind: "deterministic-rule",
+    sourceId: "genesis-pattern-rules",
+    status: "implemented",
+    doctrine:
+      "Genesis v2 pattern engine adapted to Firmament chart rows and house frame",
+    statement:
+      "Genesis detects configurable aspects, transit-to-natal activations, stelliums, Grand Trines, T-Squares, dignity, house emphasis, archetypes, and high-level signatures.",
+  },
+  {
+    id: "genesis-astro-engine",
+    tradition: "firmament",
+    technique: "astro-engine",
+    subject: "reading",
+    kind: "deterministic-rule",
+    sourceId: "genesis-astro-engine",
+    status: "implemented",
+    doctrine:
+      "Original Genesis Astro Engine actively run over Firmament chart calculations",
+    statement:
+      "Genesis Astro Engine parses placements, detects transit activations, scores Mind/Soul/Spirit, detects Sade Sati and Moon phase, and emits readable chart summaries.",
+  },
+  {
+    id: "genesis-pattern-engine-original",
+    tradition: "firmament",
+    technique: "pattern-engine-original",
+    subject: "chart",
+    kind: "deterministic-rule",
+    sourceId: "genesis-pattern-engine-original",
+    status: "implemented",
+    doctrine:
+      "Original Genesis Pattern Engine v2.0 actively run over Firmament chart rows",
+    statement:
+      "The original Genesis Pattern Engine runs its configured aspects, planetary strength, classic configurations, archetypes, and signatures as a live reading stage.",
+  },
+  {
+    id: "firmament-behavioral-pattern-engine",
+    tradition: "firmament",
+    technique: "behavioral-pattern",
+    subject: "human-behavior",
+    kind: "deterministic-rule",
+    sourceId: "firmament-behavioral-intelligence",
+    status: "implemented",
+    doctrine:
+      "7-channel behavioral convergence, 5-level confidence hierarchy, 12 polarity axes, and Trigger-Motivation-Response-Cycle synthesis",
+    statement:
+      "Evaluates observable human behavioral patterns, motivations, triggers, response styles, constructive/shadow expressions, counter-indicators, and dynamic polarities without clinical diagnosis.",
+  },
+  {
+    id: "firmament-life-event-engine",
+    tradition: "firmament",
+    technique: "life-event-signature",
+    subject: "life-situation",
+    kind: "deterministic-rule",
+    sourceId: "firmament-behavioral-intelligence",
+    status: "implemented",
+    doctrine:
+      "E1-E5 life-event convergence, State 1-9 temporal activation, and cross-domain event sequence chains",
+    statement:
+      "Evaluates life-situation signatures across natal promise, house rulers, transits, God/Agent translation, and multi-stage event sequences without claiming deterministic certainty.",
+  },
+  {
+    id: "vedic-nakshatra-27",
+    tradition: "vedic",
+    technique: "nakshatra",
+    subject: "planet",
+    kind: "deterministic-rule",
+    sourceId: "firmament-architecture",
+    status: "implemented",
+    statement:
+      "The fixed 360-degree spine is divided into 27 equal 13°20′ lunar mansions and four padas per mansion.",
+  },
+  {
+    id: "vedic-house-lords",
+    tradition: "vedic",
+    technique: "house-lord",
+    subject: "house",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "implemented",
+    statement:
+      "Classical sign rulers are mapped to the supplied Agent Ascendant and house placements.",
+  },
+  {
+    id: "vedic-graha-drishti",
+    tradition: "vedic",
+    technique: "drishti",
+    subject: "planet",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "implemented",
+    statement:
+      "Traditional whole-house planetary aspects are resolved for Mars, Jupiter, Saturn, and the seventh aspect.",
+  },
+  {
+    id: "vedic-varga-architecture",
+    tradition: "vedic",
+    technique: "varga",
+    subject: "divisional-chart",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "incomplete",
+    statement:
+      "D2, D3, D9, and D10 contracts are reserved; chart-specific varga calculation is not yet enabled.",
+  },
+  {
+    id: "vedic-ashtakavarga-classical",
+    tradition: "vedic",
+    technique: "ashtakavarga",
+    subject: "sign-strength",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "implemented",
+    statement:
+      "Classical Parashari Bhinnashtakavarga and unreduced Sarvashtakavarga are calculated from Lahiri sidereal D1 positions, with per-planet and 337-total checksums; Trikona and Ekadhipatya reductions are not included.",
+  },
+  {
+    id: "vedic-dasha-architecture",
+    tradition: "vedic",
+    technique: "dasha",
+    subject: "timing",
+    kind: "deterministic-rule",
+    sourceId: "local-vedic-rules",
+    status: "implemented",
+    statement:
+      "Vimshottari Mahadasha, Antardasha, and Pratyantardasha are calculated from the natal Moon using Swiss Ephemeris Lahiri/Chitrapaksha ayanamsa; date-only or unknown birth times are explicitly marked uncertain.",
+  },
+  {
+    id: "arabic-day-sect",
+    tradition: "arabic",
+    technique: "sect",
+    subject: "chart",
+    kind: "deterministic-rule",
+    sourceId: "local-arabic-rules",
+    status: "implemented",
+    statement:
+      "Day/night sect is resolved from whether the Sun is in houses 7–12 or 1–6 in Agent View.",
+  },
+  {
+    id: "arabic-lots",
+    tradition: "arabic",
+    technique: "lots",
+    subject: "fortune-spirit",
+    kind: "deterministic-rule",
+    sourceId: "local-arabic-rules",
+    status: "implemented",
+    statement:
+      "Fortune and Spirit use sect-sensitive luminary formulas; results are normalized to 0–360 degrees.",
+  },
+  {
+    id: "arabic-manazil-28",
+    tradition: "arabic",
+    technique: "manzil",
+    subject: "moon",
+    kind: "deterministic-rule",
+    sourceId: "firmament-architecture",
+    status: "implemented",
+    statement:
+      "The fixed 360-degree spine is divided into 28 equal Manzil sectors with explicit boundaries.",
+  },
+  {
+    id: "arabic-planetary-hours",
+    tradition: "arabic",
+    technique: "planetary-hours",
+    subject: "timing",
+    kind: "deterministic-rule",
+    sourceId: "canopy-arabian",
+    status: "incomplete",
+    statement:
+      "Planetary-hour calculation requires local sunrise and sunset data and is not inferred without those inputs.",
+  },
+  {
+    id: "arabic-twelfth-parts",
+    tradition: "arabic",
+    technique: "twelfth-parts",
+    subject: "planet",
+    kind: "deterministic-rule",
+    sourceId: "canopy-arabian",
+    status: "incomplete",
+    statement:
+      "Twelfth-parts methodology is reserved pending an explicit house/sign doctrine setting.",
+  },
+  {
+    id: "firmament-canon-dossier",
+    tradition: "firmament",
+    technique: "canon-placement-dossier",
+    subject: "placement",
+    kind: "deterministic-rule",
+    sourceId: "firmament-canon-knowledge",
+    status: "implemented",
+    doctrine:
+      "Epistemically categorized (FACT / TRADITION / FIRMAMENT_CANON) retrieval of Planet + Sign + House + Dignities + Bounds + 36 Decans + 28 Manazil + 27 Nakshatras/Padas + Fixed Stars + God→Agent translation",
+    statement:
+      "Retrieves complete deterministic traditional and Firmament Canon placement dossiers locally before Master AI synthesis.",
+  },
+  {
+    id: "firmament-traditional-mechanisms",
+    tradition: "arabic",
+    technique: "traditional-mechanisms",
+    subject: "chart",
+    kind: "deterministic-rule",
+    sourceId: "firmament-canon-knowledge",
+    status: "implemented",
+    doctrine:
+      "Applying/Separating Aspects, Mutual/Unilateral Receptions, Translation of Light, Collection of Light, Prohibition, Refranation, Cazimi, Combustion, Under the Beams, Retrograde",
+    statement:
+      "Detects traditional horary and natal relational mechanisms deterministically with source provenance.",
+  },
+];
+
+export function sourceById(id: string) {
+  return ASTROLOGY_SOURCES.find(source => source.id === id);
+}
+export function rulesFor(plan: { domains: string[]; techniques: string[] }) {
+  return ASTROLOGY_RULES.filter(
+    rule =>
+      plan.domains.includes(rule.tradition) &&
+      plan.techniques.includes(rule.technique)
+  );
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/planner.ts
+BLOB SHA: 6625f46ed6c4013c1f284d7cba1ddc2ab2e2bb3e
+================================================================================
+import type { KnowledgePlan } from "./types";
+
+export function planKnowledge(
+  question: string,
+  mode: "natal" | "transit" | "combined" = "combined"
+): KnowledgePlan {
+  const q = question.toLowerCase();
+  const relationship =
+    /relationship|marriage|partner|dating|love|ex\b|belong|friend/.test(q);
+  const career =
+    /career|work|job|profession|purpose|business|success|money|income|wealth/.test(
+      q
+    );
+  const home = /move|moving|home|house|relocat|family|property/.test(q);
+  const emotional =
+    /feel|emotion|anxious|mood|why now|healing|inner|pattern|repeat/.test(q);
+  const timing =
+    mode !== "natal" ||
+    /when|timing|soon|next|today|current|right time|60 days|future/.test(q);
+  const domains = ["western", "vedic", "arabic"];
+  const subjects = new Set<string>(["Sun", "Moon", "Ascendant"]);
+  const techniques = new Set<string>([
+    "aspects",
+    "dignity",
+    "nakshatra",
+    "manzil",
+    "astro-engine",
+    "pattern-recognition",
+    "behavioral-pattern",
+    "life-event-signature",
+    "dasha",
+    "ashtakavarga",
+  ]);
+  const reasons: string[] = [
+    "Genesis is a mandatory core evidence layer: Astro Engine, Pattern Engine, and Yoga Detector execute and are reviewed before question-specific prioritization.",
+    "The question planner controls emphasis only; it may classify Genesis findings as primary, supporting, contextual, or non-decisive, but it may not bypass or downgrade the Genesis layer itself.",
+  ];
+  if (relationship) {
+    [
+      "7th-house",
+      "7th-lord",
+      "Venus",
+      "Moon",
+      "relationship-significators",
+      "D9",
+    ].forEach(value => subjects.add(value));
+    [
+      "house-lord",
+      "varga",
+      "mind-soul-spirit",
+      "pattern-recognition",
+      "archetype",
+      "vedic-yoga",
+    ].forEach(value => techniques.add(value));
+    reasons.push(
+      "Relationship language activates the partnership axis, Venus, Moon, and relevant Vedic relationship evidence."
+    );
+  }
+  if (career) {
+    [
+      "2nd-house",
+      "6th-house",
+      "10th-house",
+      "10th-lord",
+      "11th-house",
+      "Saturn",
+      "Jupiter",
+      "D10",
+    ].forEach(value => subjects.add(value));
+    [
+      "varga",
+      "mind-soul-spirit",
+      "pattern-recognition",
+      "planetary-strength",
+    ].forEach(value => techniques.add(value));
+    reasons.push(
+      "Career or money language activates livelihood houses, rulers, significators, and D10 when available."
+    );
+  }
+  if (home) {
+    ["4th-house", "4th-lord", "9th-house", "12th-house", "Moon"].forEach(
+      value => subjects.add(value)
+    );
+    techniques.add("house-lord");
+    reasons.push(
+      "Home or movement language activates foundations, relocation axes, Moon, and house rulers."
+    );
+  }
+  if (emotional) {
+    ["Moon", "natal-Moon", "current-transits", "Ascendant"].forEach(value =>
+      subjects.add(value)
+    );
+    reasons.push(
+      "Emotional language prioritizes the Moon, angles, and current activation rather than the whole chart equally."
+    );
+    [
+      "mind-soul-spirit",
+      "astro-engine",
+      "pattern-recognition",
+      "sade-sati",
+      "moon-phase",
+    ].forEach(value => techniques.add(value));
+  }
+  if (timing) {
+    techniques.add("transits");
+    techniques.add("dasha");
+    techniques.add("planetary-hours");
+    reasons.push(
+      "Timing language or a transit reading requests current activation; Dasha is also evaluated as a natal timing layer when birth-time precision permits."
+    );
+  }
+  if (reasons.length === 2)
+    reasons.push(
+      "No narrow domain was detected; the gateway uses a balanced identity, Moon, angle, aspect, lunar, and cross-system scan after the mandatory Genesis evaluation."
+    );
+  return {
+    question,
+    coreLayers: [
+      "genesis-astro-engine",
+      "genesis-pattern-engine",
+      "genesis-yoga-detector",
+    ],
+    genesisPolicy: "mandatory-evaluate-before-prioritization",
+    domains,
+    subjects: Array.from(subjects),
+    techniques: Array.from(techniques),
+    includeTiming: timing,
+    includeDivisionalCharts: [
+      relationship ? "D9" : "",
+      career ? "D10" : "",
+    ].filter(Boolean),
+    reasons,
+  };
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/resolver.ts
+BLOB SHA: 35e231eeb157df1193dc8f2dc0174ce8e97bd390
+================================================================================
+import type { EvidenceItem, EvidenceRelationship, Tradition } from "./types";
+
+const traditions = ["western", "vedic", "arabic"] as const;
+function key(evidence: EvidenceItem) {
+  const subject = evidence.subject.toLowerCase();
+  const structuralSubject = [
+    "sun",
+    "moon",
+    "venus",
+    "mars",
+    "jupiter",
+    "saturn",
+    "ascendant",
+    "relationship",
+    "career",
+    "fortune",
+    "spirit",
+    "timing",
+  ].find(value => subject.includes(value));
+  if (structuralSubject) return structuralSubject;
+  return (
+    evidence.concepts
+      .filter(value => !["neutral", "incomplete"].includes(value))
+      .find(value =>
+        /house-|moon|sun|venus|mars|jupiter|saturn|relationship|career|lunar|dignity|condition|aspect|drishti|lot|manzil/.test(
+          value
+        )
+      ) ?? evidence.technique
+  );
+}
+function relationFor(items: EvidenceItem[]): EvidenceRelationship | null {
+  const present = Array.from(
+    new Set(
+      items
+        .map(item => item.tradition)
+        .filter((tradition): tradition is Tradition =>
+          traditions.includes(tradition as (typeof traditions)[number])
+        )
+    )
+  );
+  if (present.length < 2) return null;
+  const pressured = items.some(item => item.polarity === "pressured");
+  const supportive = items.some(item => item.polarity === "supportive");
+  const relation =
+    pressured && supportive
+      ? "qualification"
+      : pressured
+        ? "reinforcement"
+        : "reinforcement";
+  const theme = key(items[0]);
+  return {
+    id: `relationship-${theme}-${present.join("-")}`,
+    relation,
+    theme,
+    evidenceIds: items.map(item => item.id),
+    traditions: present,
+    explanation:
+      relation === "qualification"
+        ? `The traditions describe ${theme} through different layers: some evidence supports capacity while other evidence adds pressure or work.`
+        : `Independent evidence in ${present.join(", ")} describes the same structural subject, so the relationship is stronger than a shared keyword alone.`,
+    strength: Number(
+      Math.min(
+        1,
+        0.35 +
+          present.length * 0.2 +
+          (items.reduce((sum, item) => sum + (item.strength ?? 0), 0) /
+            Math.max(1, items.length)) *
+            0.3
+      ).toFixed(3)
+    ),
+  };
+}
+export function resolveRelationships(evidence: EvidenceItem[]) {
+  const groups = new Map<string, EvidenceItem[]>();
+  for (const item of evidence) {
+    const group = groups.get(key(item)) ?? [];
+    group.push(item);
+    groups.set(key(item), group);
+  }
+  const relationships = Array.from(groups.values())
+    .map(relationFor)
+    .filter((value): value is EvidenceRelationship => Boolean(value));
+  const contradictions: EvidenceRelationship[] = [];
+  for (const items of Array.from(groups.values())) {
+    const polarities = new Set(
+      items.map((item: EvidenceItem) => item.polarity).filter(Boolean)
+    );
+    if (
+      polarities.has("supportive") &&
+      polarities.has("pressured") &&
+      items.length >= 2
+    ) {
+      const base = relationFor(items);
+      if (base)
+        contradictions.push({
+          ...base,
+          id: `${base.id}-contradiction`,
+          relation: "contradiction",
+          explanation: `Evidence does not point in one direction: supportive and pressured testimony coexist around ${base.theme}. This may describe different layers or stages rather than an error.`,
+          strength: base.strength,
+        });
+    }
+  }
+  return {
+    relationships,
+    convergences: relationships.filter(item =>
+      ["reinforcement", "amplification", "qualification"].includes(
+        item.relation
+      )
+    ),
+    contradictions,
+  };
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/types.ts
+BLOB SHA: bdea0ee60d0bebb8318a93fee153c47b6755622a
+================================================================================
+import type { ChartResult } from "../astronomy";
+import type { BehavioralIntelligenceReport } from "./behavioral/types";
+import type { ChartCanonDossier } from "./canon/types";
+
+import type { EvidenceItem, EvidenceRelationship, KnowledgePlan, SourceTrace } from "./evidenceTypes";
+export type {
+  Tradition,
+  KnowledgeKind,
+  RuleStatus,
+  EvidenceRelation,
+  AstrologySource,
+  AstrologyRule,
+  KnowledgePlan,
+  EvidenceItem,
+  SourceTrace,
+  EvidenceRelationship
+} from "./evidenceTypes";
+
+export type AstrologyEvidencePacket = {
+  question: string;
+  plan: KnowledgePlan;
+  chartFacts: {
+    worldview: ChartResult["worldview"];
+    readingScope: ChartResult["readingScope"];
+    utc: string;
+    agentViewAvailable: boolean;
+    placements: Array<{
+      name: string;
+      longitude: number;
+      display: string;
+      house: number;
+      godHouse?: number;
+      agentHouse?: number;
+    }>;
+  };
+  westernEvidence: EvidenceItem[];
+  patternEvidence: EvidenceItem[];
+  genesisAstroEvidence: EvidenceItem[];
+  behavioralEvidence: EvidenceItem[];
+  lifeEventEvidence: EvidenceItem[];
+  behavioralReport: BehavioralIntelligenceReport;
+  canonEvidence: EvidenceItem[];
+  canonDossier: ChartCanonDossier;
+  vedicEvidence: EvidenceItem[];
+  arabicEvidence: EvidenceItem[];
+  lunarEvidence: EvidenceItem[];
+  fixedStarEvidence: EvidenceItem[];
+  timingEvidence: EvidenceItem[];
+  relationships: EvidenceRelationship[];
+  convergences: EvidenceRelationship[];
+  contradictions: EvidenceRelationship[];
+  uncertainties: EvidenceItem[];
+  incomplete: string[];
+  sourceTrace: SourceTrace[];
+  doctrine: {
+    genesis: Record<string, unknown>;
+    western: Record<string, unknown>;
+    vedic: Record<string, unknown>;
+    arabic: Record<string, unknown>;
+  };
+};
+
+
+================================================================================
+FILE: shared/hybrid.ts
+BLOB SHA: c9f0739cbcd4a42702d30f9c795aa0fd4361871f
+================================================================================
+import { chineseMansionAtLongitude, nakshatraRulerAtLongitude } from "./lunar-mansion-framework";
+
+export const ZODIAC_SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"] as const;
+
+// Frozen symbolic anchors used by the hybrid zodiac. These are intentionally
+// precession-locked rather than live ephemeris positions.
+export const FIXED_STARS = [
+  ["Hamal", 12.9333], ["Algol", 31.4333], ["Aldebaran", 45], ["Rigel", 52.1], ["Polaris", 63.8333],
+  ["Sirius", 79.35], ["Regulus", 135], ["Spica", 179.1], ["Antares", 225.0167], ["Fomalhaut", 315],
+  // Additional permanent anchors: 2026 catalog ecliptic longitudes calibrated
+  // by subtracting 25°09' (Aldebaran 70°09' -> fixed 45°). No runtime drift.
+  // Pleiades is a stellar cluster represented by its Alcyone reference point.
+  ["Pleiades", 35.2], ["Betelgeuse", 63.9667], ["Bellatrix", 56.1667],
+  ["Alnitak", 59.9], ["Alnilam", 58.6833], ["Mintaka", 57.5833],
+  ["Castor", 85.45], ["Pollux", 88.4333], ["Procyon", 90.9833],
+  ["Capella", 57.0667], ["Arcturus", 179.45], ["Vega", 260.5333],
+  ["Deneb", 310.5333], ["Altair", 276.9999], ["Canopus", 80.1667],
+  ["Alhena", 74.3167], ["Denebola", 146.8333],
+  ["Zubenelgenubi", 200.3], ["Nunki", 287.6], ["Markab", 328.7],
+] as const;
+
+export const NAKSHATRAS = ["Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"] as const;
+export const MANAZIL = ["Al-Sharatain", "Al-Butain", "Al-Thurayya", "Al-Dabaran", "Al-Haq’ah", "Al-Han’ah", "Al-Dhira’", "Al-Nathrah", "Al-Tarf", "Al-Jabhah", "Al-Zubrah", "Al-Sarfah", "Al-Awwa’", "Al-Simak", "Al-Ghafr", "Al-Zubana", "Al-Iklil", "Al-Qalb", "Al-Shaula", "Al-Na’am", "Al-Baldah", "Sa’d al-Dhabih", "Sa’d Bula’", "Sa’d al-Su’ud", "Sa’d al-Akhbiya", "Al-Fargh al-Muqaddam", "Al-Fargh al-Mu’akhkhar", "Al-Risha/Batn al-Hut"] as const;
+export const DECANS = ["Mars (Aries 1st)", "Sun (Aries 2nd)", "Venus (Aries 3rd)", "Mercury (Taurus 1st)", "Moon (Taurus 2nd)", "Saturn (Taurus 3rd)", "Jupiter (Gemini 1st)", "Mars (Gemini 2nd)", "Sun (Gemini 3rd)", "Venus (Cancer 1st)", "Mercury (Cancer 2nd)", "Moon (Cancer 3rd)", "Saturn (Leo 1st)", "Jupiter (Leo 2nd)", "Mars (Leo 3rd)", "Sun (Virgo 1st)", "Venus (Virgo 2nd)", "Mercury (Virgo 3rd)", "Moon (Libra 1st)", "Saturn (Libra 2nd)", "Jupiter (Libra 3rd)", "Mars (Scorpio 1st)", "Sun (Scorpio 2nd)", "Venus (Scorpio 3rd)", "Mercury (Sagittarius 1st)", "Moon (Sagittarius 2nd)", "Saturn (Sagittarius 3rd)", "Jupiter (Capricorn 1st)", "Mars (Capricorn 2nd)", "Sun (Capricorn 3rd)", "Venus (Aquarius 1st)", "Mercury (Aquarius 2nd)", "Moon (Aquarius 3rd)", "Saturn (Pisces 1st)", "Jupiter (Pisces 2nd)", "Mars (Pisces 3rd)"] as const;
+
+export type Overlay = {
+  nakshatra: string;
+  pada: number;
+  manzil: string;
+  decan: string;
+  nakshatraRuler: string;
+  chineseMansion: string;
+  chineseMansionIndex: number;
+  chineseDeterminativeStar: string;
+  chineseBoundaryModel: "historical-han-width-proportional-firmament-adaptation";
+};
+export function overlay(longitude: number): Overlay {
+  const L = normalizeLongitude(longitude);
+  const nakSize = 360 / 27;
+  const padaSize = nakSize / 4;
+  const chinese = chineseMansionAtLongitude(L);
+  return {
+    nakshatra: NAKSHATRAS[Math.floor(L / nakSize) % 27],
+    pada: Math.floor((L % nakSize) / padaSize) + 1,
+    manzil: MANAZIL[Math.floor(L / (360 / 28)) % 28],
+    decan: DECANS[Math.floor(L / 10) % 36],
+    nakshatraRuler: nakshatraRulerAtLongitude(L),
+    chineseMansion: chinese.mansion,
+    chineseMansionIndex: chinese.mansionIndex,
+    chineseDeterminativeStar: chinese.determinativeStar,
+    chineseBoundaryModel: chinese.boundaryModel,
+  };
+}
+export function signAtLongitude(longitude: number): string {
+  return ZODIAC_SIGNS[Math.floor(normalizeLongitude(longitude) / 30)];
+}
+
+export function findBodyLongitude(
+  bodies: readonly { name: string; longitude: number }[],
+  name: string
+): number | undefined {
+  const body = bodies.find(candidate => candidate.name === name);
+  return body && Number.isFinite(body.longitude)
+    ? normalizeLongitude(body.longitude)
+    : undefined;
+}
+
+export function formatLongitude(longitude: number) { const L = normalizeLongitude(longitude); const sign = ZODIAC_SIGNS[Math.floor(L / 30)]; const deg = L % 30; const d = Math.floor(deg); const m = Math.round((deg - d) * 60); return `${sign} ${String(d).padStart(2, "0")}°${String(m % 60).padStart(2, "0")}′`; }
+export function normalizeLongitude(value: number) { const wrapped = value % 360; return wrapped < 0 ? wrapped + 360 : wrapped; }
+
+/** Elemental-family (triplicity) decans: each sign's three ten-degree sectors
+ * follow the three zodiac signs of its element, beginning with the host sign.
+ * This is NOT the Chaldean planetary-face sequence.
+ */
+export const ELEMENTAL_DECAN_SIGNS = [
+  ["Aries", "Leo", "Sagittarius"],
+  ["Taurus", "Virgo", "Capricorn"],
+  ["Gemini", "Libra", "Aquarius"],
+  ["Cancer", "Scorpio", "Pisces"],
+  ["Leo", "Sagittarius", "Aries"],
+  ["Virgo", "Capricorn", "Taurus"],
+  ["Libra", "Aquarius", "Gemini"],
+  ["Scorpio", "Pisces", "Cancer"],
+  ["Sagittarius", "Aries", "Leo"],
+  ["Capricorn", "Taurus", "Virgo"],
+  ["Aquarius", "Gemini", "Libra"],
+  ["Pisces", "Cancer", "Scorpio"],
+] as const;
+
+
+export type Varga = "D2" | "D3" | "D9" | "D10";
+
+export function vargaPlacement(longitude: number, division: Varga) {
+  const lon = normalizeLongitude(longitude), sign = Math.floor(lon / 30), degree = lon % 30;
+  const n = Number(division.slice(1)), part = Math.min(n - 1, Math.floor(degree / (30 / n)));
+  let result: number;
+  if (division === "D2") {
+    const sunHora = (sign % 2 === 0) === (part === 0);
+    result = sunHora ? 4 : 3;
+  } else if (division === "D3") {
+    result = (sign + 4 * part) % 12;
+  } else if (division === "D9") {
+    const start = sign % 3 === 0 ? sign : sign % 3 === 1 ? (sign + 8) % 12 : (sign + 4) % 12;
+    result = (start + part) % 12;
+  } else {
+    result = ((sign % 2 === 0 ? sign : (sign + 8) % 12) + part) % 12;
+  }
+  return {
+    division,
+    part: part + 1,
+    sourceSign: ZODIAC_SIGNS[sign],
+    sign: ZODIAC_SIGNS[result],
+    signIndex: result,
+    degreeInPart: degree - part * (30 / n),
+    coordinateFrame: "guardian-fixed-zero-reference" as const,
+  };
+}
+
+export function grahaDrishtiTargetHouses(planet: string, fromHouse: number): number[] {
+  const aspectCounts: Record<string, readonly number[]> = {
+    Mars: [4, 7, 8],
+    Jupiter: [5, 7, 9],
+    Saturn: [3, 7, 10],
+  };
+  const counts = aspectCounts[planet];
+  if (!counts) return [];
+  if (!Number.isInteger(fromHouse) || fromHouse < 1 || fromHouse > 12)
+    throw new RangeError("Graha drishti requires a valid occupied house 1–12");
+  return counts.map((count) => ((fromHouse + count - 2) % 12) + 1);
+}
+
+
