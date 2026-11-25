@@ -38,6 +38,11 @@ describe("Master Interpreter prompt coverage", () => {
     expect(MASTER_INTERPRETER_PROMPT).toContain("Use the full chart silently");
     expect(MASTER_INTERPRETER_PROMPT).toContain(READING_BEHAVIOR_DIRECTIVE);
     expect(MASTER_INTERPRETER_PROMPT).toContain("COMBINATION RECOGNITION");
+    for (const term of ["Parivartana", "Pancha Mahapurusha", "Nabhasa", "Translation of light", "28 Manazil", "Overcoming", "Valens' planetary mixtures", "ORIGINAL interpretations"]) {
+      expect(FULL_SYNTHESIS_STYLE).toContain(term);
+      expect(MASTER_INTERPRETER_PROMPT).toContain(term);
+    }
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("The specificity filter eliminates generic conclusions, not novel ones.");
     expect(FULL_SYNTHESIS_STYLE).toContain("Do not confuse one trine with a Grand Trine");
     expect(FULL_SYNTHESIS_STYLE).toContain("WHO ARE YOU — WHOLE-CHART HOMEPAGE MODE");
     expect(MASTER_INTERPRETER_PROMPT).toContain("Taurus—neck/throat/voice");
