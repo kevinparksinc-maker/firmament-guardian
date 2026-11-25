@@ -3,7 +3,7 @@ import { noaaSunriseUtc, type ChartResult } from "./astronomy";
 import { normalizeLongitude, formatLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
 import { calculateArabicLots, type Sect } from "./utils/arabicLots";
 
-import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
+import { runInterpretation, interpretationText, parseLlmJsonObject } from "./astrologyKnowledge/synthesis/interpretationPipeline";
 import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
 import { scrubNonHoraryAstrologyJargon } from "./astrologyKnowledge/synthesis/narrative";
 
@@ -896,6 +896,65 @@ export function runAstrologyEngineAudit(chart: ChartResult): MethodAuditStatus[]
   ];
 }
 
+export interface LifeStoryBeat {
+  period: string;
+  lifeDomain: string;
+  configuration: string;
+  manifestation: string;
+  consequence: string;
+  timingBasis: string;
+  findingIds: string[];
+  counterEvidenceIds: string[];
+  prose: string;
+}
+
+export interface LifeStoryPlan {
+  beats: LifeStoryBeat[];
+  gaps: string[];
+}
+
+export function parseLifeStoryPlan(
+  raw: unknown,
+  methods: readonly import("./astrologyKnowledge/synthesis/types").MethodOutcome[]
+): LifeStoryPlan {
+  const validIds = new Set(methods.flatMap(method => [
+    ...method.calculatedFindings.map(finding => finding.evidenceId),
+    ...method.findingJudgments.flatMap(finding => [finding.id, ...finding.evidenceIds]),
+  ]));
+  const asRecord = (value: unknown): Record<string, unknown> =>
+    value !== null && typeof value === "object" && !Array.isArray(value)
+      ? value as Record<string, unknown> : {};
+  const asText = (value: unknown) => typeof value === "string" ? value.trim() : "";
+  const asStrings = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((v): v is string => typeof v === "string").map(v => v.trim()).filter(Boolean) : [];
+  const source = asRecord(raw);
+  const gaps = asStrings(source.gaps);
+  const beats: LifeStoryBeat[] = [];
+  for (const value of Array.isArray(source.beats) ? source.beats : []) {
+    const item = asRecord(value);
+    const requestedIds = asStrings(item.findingIds);
+    const findingIds = [...new Set(requestedIds.filter(id => validIds.has(id)))];
+    const requestedCounterIds = asStrings(item.counterEvidenceIds);
+    const counterEvidenceIds = [...new Set(requestedCounterIds.filter(id => validIds.has(id)))];
+    if (requestedIds.some(id => !validIds.has(id)) || requestedCounterIds.some(id => !validIds.has(id)))
+      gaps.push("A generated evidence reference was not present in the delivered chart dossier.");
+    const beat: LifeStoryBeat = {
+      period: asText(item.period), lifeDomain: asText(item.lifeDomain),
+      configuration: asText(item.configuration), manifestation: asText(item.manifestation),
+      consequence: asText(item.consequence), timingBasis: asText(item.timingBasis),
+      findingIds, counterEvidenceIds,
+      prose: scrubNonHoraryAstrologyJargon(asText(item.prose)),
+    };
+    if (!beat.period || !beat.lifeDomain || !beat.configuration || !beat.manifestation ||
+        !beat.consequence || !beat.timingBasis || !beat.prose || !beat.findingIds.length)
+      throw new Error("LIFE_STORY_PLAN_INCOMPLETE: A proposed life development lacked its required chart reference or narrative. Retry this chapter.");
+    beats.push(beat);
+  }
+  if (!beats.length) throw new Error("LIFE_STORY_PLAN_EMPTY: No evidence-linked life developments were returned. Retry this chapter.");
+  // Exact IDs establish traceability, not empirical proof or semantic entailment.
+  return { beats, gaps: [...new Set(gaps)] };
+}
+
 export const LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS = `You are THE ABSOLUTE LIFE HISTORIAN, an immersive biographical storyteller. Tell the person's *life story* from the birth chart and calculated timing evidence, not their behavior profile. Write directly to the reader in second person ("you") in deep, human, clear language.
 
 ## 1. A LIFE, NOT A PERSONALITY REPORT
@@ -925,7 +984,7 @@ export async function generateLifeStoryChapter(
   chart: ChartResult,
   chapterKey: LifeStageKey,
   selectedAge?: number
-): Promise<{ title: string; content: string; chapterMeta: LifeStoryChapterSummary }> {
+): Promise<{ title: string; content: string; chapterMeta: LifeStoryChapterSummary; genesisPlan: LifeStoryPlan }> {
   const currentAge = calculatePersonAge(chart.input.date || "1990-01-01");
   const cycles = generatePlanetaryCycles(chart, currentAge);
   const chapters = compileLifeStoryChapters(chart, currentAge, cycles);
@@ -938,6 +997,15 @@ export async function generateLifeStoryChapter(
       ? selectedAge
       : (stageStart + stageEnd) / 2;
   const profection = calculateAnnualProfection(focusAge, chart);
+  // Give Genesis the whole requested stage, not just its midpoint time lord.
+  const stageProfections = Array.from(
+    { length: Math.max(0, Math.ceil(stageEnd) - Math.ceil(stageStart)) },
+    (_, index) => {
+      const age = Math.ceil(stageStart) + index;
+      const year = calculateAnnualProfection(age, chart);
+      return { age, agent: [year.profectedHouseAgent, year.profectedSignAgent, year.lordOfTheYearAgent], god: [year.profectedHouseGod, year.profectedSignGod, year.lordOfTheYearGod] };
+    }
+  );
 
   // Compute lots
   const sun = chart.movingBodies.find(b => b.name === "Sun");
@@ -975,12 +1043,16 @@ export async function generateLifeStoryChapter(
     `## CHAPTER IDENTITY`,
     `- Stage: ${targetChapter.title}`,
     `- Period: ${targetChapter.periodLabel}`,
-    `- Person's Current Age: ${currentAge.toFixed(1)} years`,
+    `- Elapsed years since birth: ${currentAge.toFixed(1)} (not proof the person is alive or has experienced every past stage)`,
     `- Stage Status: ${targetChapter.status.toUpperCase()}`,
     `- Profected Age Focus: Age ${Math.floor(focusAge)} (Year ${profection.yearNumber} of Life)`,
     `- Lord of the Year (Agent View): ${profection.lordOfTheYearAgent} (activating ${profection.profectedSignAgent}, House ${profection.profectedHouseAgent})`,
     `- Lord of the Year (God View): ${profection.lordOfTheYearGod} (activating ${profection.profectedSignGod}, House ${profection.profectedHouseGod})`,
     `- Profection Themes: ${profection.traditionalThemes.join(", ")}`,
+    ``,
+    `## ANNUAL PROFECTIONS THROUGHOUT THE REQUESTED STAGE`,
+    `Each row: age, Agent [house, sign, lord], God [house, sign, lord]. These are symbolic activation windows, not evidence of actual events.`,
+    JSON.stringify(stageProfections),
     ``,
     `## CALCULATED TIMING CYCLES FOR THIS STAGE`,
     ...targetChapter.keyCycles.map(
@@ -1006,6 +1078,9 @@ export async function generateLifeStoryChapter(
     `2. Describe what could happen to this person in the world—home and school, opportunity, livelihood, meaningful relationships, success or reversals—and the external consequences of the developments supported by evidence.`,
     `3. Show how supported gifts might become work or public impact and how supported challenges might alter the course of life. Anchor precise time windows only in calculated cycles; no invented biography, medical facts or inevitable outcomes.`,
     `4. Write deep, immersive, chronological prose in second person with no psychological analysis, behavior advice, personality checklist or visible astrology vocabulary. Give the chapter a beginning, developmental arc and human consequence.`,
+    `5. Before writing the story, investigate genuinely different chart combinations, including occupied and ruled houses, configurations, strength, yogas, mansions, Lots, and timing. A gift is not its outcome: determine what the gift could produce in the world, the people or institutions that provide the opening, what changes materially, and the potential scale of recognition. Compare private/local, professional and wider public expression where the chart supplies testimony. Do not default to greatness or hardship. For infancy, restrict outward circumstances to infancy and distinguish later potential from events in that stage.`,
+    `6. Apply the specificity test: discard interchangeable conclusions and any second beat that merely restates a first beat in other language. Do not use sensitivity, emotional vigilance, control, or another personality trait as a substitute for a life development. Work through the actual configurations even when they point to different domains. No advice or generic moral ending.`,
+    `7. Return ONE JSON object, not Markdown outside the object: {"beats":[{"period":"stage-relative period or supplied age window","lifeDomain":"specific external life domain","configuration":"specific combination and how it links domains","manifestation":"possible concrete development","consequence":"what changes as a result","timingBasis":"supplied timing or stage-level only","findingIds":["exact supplied finding or evidence ID"],"counterEvidenceIds":["exact supplied counter-testimony ID if any"],"prose":"substantial connected second-person biographical paragraphs for this beat"}],"gaps":["important unsupported or uncertain claims"]}. Put the technical reasoning in the beat fields; write only reader-facing biographical prose in each prose field. Order beats chronologically. Aim for 3–5 distinct developments where supported (fewer for infancy or sparse evidence), about 600–1000 words total where warranted. Never manufacture a beat to meet length. The narrative must be complete, end on a real-world consequence, and use calibrated wording for unverified events.`,
   ].join("\n");
 
   const { synthesis } = await synthesizeChartForReading(chart, "natal", targetChapter.title);
@@ -1013,21 +1088,27 @@ export async function generateLifeStoryChapter(
     messages: [
       {
         role: "system",
-        content: LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS,
+        content: LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS + "\n\nOUTPUT CONTRACT: The requested structured Genesis JSON is the only response format. The prose fields alone are the reader-facing story; the other fields are the technical evidence plan. Do not print a separate essay or repeat one thesis throughout the beats.",
       },
       {
         role: "user",
         content: prompt,
       },
     ],
+    responseFormat: { type: "json_object" },
+    max_tokens: 6000,
   });
 
-  const content = scrubNonHoraryAstrologyJargon(interpretationText(response));
-  if (!content) throw new Error("LIFE_STORY_EMPTY: The provider returned no chapter.");
+  // Validate the response structure and evidence references, never filter the input dossier.
+  const parsed = parseLlmJsonObject(interpretationText(response), "LIFE_STORY_INVALID_JSON");
+  const plan = parseLifeStoryPlan(parsed, synthesis.methodOutcomes);
+  const content = plan.beats.map(beat => beat.prose).join("\n\n");
+  if (!content.trim()) throw new Error("LIFE_STORY_EMPTY: The provider returned no chapter.");
 
   return {
     title: targetChapter.title,
     content,
     chapterMeta: targetChapter,
+    genesisPlan: plan,
   };
 }
