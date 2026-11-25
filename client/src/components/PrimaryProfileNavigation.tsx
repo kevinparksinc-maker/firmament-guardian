@@ -29,7 +29,7 @@ export function PrimaryProfileNavigation() {
   return (
     <nav
       aria-label="Mobile bottom navigation dock"
-      className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-6 border-t border-white/10 bg-[#080B14]/94 px-2 py-1.5 pb-[max(10px,env(safe-area-inset-bottom))] shadow-[0_-15px_40px_rgba(0,0,0,0.75)] backdrop-blur-2xl md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-6 border-t border-white/10 bg-[#080B14]/94 px-2 py-1.5 pb-[max(10px,env(safe-area-inset-bottom))] shadow-[0_-15px_40px_rgba(0,0,0,0.75)] backdrop-blur-2xl lg:hidden"
     >
       {navItems.map((item) => {
         const Icon = item.Icon;

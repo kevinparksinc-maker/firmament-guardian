@@ -110,8 +110,6 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
     return cached ? { key: readingKey, reading: cached } : null;
   });
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
-  const [retry, setRetry] = useState(0);
-  const [countdown, setCountdown] = useState<number | null>(null);
 
   const handleRefreshTransits = () => {
     if (readingKey) clearCachedEnergyReading(readingKey);
@@ -119,81 +117,32 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
     onRefresh?.();
   };
 
+  // Local scores and evidence remain available even when AI is offline.
+  // Only retrieve cached AI prose on navigation; never invoke a provider on page load.
   useEffect(() => {
-    let active = true;
     setFailure(null);
-    if (!chart || calculating) {
-      return () => { active = false; };
+    const cached = readingKey ? readCachedEnergyReading<Reading>(readingKey) : null;
+    setResolved(cached ? { key: readingKey, reading: cached } : null);
+  }, [readingKey]);
+
+  const generateDeepReading = async () => {
+    if (!chart || !readingKey || synthesisRequest.isPending) return;
+    setFailure(null);
+    try {
+      const result = await synthesisRequest.mutateAsync({ chart });
+      writeCachedEnergyReading(readingKey, result);
+      setResolved({ key: readingKey, reading: result });
+    } catch (cause) {
+      setFailure({
+        key: readingKey,
+        message: cause instanceof Error ? cause.message : "Energy interpretation unavailable.",
+      });
     }
-    const cached = readCachedEnergyReading<Reading>(readingKey);
-    if (cached && retry === 0) {
-      setResolved({ key: readingKey, reading: cached });
-      return () => { active = false; };
-    }
-    setResolved(null);
-    synthesisRequest.mutateAsync({ chart }).then(reading => {
-      if (!active) return;
-      writeCachedEnergyReading(readingKey, reading);
-      setResolved({ key: readingKey, reading });
-    }).catch(error => {
-      if (active) setFailure({ key: readingKey, message: error instanceof Error ? error.message : "Energy synthesis failed." });
-    });
-    return () => { active = false; };
-  }, [readingKey, retry, calculating]);
+  };
   const reading = !calculating && resolved?.key === readingKey ? resolved.reading : null;
   const synthesisError = failure?.key === readingKey ? failure.message : null;
   const localEnergyData = useMemo(() => calculateEnergyRead(chart), [chart]);
-  const energyData = reading?.score ?? localEnergyData;
-
-  const isServerStarting = Boolean(
-    synthesisError &&
-      (synthesisError.includes("Starting Server") ||
-        synthesisError.includes("Non-JSON response") ||
-        synthesisError.includes("Failed to fetch") ||
-        synthesisError.includes("Server starting up"))
-  );
-
-  useEffect(() => {
-    if (!isServerStarting) return;
-    const timer = setTimeout(() => {
-      setRetry(v => v + 1);
-    }, 1800);
-    return () => clearTimeout(timer);
-  }, [isServerStarting]);
-
-  const isRateLimit = Boolean(
-    !isServerStarting &&
-      synthesisError &&
-      (synthesisError.includes("429") ||
-        synthesisError.includes("RESOURCE_EXHAUSTED") ||
-        synthesisError.includes("quota") ||
-        synthesisError.includes("Quota exceeded") ||
-        synthesisError.includes("rate-limits"))
-  );
-
-  useEffect(() => {
-    if (!isRateLimit || retry >= 1) {
-      setCountdown(null);
-      return;
-    }
-
-    const match = synthesisError?.match(/retry in ([0-9.]+)s/i);
-    const initialSeconds = match && match[1] ? Math.max(Math.ceil(parseFloat(match[1])), 30) : 45;
-    setCountdown(initialSeconds);
-
-    const timer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev === null || prev <= 1) {
-          clearInterval(timer);
-          setRetry(v => v + 1);
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [synthesisError, isRateLimit, retry]);
+  const energyData = localEnergyData;
 
   const filteredContacts = useMemo(() => {
     if (!energyData) return [];
@@ -323,88 +272,25 @@ export default function EnergyPage({ onRefresh, calculating = false, error = "" 
         ))}
       </nav>
       <p className="text-sm leading-6 text-slate-400">Personal contacts compare current transit bodies with your natal placements and angles. Independent Sky counts pairs within one event sky. The totals can differ even at the same place and time.</p>
-      {chart && !reading && !synthesisError && (
-        <div role="status" className="flex items-center gap-3 rounded-2xl border border-cyan-400/30 bg-cyan-950/20 p-4 text-cyan-200">
-          <div className="h-4 w-4 shrink-0 rounded-full border-2 border-cyan-300 border-t-transparent animate-spin" />
-          <p className="text-xs">
-            Synthesizing deep AI narrative in background… Your chart map, barometer, and aspects are active below.
+      {chart && energyData && page === "summary" && (
+        <section aria-label="Optional deep energy interpretation" className="rounded-2xl border border-cyan-400/30 bg-cyan-950/20 p-4 space-y-3">
+          <p className="text-sm text-slate-200">
+            Your energy scores, contacts and evidence below are calculated locally. A full AI interpretation is optional.
           </p>
-        </div>
-      )}
-      {synthesisError && (
-        <div
-          role="alert"
-          className="space-y-3 rounded-2xl border border-amber-500/40 bg-amber-950/20 p-6 text-amber-200 backdrop-blur-md"
-        >
-          {isServerStarting ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-cyan-300 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-                <span>Server Restarting · Connecting…</span>
-              </div>
-              <p className="text-xs text-slate-300">
-                The server is completing its startup. Automatically resuming energy synthesis in a moment…
-              </p>
-              <button
-                type="button"
-                onClick={() => setRetry(value => value + 1)}
-                className="mt-1 px-4 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-all shadow-md active:scale-95 cursor-pointer"
-              >
-                Reconnect now
-              </button>
-            </div>
-          ) : isRateLimit ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-amber-300 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-                <span>AI Reasoning Rate Limit (250,000 tokens/min cooldown)</span>
-              </div>
-              <p className="text-xs text-slate-300">
-                The Google Gemini API Free Tier requires a short pause before processing another energy synthesis. All your calculated planetary contacts and charts are preserved.
-              </p>
-              <div className="flex items-center gap-3 pt-2">
-                {countdown !== null && (
-                  <span className="text-xs font-mono px-3 py-1.5 rounded-lg bg-amber-950/80 border border-amber-700/60 text-amber-200">
-                    Auto-retrying in {countdown}s…
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCountdown(null);
-                    setRetry(value => value + 1);
-                  }}
-                  className="px-4 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs transition-all shadow-md active:scale-95 cursor-pointer"
-                >
-                  Retry synthesis now
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="font-semibold text-rose-300">Energy synthesis could not be completed</p>
-              <p className="text-xs text-slate-300">
-                {synthesisError.startsWith("{")
-                  ? (() => {
-                      try {
-                        const parsed = JSON.parse(synthesisError);
-                        return parsed.error?.message || parsed.message || synthesisError;
-                      } catch {
-                        return synthesisError;
-                      }
-                    })()
-                  : synthesisError}
-              </p>
-              <button
-                type="button"
-                onClick={() => setRetry(value => value + 1)}
-                className="mt-2 inline-block px-4 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-200 font-semibold text-xs transition-all cursor-pointer"
-              >
-                Retry synthesis
-              </button>
-            </div>
+          <button
+            type="button"
+            onClick={() => void generateDeepReading()}
+            disabled={synthesisRequest.isPending || calculating}
+            className="rounded-xl border border-amber-300/50 bg-amber-400/15 px-4 py-2 text-sm font-semibold text-amber-100 disabled:opacity-50"
+          >
+            {synthesisRequest.isPending ? "Generating interpretation…" : reading ? "Regenerate Deep Energy Reading" : "Generate Deep Energy Reading"}
+          </button>
+          {synthesisError && (
+            <p role="alert" className="text-sm text-amber-200">
+              AI interpretation unavailable: {synthesisError}. Your calculated chart and contacts remain available. Retry only when you choose.
+            </p>
           )}
-        </div>
+        </section>
       )}
       {reading && (
         <section aria-label="Synthesized Current Energy" className="space-y-4 rounded-3xl border border-amber-200/30 bg-[#080B14]/90 p-6 sm:p-8">

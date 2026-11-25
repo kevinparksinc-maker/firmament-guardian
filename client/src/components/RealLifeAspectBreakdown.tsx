@@ -73,6 +73,17 @@ export function RealLifeAspectBreakdown({ chart, contacts, onAskQuestion }: Real
   // Filtered contacts
   const filteredItems = useMemo(() => {
     return aspectItems.filter(item => {
+      // Life-area tabs filter by calculated natal/transit houses, not merely by the prose lens.
+      // House categories overlap intentionally; "Overview" preserves the complete ledger.
+      const areaHouses: Record<Exclude<typeof lifeArea, "all">, number[]> = {
+        mind: [1, 3, 6, 12],
+        work: [2, 6, 10, 11],
+        love: [3, 5, 7, 11],
+      };
+      if (lifeArea !== "all") {
+        const houses = areaHouses[lifeArea];
+        if (!houses.includes(item.natalHouse ?? -1) && !houses.includes(item.transitHouse ?? -1)) return false;
+      }
       if (impactFilter === "major" && !item.isMajor) return false;
       if (impactFilter === "minor" && item.isMajor) return false;
       if (impactFilter === "flow" && !item.isFlow) return false;
@@ -90,7 +101,7 @@ export function RealLifeAspectBreakdown({ chart, contacts, onAskQuestion }: Real
 
       return true;
     });
-  }, [aspectItems, impactFilter, searchQuery]);
+  }, [aspectItems, impactFilter, searchQuery, lifeArea]);
 
   const majorCount = useMemo(() => aspectItems.filter(i => i.isMajor).length, [aspectItems]);
   const minorCount = useMemo(() => aspectItems.filter(i => !i.isMajor).length, [aspectItems]);
@@ -119,7 +130,7 @@ export function RealLifeAspectBreakdown({ chart, contacts, onAskQuestion }: Real
             What Today&apos;s Aspects Mean in Real Life
           </h2>
           <p className="mt-1 text-xs text-slate-300 max-w-2xl leading-relaxed">
-            Sorted from strongest Major drivers (100% impact) to subtle Minor adjustments (50% impact), mapped straight to your Houses and Signs.
+            Sorted by major/minor category and contact strength. Life-area tabs show contacts touching the relevant calculated houses; a contact may appear in more than one area.
           </p>
         </div>
 
@@ -134,7 +145,7 @@ export function RealLifeAspectBreakdown({ chart, contacts, onAskQuestion }: Real
             <button
               key={tab.id}
               type="button"
-              onClick={() => setLifeArea(tab.id as any)}
+              onClick={() => { setLifeArea(tab.id as any); setShowAll(false); }}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-semibold transition-all cursor-pointer ${
                 lifeArea === tab.id
                   ? "bg-[#D9B66F] text-slate-950 font-bold shadow-sm"
@@ -191,7 +202,7 @@ export function RealLifeAspectBreakdown({ chart, contacts, onAskQuestion }: Real
       {visibleItems.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-black/40 p-8 text-center text-sm text-slate-400">
           <Compass className="mx-auto mb-2 h-7 w-7 text-cyan-400/60" />
-          <p>No active aspects match your selected filters. Click &ldquo;All&rdquo; to reset.</p>
+          <p>No active aspects match these filters. Select Overview and All to see every contact.</p>
         </div>
       ) : (
         <div className="space-y-4">

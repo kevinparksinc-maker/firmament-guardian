@@ -53,6 +53,7 @@ export function GuardianNavigation() {
               {tab.label}
             </Link>
           ))}
+          <Link href="/horary" aria-current={path === "/horary" ? "page" : undefined} className={path === "/horary" ? "active" : ""}>Horary</Link>
         </div>
         <div className="flex items-center gap-2">
           <AccountControl />
