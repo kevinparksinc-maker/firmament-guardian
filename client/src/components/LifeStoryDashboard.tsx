@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BookOpen, Compass, Clock, Sparkles, ChevronDown, ShieldCheck, Sliders, Volume2, VolumeX, BookmarkPlus, Eye, Loader2, RefreshCw } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { trpc } from "@/lib/trpc";
@@ -27,6 +27,9 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
     early_adulthood: true,
   });
   const [generatedChapters, setGeneratedChapters] = useState<Record<string, string>>({});
+  const [chapterErrors, setChapterErrors] = useState<Record<string, string>>({});
+  const [generatingKey, setGeneratingKey] = useState<LifeStageKey | null>(null);
+  const generationLock = useRef(false);
   const [isAuditingOpen, setIsAuditingOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -66,7 +69,11 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
 
   // Handle generation of full narrative chapter
   const handleGenerateChapter = async (chapterKey: LifeStageKey) => {
-    if (generateChapterMutation.isPending) return;
+    if (generationLock.current || generateChapterMutation.isPending) return;
+    generationLock.current = true;
+    setGeneratingKey(chapterKey);
+    setChapterErrors(prev => ({ ...prev, [chapterKey]: "" }));
+    setExpandedChapterKeys(prev => ({ ...prev, [chapterKey]: true }));
     try {
       // Only use the scrubbed timeline selection when it belongs to this chapter.
       // Otherwise the server chooses an age inside the chapter's own interval.
@@ -84,6 +91,9 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
         chapterKey,
         selectedAge: chapterAge,
       });
+      if (typeof res.content !== "string" || !res.content.trim()) {
+        throw new Error("The interpretation service returned an empty chapter. Retry this chapter.");
+      }
       setGeneratedChapters(prev => ({
         ...prev,
         [chapterKey]: res.content,
@@ -91,7 +101,12 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
       setExpandedChapterKeys(prev => ({ ...prev, [chapterKey]: true }));
       toast.success(`${res.title} chapter generated successfully!`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to generate chapter");
+      const message = err instanceof Error ? err.message : "Failed to generate chapter. Please retry.";
+      setChapterErrors(prev => ({ ...prev, [chapterKey]: message }));
+      toast.error(message);
+    } finally {
+      generationLock.current = false;
+      setGeneratingKey(null);
     }
   };
 
@@ -397,9 +412,9 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
         {chapters.map((chapter, idx) => {
           const isExpanded = Boolean(expandedChapterKeys[chapter.key]);
           const narrative = generatedChapters[chapter.key];
-          const isGenerating =
-            generateChapterMutation.isPending &&
-            generateChapterMutation.variables?.chapterKey === chapter.key;
+          const isGenerating = generatingKey === chapter.key;
+          const chapterError = chapterErrors[chapter.key];
+          const generationBusy = generatingKey !== null || generateChapterMutation.isPending;
 
           const statusColor =
             chapter.status === "current"
@@ -449,8 +464,9 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
                     <button
                       type="button"
                       onClick={() => handleGenerateChapter(chapter.key)}
-                      disabled={generateChapterMutation.isPending}
-                      className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-fuchsia-300/40 bg-fuchsia-400/15 px-4 text-xs font-semibold text-fuchsia-100 shadow-[0_0_15px_rgba(232,121,249,0.15)] transition hover:bg-fuchsia-400/25"
+                      disabled={generationBusy}
+                      aria-busy={isGenerating}
+                      className="disabled:opacity-60 disabled:cursor-not-allowed inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-fuchsia-300/40 bg-fuchsia-400/15 px-4 text-xs font-semibold text-fuchsia-100 shadow-[0_0_15px_rgba(232,121,249,0.15)] transition hover:bg-fuchsia-400/25"
                     >
                       {isGenerating ? (
                         <>
@@ -465,7 +481,7 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
                       ) : (
                         <>
                           <Sparkles size={13} />
-                          <span>Generate Chapter</span>
+                          <span>{chapterError ? "Retry Chapter" : "Generate Chapter"}</span>
                         </>
                       )}
                     </button>
@@ -557,6 +573,20 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
                     </div>
                   )}
 
+                  {isGenerating && (
+                    <div role="status" aria-live="polite" className="flex items-center gap-3 rounded-xl border border-fuchsia-300/30 bg-fuchsia-950/40 p-4 text-sm text-fuchsia-100">
+                      <Loader2 size={20} className="shrink-0 animate-spin" />
+                      <div><p className="font-semibold">Generating this chapter…</p><p className="mt-1 text-xs text-fuchsia-200/80">Your request is in progress. The chapter will appear here when the interpretation service returns.</p></div>
+                    </div>
+                  )}
+                  {chapterError && !isGenerating && (
+                    <div role="alert" className="rounded-xl border border-rose-400/40 bg-rose-950/40 p-4 text-sm text-rose-100">
+                      <p className="font-semibold">Chapter generation failed</p>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-xs">{chapterError}</p>
+                      <button type="button" disabled={generationBusy} onClick={() => void handleGenerateChapter(chapter.key)} className="mt-3 rounded-lg border border-rose-300/40 px-3 py-2 text-xs font-semibold disabled:opacity-60">Retry Chapter</button>
+                    </div>
+                  )}
+
                   {/* The Master Interpreter Narrative */}
                   {narrative ? (
                     <div className="rounded-2xl border border-fuchsia-300/30 bg-slate-950/80 p-6 space-y-4 shadow-inner">
@@ -585,7 +615,7 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
                       <BookOpen size={32} className="mx-auto text-fuchsia-300/60" />
                       <div>
                         <h4 className="font-serif text-lg font-semibold text-white">
-                          Chapter Narrative Unwritten
+                          {isGenerating ? "Writing your chapter…" : chapterError ? "Chapter not generated" : "Chapter Narrative Unwritten"}
                         </h4>
                         <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
                           Click below to have the Master Interpreter synthesize this chapter using
@@ -595,11 +625,12 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
                       <button
                         type="button"
                         onClick={() => handleGenerateChapter(chapter.key)}
-                        disabled={generateChapterMutation.isPending}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-fuchsia-400/50 bg-fuchsia-500/20 px-5 text-xs font-semibold text-white shadow-[0_0_20px_rgba(217,70,239,0.2)] hover:bg-fuchsia-500/30"
+                        disabled={generationBusy}
+                        aria-busy={isGenerating}
+                        className="disabled:opacity-60 disabled:cursor-not-allowed inline-flex min-h-11 items-center gap-2 rounded-xl border border-fuchsia-400/50 bg-fuchsia-500/20 px-5 text-xs font-semibold text-white shadow-[0_0_20px_rgba(217,70,239,0.2)] hover:bg-fuchsia-500/30"
                       >
-                        <Sparkles size={14} />
-                        <span>Generate {chapter.title}</span>
+                        {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                        <span>{isGenerating ? "Synthesizing chapter…" : chapterError ? "Retry " + chapter.title : "Generate " + chapter.title}</span>
                       </button>
                     </div>
                   )}
