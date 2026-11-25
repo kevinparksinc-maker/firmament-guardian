@@ -1,0 +1,3309 @@
+THE ABSOLUTE — SOURCE AUDIT: 05-ui-router-and-tests.txt
+Source snapshot: 5e1cd90d29f4c3c092e5e252ceb8eedbccc98bc2
+Draft repair PR #84. Not merged or live-verified.
+Source bodies copied verbatim.
+Missing sources: none
+
+
+================================================================================
+FILE: server/routers.ts
+BLOB SHA: 8c5a195b2438ff8afd5e8bb92e709893db200fe9
+================================================================================
+import { computeSynastry } from "../shared/synastryEngine";
+import { calculateIndependentEnergyRead } from "../shared/energyScoring";
+import { buildChartMethodOutcomes } from "./chartMethodOutcomes";
+import { synthesizeMasterSnapshot } from "./astrologyKnowledge/synthesis/readingBridge";
+import {
+  narrateMasterSynthesis,
+  scrubNonHoraryAstrologyJargon,
+} from "./astrologyKnowledge/synthesis/narrative";
+import { calculateMasterChart as calculateChart } from "./masterChart/entry";
+import { buildEnergyReading } from "./energyReading";
+import { buildChartPageReading } from "./chartPageReading";
+import { buildPlanetPersonaMatrix } from "../shared/planetPersonaMatrix";
+import { mapRequestedPlacementsToCanonicalMeaning } from "../shared/masterPlanetPersonaConfig";
+import { buildChartBriefing } from "./chartBriefing";
+import { readFocusedPlacement } from "./focusedReading";
+import { interactiveNatalChat } from "./interactiveNatalCompanion";
+import { calculateHarmonicForecast } from "./harmonicForecast";
+import { buildVimshottariTimeline, getAshtakavargaVisual } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
+import { buildDivisionalCharts } from "./astrologyKnowledge/vedic/divisionalCharts";
+import { calculateVedicStrength } from "./astrologyKnowledge/vedic/strength";
+import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+import { z } from "zod";
+import { checkAccountRateLimit, getAccountAvailability, loginAccount, registerAccount } from "./accountAuth";
+import { sessionConfiguration } from "./_core/env";
+import { sdk } from "./_core/sdk";
+import { COOKIE_NAME } from "@shared/const";
+import { getSessionCookieOptions } from "./_core/cookies";
+import { systemRouter } from "./_core/systemRouter";
+import { aiProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import * as db from "./db";
+import { geocodeLocation, reverseGeocodeLocation, type ChartResult } from "./astronomy";
+import {
+  calculatePersonAge,
+  calculateAnnualProfection,
+  generatePlanetaryCycles,
+  compileLifeStoryChapters,
+  runAstrologyEngineAudit,
+  generateLifeStoryChapter,
+} from "./lifeStoryEngine";
+import {
+  followUp,
+  generateChapter,
+  generateInterpretation,
+  READING_CHAPTERS,
+} from "./interpretation";
+import { askHost } from "./host";
+import { horaryFollowUp, openHoraryQuestion, type HoraryChart } from "./horary";
+import { getZodiacSignReading } from "./zodiacHorary";
+import { ZODIAC_SIGNS } from "../shared/hybrid";
+import { horaryFollowUpHistorySchema } from "./horary-input";
+import {
+  diagnoseAstrologyEvidence,
+  evaluateBehavioralIntelligence,
+} from "./astrologyKnowledge";
+import { synthesizePlacement } from "./placement-synthesis";
+import { analyzeSystemIntersect, evaluateLovedOneCheckIn } from "./social";
+import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
+import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
+import { FULL_SYNTHESIS_STYLE } from "./master-interpreter";
+import { runGenesisPatternPipeline } from "./genesisBackup/adapter";
+import { calculateGenesisReadingMetrics } from "./genesisBackup/readingEngine";
+import { buildUnifiedMasterChart, getMasterNatalChart } from "./masterChart/builder";
+import { buildMasterPipeline } from "./master-pipeline";
+import { buildMasterGameChart } from "./simulationLab/masterGameChart";
+import { evaluatePlanetaryTeamHouses, predictSportsGame } from "./simulationLab/sportsPredictor";
+import { evaluateGameMethods } from "../shared/simulationLab/registry";
+
+
+const synastryFocus = z.object({ planetA: z.string().max(80), planetB: z.string().max(80), aspect: z.string().max(40) });
+
+async function readSynastry(userChart: ChartResult, targetChart: ChartResult, focus?: z.infer<typeof synastryFocus>, question = "How do these two charts interact in everyday relationships?") {
+  const [user, target] = await Promise.all([
+    synthesizeChartForReading(userChart, "natal", question),
+    synthesizeChartForReading(targetChart, "natal", question),
+  ]);
+  const crossChart = analyzeSystemIntersect(user.canonicalChart, target.canonicalChart);
+  const studio = computeSynastry(user.canonicalChart, target.canonicalChart);
+  const selected = focus && studio.aspects.find(aspect =>
+    aspect.planetA === focus.planetA && aspect.planetB === focus.planetB && aspect.aspect === focus.aspect
+  );
+  if (focus && !selected) throw new Error("SYNASTRY_CONTACT_MISSING: Select a calculated cross-chart contact.");
+  const response = await runInterpretation("SYNASTRY", [user.synthesis, target.synthesis], {
+    messages: [
+      { role: "system", content: FULL_SYNTHESIS_STYLE },
+      { role: "user", content: stringifyEvidence({
+        question,
+        studio,
+        selectedContact: selected,
+        instructions: "Ledger 1 is the reader and ledger 2 is the other person. Base all cross-chart aspect and overlay claims on the actual studio calculations. When selectedContact is present, center the reading on that contact. Show what each brings and how confirmed contacts create ease or friction in ordinary life. Write clear second-person prose without astrology terminology. Never invent an event, contact, score, or motive.",
+      }) },
+    ],
+    maxTokens: 2500,
+  });
+  const interpretation = scrubNonHoraryAstrologyJargon(interpretationText(response));
+  if (interpretation.length < 100)
+    throw new Error("SYNASTRY_INCOMPLETE: The provider did not return a complete reading.");
+  return { crossChart, interpretation, user: user.synthesis, target: target.synthesis };
+}
+
+const chartInput = z.object({
+  location: z.string(),
+  latitude: z.number(),
+  longitude: z.number(),
+  timezone: z.string(),
+  date: z.string(),
+  time: z.string(),
+  transitLocation: z.string().optional(),
+  transitLatitude: z.number().optional(),
+  transitLongitude: z.number().optional(),
+  transitTimezone: z.string().optional(),
+  transitDate: z.string().optional(),
+  transitTime: z.string().optional(),
+  transitInstantUtc: z.string().datetime({ offset: true }).optional(),
+  instantUtc: z.string().datetime({ offset: true }).optional(),
+  worldview: z.enum(["god", "agent", "agent-vs-god"]).default("agent"),
+  readingScope: z.enum(["natal", "transit", "combined"]).default("combined"),
+  birthTimeKnown: z.boolean().optional(),
+  chartRole: z.enum(["natal", "event"]).optional(),
+  elevation: z.number().optional(),
+  sunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),
+  transitSunriseAnchor: z.object({ sunriseUtc: z.string().datetime({ offset: true }), sunriseSunXYZ: z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() }) }).optional(),
+  xyzPositions: z.record(z.string(), z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() })).optional(),
+  transitXYZPositions: z.record(z.string(), z.object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() })).optional(),
+});
+const chartRowPayload = z.object({
+  name: z.string().min(1).max(100),
+  longitude: z.number().finite(),
+  display: z.string().max(100),
+  house: z.number().int().min(1).max(12),
+}).passthrough();
+const chartPayloadShape = z.object({
+  input: z.object({ location: z.string().max(240), date: z.string(), time: z.string() }).passthrough(),
+  utc: z.string().min(1).max(60),
+  julianDay: z.number().finite(),
+  movingBodies: z.array(chartRowPayload).min(1).max(50),
+  frozenStars: z.array(chartRowPayload).max(100),
+  transits: z.array(chartRowPayload).max(80),
+  houses: z.array(z.number().finite()).length(12),
+}).passthrough();
+/** Validate browser-returned calculated charts before trusting client-provided chart facts. */
+const chartPayload = z.custom<ChartResult>(value => chartPayloadShape.safeParse(value).success, "Invalid calculated chart payload");
+const horaryPayloadShape = z.object({
+  question: z.string().min(1).max(1000),
+  askedAt: z.string().min(1).max(60),
+  placements: z.array(chartRowPayload).min(1).max(50),
+  houses: z.array(z.object({ house: z.number().int().min(1).max(12), longitude: z.number().finite() }).passthrough()).length(12),
+  traditional: z.object({ judgment: z.object({ verdict: z.string() }).passthrough() }).passthrough(),
+}).passthrough();
+const horaryPayload = z.custom<HoraryChart>(value => horaryPayloadShape.safeParse(value).success, "Invalid Horary chart payload");
+const chartResultInput = z.object({ chart: chartPayload });
+const placeInput = z.object({
+  location: z.string().trim().min(2).max(240),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  timezone: z.string().min(2),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+});
+const horaryQuestionInput = placeInput.extend({
+  question: z.string().trim().min(10).max(1000),
+  subject: z.enum(["querent", "other"]).optional(),
+  topicHouse: z.number().int().min(1).max(12).optional(),
+  subjectHouse: z.number().int().min(1).max(12).optional(),
+  natal: placeInput.optional(),
+});
+export const appRouter = router({
+  system: systemRouter,
+  auth: router({
+    availability: publicProcedure.query(() => getAccountAvailability()),
+    me: publicProcedure.query(({ ctx }) => {
+      if (ctx.authError) throw ctx.authError;
+      return ctx.user;
+    }),
+    register: publicProcedure.input(z.object({ name: z.string().trim().min(1).max(100), email: z.string().trim().email().max(320), password: z.string().min(12).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        checkAccountRateLimit(`register:${ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown"}`);
+        sessionConfiguration();
+        const user = await registerAccount(input);
+        const duration = 30 * 24 * 60 * 60 * 1000;
+        const token = await sdk.createSessionToken(user.openId, { name: user.name, expiresInMs: duration });
+        ctx.res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(ctx.req), maxAge: duration });
+        return { success: true };
+      }),
+    login: publicProcedure.input(z.object({ email: z.string().trim().email().max(320), password: z.string().min(1).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        checkAccountRateLimit(`login:${ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown"}`);
+        const user = await loginAccount(input);
+        const duration = 30 * 24 * 60 * 60 * 1000;
+        const token = await sdk.createSessionToken(user.openId, { name: user.name, expiresInMs: duration });
+        ctx.res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(ctx.req), maxAge: duration });
+        return { success: true };
+      }),
+    logout: publicProcedure.mutation(({ ctx }) => {
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      return { success: true } as const;
+    }),
+  }),
+  history: router({
+    charts: protectedProcedure.query(({ ctx }) =>
+      db.listSavedCharts(ctx.user.openId)
+    ),
+    readings: protectedProcedure.query(({ ctx }) =>
+      db.listSavedReadings(ctx.user.openId)
+    ),
+    saveChart: protectedProcedure
+      .input(
+        z.object({
+          title: z.string().trim().min(1).max(180),
+          location: z.string().trim().min(2).max(240),
+          input: z.record(z.string(), z.unknown()),
+          chart: z.record(z.string(), z.unknown()),
+        })
+      )
+      .mutation(({ ctx, input }) =>
+        db.createSavedChart({ openId: ctx.user.openId, ...input })
+      ),
+    saveReading: protectedProcedure
+      .input(
+        z.object({
+          chartId: z.number().int().optional(),
+          title: z.string().trim().min(1).max(180),
+          mode: z.enum(["natal", "transit", "combined"]),
+          content: z.record(z.string(), z.unknown()),
+        })
+      )
+      .mutation(({ ctx, input }) =>
+        db.createSavedReading({ openId: ctx.user.openId, ...input })
+      ),
+  }),
+  simulationLab: router({
+    predict: aiProcedure
+      .input(z.object({
+        id: z.string().trim().min(1).max(120),
+        league: z.enum(["NFL", "NBA", "NHL"]),
+        scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        scheduledTime: z.string().regex(/^\d{2}:\d{2}$/),
+        venue: z.object({
+          name: z.string().trim().min(1).max(240),
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+          timezone: z.string().min(2).max(100),
+        }),
+        ascTeam: z.string().trim().min(1).max(120),
+        descTeam: z.string().trim().min(1).max(120),
+      }))
+      .mutation(async ({ input }) => {
+        const { snapshot, chart } = await buildMasterGameChart({
+          ...input,
+          chartVersion: "sports-master-2026.1",
+        });
+        const methods = evaluateGameMethods(snapshot, [{
+          id: "sports-team-house-occupancy",
+          name: "God/Agent event-chart team-house occupancy baseline",
+          evaluate: () => evaluatePlanetaryTeamHouses(chart),
+        }]);
+        const { synthesis } = await synthesizeChartForReading(chart, "natal", "Explain the calculated contest testimony.");
+        const prediction = await predictSportsGame(snapshot, methods, synthesis);
+        return { snapshot, methods, prediction };
+      }),
+  }),
+  hybrid: router({
+    geocode: publicProcedure
+      .input(z.object({ query: z.string().min(2) }))
+      .query(({ input }) => geocodeLocation(input.query)),
+    reverseGeocode: publicProcedure
+      .input(z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }))
+      .query(({ input }) => reverseGeocodeLocation(input.latitude, input.longitude)),
+    calculate: publicProcedure
+      .input(chartInput)
+      .mutation(({ input }) => calculateChart(input)),
+    harmonicForecast: publicProcedure
+      .input(z.object({ chart: chartInput, start: z.string().datetime(), steps: z.number().int().min(1).max(48).default(48) }))
+      .mutation(({ input }) => calculateHarmonicForecast(input.chart, input.start, input.steps)),
+    masterChart: aiProcedure
+      .input(
+        chartInput.extend({
+          mode: z.enum(["natal", "transit", "combined"]).default("natal"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const snapshot = await (input.mode === "natal" && input.worldview === "agent-vs-god"
+          ? getMasterNatalChart : buildUnifiedMasterChart)({ ...input, mode: input.mode });
+        await synthesizeMasterSnapshot(snapshot, input.mode, "Evaluate the chart's complete method formation before output.");
+        return snapshot;
+      }),
+  }),
+  techniqueAudit: router({
+    natal: publicProcedure
+      .input(chartInput)
+      .query(async ({ input }) => {
+        const snapshot = await getMasterNatalChart({
+          ...input,
+          mode: "natal",
+          worldview: "agent-vs-god",
+        });
+        return {
+          snapshotId: snapshot.snapshotId,
+          validation: snapshot.validation,
+          layers: snapshot.methodExecutionLedger.map(layer => ({
+            id: layer.id,
+            name: layer.name,
+            tradition: layer.tradition,
+            technique: layer.technique,
+            status: layer.status,
+            frame: layer.frame,
+            evidenceIds: layer.evidenceIds,
+            results: layer.results ?? null,
+            errorCode: layer.errorCode ?? null,
+            notes: layer.notes ?? null,
+          })),
+        };
+      }),
+  }),
+  vedic: router({
+    // Pure numeric computation. This must never depend on an AI provider or
+    // wait for full-chart mini readings to finish.
+    strength: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => calculateVedicStrength(input.chart)),
+    ashtakavargaVisual: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => getAshtakavargaVisual(input.chart)),
+    dashaTimeline: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => buildVimshottariTimeline(input.chart)),
+
+    // Read a chart already saved to the signed-in account. Never recalculate
+    // natal astronomy from a birth date, and never trust another user's ID.
+    savedDivisionalCharts: protectedProcedure
+      .input(z.object({ chartId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => {
+        const saved = (await db.listSavedCharts(ctx.user.openId))
+          .find(row => row.id === input.chartId);
+        if (!saved) throw new Error("Saved natal chart not found for this account.");
+        const validated = chartPayloadShape.safeParse(saved.chart);
+        if (!validated.success) throw new Error("Saved chart does not contain a complete natal chart.");
+        const natal = validated.data as ChartResult;
+        if (!natal.ascendant || !Number.isFinite(natal.ascendant.longitude))
+          throw new Error("Saved natal chart is missing a valid Ascendant.");
+        if (!natal.northNode || !natal.southNode || !Number.isFinite(natal.northNode.longitude) || !Number.isFinite(natal.southNode.longitude))
+          throw new Error("Saved natal chart is missing its lunar nodes.");
+        return buildDivisionalCharts({
+          ascendantLongitude: natal.ascendant.longitude,
+          planets: [
+            ...natal.movingBodies.map(p => ({ name: p.name, longitude: p.longitude })),
+            { name: natal.northNode.name, longitude: natal.northNode.longitude },
+            { name: natal.southNode.name, longitude: natal.southNode.longitude },
+          ],
+          d1HouseCusps: natal.houses,
+        });
+      }),
+
+    // Reuses the active profile's existing natal chart; no calculateChart call.
+    // The caller must supply the same chart already shown in the profile UI.
+    divisionalCharts: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => {
+        const natal = input.chart;
+        if (!natal.ascendant || !Number.isFinite(natal.ascendant.longitude))
+          throw new Error("A calculated natal Ascendant is required for Vargas.");
+        return buildDivisionalCharts({
+          ascendantLongitude: natal.ascendant.longitude,
+          planets: [
+            ...natal.movingBodies.map(p => ({ name: p.name, longitude: p.longitude })),
+            { name: natal.northNode.name, longitude: natal.northNode.longitude },
+            { name: natal.southNode.name, longitude: natal.southNode.longitude },
+          ],
+          d1HouseCusps: natal.houses,
+        });
+      }),
+  }),
+  astrologyKnowledge: router({
+    placementSynthesis: aiProcedure
+      .input(
+        chartResultInput.extend({
+          body: z.string().trim().min(1).max(40),
+          question: z.string().trim().max(2000).default(""),
+        })
+      )
+      .mutation(({ input }) => synthesizePlacement(input.chart, input.body, input.question)),
+    behavioralReport: aiProcedure
+      .input(
+        chartResultInput.extend({
+          question: z.string().trim().max(2000).default(""),
+          mode: z.enum(["natal", "transit", "combined"]).default("combined"),
+        })
+      )
+      .query(async ({ input }) => {
+        const master = await buildMasterPipeline(input.chart, input.mode, input.question);
+        const report = evaluateBehavioralIntelligence(master.canonicalChart, input.question, input.mode);
+        const narrated = await narrateMasterSynthesis(master.synthesis, input.question || "Explain the central behavioral patterns in this chart.");
+        return {
+          ...report,
+          interpretation: narrated.narrative.answer,
+          masterSnapshot: master.snapshot,
+          masterSynthesis: master.synthesis,
+        };
+      }),
+    diagnose: publicProcedure
+      .input(
+        chartResultInput.extend({
+          question: z.string().trim().min(1).max(2000),
+          mode: z.enum(["natal", "transit", "combined"]).default("combined"),
+        })
+      )
+      .mutation(({ input }) => {
+        if (process.env.NODE_ENV === "production")
+          throw new Error(
+            "Evidence Trace is available only in development mode."
+          );
+        return diagnoseAstrologyEvidence(
+          input.chart,
+          input.question,
+          input.mode
+        );
+      }),
+  }),
+  interpretation: router({
+    methodOutcomes: aiProcedure
+      .input(chartResultInput.extend({ mode: z.enum(["natal", "transit", "combined"]).default("natal") }))
+      .query(({ input }) => buildChartMethodOutcomes(input.chart, input.mode)),
+    independentSkyReading: aiProcedure
+      .input(chartResultInput.extend({ contactId: z.string().max(180).optional() }))
+      .mutation(async ({ input }) => {
+        if (input.chart.input.chartRole !== "event") throw new Error("An independent event chart is required.");
+        const question = "What patterns stand out in this independent event sky?";
+        const { synthesis, canonicalChart } = await synthesizeChartForReading(input.chart, "natal", question);
+        const score = calculateIndependentEnergyRead(canonicalChart);
+        const contact = input.contactId && score?.contacts.find(item => item.id === input.contactId);
+        if (input.contactId && !contact) throw new Error("The selected contact is absent from this event chart.");
+        const response = await runInterpretation("INDEPENDENT_SKY", synthesis, {
+          messages: [
+            { role: "system", content: FULL_SYNTHESIS_STYLE },
+            { role: "user", content: stringifyEvidence({
+              question, score, contact,
+              instruction: "Read only the independent event sky and its body-to-body contacts. Do not treat either side of a contact as a natal placement. If a contact is selected, lead with its meaning and put it in the context of the surrounding sky. Describe the observable situation in clear language without predicting a guaranteed outcome.",
+            }) },
+          ],
+          maxTokens: 1600,
+        });
+        return scrubNonHoraryAstrologyJargon(interpretationText(response));
+      }),
+    energyReading: aiProcedure.input(chartResultInput).mutation(({ input }) => buildEnergyReading(input.chart)),
+    chartPage: aiProcedure.input(z.object({ chart: chartPayload, mode: z.enum(["natal", "transit", "combined"]), names: z.array(z.string().min(1).max(80)).min(1).max(2).default(["Sun", "Moon"]) })).mutation(({ input }) => buildChartPageReading(input.chart, input.mode, input.names)),
+    personaMatrix: publicProcedure.input(chartResultInput).query(({ input }) => buildPlanetPersonaMatrix(input.chart)),
+    canonicalMappings: publicProcedure
+      .input(chartResultInput.extend({ requestedActors: z.array(z.string()).optional() }))
+      .query(({ input }) => mapRequestedPlacementsToCanonicalMeaning(input.chart, input.requestedActors)),
+    chatWithChart: aiProcedure
+      .input(
+        z.object({
+          chart: chartPayload,
+          history: z
+            .array(
+              z.object({
+                role: z.enum(["user", "assistant"]),
+                content: z.string().max(12000),
+              })
+            )
+            .max(40)
+            .default([]),
+          question: z.string().min(1).max(2000),
+          mode: z.enum(["natal", "transit", "combined"]).default("natal"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return interactiveNatalChat(input.history, input.question, input.chart, input.mode);
+      }),
+    chartBriefing: aiProcedure.input(z.object({ chart: chartPayload })).mutation(({ input }) => buildChartBriefing(input.chart)),
+    focusedPlacement: aiProcedure
+      .input(z.object({ chart: chartPayload, target: z.object({ kind: z.enum(["placement", "star", "contact"]), name: z.string().min(1).max(80), otherName: z.string().min(1).max(80).optional(), layer: z.enum(["natal", "transit"]), lens: z.enum(["all", "mind", "work", "love"]).optional(), atUtc: z.string().datetime({ offset: true }).optional() }) }))
+      .mutation(({ input }) => readFocusedPlacement(input.chart, input.target)),
+    host: aiProcedure
+      .input(
+        z.object({
+          history: z
+            .array(
+              z.object({
+                role: z.enum(["user", "assistant"]),
+                content: z.string().max(12000),
+              })
+            )
+            .max(40)
+            .default([]),
+          question: z.string().min(1).max(2000),
+          chart: chartPayload.optional(),
+          mode: z.enum(["natal", "transit", "combined"]).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return askHost(input.history, input.question, input.chart, input.mode);
+      }),
+    generate: aiProcedure
+      .input(
+        chartResultInput.extend({
+          mode: z.enum(["natal", "transit", "combined"]).default("combined"),
+          question: z
+            .string()
+            .trim()
+            .min(1)
+            .max(2000)
+            .default("What should I understand from this chart?"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const interpretation = await generateInterpretation(input.chart, input.mode, input.question);
+        return { ...interpretation, synthesis: interpretation.masterSynthesis };
+      }),
+    masterSynthesize: aiProcedure
+      .input(
+        chartInput.extend({
+          chart: chartPayload.optional(),
+          mode: z.enum(["natal", "transit", "combined"]).default("natal"),
+          question: z
+            .string()
+            .trim()
+            .max(2000)
+            .default("What is the core life purpose and integrated trajectory of this chart?"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        if (input.chart) {
+          const { synthesis } = await synthesizeChartForReading(input.chart, input.mode, input.question);
+          return narrateMasterSynthesis(synthesis, input.question);
+        }
+        const snapshot = await buildUnifiedMasterChart({ ...input, mode: input.mode });
+        const { synthesis } = await synthesizeMasterSnapshot(snapshot, input.mode, input.question);
+        return narrateMasterSynthesis(synthesis, input.question);
+      }),
+    chapter: aiProcedure
+      .input(
+        z.object({
+          chart: chartPayload,
+          mode: z.enum(["natal", "transit", "combined"]),
+          intelligence: z.string(),
+          chapterId: z.enum(
+            READING_CHAPTERS.map(chapter => chapter.id) as [string, ...string[]]
+          ),
+          completedChapters: z.array(z.string()).default([]),
+          analysis: z.string().default(""),
+          question: z.string().trim().max(2000).default(""),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return generateChapter(
+          input.chart as ChartResult,
+          input.mode,
+          input.intelligence,
+          input.chapterId as any,
+          input.completedChapters,
+          input.analysis,
+          input.question
+        );
+      }),
+    followUp: aiProcedure
+      .input(
+        z.object({
+          chart: chartPayload,
+          interpretation: z.object({
+            intelligence: z.string(),
+            reading: z.string(),
+          }),
+          history: z.array(
+            z.object({
+              role: z.enum(["user", "assistant"]),
+              content: z.string(),
+            })
+          ),
+          question: z.string().min(1),
+          mode: z.enum(["natal", "transit", "combined"]).default("combined"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return followUp(
+          input.chart as ChartResult,
+          input.interpretation,
+          input.history,
+          input.question,
+          input.mode
+        );
+      }),
+  }),
+  horary: router({
+    open: aiProcedure
+      .input(horaryQuestionInput)
+      .mutation(({ input }) => openHoraryQuestion(input)),
+    followUp: aiProcedure
+      .input(
+        z.object({
+          chart: horaryPayload,
+          history: horaryFollowUpHistorySchema,
+          question: z.string().trim().min(1).max(2000),
+        })
+      )
+      .mutation(({ input }) =>
+        horaryFollowUp(input.chart, input.history, input.question)
+      ),
+  }),
+  zodiacHorary: router({
+    // Separate from traditional Horary: the selected sign's classical ruler
+    // anchors Agent House 1 while God View retains 0° Aries.
+    read: aiProcedure
+      .input(z.object({
+        sign: z.enum(ZODIAC_SIGNS),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        time: z.string().regex(/^\d{2}:\d{2}$/),
+        question: z.string().trim().max(700).optional(),
+      }))
+      .mutation(({ input }) => getZodiacSignReading(input)),
+  }),
+  social: router({
+    listLovedOnes: protectedProcedure.query(({ ctx }) => db.listLovedOnes(ctx.user.openId)),
+    saveLovedOne: protectedProcedure
+      .input(
+        z.object({
+          id: z.number().optional(),
+          name: z.string().trim().min(1).max(100),
+          relationship: z.enum([
+            "child",
+            "partner",
+            "parent",
+            "sibling",
+            "friend",
+            "mentor",
+            "colleague",
+          ]),
+          location: z.string().trim().min(2),
+          latitude: z.number(),
+          longitude: z.number(),
+          timezone: z.string(),
+          date: z.string(),
+          time: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const openId = ctx.user.openId;
+        return db.upsertLovedOne(openId, input as any);
+      }),
+    deleteLovedOne: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const openId = ctx.user.openId;
+        return db.deleteLovedOne(openId, input.id);
+      }),
+    checkInStatus: aiProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          relationship: z.enum([
+            "child",
+            "partner",
+            "parent",
+            "sibling",
+            "friend",
+            "mentor",
+            "colleague",
+          ]),
+          location: z.string(),
+          latitude: z.number(),
+          longitude: z.number(),
+          timezone: z.string(),
+          date: z.string(),
+          time: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const chart = await calculateChart({
+          location: input.location,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          timezone: input.timezone,
+          date: input.date,
+          time: input.time || "12:00",
+          worldview: "agent",
+          readingScope: "combined",
+        });
+        const question = "What is a considerate way to check in with this loved one at the selected moment?";
+        const { synthesis, canonicalChart } = await synthesizeChartForReading(chart, "combined", question);
+        const calculated = evaluateLovedOneCheckIn(canonicalChart, input.name, input.relationship);
+        const { activeSignatures, pressureLevel, dominantTransitBody } = calculated;
+        const response = await runInterpretation("LOVED_ONE_CHECK_IN", synthesis, {
+          messages: [
+            { role: "system", content: "Offer grounded, considerate relationship guidance. Never claim private knowledge of this person's feelings or events. Keep technical astrology language in the evidence." },
+            { role: "user", content: stringifyEvidence({
+              question, name: input.name, relationship: input.relationship,
+              evidence: { activeSignatures, pressureLevel, dominantTransitBody },
+              format: "Return JSON with mechanicsSummary, whatTheyAreProcessing (a possibility in ordinary language), howToShowUp, whatToAvoid, and suggestedCheckInMessage. Keep each field specific and useful. The suggested message is a draft in the reader's voice.",
+            }) },
+          ],
+          responseFormat: { type: "json_object" },
+          maxTokens: 1400,
+        });
+        const { mechanicsSummary, suggestedCheckInMessage, ...actionableEmpathyPrompt } = z.object({
+          mechanicsSummary: z.string().trim().min(20),
+          whatTheyAreProcessing: z.string().trim().min(20),
+          howToShowUp: z.string().trim().min(20),
+          whatToAvoid: z.string().trim().min(20),
+          suggestedCheckInMessage: z.string().trim().min(20),
+        }).parse(JSON.parse(interpretationText(response)));
+        return {
+          chart,
+          status: {
+            lovedOneName: input.name,
+            relationship: input.relationship,
+            activeSignatures,
+            pressureLevel,
+            dominantTransitBody,
+            mechanicsSummary,
+            actionableEmpathyPrompt,
+            suggestedCheckInMessage,
+          },
+        };
+      }),
+    systemIntersect: aiProcedure
+      .input(
+        z.object({
+          userChart: chartPayload,
+          targetChart: chartPayload,
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { crossChart, interpretation, user, target } = await readSynastry(input.userChart, input.targetChart);
+        return {
+          ...crossChart,
+          interpretation,
+          unifiedSynthesis: {
+            scope: "two-natal-ledgers-plus-existing-cross-chart-synastry" as const,
+            user,
+            target,
+          },
+        };
+      }),
+  }),
+  ai: router({
+    answerChartQuestion: aiProcedure
+      .input(z.object({
+        question: z.string().min(1),
+        chart: chartPayload,
+        mode: z.enum(["natal", "transit", "combined"]).default("natal"),
+      }))
+      .mutation(({ input }) => askHost([], input.question, input.chart, input.mode)),
+
+    askTransitQuestion: aiProcedure
+      .input(chartResultInput.extend({
+        question: z.string().min(1),
+        conversationHistory: horaryFollowUpHistorySchema.optional(),
+      }))
+      .mutation(async ({ input }) => ({
+        answer: await askHost(input.conversationHistory ?? [], input.question, input.chart, "transit"),
+      })),
+
+    generateSoulmatePrediction: aiProcedure
+      .input(chartResultInput)
+      .mutation(async ({ input }) => {
+        const { synthesis } = await synthesizeChartForReading(input.chart, "natal", "Natal relationship potential");
+        const response = await runInterpretation("RELATIONSHIP_POTENTIAL", synthesis, {
+          messages: [
+            { role: "system", content: FULL_SYNTHESIS_STYLE },
+            { role: "user", content: "Synthesize the reader's natal relationship potential. Show how intimacy, loyalty, attraction, and conflict interact in ordinary life. Return JSON with soulmatePrediction (candid flowing second-person prose, at least 100 characters) and descriptors (3–5 distinct everyday traits). Keep astrology terms out of the prose. Do not invent a partner, an event, or someone else's motives." },
+          ],
+          maxTokens: 2000,
+          responseFormat: { type: "json_object" },
+        });
+        const reading = z.object({
+          soulmatePrediction: z.string().trim().min(100),
+          descriptors: z.array(z.string().trim().min(1)).min(3).max(5),
+        }).parse(JSON.parse(interpretationText(response)));
+        return {
+          soulmatePrediction: scrubNonHoraryAstrologyJargon(reading.soulmatePrediction),
+          descriptors: reading.descriptors,
+        };
+      }),
+
+    generateSynastryBreakdown: aiProcedure
+      .input(z.object({ userChart: chartPayload, targetChart: chartPayload, focus: synastryFocus.optional(), question: z.string().trim().max(500).optional() }))
+      .mutation(async ({ input }) => {
+        const { crossChart, interpretation } = await readSynastry(input.userChart, input.targetChart, input.focus, input.question);
+        return {
+          interpretation,
+          aspectGroups: [
+            { type: "harmonious", aspects: crossChart.keyConnections.filter(contact => contact.type === "support") },
+            { type: "challenging", aspects: crossChart.keyConnections.filter(contact => contact.type !== "support") },
+          ],
+        };
+      }),
+
+    genesisReading: aiProcedure
+      .input(chartResultInput.extend({
+        question: z.string().default(""),
+        focusArea: z.enum(["career", "relationships", "health", "finance", "spirituality", "general", "creativity", "home"]).default("general"),
+      }))
+      .mutation(async ({ input }) => {
+        const question = input.question || `Read this chart with a focus on ${input.focusArea}.`;
+        const { canonicalChart, synthesis } = await synthesizeChartForReading(input.chart, input.chart.readingScope, question);
+        const { analysis } = runGenesisPatternPipeline(canonicalChart);
+        const { developmentalPhase, confidence, themeStrengths } = calculateGenesisReadingMetrics(analysis, { question, focusArea: input.focusArea });
+        const response = await runInterpretation("GENESIS_READING", synthesis, {
+          messages: [
+            { role: "system", content: FULL_SYNTHESIS_STYLE },
+            { role: "user", content: stringifyEvidence({
+              question,
+              focusArea: input.focusArea,
+              calculatedPatterns: analysis,
+              developmentalPhase,
+              themeNames: Array.from(themeStrengths.keys()),
+              format: "Return JSON with plain, deep, guidance, forecast, childhoodRoots and adulthoodArc, each a distinct prose section. Also return emotionalTone (short text), themes [{name, description, actionableAdvice}] using only listed theme names, tensions [{between, description, resolutionPath}], and gifts [{source, description, howToUse}]. Ground forecasts in calculated timing and keep childhood and adulthood sections tied to tendencies without inventing past events. An array can be empty if the evidence supplies no matching finding.",
+            }) },
+          ],
+          maxTokens: 4200,
+          responseFormat: { type: "json_object" },
+        });
+        const prose = z.object({
+          plain: z.string().trim().min(40),
+          deep: z.string().trim().min(40),
+          guidance: z.string().trim().min(40),
+          forecast: z.string().trim().min(40),
+          childhoodRoots: z.string().trim().min(40),
+          adulthoodArc: z.string().trim().min(40),
+          emotionalTone: z.string().trim().min(1),
+          themes: z.array(z.object({ name: z.string().refine(name => themeStrengths.has(name)), description: z.string().trim().min(1), actionableAdvice: z.string().trim().min(1) })),
+          tensions: z.array(z.object({ between: z.array(z.string()).min(2), description: z.string().trim().min(1), resolutionPath: z.string().trim().min(1) })),
+          gifts: z.array(z.object({ source: z.string().trim().min(1), description: z.string().trim().min(1), howToUse: z.string().trim().min(1) })),
+        }).parse(JSON.parse(interpretationText(response)));
+        const titles = ["The current pattern", "Why it matters", "How to work with it", "What is emerging", "Early roots", "Adulthood"];
+        const sections = [prose.plain, prose.deep, prose.guidance, prose.forecast, prose.childhoodRoots, prose.adulthoodArc];
+        return {
+          ...prose,
+          themes: prose.themes.map(theme => ({ ...theme, strength: themeStrengths.get(theme.name)! })),
+          developmentalPhase,
+          confidence,
+          formattedReading: sections.map((section, i) => `## ${titles[i]}\n\n${section}`).join("\n\n"),
+          timestamp: new Date(),
+        };
+      }),
+  }),
+  lifeStory: router({
+    calculateCycles: publicProcedure
+      .input(
+        chartResultInput.extend({
+          targetAge: z.number().min(0).max(120).optional(),
+        })
+      )
+      .query(({ input }) => {
+        const birthDate = input.chart.input?.date || "1990-01-01";
+        const currentAge = calculatePersonAge(birthDate);
+        const selectedAge = input.targetAge ?? currentAge;
+        const profection = calculateAnnualProfection(selectedAge, input.chart);
+        const cycles = generatePlanetaryCycles(input.chart, currentAge);
+        const chapters = compileLifeStoryChapters(input.chart, currentAge, cycles);
+        const audit = runAstrologyEngineAudit(input.chart);
+
+        return {
+          currentAge,
+          selectedAge,
+          profection,
+          cycles,
+          chapters,
+          audit,
+        };
+      }),
+
+    generateChapter: aiProcedure
+      .input(
+        chartResultInput.extend({
+          chapterKey: z.enum([
+            "birth_origins",
+            "childhood",
+            "adolescence",
+            "early_adulthood",
+            "adult_development",
+            "later_life",
+            "turning_points",
+            "future_chapters",
+          ]),
+          selectedAge: z.number().min(0).max(120).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return generateLifeStoryChapter(input.chart, input.chapterKey, input.selectedAge);
+      }),
+
+    audit: publicProcedure
+      .input(chartResultInput)
+      .query(({ input }) => {
+        const layers = runAstrologyEngineAudit(input.chart);
+        const verifiedCount = layers.filter(
+          l => l.status === "implemented-verified"
+        ).length;
+        return {
+          layers,
+          totalLayers: layers.length,
+          verifiedCount,
+          isFullyOperational: verifiedCount >= 19,
+        };
+      }),
+  }),
+});
+export type AppRouter = typeof appRouter;
+
+
+================================================================================
+FILE: client/src/components/LifeStoryDashboard.tsx
+BLOB SHA: cd10559414d93ad8585e945312b0e7bb9f1cc2b6
+================================================================================
+import { useState, useEffect, useRef } from "react";
+import { BookOpen, Compass, Clock, Sparkles, ChevronDown, ShieldCheck, Sliders, Volume2, VolumeX, BookmarkPlus, Eye, Loader2, RefreshCw } from "lucide-react";
+import { Streamdown } from "streamdown";
+import { trpc } from "@/lib/trpc";
+import type { ChartResult } from "../../../server/astronomy";
+import type { LifeStageKey } from "../../../server/lifeStoryEngine";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
+interface LifeStoryDashboardProps {
+  chart: ChartResult;
+  onSaveReading?: (title: string, content: Record<string, unknown>) => void;
+}
+
+export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardProps) {
+  const [frame, setFrame] = useState<"agent" | "god">("agent");
+  const [selectedAge, setSelectedAge] = useState<number | null>(null);
+  const [activeChapterKey, setActiveChapterKey] = useState<LifeStageKey>("early_adulthood");
+  const [expandedChapterKeys, setExpandedChapterKeys] = useState<Record<string, boolean>>({
+    birth_origins: true,
+    early_adulthood: true,
+  });
+  const [generatedChapters, setGeneratedChapters] = useState<Record<string, string>>({});
+  const [chapterErrors, setChapterErrors] = useState<Record<string, string>>({});
+  const [generatingKey, setGeneratingKey] = useState<LifeStageKey | null>(null);
+  const generationLock = useRef(false);
+  const [isAuditingOpen, setIsAuditingOpen] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // tRPC query to calculate chronological milestones, profections, and chapters
+  const cyclesQuery = trpc.lifeStory.calculateCycles.useQuery(
+    {
+      chart,
+      targetAge: selectedAge ?? undefined,
+    },
+    {
+      enabled: Boolean(chart),
+      staleTime: 60000,
+    }
+  );
+
+  const generateChapterMutation = trpc.lifeStory.generateChapter.useMutation();
+  const saveReadingMutation = trpc.history.saveReading.useMutation();
+
+  const data = cyclesQuery.data;
+  const currentAge = data?.currentAge ?? 30;
+  const activeAge = selectedAge ?? Math.floor(currentAge);
+  const profection = data?.profection;
+  const chapters = data?.chapters ?? [];
+  const cycles = data?.cycles ?? [];
+  const auditLayers = data?.audit ?? [];
+
+  // Initialize selected chapter to the current life stage when data loads
+  useEffect(() => {
+    if (data?.chapters) {
+      const currentCh = data.chapters.find(c => c.status === "current");
+      if (currentCh) {
+        setActiveChapterKey(currentCh.key);
+        setExpandedChapterKeys(prev => ({ ...prev, [currentCh.key]: true }));
+      }
+    }
+  }, [data?.chapters]);
+
+  // Handle generation of full narrative chapter
+  const handleGenerateChapter = async (chapterKey: LifeStageKey) => {
+    if (generationLock.current || generateChapterMutation.isPending) return;
+    generationLock.current = true;
+    setGeneratingKey(chapterKey);
+    setChapterErrors(prev => ({ ...prev, [chapterKey]: "" }));
+    setExpandedChapterKeys(prev => ({ ...prev, [chapterKey]: true }));
+    try {
+      // Only use the scrubbed timeline selection when it belongs to this chapter.
+      // Otherwise the server chooses an age inside the chapter's own interval.
+      const selectedChapter = chapters.find(ch => ch.key === chapterKey);
+      const chapterAge =
+        selectedAge !== null &&
+        selectedChapter &&
+        selectedAge >= selectedChapter.ageRange[0] &&
+        selectedAge < selectedChapter.ageRange[1]
+          ? selectedAge
+          : undefined;
+      toast.info("Master Interpreter is synthesizing your life story chapter...");
+      const res = await generateChapterMutation.mutateAsync({
+        chart,
+        chapterKey,
+        selectedAge: chapterAge,
+      });
+      if (typeof res.content !== "string" || !res.content.trim()) {
+        throw new Error("The interpretation service returned an empty chapter. Retry this chapter.");
+      }
+      setGeneratedChapters(prev => ({
+        ...prev,
+        [chapterKey]: res.content,
+      }));
+      setExpandedChapterKeys(prev => ({ ...prev, [chapterKey]: true }));
+      toast.success(`${res.title} chapter generated successfully!`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to generate chapter. Please retry.";
+      setChapterErrors(prev => ({ ...prev, [chapterKey]: message }));
+      toast.error(message);
+    } finally {
+      generationLock.current = false;
+      setGeneratingKey(null);
+    }
+  };
+
+  // Text to speech narration
+  const handleToggleNarration = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      toast.error("Audio narration is not supported by your browser");
+      return;
+    }
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const cleanText = text.replace(/[*#_`]/g, "");
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 0.95;
+    utterance.pitch = 0.95;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+    toast.success("Playing Master Interpreter narration");
+  };
+
+  // Save life story reading
+  const handleSaveToHistory = () => {
+    const chapterCount = Object.keys(generatedChapters).length;
+    if (chapterCount === 0) {
+      toast.error("Generate at least one chapter before saving to reading history.");
+      return;
+    }
+    const title = `Life Story (${chart.input?.location || "Birth Chart"} · Age ${activeAge})`;
+    saveReadingMutation.mutate(
+      {
+        title,
+        mode: "natal",
+        content: {
+          currentAge,
+          activeAge,
+          profection,
+          generatedChapters,
+        },
+      },
+      {
+        onSuccess: () => toast.success("Life Story reading saved to your library!"),
+        onError: () => toast.error("Unable to save reading. Please check your login session."),
+      }
+    );
+  };
+
+  const activeProfectionLord =
+    frame === "agent" ? profection?.lordOfTheYearAgent : profection?.lordOfTheYearGod;
+  const activeProfectionSign =
+    frame === "agent" ? profection?.profectedSignAgent : profection?.profectedSignGod;
+  const activeProfectedHouse =
+    frame === "agent" ? profection?.profectedHouseAgent : profection?.profectedHouseGod;
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-8 pb-16 text-slate-100">
+      {/* Top Banner / Hero */}
+      <header className="relative overflow-hidden rounded-3xl border-2 border-fuchsia-400/50 bg-[radial-gradient(circle_at_top,#2e1065_0%,#0f172a_60%,#030712_100%)] p-6 shadow-[0_0_50px_rgba(217,70,239,0.18)] sm:p-10">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-cyan-500/15 blur-3xl" />
+
+        <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2 text-fuchsia-300">
+              <BookOpen className="h-5 w-5" />
+              <span className="text-xs font-bold uppercase tracking-[0.25em]">
+                The Absolute · Life Story Mode
+              </span>
+            </div>
+            <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight text-white sm:text-5xl">
+              Chronological <em>Life Story</em>
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
+              Read a chronological life story based on symbolic chart testimony and changing life-stage themes.
+              Draws on Annual Profections, indicative cycle windows, Vimshottari Dasha, and
+              dual God/Agent frames. Life events are interpretive possibilities, not verified history.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-end gap-3 self-stretch sm:self-auto">
+            <div className="flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/10 px-4 py-2.5 text-xs">
+              <Clock className="h-4 w-4 text-fuchsia-300" />
+              <span>
+                Calculated Age: <strong className="text-white">{currentAge.toFixed(1)} yrs</strong>
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAuditingOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3.5 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-400/20"
+                title="Inspect verification status of all 20 calculation engine layers"
+              >
+                <ShieldCheck size={14} className="text-cyan-300" />
+                <span>Engine Audit (20 Layers)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveToHistory}
+                disabled={saveReadingMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3.5 py-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20"
+                title="Save current life story reading to your profile history"
+              >
+                <BookmarkPlus size={14} className="text-amber-300" />
+                <span>Save Reading</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Reference Frame Switch */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-4 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400">Interpretation Frame:</span>
+            <div className="inline-flex rounded-xl border border-white/15 bg-black/40 p-1">
+              <button
+                type="button"
+                aria-pressed={frame === "agent"}
+                onClick={() => setFrame("agent")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  frame === "agent"
+                    ? "bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-400/40"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <Compass size={13} />
+                <span>Agent View (Local Horizon)</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={frame === "god"}
+                onClick={() => setFrame("god")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  frame === "god"
+                    ? "bg-amber-500/20 text-amber-200 border border-amber-400/40"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <Eye size={13} />
+                <span>God View (0° Aries Fixed)</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="text-slate-400">
+            Birth Moment:{" "}
+            <span className="font-mono text-cyan-200">
+              {chart.input?.date} at {chart.input?.time || "12:00"} ({chart.input?.location})
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* Interactive Age Scrubber & Annual Profection HUD */}
+      <section
+        className="rounded-3xl border border-cyan-400/30 bg-slate-950/80 p-6 shadow-[0_15px_40px_rgba(0,0,0,0.6)]"
+        aria-label="Interactive Chronological Age Scrubber"
+      >
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-cyan-300">
+              <Sliders size={16} />
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Chronological Life Scrubber
+              </span>
+            </div>
+            <h2 className="font-serif text-2xl font-semibold text-white mt-1">
+              Explore Age {activeAge} · Year {activeAge + 1} of Life
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Drag the scrubber to inspect your annual profection, activated house, and time-lord
+              at any age.
+            </p>
+          </div>
+
+          {profection && (
+            <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-3">
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-cyan-300">
+                  Lord of the Year ({frame === "agent" ? "Agent" : "God"})
+                </span>
+                <span className="font-serif text-lg font-bold text-white">
+                  {activeProfectionLord} in {activeProfectionSign}
+                </span>
+                <span className="block text-[11px] text-cyan-200">
+                  House {activeProfectedHouse} Activated
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Range Slider */}
+        <div className="mt-6 space-y-3">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Age 0 (Inception)</span>
+            <span className="font-bold text-fuchsia-300">
+              Currently Selected: Age {activeAge}
+            </span>
+            <span>Age 90 (Elder)</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="90"
+            step="1"
+            value={activeAge}
+            onChange={e => setSelectedAge(Number(e.target.value))}
+            className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-400"
+            aria-label="Select age to inspect"
+          />
+        </div>
+
+        {/* Milestone Quick Jump Buttons */}
+        <div className="mt-5 flex flex-wrap gap-2 pt-4 border-t border-white/10">
+          <span className="text-xs text-slate-400 py-1.5 mr-1">Milestones:</span>
+          {[
+            { label: `Today (Age ${Math.floor(currentAge)})`, age: Math.floor(currentAge) },
+            { label: "Childhood (7)", age: 7 },
+            { label: "Adolescence (15)", age: 15 },
+            { label: "First Saturn Return (29)", age: 29 },
+            { label: "Midlife Awakening (42)", age: 42 },
+            { label: "Chiron Return (50)", age: 50 },
+            { label: "Second Saturn Return (59)", age: 59 },
+          ].map(m => (
+            <button
+              key={m.label}
+              type="button"
+              onClick={() => setSelectedAge(m.age)}
+              className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                activeAge === m.age
+                  ? "bg-fuchsia-500/30 text-fuchsia-200 border border-fuchsia-400/50"
+                  : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Profection Details Grid */}
+        {profection && (
+          <div className="mt-5 grid gap-3 sm:grid-cols-3 pt-4 border-t border-white/10 text-xs">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <span className="text-slate-400">Hellenistic Profected House</span>
+              <p className="font-serif text-base font-bold text-white mt-1">
+                House {activeProfectedHouse} ({activeProfectionSign})
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Themes: {profection.traditionalThemes.slice(0, 3).join(", ")}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <span className="text-slate-400">Time-Lord / Ruler of the Year</span>
+              <p className="font-serif text-base font-bold text-amber-200 mt-1">
+                {activeProfectionLord}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                The planetary ruler overseeing this 12-month developmental arc.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <span className="text-slate-400">Chronological Status</span>
+              <p className="font-serif text-base font-bold text-cyan-200 mt-1">
+                {activeAge < Math.floor(currentAge)
+                  ? "Past Developmental Chapter"
+                  : activeAge === Math.floor(currentAge)
+                  ? "Active Life Territory"
+                  : "Upcoming Future Chapter"}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {Math.abs(activeAge - Math.floor(currentAge))} years from your present age.
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* The 8 Chronological Life Story Chapters */}
+      <div className="space-y-6" role="feed" aria-label="Life Story Chapters">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div>
+            <h2 className="font-serif text-2xl font-bold text-white">Chronological Chapters</h2>
+            <p className="text-xs text-slate-400">
+              Each chapter integrates the full calculation engine: Hellenistic profections, Dasha,
+              Lots, and planetary returns.
+            </p>
+          </div>
+          <span className="text-xs font-semibold text-fuchsia-300">
+            {chapters.length} Narrative Stages
+          </span>
+        </div>
+
+        {chapters.map((chapter, idx) => {
+          const isExpanded = Boolean(expandedChapterKeys[chapter.key]);
+          const narrative = generatedChapters[chapter.key];
+          const isGenerating = generatingKey === chapter.key;
+          const chapterError = chapterErrors[chapter.key];
+          const generationBusy = generatingKey !== null || generateChapterMutation.isPending;
+
+          const statusColor =
+            chapter.status === "current"
+              ? "border-fuchsia-400/80 bg-fuchsia-500/10 text-fuchsia-200"
+              : chapter.status === "past"
+              ? "border-slate-700/60 bg-slate-800/40 text-slate-300"
+              : "border-cyan-400/60 bg-cyan-500/10 text-cyan-200";
+
+          return (
+            <article
+              key={chapter.key}
+              className={`overflow-hidden rounded-3xl border transition-all ${
+                chapter.status === "current"
+                  ? "border-fuchsia-400/60 bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950 shadow-[0_0_30px_rgba(217,70,239,0.12)]"
+                  : "border-slate-800 bg-slate-950/70"
+              }`}
+            >
+              {/* Chapter Card Header */}
+              <div className="p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/5 font-serif text-lg font-bold text-fuchsia-300">
+                      {idx + 1}
+                    </span>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusColor}`}
+                        >
+                          {chapter.status === "current"
+                            ? "Active Stage"
+                            : chapter.status === "past"
+                            ? "Completed Stage"
+                            : "Upcoming Horizon"}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">
+                          {chapter.periodLabel}
+                        </span>
+                      </div>
+                      <h3 className="font-serif text-2xl font-bold text-white mt-1">
+                        {chapter.title}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateChapter(chapter.key)}
+                      disabled={generationBusy}
+                      aria-busy={isGenerating}
+                      className="disabled:opacity-60 disabled:cursor-not-allowed inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-fuchsia-300/40 bg-fuchsia-400/15 px-4 text-xs font-semibold text-fuchsia-100 shadow-[0_0_15px_rgba(232,121,249,0.15)] transition hover:bg-fuchsia-400/25"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin" />
+                          <span>Synthesizing...</span>
+                        </>
+                      ) : narrative ? (
+                        <>
+                          <RefreshCw size={13} />
+                          <span>Regenerate Chapter</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={13} />
+                          <span>{chapterError ? "Retry Chapter" : "Generate Chapter"}</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedChapterKeys(prev => ({
+                          ...prev,
+                          [chapter.key]: !prev[chapter.key],
+                        }))
+                      }
+                      className="rounded-xl border border-white/10 bg-white/5 p-2.5 text-slate-300 hover:text-white"
+                      aria-label={isExpanded ? "Collapse chapter" : "Expand chapter"}
+                    >
+                      <ChevronDown
+                        size={17}
+                        className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Astrological Pivot Pills */}
+                <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-white/10">
+                  {chapter.astrologicalPivots.map((pivot, pIdx) => (
+                    <span
+                      key={pIdx}
+                      className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-300"
+                    >
+                      ✦ {pivot}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Expandable Chapter Content */}
+              {isExpanded && (
+                <div className="border-t border-white/10 bg-slate-900/40 p-6 space-y-6">
+                  {/* Dual Frame Comparison Banner */}
+                  <div className="grid gap-4 sm:grid-cols-2 rounded-2xl border border-white/10 bg-black/40 p-4 text-xs">
+                    <div>
+                      <div className="font-bold text-amber-200 flex items-center gap-1.5 mb-1">
+                        <Eye size={13} />
+                        <span>God View Celestial Law (Fixed Frame)</span>
+                      </div>
+                      <p className="text-slate-300 leading-relaxed">{chapter.godViewThemes}</p>
+                    </div>
+
+                    <div>
+                      <div className="font-bold text-fuchsia-200 flex items-center gap-1.5 mb-1">
+                        <Compass size={13} />
+                        <span>Agent View Temporal Reality (Local Houses)</span>
+                      </div>
+                      <p className="text-slate-300 leading-relaxed">{chapter.agentViewThemes}</p>
+                    </div>
+                  </div>
+
+                  {/* Significant Planetary Cycles in this stage */}
+                  {chapter.keyCycles.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Approximate Life-Cycle Windows ({chapter.keyCycles.length})
+                      </h4>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {chapter.keyCycles.map(cycle => (
+                          <div
+                            key={cycle.id}
+                            className={`rounded-xl border p-3 text-xs ${
+                              cycle.isCurrent
+                                ? "border-fuchsia-400/50 bg-fuchsia-400/10 text-white"
+                                : "border-white/10 bg-white/5 text-slate-300"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between font-semibold">
+                              <span className="text-amber-200 font-serif text-sm">
+                                {cycle.title}
+                              </span>
+                              <span className="text-[11px] text-slate-400">
+                                Age ~{cycle.age} ({cycle.approxDate})
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[11px] text-slate-300 leading-relaxed">
+                              {cycle.description}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {isGenerating && (
+                    <div role="status" aria-live="polite" className="flex items-center gap-3 rounded-xl border border-fuchsia-300/30 bg-fuchsia-950/40 p-4 text-sm text-fuchsia-100">
+                      <Loader2 size={20} className="shrink-0 animate-spin" />
+                      <div><p className="font-semibold">Generating this chapter…</p><p className="mt-1 text-xs text-fuchsia-200/80">Your request is in progress. The chapter will appear here when the interpretation service returns.</p></div>
+                    </div>
+                  )}
+                  {chapterError && !isGenerating && (
+                    <div role="alert" className="rounded-xl border border-rose-400/40 bg-rose-950/40 p-4 text-sm text-rose-100">
+                      <p className="font-semibold">Chapter generation failed</p>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-xs">{chapterError}</p>
+                      <button type="button" disabled={generationBusy} onClick={() => void handleGenerateChapter(chapter.key)} className="mt-3 rounded-lg border border-rose-300/40 px-3 py-2 text-xs font-semibold disabled:opacity-60">Retry Chapter</button>
+                    </div>
+                  )}
+
+                  {/* The Master Interpreter Narrative */}
+                  {narrative ? (
+                    <div className="rounded-2xl border border-fuchsia-300/30 bg-slate-950/80 p-6 space-y-4 shadow-inner">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                        <span className="text-xs font-bold uppercase tracking-wider text-fuchsia-300 flex items-center gap-1.5">
+                          <Sparkles size={14} /> Master Interpreter Storytelling
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleNarration(narrative)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-fuchsia-400/30 bg-fuchsia-400/10 px-3 py-1 text-xs font-semibold text-fuchsia-200 hover:bg-fuchsia-400/20"
+                          title="Read chapter aloud"
+                        >
+                          {isSpeaking ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                          <span>{isSpeaking ? "Stop Narration" : "Listen (Narration)"}</span>
+                        </button>
+                      </div>
+
+                      <div className="prose prose-invert prose-fuchsia max-w-none text-sm leading-8 text-slate-200">
+                        <Streamdown>{narrative}</Streamdown>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 p-8 text-center space-y-3">
+                      <BookOpen size={32} className="mx-auto text-fuchsia-300/60" />
+                      <div>
+                        <h4 className="font-serif text-lg font-semibold text-white">
+                          {isGenerating ? "Writing your chapter…" : chapterError ? "Chapter not generated" : "Chapter Narrative Unwritten"}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                          Click below to have the Master Interpreter synthesize this chapter using
+                          your exact natal chart, profections, and active planetary returns.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateChapter(chapter.key)}
+                        disabled={generationBusy}
+                        aria-busy={isGenerating}
+                        className="disabled:opacity-60 disabled:cursor-not-allowed inline-flex min-h-11 items-center gap-2 rounded-xl border border-fuchsia-400/50 bg-fuchsia-500/20 px-5 text-xs font-semibold text-white shadow-[0_0_20px_rgba(217,70,239,0.2)] hover:bg-fuchsia-500/30"
+                      >
+                        {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                        <span>{isGenerating ? "Synthesizing chapter…" : chapterError ? "Retry " + chapter.title : "Generate " + chapter.title}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+
+      {/* Engine Audit Modal: Verifies all 20 layers */}
+      <Dialog open={isAuditingOpen} onOpenChange={setIsAuditingOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto border-2 border-cyan-400/50 bg-slate-950 text-slate-100">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-serif text-2xl text-cyan-200">
+              <ShieldCheck className="h-6 w-6 text-cyan-400" />
+              Complete Astrological Engine Audit (20 Layers)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              Auditing: Calculation → Data Output → API Procedure → Interpreter Integration → UI
+              Display across all supported astronomical methods.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 space-y-4 text-xs">
+            <div className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-400/10 p-3">
+              <span className="font-semibold text-cyan-200">
+                Operational Status: 19 Verified Layers · 1 Documented Uncalibrated
+              </span>
+              <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                100% CANONICAL AUDIT PASS
+              </span>
+            </div>
+
+            <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-black/40">
+              {auditLayers.map(l => (
+                <div key={l.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-cyan-400 font-bold">#{l.id}</span>
+                      <strong className="font-serif text-sm text-white">{l.name}</strong>
+                      <span className="text-slate-400 font-mono text-[11px]">({l.layer})</span>
+                    </div>
+
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                        l.status === "implemented-verified"
+                          ? "border border-emerald-400/40 bg-emerald-500/15 text-emerald-300"
+                          : "border border-amber-400/40 bg-amber-500/15 text-amber-300"
+                      }`}
+                    >
+                      {l.status === "implemented-verified"
+                        ? "Verified & Operating"
+                        : "Documented Uncalibrated"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300 pt-1">
+                    <div>
+                      <span className="text-slate-400">Calculation Source:</span>{" "}
+                      <code className="text-cyan-200">{l.calculationSource}</code>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">API Procedure:</span>{" "}
+                      <code className="text-violet-200">{l.apiProcedure}</code>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Data Output:</span>{" "}
+                      <span className="text-slate-200">{l.dataOutput}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">UI Display:</span>{" "}
+                      <span className="text-slate-200">{l.uiDisplayLocation}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 pt-1 border-t border-white/5">
+                    <strong>Audit Note:</strong> {l.auditNotes}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+
+================================================================================
+FILE: client/src/components/LifeStoryInterpreter.tsx
+BLOB SHA: 06015f96d5440760967f18121117794d578c24dc
+================================================================================
+import { useState } from "react";
+import { Link } from "wouter";
+import { BookOpen, Loader2, Sparkles } from "lucide-react";
+import { Streamdown } from "streamdown";
+import { trpc } from "@/lib/trpc";
+import type { ChartResult } from "../../../server/astronomy";
+
+const STAGES = [
+  { key: "birth_origins", title: "Birth: The World You Enter", period: "Home, family circumstances and the start of the journey" },
+  { key: "childhood", title: "Childhood: Home, School & First Discoveries", period: "Growing up, early experiences and first opportunities" },
+  { key: "adolescence", title: "Teenage Years: Turning Points", period: "Education, friendships, first openings and new directions" },
+  { key: "early_adulthood", title: "Young Adulthood: Work, Love & Independence", period: "Life outside childhood and the first adult crossroads" },
+  { key: "adult_development", title: "Adult Years: Family, Achievements & Trials", period: "Building a life and confronting major reversals" },
+  { key: "later_life", title: "Later Years: Contribution & Legacy", period: "What later chapters of life may bring and leave behind" },
+  { key: "turning_points", title: "The Major Turning Points", period: "A lifetime of evidence-supported openings and setbacks" },
+  { key: "future_chapters", title: "The Road Ahead", period: "Upcoming life chapters in the supplied timing windows" },
+] as const;
+
+export function LifeStoryInterpreter({ chart }: { chart: ChartResult }) {
+  const [open, setOpen] = useState(false);
+  const [chapters, setChapters] = useState<Record<number, string>>({});
+  const [active, setActive] = useState<number | null>(null);
+  const story = trpc.lifeStory.generateChapter.useMutation();
+
+  const read = async (index: number) => {
+    if (story.isPending) return;
+    setActive(index);
+    if (chapters[index]) return;
+    const stage = STAGES[index];
+    try {
+      const answer = await story.mutateAsync({ chart, chapterKey: stage.key });
+      setChapters(previous => ({ ...previous, [index]: answer.content }));
+    } catch {
+      // The mutation error is shown below and the chapter can be retried.
+    }
+  };
+
+  return (
+    <section className="relative overflow-hidden rounded-3xl border border-fuchsia-400/40 bg-gradient-to-br from-slate-950 via-violet-950/40 to-slate-950 p-4 shadow-[0_0_28px_rgba(217,70,239,0.13)] sm:p-6" aria-label="Life Story Interpreter">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-fuchsia-500/15 blur-3xl" />
+      <div className="relative flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-fuchsia-200"><BookOpen className="h-5 w-5" /><span className="text-xs font-bold uppercase tracking-[0.2em]">Firmament Life Story</span></div>
+          <h2 className="mt-2 font-serif text-2xl text-white">The Story Within Your Stars</h2>
+          <p className="mt-1 max-w-xl text-sm text-slate-300">A deep, chronological life journey—from childhood and first opportunities to adulthood, major changes and legacy.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/life-story"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-400/20"
+          >
+            <Sparkles className="h-4 w-4 text-cyan-300" />
+            <span>Open Dedicated Life Story Suite →</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(value => !value)}
+            className="rounded-xl border border-fuchsia-300/50 bg-fuchsia-400/15 px-4 py-3 text-sm font-semibold text-fuchsia-100 shadow-[0_0_16px_rgba(232,121,249,0.14)]"
+          >
+            {open ? "Close Life Story" : "Explore Quick Stages"}
+          </button>
+        </div>
+      </div>
+      {open && <div className="relative mt-5 space-y-3">
+        <p className="text-xs text-slate-400">Choose a chapter of life's journey. Read about possible real-world experiences and turning points from symbolic chart evidence—not a behavior or personality profile.</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {STAGES.map((stage, index) => <button key={stage.title} type="button" disabled={story.isPending} onClick={() => void read(index)} className={`rounded-xl border p-3 text-left transition hover:border-fuchsia-300/70 hover:bg-fuchsia-400/10 ${active === index ? "border-fuchsia-300/70 bg-fuchsia-400/10" : "border-white/15 bg-white/5"}`}>
+            <span className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-fuchsia-300" />{stage.title}</span>
+            <span className="mt-1 block text-xs text-slate-400">{stage.period}{chapters[index] ? " · Ready" : ""}</span>
+          </button>)}
+        </div>
+        {story.isPending && <p role="status" className="flex items-center gap-2 text-sm text-fuchsia-200"><Loader2 className="h-4 w-4 animate-spin" />Writing this chapter from your chart evidence…</p>}
+        {story.error && !story.isPending && <p role="alert" className="text-sm text-rose-300">Chapter generation failed: {story.error.message}. Select the chapter to retry.</p>}
+        {active !== null && chapters[active] && <article className="rounded-2xl border border-fuchsia-300/20 bg-slate-950/70 p-4 text-sm leading-7 text-slate-100 sm:p-6">
+          <Streamdown>{chapters[active]}</Streamdown>
+        </article>}
+      </div>}
+    </section>
+  );
+}
+
+
+================================================================================
+FILE: client/src/pages/LifeStoryPage.tsx
+BLOB SHA: 0b15e884c0d0e90592b36532f8b47ff6eff5905e
+================================================================================
+import { Link } from "wouter";
+import { BookOpen, Sparkles, UserRound, ArrowLeft } from "lucide-react";
+import { useProfileSession } from "@/contexts/ProfileSessionContext";
+import { LifeStoryDashboard } from "@/components/LifeStoryDashboard";
+import { SAMPLE_PROFILE } from "@/components/NatalProfileBuilder";
+import { trpc } from "@/lib/trpc";
+
+export default function LifeStoryPage() {
+  const { profile, setProfile, chart, setChart } = useProfileSession();
+  const calculate = trpc.hybrid.calculate.useMutation({ onSuccess: setChart });
+
+  const handleLoadSample = () => {
+    setProfile(SAMPLE_PROFILE);
+    calculate.mutate({
+      location: SAMPLE_PROFILE.location,
+      latitude: SAMPLE_PROFILE.latitude,
+      longitude: SAMPLE_PROFILE.longitude,
+      timezone: SAMPLE_PROFILE.timezone,
+      date: SAMPLE_PROFILE.date,
+      time: SAMPLE_PROFILE.time,
+      worldview: "agent",
+      readingScope: "natal",
+      birthTimeKnown: true,
+    });
+  };
+
+  return (
+    <div className="relative min-h-screen isolate bg-transparent text-slate-100 selection:bg-fuchsia-400/30">
+      <div
+        className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(180deg,rgba(3,5,12,.15),rgba(3,5,12,.65)_60%,rgba(3,5,12,.9)),url('/assets/firmament-starfield.png')] bg-cover bg-top bg-fixed"
+        aria-hidden="true"
+      />
+
+      <main className="relative z-10 mx-auto max-w-[1440px] px-4 py-6 md:px-8 md:py-10">
+        {/* Navigation Breadcrumb */}
+        <div className="mb-6 flex items-center justify-between">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
+          >
+            <ArrowLeft size={14} />
+            <span>Back to Observatory</span>
+          </Link>
+
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <Link href="/profile" className="hover:text-amber-200 transition">
+              Birth Profile
+            </Link>
+            <span>/</span>
+            <Link href="/chart" className="hover:text-cyan-200 transition">
+              Diamond Chart
+            </Link>
+            <span>/</span>
+            <span className="text-fuchsia-300 font-semibold">Life Story Mode</span>
+          </div>
+        </div>
+
+        {/* If chart is available, show the complete Life Story Dashboard */}
+        {chart ? (
+          <LifeStoryDashboard chart={chart} />
+        ) : (
+          <div className="mx-auto max-w-xl rounded-3xl border border-fuchsia-400/30 bg-slate-950/80 p-8 text-center space-y-4 shadow-[0_0_40px_rgba(217,70,239,0.12)]">
+            <BookOpen size={40} className="mx-auto text-fuchsia-300" />
+            <h2 className="font-serif text-2xl font-bold text-white">
+              Unlock Your Chronological Life Story
+            </h2>
+            <p className="text-xs leading-relaxed text-slate-300">
+              Life Story Mode transforms your calculated birth chart into an expansive chronological
+              biography. Set up your personal birth profile or load a sample chart to begin.
+            </p>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/profile"
+                className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-amber-300/40 bg-amber-400/15 px-5 text-xs font-semibold text-amber-200 hover:bg-amber-400/25"
+              >
+                <UserRound size={14} />
+                <span>Set Up My Birth Profile</span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLoadSample}
+                disabled={calculate.isPending}
+                className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-fuchsia-300/40 bg-fuchsia-400/15 px-5 text-xs font-semibold text-fuchsia-200 hover:bg-fuchsia-400/25"
+              >
+                <Sparkles size={14} />
+                <span>{calculate.isPending ? "Calculating..." : "Explore Sample Chart"}</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+
+================================================================================
+FILE: server/lifeStoryEngine.test.ts
+BLOB SHA: 4569433702099dc15ba266ba9a346022e59b96c5
+================================================================================
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { mockInvokeLLM } = vi.hoisted(() => ({
+  mockInvokeLLM: vi.fn(),
+}));
+
+vi.mock("./_core/llm", () => ({
+  invokeLLM: mockInvokeLLM,
+}));
+
+import { calculateChart, type ChartResult } from "./astronomy";
+import {
+  LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS,
+  compileLifeStoryChapters,
+  generateLifeStoryChapter,
+  generatePlanetaryCycles,
+} from "./lifeStoryEngine";
+import {
+  GENESIS_HISTORIAN_INSTRUCTIONS,
+  GENESIS_QUESTIONS,
+  buildGenesisInquiryPrompt,
+} from "./genesisLifeStoryInquiry";
+
+let SAMPLE_CHART: ChartResult;
+
+describe("Life Story — chronology and Genesis 72-question evidence synthesis", () => {
+  beforeAll(async () => {
+    SAMPLE_CHART = await calculateChart({
+      date: "1986-11-20",
+      time: "10:06",
+      location: "Dallas, TX",
+      latitude: 32.7767,
+      longitude: -96.797,
+      timezone: "America/Chicago",
+      worldview: "agent",
+    });
+  });
+
+  beforeEach(() => {
+    mockInvokeLLM.mockReset();
+    mockInvokeLLM.mockResolvedValue({
+      choices: [{
+        message: {
+          content: "You enter your school years as family circumstances begin to change. " +
+            "An early opportunity for study could open a path beyond your first home, " +
+            "though the same years may require material sacrifices that delay that opening.",
+        },
+      }],
+    });
+  });
+
+  it("requires chronological life developments instead of personality or behavior analysis", () => {
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).toContain("THE ABSOLUTE LIFE HISTORIAN");
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).toContain("A LIFE, NOT A PERSONALITY REPORT");
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).toContain("72-QUESTION DEEP INVESTIGATION");
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).toContain("single most plausible");
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).toContain("FOLLOW THE CHRONOLOGY");
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).toContain("ASTROLOGICAL POSSIBILITY IS NOT VERIFIED HISTORY");
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).toContain("Keep all astrology jargon");
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).not.toContain("Show what the reader does when a pattern is active");
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).not.toContain("how their behavior lands with other people");
+    expect(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS).not.toContain("psychological astrologer");
+  });
+
+  it("uses 72 silent biographical questions, including independently supported turning points", () => {
+    expect(GENESIS_QUESTIONS).toHaveLength(72);
+    expect(GENESIS_QUESTIONS[0].id).toBe(1);
+    expect(GENESIS_QUESTIONS[71].id).toBe(72);
+    expect(GENESIS_QUESTIONS.map(q => q.section)).toContain("Teenage Turning Points");
+    expect(GENESIS_QUESTIONS.map(q => q.section)).toContain("Career and Public Achievement");
+    expect(GENESIS_QUESTIONS.map(q => q.section)).toContain("Trials, Losses and Recoveries");
+    expect(GENESIS_HISTORIAN_INSTRUCTIONS).toContain("life historian");
+    expect(GENESIS_HISTORIAN_INSTRUCTIONS).toContain("Never turn this into a behavioral");
+    const prompt = buildGenesisInquiryPrompt("Teenage years");
+    expect(prompt).toContain("Investigate all 72 questions internally");
+    expect(prompt).toContain("Teenage years");
+    expect(prompt).not.toMatch(/What would this person's natural temperament look like/i);
+    expect(prompt).not.toMatch(/How might they behave in a classroom/i);
+  });
+
+  it("returns eight chronological chapters with real-world life settings", () => {
+    const cycles = generatePlanetaryCycles(SAMPLE_CHART, 38);
+    const chapters = compileLifeStoryChapters(SAMPLE_CHART, 38, cycles);
+    expect(chapters).toHaveLength(8);
+    expect(chapters.map(c => c.key)).toEqual([
+      "birth_origins", "childhood", "adolescence", "early_adulthood",
+      "adult_development", "later_life", "turning_points", "future_chapters",
+    ]);
+    expect(chapters[0].title).toContain("Birth");
+    expect(chapters[1].title).toContain("Childhood");
+    expect(chapters[2].title).toContain("Teenage");
+    expect(chapters[3].title).toContain("Young Adulthood");
+    expect(chapters[4].title).toContain("Adult Years");
+    expect(chapters[5].title).toContain("Later Years");
+    expect(chapters[1].agentViewThemes).toContain("school");
+    expect(chapters[4].agentViewThemes).toContain("career");
+    expect(JSON.stringify({ cycles, chapters })).not.toMatch(/psychological crucible|emotional regulation|attachment wounds/i);
+  });
+
+  it("sends the event-focused Genesis inquiry and pinpoint instructions into the life-story AI pathway", async () => {
+    const result = await generateLifeStoryChapter(SAMPLE_CHART, "childhood", 8);
+    expect(mockInvokeLLM).toHaveBeenCalledTimes(1);
+    const callArg = mockInvokeLLM.mock.calls[0][0];
+    expect(callArg.messages[0].role).toBe("system");
+    expect(callArg.messages[0].content).toBe(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS);
+    expect(callArg.messages[1].content).toContain("PINPOINT SILENT SYNTHESIS");
+    expect(callArg.messages[1].content).toContain("72 Genesis questions");
+    expect(callArg.messages[1].content).toContain("Childhood");
+    expect(callArg.messages[1].content).toContain("Age ~");
+    expect(callArg.messages[1].content).not.toContain("how their behavior lands");
+    expect(result.title).toContain("Childhood");
+    expect(result.content).toContain("family circumstances");
+  });
+});
+
+
+================================================================================
+FILE: server/chartPageReading.test.ts
+BLOB SHA: f89c4df8a9683a16f831968a5f878aa1046b33e3
+================================================================================
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  buildPlacementPackets,
+  packPlacementMiniPrompt,
+  validatePlacementSummaries,
+  buildChartPageReading,
+} from "./chartPageReading";
+import { calculateChart, type ChartResult } from "./astronomy";
+import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+import { invokeLLM } from "./_core/llm";
+vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
+let chart: ChartResult;
+let packets: ReturnType<typeof buildPlacementPackets>;
+beforeAll(async () => {
+  chart = await calculateChart({
+    location: "Dallas, TX",
+    latitude: 32.7767,
+    longitude: -96.797,
+    timezone: "America/Chicago",
+    date: "1986-11-20",
+    time: "10:06",
+    worldview: "agent-vs-god",
+    readingScope: "natal",
+  });
+  const { synthesis, canonicalChart } = await synthesizeChartForReading(
+    chart,
+    "natal",
+    "Placement summaries"
+  );
+  packets = buildPlacementPackets(canonicalChart, synthesis);
+});
+const response = (selected = packets) => ({
+  placements: selected.map(p => ({
+    name: p.name,
+    paragraph:
+      "A compact interpretation that connects this planet’s own calculated mansion, pada, manzil and supporting conditions to a specific drive, strength and challenge in everyday life.",
+    evidenceIds: p.facts.map(f => f.id),
+    layerIds: Array.from(new Set(p.facts.map(f => f.layerId))),
+  })),
+});
+describe("Compact Chart page placement summaries", () => {
+  it("preserves Sun and Moon mansion evidence and vargas", () => {
+    const sun = packets.find(p => p.name === "Sun")!;
+    const moon = packets.find(p => p.name === "Moon")!;
+    expect(sun.canon.nakshatra.name).toBe("Jyeshtha");
+    expect(moon.canon.nakshatra.name).toBe("Pushya");
+    expect(moon.canon.manzil.name).toBe("Al-Tarf");
+    expect(moon.facts.some(f => f.layerId === "vedic-vargas-divisional")).toBe(
+      true
+    );
+    expect(
+      JSON.stringify(packPlacementMiniPrompt(packets)).length
+    ).toBeLessThan(170_000);
+  });
+  it("keeps actual judgments for Nodes and angles, excluding failed or unrelated methods", () => {
+    for (const name of [
+      "Ascendant",
+      "Descendant",
+      "North Node",
+      "South Node",
+    ]) {
+      const p = packets.find(p => p.name === name)!;
+      expect(p.judgments.length).toBeGreaterThan(0);
+      expect(
+        p.judgments.some(j => j.methodId === "vedic-nakshatras-and-padas")
+      ).toBe(true);
+      expect(p.judgments.every(j => j.sources.length > 0)).toBe(true);
+    }
+    expect(
+      packets
+        .flatMap(p => p.judgments)
+        .some(j => j.methodId.startsWith("transit:"))
+    ).toBe(false);
+  });
+  it("losslessly retains all method judgments in the compact AI packet", () => {
+    const packed = packPlacementMiniPrompt(packets);
+    packets.forEach((p, index) =>
+      p.judgments.forEach((j, jIndex) => {
+        const row =
+          packed.findings[packed.placements[index].findingRefs[jIndex]!];
+        const restored = (row[0] as Array<string | number>)
+          .map(part =>
+            typeof part === "number" ? packed.textTable[part] : part
+          )
+          .join("");
+        expect(restored).toBe(j.judgment);
+        expect(row[2]).toEqual(j.evidenceIds);
+      })
+    );
+  });
+  it("requires every displayed planet, including the Sun, and rejects duplicates", () => {
+    expect(
+      validatePlacementSummaries(response(), packets).placements.length
+    ).toBe(chart.movingBodies.length + 4);
+    const missingSun = response();
+    missingSun.placements = missingSun.placements.filter(p => p.name !== "Sun");
+    expect(() => validatePlacementSummaries(missingSun, packets)).toThrow(
+      "INCOMPLETE"
+    );
+    const duplicate = response();
+    duplicate.placements[0] = duplicate.placements[1];
+    expect(() => validatePlacementSummaries(duplicate, packets)).toThrow(
+      "INCOMPLETE"
+    );
+  });
+  it("rejects sign-only summaries and invented evidence", () => {
+    const shallow = response();
+    shallow.placements[0].layerIds = [
+      "western-planets-and-signs",
+      "elemental-decans",
+    ];
+    expect(() => validatePlacementSummaries(shallow, packets)).toThrow(
+      "SHALLOW"
+    );
+    const invented = response();
+    invented.placements[0].evidenceIds.push("invented-shadbala");
+    expect(() => validatePlacementSummaries(invented, packets)).toThrow(
+      "UNGROUNDED"
+    );
+  });
+  it("sends all raw calculations, full outcomes and Canon while requesting concise placement prose", async () => {
+    vi.mocked(invokeLLM).mockResolvedValue({
+      choices: [
+        {
+          message: {
+            role: "assistant",
+            content: JSON.stringify(
+              response(packets.filter(p => ["Sun", "Moon"].includes(p.name)))
+            ),
+          },
+          index: 0,
+          finish_reason: "stop",
+        },
+      ],
+      id: "test",
+      created: 0,
+      model: "test",
+    });
+    const result = await buildChartPageReading(chart, "natal");
+    expect(result.placements[0].name).toBe("Sun");
+    const call = vi.mocked(invokeLLM).mock.calls[0][0];
+    expect(call.max_tokens).toBe(2000);
+    expect(call.timeoutMs).toBe(25000);
+    expect(call.response_format).toMatchObject({
+      type: "json_schema",
+      json_schema: { strict: true },
+    });
+    expect(call.messages[0].content).toContain(
+      "psychological astrologer and narrative writer for The Absolute"
+    );
+    expect(call.messages[0].content).toContain("70–110 words");
+    const delivered = JSON.parse(String(call.messages[1].content)) as {
+      chartScope?: string;
+      placements: Array<{
+        name: string;
+        position: { display: string };
+        methods: Array<{ methodId: string; evidenceIds: string[] }>;
+      }>;
+    };
+    expect(delivered.chartScope).toBe("natal");
+    expect(delivered.placements).toHaveLength(2);
+    expect(delivered.placements[0].methods.length).toBeGreaterThan(0);
+    expect(call.messages[0].content).toContain("Keep all astrology terminology out");
+    expect(call.messages[1].content).not.toContain("UNIFIED MASTER SYNTHESIS");
+    await buildChartPageReading(chart, "natal");
+    expect(invokeLLM).toHaveBeenCalledTimes(1);
+  });
+  it("generates transit minis from the independent event sky, not the natal packets", async () => {
+    vi.mocked(invokeLLM).mockClear();
+    const eventChart = await calculateChart({
+      ...chart.input,
+      readingScope: "combined",
+      transitLocation: "Las Vegas",
+      transitLatitude: 36.1699,
+      transitLongitude: -115.1398,
+      transitTimezone: "America/Los_Angeles",
+      transitDate: "2026-11-07",
+      transitTime: "09:00",
+    });
+    vi.mocked(invokeLLM).mockImplementation(async request => {
+      const input = JSON.parse(String(request.messages[1].content)) as {
+        chartScope?: string;
+        placements: Array<{
+          name: string;
+          placementEvidenceId: string;
+          position: { display: string };
+          methods: Array<{ methodId: string; evidenceIds: string[] }>;
+        }>;
+      };
+      expect(input.chartScope).toBe("event");
+      if (input.placements.some((p: any) => p.name === "Sun"))
+        expect(
+          input.placements.find((p: any) => p.name === "Sun")!.position.display
+        ).not.toBe(chart.movingBodies.find(p => p.name === "Sun")!.display);
+      expect(input.placements.length).toBeGreaterThan(0);
+      return {
+        id: "event",
+        created: 0,
+        model: "test",
+        choices: [
+          {
+            index: 0,
+            finish_reason: "stop",
+            message: {
+              role: "assistant",
+              content: JSON.stringify({
+                placements: input.placements.map((p: any) => ({
+                  name: p.name,
+                  paragraph: `${p.name} describes the selected event sky, with its calculated mansion, elemental-family ruler and supporting conditions shaping a specific expression in this event rather than a birth biography.`,
+                  evidenceIds: [
+                    p.placementEvidenceId,
+                    ...p.methods.flatMap((m: any) => m.evidenceIds),
+                  ],
+                  layerIds: Array.from(
+                    new Set([
+                      "western-planets-and-signs",
+                      ...p.methods.map((m: any) => m.methodId),
+                    ])
+                  ),
+                })),
+              }),
+            },
+          },
+        ],
+      };
+    });
+    const result = await buildChartPageReading(eventChart, "transit");
+    expect(result.placements.length).toBe(2);
+    expect(vi.mocked(invokeLLM).mock.calls.length).toBeLessThanOrEqual(2);
+  });
+});
+
+
+================================================================================
+FILE: server/master-interpreter.test.ts
+BLOB SHA: 452c27179c49d49bad2538a9d38c2fea74364371
+================================================================================
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
+vi.mock("./_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
+
+import { askHost } from "./host";
+import { followUp, generateChapter } from "./interpretation";
+import { calculateChart, type ChartResult } from "./astronomy";
+import { MASTER_INTERPRETER_PROMPT, FULL_SYNTHESIS_STYLE, DEEP_SYNTHESIS_METHOD, MINI_SYNTHESIS_STYLE, READING_BEHAVIOR_DIRECTIVE, buildAstrologyInterpreterSystem } from "./master-interpreter";
+
+let chart: ChartResult;
+beforeAll(async () => {
+  chart = await calculateChart({
+    location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797,
+    timezone: "America/Chicago", date: "1986-11-20", time: "10:06",
+    worldview: "agent", readingScope: "combined",
+    transitLocation: "Las Vegas, Nevada, USA", transitLatitude: 36.1699,
+    transitLongitude: -115.1398, transitTimezone: "America/Los_Angeles",
+    transitDate: "2026-11-06", transitTime: "11:06",
+  });
+});
+
+function systemPromptFromLastCall() {
+  const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };
+  return request.messages.find(message => message.role === "system")?.content ?? "";
+}
+
+beforeEach(() => {
+  mocked.invokeLLM.mockReset();
+  mocked.invokeLLM.mockResolvedValue({
+    choices: [{ message: { role: "assistant", content: "A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. A synthetic interpretation grounded in the supplied chart evidence. " } }],
+  });
+});
+
+describe("Master Interpreter prompt coverage", () => {
+  it("keeps the current replacement interpretation contract and domain instructions", () => {
+    expect(MASTER_INTERPRETER_PROMPT).toContain("psychological astrologer and narrative writer for The Absolute");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Use the full chart silently");
+    expect(MASTER_INTERPRETER_PROMPT).toContain(READING_BEHAVIOR_DIRECTIVE);
+    expect(MASTER_INTERPRETER_PROMPT).toContain("COMBINATION RECOGNITION");
+    for (const term of ["Parivartana", "Pancha Mahapurusha", "Nabhasa", "Translation of light", "28 Manazil", "Overcoming", "Valens' planetary mixtures", "ORIGINAL interpretations"]) {
+      expect(FULL_SYNTHESIS_STYLE).toContain(term);
+      expect(MASTER_INTERPRETER_PROMPT).toContain(term);
+    }
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("The specificity filter eliminates generic conclusions, not novel ones.");
+    expect(FULL_SYNTHESIS_STYLE).toContain("Do not confuse one trine with a Grand Trine");
+    expect(FULL_SYNTHESIS_STYLE).toContain("WHO ARE YOU — WHOLE-CHART HOMEPAGE MODE");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Taurus—neck/throat/voice");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Scorpio—reproductive and excretory regions");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("8—genital region/bladder");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Never infer a symptom, disease");
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("IF YES — KILL IT");
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("DO NOT rewrite it");
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("Could this describe almost anybody?");
+    expect(READING_BEHAVIOR_DIRECTIVE).toContain("VERBATIM");
+    expect(MINI_SYNTHESIS_STYLE).toContain(READING_BEHAVIOR_DIRECTIVE);
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Write the life the reader recognizes");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Give natural gifts the same weight as difficult patterns");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Use short, bold section titles specific to this reader and topic");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Keep all astrology terminology out of the reader-facing text, including the titles");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Use no bullet-point lists of traits");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("End with a sentence that belongs to this reader and this chart");
+    expect(DEEP_SYNTHESIS_METHOD).toContain("Trace rulership chains");
+    expect(DEEP_SYNTHESIS_METHOD).toContain("short, bold section title specific to this reader and topic");
+    expect(DEEP_SYNTHESIS_METHOD).toContain("bullet-point lists of traits");
+    expect(FULL_SYNTHESIS_STYLE).toContain(DEEP_SYNTHESIS_METHOD);
+    expect(buildAstrologyInterpreterSystem("fixture domain instruction")).toContain("fixture domain instruction");
+  });
+
+  it("writes chapters from a distilled prompt, the evidence sheet, and the reading plan", async () => {
+    const analysis = JSON.stringify({
+      threads: [{ title: "Test thread", insight: "A synthetic insight.", evidence: ["Sun — Aries 1°"], chapters: ["identity"] }],
+      tensions: [],
+      chapters: { identity: { angle: "A synthetic angle.", evidence: ["Sun — Aries 1°"] } },
+    });
+    await generateChapter(chart, "natal", "synthetic chart intelligence", "identity", [], analysis);
+    const request = mocked.invokeLLM.mock.calls.at(-1)?.[0] as { messages: Array<{ role: string; content: string }> };
+    const system = systemPromptFromLastCall();
+    const user = request.messages.find(message => message.role === "user")?.content ?? "";
+    expect(system).toContain(MASTER_INTERPRETER_PROMPT);
+    expect(system).not.toContain("What this means for you");
+    expect(system).toContain("Follow the reading plan");
+    expect(user).toContain("CHART EVIDENCE SHEET");
+    expect(user).toContain("READING PLAN");
+    expect(user).toContain("Test thread");
+  });
+
+  it("attaches the Master Interpreter to chart-anchored interpretive follow-ups", async () => {
+    await followUp(chart, { intelligence: "synthetic", reading: "synthetic" }, [], "What does this pattern mean?", "combined");
+    expect(systemPromptFromLastCall()).toContain(MASTER_INTERPRETER_PROMPT);
+  });
+
+  it("attaches the Master Interpreter to model-backed Host responses", async () => {
+    await askHost([], "What might a supplied Saturn placement mean in relationships?");
+    expect(systemPromptFromLastCall()).toContain(MASTER_INTERPRETER_PROMPT);
+    expect(systemPromptFromLastCall()).toContain("The Absolute's Host Interpreter");
+  });
+});
+
+
+================================================================================
+FILE: server/astrologyKnowledge/interpretation.integration.test.ts
+BLOB SHA: 067206be25460df1f8fcc331c46dfba520ac5960
+================================================================================
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocked = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
+vi.mock("../_core/llm", () => ({ invokeLLM: mocked.invokeLLM }));
+
+import {
+  followUp,
+  generateChapter,
+  generateInterpretation,
+} from "../interpretation";
+import { calculateChart, type ChartResult } from "../astronomy";
+
+let chart: ChartResult;
+beforeAll(async () => {
+  chart = await calculateChart({
+    location: "Dallas, Texas, USA", latitude: 32.7767, longitude: -96.797,
+    timezone: "America/Chicago", date: "1986-11-20", time: "10:06",
+    worldview: "agent", readingScope: "combined",
+    transitLocation: "Las Vegas, Nevada, USA", transitLatitude: 36.1699,
+    transitLongitude: -115.1398, transitTimezone: "America/Los_Angeles",
+    transitDate: "2026-11-06", transitTime: "11:06",
+  });
+});
+
+describe("interpretation.generate knowledge gateway integration", () => {
+  beforeEach(() => {
+    mocked.invokeLLM.mockReset();
+    mocked.invokeLLM.mockImplementation(async request => {
+      const system = request.messages.find((message: { role: string }) => message.role === "system")?.content || "";
+      const plan = {
+        threads: [
+          { title: "Solar pattern", insight: "Fixture solar evidence.", evidence: ["Sun"], chapters: ["identity", "work-purpose"] },
+          { title: "Lunar pattern", insight: "Fixture lunar evidence.", evidence: ["Moon"], chapters: ["mind-heart", "relationships"] },
+        ],
+        tensions: [],
+        chapters: Object.fromEntries(["identity", "mind-heart", "relationships", "work-purpose"].map(id => [id, { angle: "Fixture evidence", evidence: [id === "identity" ? "Sun" : "Moon"] }])),
+      };
+      let content = system.includes("silent first reader") ? JSON.stringify(plan) : "A synthetic interpretation grounded in the supplied chart evidence. ".repeat(8);
+      if (system.includes("Interpret ALL supplied method outcomes")) {
+        const user = request.messages.find((m: {role:string}) => m.role === "user").content as string;
+        const packet = JSON.parse(user.slice(user.lastIndexOf("\n") + 1));
+        const active = packet.methodOutcomes.filter((o: {status:string}) => o.status === "interpreted");
+        const sections = Array.from({length:3}, (_,i) => ({id:`section-${i}`,title:`Integrated theme ${i}`,text:"A connected interpretation grounded in actual method judgments, explaining the chart-specific relationship between placement, mansion, condition, and their practical consequences. ".repeat(2),findingIds:[] as string[]}));
+        const methodContributions = active.map((o: any,i: number) => {
+          const row = o.findingJudgments[0];
+          sections[i%3].findingIds.push(row[8]);
+          const judgment = row[1].map((part: string | number) => typeof part === "number" ? packet.textTable[part] : part).join("");
+          return {methodId:o.methodId,sectionIds:[sections[i%3].id],findingIds:[row[8]],contribution:judgment.slice(0,1000)};
+        });
+        for (const valence of ["supportive","challenging"]) {
+          const row = active.flatMap((o:any)=>o.findingJudgments).find((row:any)=>row[4]===valence);
+          if(row) sections[0].findingIds.push(row[8]);
+        }
+        content = JSON.stringify({answer:"The supplied relationship findings connect natal disposition to concrete conditions, preserving both strengths and pressure in this reading.", sections, methodContributions, methodsReviewed:packet.methodOutcomes.map((o:any)=>o.methodId)});
+      }
+      return { choices: [{ message: { role: "assistant", content }, finish_reason: "stop" }] };
+    });
+  });
+
+  it("runs question planning and evidence retrieval before the Master Interpreter request", async () => {
+    const result = await generateInterpretation(
+      chart,
+      "natal",
+      "Why do relationships keep repeating the same pattern for me?"
+    );
+    expect(result.evidencePacket.plan.subjects).toEqual(
+      expect.arrayContaining(["7th-house", "7th-lord", "D9"])
+    );
+    expect(result.intelligence).toContain("ASTROLOGY EVIDENCE PACKET");
+    expect(result.masterSynthesis.narrativeAudit.passed).toBe(true);
+    expect(result.reading).toContain(result.masterSynthesis.narrative.sections[0].text);
+    expect(result.masterSynthesis.narrative.methodContributions.length).toBeGreaterThan(10);
+    expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "dasha")).toBe(true);
+    expect(result.evidencePacket.vedicEvidence.some(item => item.technique === "ashtakavarga")).toBe(true);
+    const userPrompts = mocked.invokeLLM.mock.calls.map(call =>
+      String(
+        call[0].messages.find(
+          (message: { role: string }) => message.role === "user"
+        )?.content ?? ""
+      )
+    );
+    expect(
+      userPrompts.some(
+        prompt =>
+          prompt.includes("ASTROLOGY EVIDENCE PACKET") &&
+          prompt.includes("Why do relationships")
+      )
+    ).toBe(true);
+    expect(userPrompts.some(prompt => prompt.includes("[vedic/dasha]") && prompt.includes("[vedic/ashtakavarga]"))).toBe(true);
+
+    await generateChapter(
+      chart,
+      "natal",
+      result.intelligence,
+      "relationships",
+      [],
+      result.analysis
+    );
+    await followUp(
+      chart,
+      { intelligence: result.intelligence, reading: "Synthetic reading" },
+      [],
+      "What does that mean specifically for marriage?",
+      "natal"
+    );
+    const laterPrompts = mocked.invokeLLM.mock.calls.map(call =>
+      String(
+        call[0].messages.find(
+          (message: { role: string }) => message.role === "user"
+        )?.content ?? ""
+      )
+    );
+    expect(
+      laterPrompts.some(
+        prompt =>
+          prompt.includes("ASTROLOGY EVIDENCE PACKET") &&
+          prompt.includes("Chapter focus: Love, Sex, Marriage & Heartbreak")
+      )
+    ).toBe(true);
+    expect(
+      laterPrompts.some(
+        prompt =>
+          prompt.includes("ASTROLOGY EVIDENCE PACKET") &&
+          prompt.includes("specifically for marriage")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects invented evidence labels in the reading plan", async () => {
+    const plan = {
+      threads: [
+        {
+          title: "Calculated pattern",
+          insight:
+            "A selected Genesis pattern should remain available to the reading.",
+          evidence: ["Stellium in Scorpio"],
+          chapters: ["work-purpose"],
+        },
+        {
+          title: "Selected activation",
+          insight:
+            "A selected activation should remain available to the reading.",
+          evidence: ["Genesis Astro Engine activation"],
+          chapters: ["mind-heart"],
+        },
+      ],
+      tensions: [],
+      chapters: {
+        identity: { angle: "identity", evidence: ["Stellium in Scorpio"] },
+        "mind-heart": {
+          angle: "mind",
+          evidence: ["Genesis Astro Engine activation"],
+        },
+        relationships: { angle: "relationships", evidence: ["Venus"] },
+        "work-purpose": { angle: "work", evidence: ["Stellium in Scorpio"] },
+      },
+    };
+    mocked.invokeLLM.mockResolvedValue({
+      choices: [
+        { message: { role: "assistant", content: JSON.stringify(plan) } },
+      ],
+    });
+    await expect(generateInterpretation(
+      chart,
+      "natal",
+      "What is the major pattern affecting my career?"
+    )).rejects.toThrow("READING_PLAN_FAILED");
+    expect(mocked.invokeLLM).toHaveBeenCalledTimes(2);
+  });
+});
+
+
+================================================================================
+FILE: server/astrologyKnowledge/synthesis/focusedPlacementHandoff.test.ts
+BLOB SHA: 13e392305366670a629bf1565470a0ac07684ea7
+================================================================================
+import { expect, it, vi } from "vitest";
+import { invokeLLM } from "../../_core/llm";
+import { decodeEvidence } from "./evidenceTransport";
+import { runInterpretation } from "./interpretationPipeline";
+import type { SynthesisResult } from "./types";
+
+vi.mock("../../_core/llm", () => ({
+  invokeLLM: vi.fn(async () => ({ choices: [{ message: { content: "reading" }, finish_reason: "stop" }] })),
+}));
+
+it("keeps every Moon finding and linked calculation in the serialized focused request", async () => {
+  const judgments = Array.from({ length: 4 }, (_, i) => ({
+    id: `j${i}`,
+    subject: i === 3 ? "Relationship" : "Moon",
+    evidenceIds: [`e${i}`],
+    judgment: "Detailed finding ".repeat(24) + i,
+  }));
+  const calculations = judgments.map((finding, i) => ({
+    label: i === 3 ? "Moon reception" : "Calculation",
+    evidenceId: finding.evidenceIds[0],
+    calculatedValue: finding.judgment,
+  }));
+  const synthesis = {
+    methodOutcomes: [{
+      findingJudgments: [...judgments, { subject: "Mars", evidenceIds: ["other"] }],
+      calculatedFindings: calculations,
+    }],
+    sourceSnapshot: { methodExecutionLedger: [] },
+  } as unknown as SynthesisResult;
+  await runInterpretation("FOCUSED_MINI", synthesis, {
+    messages: [{ role: "user", content: "Moon" }],
+  }, { focusedPlacement: "Moon" });
+  const messages = vi.mocked(invokeLLM).mock.calls[0][0].messages;
+  const content = messages.map(message => message.content)
+    .find(value => typeof value === "string" && value.startsWith("FOCUSED PLACEMENT DOSSIER"));
+  if (typeof content !== "string") throw new Error("Missing Moon dossier");
+  const dossier = decodeEvidence(JSON.parse(content.slice(content.indexOf("\n") + 1)));
+  const [packet] = dossier as Array<{
+    coverage: { omittedJudgments: number; omittedCalculations: number };
+    methods: Array<[string, string, string, string, Array<[string, string, string, string, string[]]>, Array<[string, string, string]>]>;
+  }>;
+  const method = packet.methods[0];
+  expect(method[4].map(item => item[0])).toEqual(judgments.map(item => item.id));
+  expect(method[5].map(item => item[0])).toEqual(calculations.map(item => item.evidenceId));
+  expect(packet.coverage).toMatchObject({ omittedJudgments: 0, omittedCalculations: 0 });
+  // The scoped model packet preserves all evidence IDs but avoids repeating
+  // long chart-wide prose that creates provider 413 request-size failures.
+  expect(content.length).toBeLessThan(16_000);
+});
+
+it("keeps both bodies of a transit contact and the full method registry without sending unrelated Mars detail", async () => {
+  vi.mocked(invokeLLM).mockClear();
+  const bodies = ["Moon", "Mercury", "Mars"];
+  const synthesis = {
+    snapshotId: "contact-snapshot",
+    methodOutcomes: [
+      {
+        methodId: "planetary-aspects", methodName: "Aspects",
+        status: "computed-with-result", frame: "agent",
+        findingJudgments: bodies.map(name => ({
+          id: `judgment-${name}`, subject: name,
+          evidenceIds: [`evidence-${name}`],
+          judgment: `Interpret ${name} based on its calculated position.`,
+        })),
+        calculatedFindings: bodies.map(name => ({
+          evidenceId: `evidence-${name}`,
+          label: `${name} placement`, calculatedValue: `${name} chart coordinates`,
+        })),
+      },
+      {
+        methodId: "fixed-stars-royal-watchers", methodName: "Fixed Stars",
+        status: "not-calculated", frame: "agent",
+        findingJudgments: [], calculatedFindings: [],
+      },
+    ],
+    sourceSnapshot: { methodExecutionLedger: [
+      { id: "planetary-aspects", status: "computed-with-result" },
+      { id: "fixed-stars-royal-watchers", status: "not-calculated" },
+    ] },
+  } as unknown as SynthesisResult;
+
+  await runInterpretation("FOCUSED_MINI", synthesis, {
+    messages: [{ role: "user", content: "Moon trine natal Mercury" }],
+  }, { focusedPlacement: "Moon|Mercury" });
+  const messages = vi.mocked(invokeLLM).mock.calls.at(-1)![0].messages;
+  const serialized = messages.map(m => m.content).find(
+    value => typeof value === "string" && value.startsWith("FOCUSED PLACEMENT DOSSIER.")
+  );
+  if (typeof serialized !== "string") throw new Error("Missing contact dossier");
+  const [packet] = decodeEvidence(JSON.parse(serialized.slice(serialized.indexOf("\n") + 1))) as Array<{
+    coverage: { methodsIncluded: number };
+    methods: Array<[string, string, string, string, Array<[string]>, Array<[string]>]>;
+  }>;
+  expect(packet.coverage.methodsIncluded).toBe(2);
+  expect(packet.methods.map(method => method[0])).toEqual([
+    "planetary-aspects", "fixed-stars-royal-watchers",
+  ]);
+  expect(packet.methods[0][4].map(j => j[0])).toEqual(["judgment-Moon", "judgment-Mercury"]);
+  expect(packet.methods[0][5].map(c => c[0])).toEqual(["evidence-Moon", "evidence-Mercury"]);
+  expect(serialized).not.toContain("judgment-Mars");
+  expect(serialized.length).toBeLessThan(16_000);
+});
+
+
+================================================================================
+FILE: server/_core/llm.test.ts
+BLOB SHA: e6e21ae44c20795a720cabe503c937709d849b88
+================================================================================
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_GEMINI_MODEL, ENV, resolveGroqModel } from "./env";
+import { invokeLLM } from "./llm";
+
+const { generateContent } = vi.hoisted(() => ({ generateContent: vi.fn() }));
+vi.mock("@google/genai", () => ({
+  GoogleGenAI: class {
+    models = { generateContent };
+  },
+  ThinkingLevel: { MINIMAL: "MINIMAL" },
+}));
+
+const originalEnv = { ...ENV };
+afterEach(() => {
+  Object.assign(ENV, originalEnv);
+  vi.resetAllMocks();
+});
+
+describe("Gemini model recovery", () => {
+  const request = { messages: [{ role: "user" as const, content: "Generate a reading." }] };
+
+  it("retries a model 404 on the default Gemini model with only a Gemini key", async () => {
+    Object.assign(ENV, { geminiModel: "gemini-2.5-flash", geminiApiKey: "test-key", groqApiKey: "", openrouterApiKey: "" });
+    generateContent
+      .mockRejectedValueOnce(Object.assign(new Error("Model unavailable"), { status: 404 }))
+      .mockResolvedValueOnce({ text: "Recovered reading" });
+
+    const result = await invokeLLM(request);
+
+    expect(result.model).toBe(DEFAULT_GEMINI_MODEL);
+    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenNthCalledWith(1, expect.objectContaining({ model: "gemini-2.5-flash" }));
+    expect(generateContent).toHaveBeenNthCalledWith(2, expect.objectContaining({ model: DEFAULT_GEMINI_MODEL }));
+  });
+
+  it("does not retry the same model when the default returns 404", async () => {
+    Object.assign(ENV, { geminiModel: DEFAULT_GEMINI_MODEL, geminiApiKey: "test-key", groqApiKey: "", openrouterApiKey: "" });
+    generateContent.mockRejectedValueOnce(Object.assign(new Error("Model unavailable"), { status: 404 }));
+
+    await expect(invokeLLM(request)).rejects.toThrow("AI_PROVIDERS_FAILED: gemini GEMINI_REQUEST_FAILED: HTTP 404");
+    expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Groq model configuration", () => {
+  it("replaces the retired Render model and preserves supported overrides", () => {
+    expect(resolveGroqModel(" llama-3.3-70b-versatile ")).toBe("openai/gpt-oss-120b");
+    expect(resolveGroqModel()).toBe("openai/gpt-oss-120b");
+    expect(resolveGroqModel("openai/gpt-oss-20b")).toBe("openai/gpt-oss-20b");
+  });
+});
+
+describe("Provider fallback and full-reading response integrity", () => {
+  const request = { messages: [{ role: "user" as const, content: "Interpret all supplied evidence." }] };
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("falls through from rejected Gemini to a successful Groq interpretation", async () => {
+    Object.assign(ENV, {
+      geminiApiKey: "test-gemini",
+      groqApiKey: "test-groq",
+      openrouterApiKey: "",
+    });
+    generateContent.mockRejectedValueOnce(Object.assign(new Error("Invalid request"), { status: 400 }));
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      id: "groq-test",
+      created: 1,
+      model: "test",
+      choices: [{ index: 0, message: { role: "assistant", content: "Complete joined interpretation." }, finish_reason: "stop" }],
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const result = await invokeLLM(request);
+    expect(result.choices[0].message.content).toBe("Complete joined interpretation.");
+    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("api.groq.com");
+  });
+
+  it("does not pass a blank Gemini reading to the user when another provider is available", async () => {
+    Object.assign(ENV, {
+      geminiApiKey: "test-gemini",
+      groqApiKey: "test-groq",
+      openrouterApiKey: "",
+    });
+    generateContent.mockResolvedValueOnce({ text: "", candidates: [{ finishReason: "STOP" }] });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      id: "groq-test",
+      created: 1,
+      model: "test",
+      choices: [{ index: 0, message: { role: "assistant", content: "Recovered from empty response." }, finish_reason: "stop" }],
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const result = await invokeLLM(request);
+    expect(result.choices[0].message.content).toBe("Recovered from empty response.");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports that no AI providers are configured rather than hanging", async () => {
+    Object.assign(ENV, { geminiApiKey: "", groqApiKey: "", openrouterApiKey: "" });
+    await expect(invokeLLM(request)).rejects.toThrow("AI_FREE_PROVIDER_UNCONFIGURED");
+  });
+});
+
+
+================================================================================
+FILE: shared/placementMiniReadings.ts
+BLOB SHA: 922ffff009e51d70560db32ec43ee9b8aff34399
+================================================================================
+import { READING_FRAMEWORK_VERSION } from "./readingIdentity";
+import type { ChartResult, ChartRow } from "../server/astronomy";
+
+export const PLACEMENT_MINI_VERSION = "placement-minis-v4-bounded";
+export function placementRows(chart: ChartResult): ChartRow[] {
+  return [
+    ...chart.movingBodies,
+    chart.ascendant,
+    chart.descendant,
+    chart.northNode,
+    chart.southNode,
+  ].filter((row): row is ChartRow => Boolean(row));
+}
+/** Natal mini readings are unaffected by a live transit refresh. */
+export function placementMiniIdentity(
+  chart: ChartResult,
+  layer: "natal" | "transit" = "natal",
+  accountId = "guest"
+) {
+  const input = chart.input;
+  return `${PLACEMENT_MINI_VERSION}:${READING_FRAMEWORK_VERSION}:${JSON.stringify(
+    {
+      accountId,
+      layer,
+      worldview: chart.worldview,
+      birth: {
+        date: input.date,
+        time: input.time,
+        location: input.location,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        timezone: input.timezone,
+        birthTimeKnown: input.birthTimeKnown,
+        sunriseAnchor: input.sunriseAnchor,
+        xyzPositions: input.xyzPositions,
+      },
+      utc: chart.utc,
+      houses: chart.houses,
+      placements: placementRows(chart).map(p => [
+        p.name,
+        p.longitude,
+        p.house,
+        p.godHouse,
+        p.agentHouse,
+        p.retrograde,
+        p.speed,
+      ]),
+      ...(layer === "transit"
+        ? {
+            transitDate: chart.transitDate,
+            transits: chart.transits,
+            transitLocation: input.transitLocation,
+            transitLatitude: input.transitLatitude,
+            transitLongitude: input.transitLongitude,
+            transitTimezone: input.transitTimezone,
+            transitSunriseAnchor: input.transitSunriseAnchor,
+          }
+        : {}),
+    }
+  )}`;
+}
+
+
+================================================================================
+FILE: shared/planetPersonaMatrix.ts
+BLOB SHA: 3ca6fc205b08928fa7e649f91e347d4924b2103b
+================================================================================
+import { aspectBetween, type ChartResult } from "../server/astronomy";
+import { placementRows } from "./placementMiniReadings";
+import { retrievePlacementDossier } from "../server/astrologyKnowledge/canon/retriever";
+import { calculateVedicStrength } from "../server/astrologyKnowledge/vedic/strength";
+import { evaluateVedicJyotishSystem } from "../server/astrologyKnowledge/canon/vedicJyotishCanon";
+import { EGYPTIAN_BOUNDS_TABLE } from "../server/astrologyKnowledge/canon/dignitiesAndHorary";
+import { normalizeLongitude, ZODIAC_SIGNS } from "./hybrid";
+
+export type PlanetPersonaTrait = {
+  planet: string;
+  display: string;
+  sign: string;
+  degreeInSign: number;
+  formattedPosition: string;
+  house: number;
+  houseArena: string;
+  houseStrengthVirupas: number;
+  houseSupportTier: "above-chart-average" | "below-chart-average" | "at-chart-average";
+  decanNumber: number;
+  decanSubRuler: string;
+  decanFlavor: string;
+  chaldeanFaceRuler: string;
+  nakshatraName: string;
+  nakshatraPada: number;
+  nakshatraDeity: string;
+  nakshatraShakti: string;
+  manzilName: string;
+  manzilEnglish: string;
+  manzilStationRole: string;
+  essentialDignities: string[];
+  essentialDebilities: string[];
+  sovereigntyTier: "High Sovereignty / Exalted / Domicile" | "Moderate / Neutral" | "Friction / Debility";
+  boundsEgyptian: string;
+  navamshaD9: string;
+  shadbalaVirupas: number;
+  shadbalaAdequacyRatio: number;
+  shadbalaStatus: "Robust & Capable" | "Strained / Strategic";
+  activeAspects: string[];
+  activeDashaRole: string;
+  fixedStarContact?: string;
+  godFrameArchetype: string;
+  agentFrameLived: string;
+  personaArchetype: string;
+  charismaProfile: string;
+};
+
+const HOUSE_ARENAS: Record<number, string> = {
+  1: "Identity, physical vitality, primary life presence, personal autonomy",
+  2: "Sustenance, tangible wealth, personal resources, earned security",
+  3: "Immediate communication, craft, local connections, tactical agility",
+  4: "Ancestral roots, emotional sanctuary, home foundations, private life",
+  5: "Creative offspring, sovereignty, artistic joy, deliberate romance",
+  6: "Daily discipline, labor, bodily health, crisis management",
+  7: "The Other, public contracts, intimate mirrors, open partners",
+  8: "Shared assets, crisis transformation, deep psychology, inheritance",
+  9: "Higher wisdom, sacred philosophy, long pilgrimages, divine law",
+  10: "Public authority, executive career, legacy, civic standing",
+  11: "Community alliances, patronage, future ideals, shared gains",
+  12: "Inner retreats, solitary contemplation, unseen currents, transcendent surrender",
+};
+
+const PLANET_ARCHETYPE_TITLES: Record<string, string> = {
+  Sun: "The Sovereign Beacon",
+  Moon: "The Instinctual Sanctuary",
+  Mercury: "The Strategic Architect",
+  Venus: "The Steward of Values & Magnetism",
+  Mars: "The Sovereign Blade",
+  Jupiter: "The Cosmopolitan Sage",
+  Saturn: "The Master of Endurance",
+  Uranus: "The Awakener & Lightning Rod",
+  Neptune: "The Intuitive Visionary",
+  Pluto: "The Catalyst of Truth & Power",
+  Ascendant: "The Primal Helm & First Impression",
+  Descendant: "The Relational Counterpart & Contract",
+  NorthNode: "The Growth Horizon (Rahu)",
+  "North Node": "The Growth Horizon (Rahu)",
+  SouthNode: "The Ingrained Baseline (Ketu)",
+  "South Node": "The Ingrained Baseline (Ketu)",
+};
+
+function getEgyptianBound(sign: string, degInSign: number): string {
+  const table = EGYPTIAN_BOUNDS_TABLE[sign] ?? [];
+  for (const [limit, ruler] of table) {
+    if (degInSign < limit) return `${ruler} Bounds`;
+  }
+  return "Saturn Bounds";
+}
+
+/**
+ * Generates an integrated, charismatic personality narrative uniting the 7+ methods.
+ * Gives the planet distinct charisma and pinpoint psychological reality.
+ */
+function generateCharismaProfile(trait: Omit<PlanetPersonaTrait, "charismaProfile">): string {
+  const dignityPhrase = trait.essentialDignities.length
+    ? `standing with sovereign ${trait.essentialDignities.join(", ")} authority`
+    : trait.essentialDebilities.length
+    ? `operating with high-friction, strategic tension via ${trait.essentialDebilities.join(", ")}`
+    : "operating as a neutral, discerning mediator";
+
+  const virupaPhrase = trait.shadbalaStatus === "Robust & Capable"
+    ? `backed by robust operational capacity (${trait.shadbalaVirupas} virupas, ${(trait.shadbalaAdequacyRatio * 100).toFixed(0)}% adequacy)`
+    : `requiring conscious cultivation and tactical patience (${trait.shadbalaVirupas} virupas, ${(trait.shadbalaAdequacyRatio * 100).toFixed(0)}% adequacy)`;
+
+  const aspectSummary = trait.activeAspects.length
+    ? `Directly in dialogue through ${trait.activeAspects.slice(0, 2).join(" and ")}.`
+    : "Standing relatively unhindered, broadcasting its archetype with raw independence.";
+
+  return `${trait.personaArchetype} commands House ${trait.house} (${trait.houseArena}), ${dignityPhrase}. Infused with the sub-elemental flavor of ${trait.decanFlavor} and regulated by ${trait.boundsEgyptian}, its emotional pulse is governed by Nakshatra ${trait.nakshatraName} (Deity: ${trait.nakshatraDeity}; Shakti: ${trait.nakshatraShakti}) and anchored in the Hermetic station of ${trait.manzilName}. In real-world manifestation, it is ${virupaPhrase}, while receiving ${trait.houseSupportTier} environmental support from its house sector. ${aspectSummary} Soul-level evolution is channeled through its Navamsha D9 in ${trait.navamshaD9}.`;
+}
+
+/**
+ * Builds the canonical Planet Personality Matrix for every body in the chart.
+ * Assembles all 7+ foundational methods into an Excel-ready grid and charismatic character profile.
+ */
+export function buildPlanetPersonaMatrix(chart: ChartResult): PlanetPersonaTrait[] {
+  const sun = chart.movingBodies.find(p => p.name === "Sun");
+  const isDayChart = Boolean(sun && sun.house >= 7);
+
+  let vedicStrength: ReturnType<typeof calculateVedicStrength> | null = null;
+  try {
+    vedicStrength = calculateVedicStrength(chart);
+  } catch {
+    /* Optional fallback */
+  }
+
+  let vedicSystem: ReturnType<typeof evaluateVedicJyotishSystem> | null = null;
+  try {
+    vedicSystem = evaluateVedicJyotishSystem(chart);
+  } catch {
+    /* Optional fallback */
+  }
+
+  const rows = placementRows(chart);
+
+  return rows.map((row): PlanetPersonaTrait => {
+    const dossier = retrievePlacementDossier(row, chart, isDayChart);
+    const norm = normalizeLongitude(row.longitude);
+    const sign = ZODIAC_SIGNS[Math.floor(norm / 30)] || "Aries";
+    const degInSign = Number((norm % 30).toFixed(2));
+    const houseArena = HOUSE_ARENAS[row.house] ?? `House ${row.house} field of experience`;
+
+    const decanSubRuler = dossier.decanRecord?.triplicitySubRuler ?? "itself";
+    const decanNumber = dossier.decanRecord?.decanNumber ?? 1;
+    const decanFlavor = dossier.decanRecord
+      ? `${dossier.decanRecord.triplicitySubRuler} flavor: Decan ${decanNumber} (${dossier.decanRecord.sign} triplicity) — ${dossier.decanRecord.traditionalTitle}`
+      : "Pure sign expression";
+    const chaldeanFaceRuler = dossier.decanRecord?.chaldeanFaceRuler ?? decanSubRuler;
+
+    const boundsEgyptian = getEgyptianBound(sign, degInSign);
+
+    const nakshatraName = dossier.nakshatraRecord?.name ?? "Unknown Nakshatra";
+    const nakshatraPada = dossier.activePada?.pada ?? 1;
+    const nakshatraDeity = dossier.nakshatraRecord?.deity ?? "Cosmic Preserver";
+    const nakshatraShakti = dossier.nakshatraRecord?.shakti || (dossier.nakshatraRecord ? `Governed by ${dossier.nakshatraRecord.vimshottariRuler}` : "Cosmic Shakti");
+
+    const manzilName = dossier.manzilRecord?.name ?? "Unknown Manzil";
+    const manzilEnglish = dossier.manzilRecord?.englishTranslation ?? "";
+    const manzilStationRole = dossier.manzilRecord?.natalAndPsychologicalMeaning || dossier.manzilRecord?.englishTranslation || `Hermetic station of ${manzilName}`;
+
+    const essentialDignities = dossier.dignityAndCondition.essentialDignities ?? [];
+    const essentialDebilities = dossier.dignityAndCondition.essentialDebilities ?? [];
+
+    let sovereigntyTier: PlanetPersonaTrait["sovereigntyTier"] = "Moderate / Neutral";
+    if (essentialDignities.some(d => /domicile|exalt/i.test(d))) {
+      sovereigntyTier = "High Sovereignty / Exalted / Domicile";
+    } else if (essentialDebilities.some(d => /fall|detriment/i.test(d))) {
+      sovereigntyTier = "Friction / Debility";
+    }
+
+    const planetStrength = vedicStrength?.planets.find(p => p.body === row.name);
+    const shadbalaVirupas = planetStrength ? Math.round(planetStrength.totalVirupas) : 400;
+    const shadbalaAdequacyRatio = planetStrength ? Number(planetStrength.adequacyRatio.toFixed(2)) : 1.0;
+    const shadbalaStatus: PlanetPersonaTrait["shadbalaStatus"] = shadbalaAdequacyRatio >= 1.0
+      ? "Robust & Capable"
+      : "Strained / Strategic";
+
+    const houseStrength = vedicStrength?.houses.find(h => h.house === row.house);
+    const houseStrengthVirupas = houseStrength ? Math.round(houseStrength.totalVirupas) : 500;
+    const houseSupportTier = (houseStrength?.relativeSupport || "at-chart-average") as PlanetPersonaTrait["houseSupportTier"];
+
+    const navamshaD9 = dossier.activePada
+      ? `${dossier.activePada.navamshaSign} (Ruler: ${dossier.activePada.navamshaRuler})`
+      : "Unassigned";
+
+    // Geometric aspects involving this placement
+    const activeAspects: string[] = rows
+      .filter(other => other.name !== row.name)
+      .map(other => {
+        const contact = aspectBetween(row.longitude, other.longitude);
+        if (contact && contact.orb <= 5) {
+          return `${contact.aspect.charAt(0).toUpperCase() + contact.aspect.slice(1)} ${other.name} (${contact.orb.toFixed(2)}° orb)`;
+        }
+        return null;
+      })
+      .filter((a): a is string => Boolean(a));
+
+    // Dasha timing role
+    let activeDashaRole = "Dormant Cycle";
+    if (vedicSystem?.vimshottariDasha) {
+      const v = vedicSystem.vimshottariDasha;
+      if (v.currentActiveMahadasha && v.currentActiveMahadasha.toLowerCase() === row.name.toLowerCase()) {
+        activeDashaRole = `Current Mahadasha Lord (${v.currentActiveMahadasha} Cycle)`;
+      } else if (v.currentActiveAntardasha && v.currentActiveAntardasha.toLowerCase() === row.name.toLowerCase()) {
+        activeDashaRole = `Active Antardasha Sub-Lord (${v.currentActiveAntardasha})`;
+      } else if (v.startingMahadashaLord && v.startingMahadashaLord.toLowerCase() === row.name.toLowerCase()) {
+        activeDashaRole = `Birth Mahadasha Lord`;
+      }
+    }
+
+    const fixedStarContact = dossier.fixedStarContacts.length > 0
+      ? dossier.fixedStarContacts.map(fc => `${fc.star.name} (${fc.orbDeg.toFixed(2)}° orb)${fc.star.isRoyalStar ? " [Royal Watcher Star]" : ""}`).join("; ")
+      : undefined;
+
+    const godFrameArchetype = `${row.name} in ${sign}: Core Chart Principle`;
+    const agentFrameLived = dossier.godToAgentNote || dossier.planetInHouseKnowledge?.core || dossier.planetInHouseSynthesis;
+    const personaArchetype = PLANET_ARCHETYPE_TITLES[row.name] ?? `The ${row.name} Sovereign`;
+
+    const partialTrait = {
+      planet: row.name,
+      display: row.display,
+      sign,
+      degreeInSign: degInSign,
+      formattedPosition: row.display,
+      house: row.house,
+      houseArena,
+      houseStrengthVirupas,
+      houseSupportTier,
+      decanNumber,
+      decanSubRuler,
+      decanFlavor,
+      chaldeanFaceRuler,
+      nakshatraName,
+      nakshatraPada,
+      nakshatraDeity,
+      nakshatraShakti,
+      manzilName,
+      manzilEnglish,
+      manzilStationRole,
+      essentialDignities,
+      essentialDebilities,
+      sovereigntyTier,
+      boundsEgyptian,
+      navamshaD9,
+      shadbalaVirupas,
+      shadbalaAdequacyRatio,
+      shadbalaStatus,
+      activeAspects,
+      activeDashaRole,
+      fixedStarContact,
+      godFrameArchetype,
+      agentFrameLived,
+      personaArchetype,
+    };
+
+    const charismaProfile = generateCharismaProfile(partialTrait);
+
+    return {
+      ...partialTrait,
+      charismaProfile,
+    };
+  });
+}
+
+
+
+================================================================================
+FILE: shared/masterPlanetPersonaConfig.ts
+BLOB SHA: 49e81cd57434667aa2f74a346348c988bf20b409
+================================================================================
+import type { ChartResult } from "../server/astronomy";
+import { buildPlanetPersonaMatrix } from "./planetPersonaMatrix";
+
+export const CORE_REQUESTED_ACTORS = [
+  "Sun",
+  "Moon",
+  "Ascendant",
+  "Descendant",
+  "North Node",
+  "South Node",
+] as const;
+
+export const FULL_CELESTIAL_ENSEMBLE = [
+  "Sun",
+  "Moon",
+  "Ascendant",
+  "Descendant",
+  "North Node",
+  "South Node",
+  "Mercury",
+  "Venus",
+  "Mars",
+  "Jupiter",
+  "Saturn",
+  "Uranus",
+  "Neptune",
+  "Pluto",
+] as const;
+
+import {
+  buildRealWorldTranslation,
+  type RealWorldActorTranslation,
+  PLANET_SYMBOLS,
+} from "./peopleTalkTranslation";
+
+export interface CanonicalPlacementMapping {
+  actor: string;
+  symbol: string;
+  formattedPosition: string;
+  sign: string;
+  house: number;
+  houseArena: string;
+  decanFlavor: string;
+  nakshatraName: string;
+  nakshatraPada: number;
+  nakshatraDeity: string;
+  nakshatraShakti: string;
+  manzilName: string;
+  manzilStationRole: string;
+  essentialDignities: string[];
+  essentialDebilities: string[];
+  sovereigntyTier: string;
+  boundsEgyptian: string;
+  shadbalaVirupas: number;
+  shadbalaStatus: string;
+  houseStrengthVirupas: number;
+  houseSupportTier: string;
+  navamshaD9: string;
+  activeAspects: string[];
+  activeDashaRole: string;
+  fixedStarContact?: string;
+  personaArchetype: string;
+  realWorldTranslation: RealWorldActorTranslation;
+}
+export { buildRealWorldTranslation, type RealWorldActorTranslation, PLANET_SYMBOLS };
+
+/**
+ * Extracts requested actors from a question or prompt.
+ * If none are explicitly requested, defaults to the Core Requested Ensemble (Sun, Moon, Ascendant, Descendant, Nodes).
+ */
+export function extractRequestedActors(promptOrQuestion: string): string[] {
+  const q = promptOrQuestion.toLowerCase();
+  const requested: string[] = [];
+
+  const candidates: Array<[string, RegExp]> = [
+    ["Sun", /\bsun\b/i],
+    ["Moon", /\bmoon\b/i],
+    ["Ascendant", /\b(ascendant|asc|rising)\b/i],
+    ["Descendant", /\b(descendant|desc|dsc)\b/i],
+    ["North Node", /\b(north node|rahu|northnode)\b/i],
+    ["South Node", /\b(south node|ketu|southnode)\b/i],
+    ["Mercury", /\bmercury\b/i],
+    ["Venus", /\bvenus\b/i],
+    ["Mars", /\bmars\b/i],
+    ["Jupiter", /\bjupiter\b/i],
+    ["Saturn", /\bsaturn\b/i],
+    ["Uranus", /\buranus\b/i],
+    ["Neptune", /\bneptune\b/i],
+    ["Pluto", /\bpluto\b/i],
+  ];
+
+  for (const [name, regex] of candidates) {
+    if (regex.test(q)) requested.push(name);
+  }
+
+  // If the prompt mentions "nodes" generically, add both North and South Node
+  if (/\bnodes?\b/i.test(q)) {
+    if (!requested.includes("North Node")) requested.push("North Node");
+    if (!requested.includes("South Node")) requested.push("South Node");
+  }
+
+  // If fewer than 2 actors were explicitly isolated, or if the question is broad,
+  // ensure the full core ensemble is included so no data is dropped!
+  if (requested.length <= 1 || /\b(chart|reading|all|placements|everything|overview|who am i|synthesis)\b/i.test(q)) {
+    for (const core of CORE_REQUESTED_ACTORS) {
+      if (!requested.includes(core)) requested.push(core);
+    }
+  }
+
+  return requested;
+}
+
+/**
+ * Maps requested placements to their full canonical meanings and real-world people talk.
+ * Forces 100% data coverage before narrative synthesis.
+ */
+export function mapRequestedPlacementsToCanonicalMeaning(
+  chart: ChartResult,
+  requestedActors?: string[]
+): CanonicalPlacementMapping[] {
+  const matrix = buildPlanetPersonaMatrix(chart);
+  const actorsToMap = requestedActors && requestedActors.length > 0
+    ? requestedActors
+    : [...CORE_REQUESTED_ACTORS];
+
+  return actorsToMap.map(actorName => {
+    const trait = matrix.find(
+      p =>
+        p.planet.toLowerCase() === actorName.toLowerCase() ||
+        p.planet.replace(/\s+/g, "").toLowerCase() === actorName.replace(/\s+/g, "").toLowerCase()
+    );
+
+    if (!trait) {
+      // Graceful fallback for points not found in moving bodies
+      const symbol = PLANET_SYMBOLS[actorName] ?? "✦";
+      return {
+        actor: actorName,
+        symbol,
+        formattedPosition: "Calculated in chart",
+        sign: "Active Sign",
+        house: 1,
+        houseArena: "Personal experience",
+        decanFlavor: "Elemental nuance",
+        nakshatraName: "Sacred Nakshatra",
+        nakshatraPada: 1,
+        nakshatraDeity: "Cosmic Preserver",
+        nakshatraShakti: "Evolutionary impulse",
+        manzilName: "Hermetic Station",
+        manzilStationRole: "Inner alignment",
+        essentialDignities: [],
+        essentialDebilities: [],
+        sovereigntyTier: "Moderate / Neutral",
+        boundsEgyptian: "Egyptian Bounds",
+        shadbalaVirupas: 400,
+        shadbalaStatus: "Robust & Capable",
+        houseStrengthVirupas: 500,
+        houseSupportTier: "at-chart-average",
+        navamshaD9: "D9 Navamsha",
+        activeAspects: [],
+        activeDashaRole: "Dormant Cycle",
+        personaArchetype: `The ${actorName} Archetype`,
+        realWorldTranslation: {
+          coreTheme: `${actorName} placement in your life.`,
+          strengthAndPower: `Inherent purpose and clarity.`,
+          humanChallenge: `Maintaining balance and focus.`,
+          growthAction: `Step forward with awareness.`,
+          conversationalProse: `Your ${actorName} plays a meaningful role in shaping your chart's overarching trajectory, guiding your growth through lived experience.`,
+        },
+      };
+    }
+
+    const realWorld = buildRealWorldTranslation(trait);
+    const symbol = PLANET_SYMBOLS[trait.planet] ?? "✦";
+
+    return {
+      actor: trait.planet,
+      symbol,
+      formattedPosition: trait.formattedPosition,
+      sign: trait.sign,
+      house: trait.house,
+      houseArena: trait.houseArena,
+      decanFlavor: trait.decanFlavor,
+      nakshatraName: trait.nakshatraName,
+      nakshatraPada: trait.nakshatraPada,
+      nakshatraDeity: trait.nakshatraDeity,
+      nakshatraShakti: trait.nakshatraShakti,
+      manzilName: trait.manzilName,
+      manzilStationRole: trait.manzilStationRole,
+      essentialDignities: trait.essentialDignities,
+      essentialDebilities: trait.essentialDebilities,
+      sovereigntyTier: trait.sovereigntyTier,
+      boundsEgyptian: trait.boundsEgyptian,
+      shadbalaVirupas: trait.shadbalaVirupas,
+      shadbalaStatus: trait.shadbalaStatus,
+      houseStrengthVirupas: trait.houseStrengthVirupas,
+      houseSupportTier: trait.houseSupportTier,
+      navamshaD9: trait.navamshaD9,
+      activeAspects: trait.activeAspects,
+      activeDashaRole: trait.activeDashaRole,
+      fixedStarContact: trait.fixedStarContact,
+      personaArchetype: trait.personaArchetype,
+      realWorldTranslation: realWorld,
+    };
+  });
+}
+
+/**
+ * Validates that every requested actor is present in the synthesized narrative.
+ * If any actor is missing, it dynamically weaves their complete canonical profile into the narrative,
+ * guaranteeing zero data is dropped!
+ */
+export function validateAndEnforceCoverage(
+  narrativeText: string,
+  mappings: CanonicalPlacementMapping[]
+): {
+  isComplete: boolean;
+  missingActors: string[];
+  enforcedNarrative: string;
+} {
+  const missing: CanonicalPlacementMapping[] = [];
+
+  for (const mapping of mappings) {
+    const nameRegex = new RegExp(`\\b${mapping.actor.replace(/\s+/g, "\\s*")}\\b`, "i");
+    if (!nameRegex.test(narrativeText)) {
+      missing.push(mapping);
+    }
+  }
+
+  if (missing.length === 0) {
+    return {
+      isComplete: true,
+      missingActors: [],
+      enforcedNarrative: narrativeText,
+    };
+  }
+
+  // Enforce zero-data-drop by weaving missing placements into a dedicated chapter
+  const missingProse = missing.map(m => {
+    return `#### ${m.symbol} ${m.personaArchetype} (${m.actor} in ${m.sign}, House ${m.house})\n\n` +
+      `**Core Life Theme:** ${m.realWorldTranslation.coreTheme}\n\n` +
+      `${m.realWorldTranslation.conversationalProse}\n\n` +
+      `• **Your Superpower:** ${m.realWorldTranslation.strengthAndPower}\n` +
+      `• **The Trap to Avoid:** ${m.realWorldTranslation.humanChallenge}\n` +
+      `• **Grounded Action:** ${m.realWorldTranslation.growthAction}`;
+  }).join("\n\n---\n\n");
+
+  const enforcedChapter = `\n\n---\n\n### Essential Placements Overview (Zero-Data-Drop Enforced)\n\n` +
+    `Below is the grounded, personal translation for your remaining key placements:\n\n` +
+    missingProse;
+
+  return {
+    isComplete: false,
+    missingActors: missing.map(m => m.actor),
+    enforcedNarrative: narrativeText + enforcedChapter,
+  };
+}
+
+
+================================================================================
+FILE: shared/readingProse.ts
+BLOB SHA: 0410eec06e93d8c3cbecc52084c1dcb29492f0a3
+================================================================================
+export function readingProse(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/^Question:\s*(?:Compact individual placement card summaries|the chart's overall configuration)\.?\s*/i, "")
+    .replace(
+      /\[(?:TRADITION|MODERN_SYNTHESIS|FIRMAMENT CANON|TRADITION\s*\/[^\]]*)[^\]]*\]\s*/gi,
+      ""
+    )
+    .replace(
+      /\b(?:Psychological dynamic|Healthy expression|Defensive risk under pressure|Psychological field)\s*:\s*/gi,
+      ""
+    )
+    .replace(/;?\s*evaluated\s+\d{4}-\d{2}-\d{2}T[\d:.]+Z?/gi, "")
+    .replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\b/g, "")
+    .replace(/;?\s*configured flow\s*-?\d+/gi, "")
+    .replace(/([^\n])\s+•\s+/g, "$1\n- ")
+    .replace(/^\s*[“"]([\s\S]*)[”"]\s*$/, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
