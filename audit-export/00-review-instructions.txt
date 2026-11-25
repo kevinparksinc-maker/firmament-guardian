@@ -1,0 +1,30 @@
+THE ABSOLUTE — INDEPENDENT AI SOURCE AUDIT
+Pinned source: 5e1cd90d29f4c3c092e5e252ceb8eedbccc98bc2
+Draft pull request #84. Not merged, deployed or proven by a live provider test.
+Goal: AS REAL AS IT GETS. Preserve the planetary reading architecture and produce genuinely integrated chart-based, chronological Life Story interpretations, not long generic personality prose.
+
+READ ALL 9 NUMBERED SOURCE FILES. These are verbatim source exports, not an executable repository or a guarantee of complete transitive dependency coverage. The reference modules may not actually execute on the Life Story route.
+01: five changed files
+02: synthesis core and method rules
+03: Genesis inquiry, master instructions, AI provider and interpretation
+04: master chart and method registry
+05: UI, route and tests
+06–07: Canon retrieval and interpretation library
+08: Genesis pattern and behavioral reference
+09: supporting method calculations
+
+REVIEW DIRECTIVE
+Act as an independent senior software architect and interpretation-quality auditor. Do not assume a function is used just because it exists. Trace the exact live code route from LifeStoryDashboard through the router, generateLifeStoryChapter, chart calculation, canonical snapshot, method outcomes, synthesis, evidence transport, provider request, structured response validation and rendered UI. Compare against buildChartPageReading, the user's preferred existing planetary mini-reading implementation. Do not invent chart results, external facts, or test executions.
+
+1. Identify whether each computed method reaches the AI with its actual findings and judgments, not merely its name. Identify omissions, compression, duplicated or competing directives, unused engines and fallback paths.
+2. Determine whether cross-planet and cross-house relationships are actually combined, or whether the system merely groups findings by category and repeats one placement's meaning.
+3. Does the shared placement index reuse the planetary builder correctly? Are all chart-wide findings retained? Does it create frame, transit, data-volume or evidence-ID problems?
+4. Does the Genesis 72-question inquiry lead to distinct stage-specific developments with meaningful consequences? Distinguish written instructions from executed calculations and validated results.
+5. Does validation prove multiple relevant witnesses support a claim, or merely check that evidence IDs and text exist? Can generic prose pass? Does the UI expose the structured reasoning?
+6. Can the model output a long, interchangeable reading despite all these inputs? Identify the root causes, with actual file paths and line or function references.
+7. Identify defects that could block compilation, provider calls, response parsing, timing or chart consistency. Distinguish confirmed source issues from hypotheses.
+8. Propose the smallest repairs to the existing pipeline. Do not rebuild the application, remove calculated methods, or add unnecessary AI calls. Preserve working planetary readings and the separate chronological presentation of Life Story.
+9. Design a blinded comparative test using several substantially different charts and assess specificity, coherence, chronology, evidence traceability, repetition and unsupported biographical claims. Astrology is interpretive, not empirical proof of biography; separate interpretive specificity from factual accuracy.
+10. Give a direct verdict: structurally ready, needs repair, or insufficient evidence to determine. Explain why and rank concrete fixes. Do not praise the product or accept prompt claims as proof of working behavior.
+
+Requested deliverable: concise executive verdict, actual call chain, method coverage assessment, prioritized defects with file references, minimal repair proposal, verification plan. Do not judge the model's real outputs without actual outputs and runtime evidence.
