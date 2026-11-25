@@ -2,6 +2,7 @@ import { invokeLLM } from "../../_core/llm";
 import { READING_BEHAVIOR_DIRECTIVE } from "../../master-interpreter";
 import { COMBINATION_INTELLIGENCE_CANON } from "../canon/combinationIntelligence";
 import { stringifyEvidence } from "./evidenceTransport";
+import { buildWholeChartPlacementIndex } from "../../placementEvidence";
 import type { SynthesisResult } from "./types";
 
 type Request = Parameters<typeof invokeLLM>[0];
@@ -57,7 +58,7 @@ function findingPriorityScore(finding: { subject?: string; strength?: string | n
   return primaryMatch + strScore;
 }
 
-export function interpretationEvidence(synthesis: SynthesisResult) {
+export function interpretationEvidence(synthesis: SynthesisResult, includePlacementIndex = false) {
   const canon = Array.from(
     new Map(
       [
@@ -74,6 +75,11 @@ export function interpretationEvidence(synthesis: SynthesisResult) {
   return {
     snapshotId: synthesis.snapshotId,
     scope: synthesis.mode,
+    ...(includePlacementIndex ? {
+      placementIndex: synthesis.sourceSnapshot.natal
+        ? buildWholeChartPlacementIndex(synthesis.sourceSnapshot.natal, synthesis)
+        : { status: "not_calculated", reason: "Canonical natal chart unavailable" },
+    } : {}),
     coverage: {
       methodsTotal: synthesis.methodOutcomes.length,
       methodsIncluded: synthesis.methodOutcomes.length,
@@ -403,12 +409,13 @@ export async function runInterpretation(
       role: "system" as const,
       content: "UNIVERSAL EVIDENCE-WEAVING CONTRACT: Read all applicable calculated methods and their statuses. Do not list parallel methods as a substitute for interpretation. Explain their convergence, contradictions and implications without invented facts. Preserve route-specific Horary verdicts, JSON schemas and evidence IDs.",
     };
+    const wholeChart = route === "MASTER_READING" || route === "LIFE_STORY";
     const evidence =
       typeof layout === "object"
         ? stringifyEvidence(ledgers.map(ledger => focusedPlacementEvidence(ledger, layout.focusedPlacement)))
         : layout === "horary-compact"
           ? stringifyEvidence(ledgers.map(horaryInterpretationEvidence))
-          : stringifyEvidence(ledgers.map(interpretationEvidence));
+          : stringifyEvidence(ledgers.map(ledger => interpretationEvidence(ledger, wholeChart)));
     const dossier = {
       role: "user" as const,
       content:
@@ -417,6 +424,7 @@ export async function runInterpretation(
           : layout === "horary-compact"
             ? "HORARY CALCULATED METHOD DOSSIER. Every registered method and status is present. The specific Horary judgment testimony is in the preceding user message. Findings are budgeted and exact omitted counts are supplied; never invent evidence omitted for size.\n"
             : "COMPLETE CALCULATED INTERPRETATION DOSSIER. Consider every applicable method, connecting agreement and tension to the specific question. Read each table using its matching column names. canonRefs index the canon table. Respect frames, evidence IDs and method status. Never fill gaps from inference. Previous prose is conversation context only.\n") +
+        (wholeChart ? "\nSHARED PLANETARY EVIDENCE INDEX: Use placementIndex to follow each planet into the exact finding IDs in the full method tables. Connect different planets, occupied and ruled houses, dignities, aspects, mansions and other methods into one configuration-level conclusion. A planet may participate in multiple distinct configurations. Examine chartWideOrUnlinkedFindingIds too: every finding remains in the full dossier. Do not write a series of isolated placement readings or simply paraphrase a domain label.\n" : "") +
         evidence,
     };
     // Preserve the domain packet and keep the current turn last in conversations.
