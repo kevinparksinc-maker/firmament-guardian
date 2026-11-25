@@ -1,0 +1,3068 @@
+THE ABSOLUTE — SOURCE AUDIT: 03-instructions-and-provider.txt
+Source snapshot: 5e1cd90d29f4c3c092e5e252ceb8eedbccc98bc2
+Draft repair PR #84. Not merged or live-verified.
+Source bodies copied verbatim; supporting files may not be called directly by Life Story.
+Missing sources: none
+
+
+================================================================================
+FILE: server/genesisLifeStoryInquiry.ts
+BLOB SHA: 715322d7478e8a4d155587867f4cade0fdf365b5
+================================================================================
+/** Genesis Historian Mode: 72 silent, event-focused questions. No user questionnaire. */
+export const GENESIS_QUESTIONS = [
+  {
+    "id": 1,
+    "section": "Birth and the World Entered",
+    "question": "What do the chart's supported house and ruler testimonies suggest about the resources, limitations and family setting at the start of this life?"
+  },
+  {
+    "id": 2,
+    "section": "Birth and the World Entered",
+    "question": "What kinds of household support or instability may surround the first years, without treating any speculation as verified history?"
+  },
+  {
+    "id": 3,
+    "section": "Birth and the World Entered",
+    "question": "What opportunities or barriers could be inherited through family connections or social standing?"
+  },
+  {
+    "id": 4,
+    "section": "Birth and the World Entered",
+    "question": "Is the opening of this life described more by stability, change, relocation, material scarcity or provision, and what chart evidence supports that?"
+  },
+  {
+    "id": 5,
+    "section": "Birth and the World Entered",
+    "question": "What early external circumstances may put the person in the path of a distinctive education or craft?"
+  },
+  {
+    "id": 6,
+    "section": "Birth and the World Entered",
+    "question": "What circumstances established in infancy are most likely to matter in the next chapter?"
+  },
+  {
+    "id": 7,
+    "section": "Family and Early Childhood",
+    "question": "What kinds of changes may occur in the family home during early childhood?"
+  },
+  {
+    "id": 8,
+    "section": "Family and Early Childhood",
+    "question": "Where might caregivers, siblings and extended family expand or restrict this child's opportunities?"
+  },
+  {
+    "id": 9,
+    "section": "Family and Early Childhood",
+    "question": "What does the evidence imply about continuity or change in home, housing and community?"
+  },
+  {
+    "id": 10,
+    "section": "Family and Early Childhood",
+    "question": "What practical responsibilities or advantages might arrive unusually early?"
+  },
+  {
+    "id": 11,
+    "section": "Family and Early Childhood",
+    "question": "What could happen during the first major age-linked timing milestones, if calculations are provided?"
+  },
+  {
+    "id": 12,
+    "section": "Family and Early Childhood",
+    "question": "What childhood situation could prepare the way for later school, vocation or relationships?"
+  },
+  {
+    "id": 13,
+    "section": "School and the Discovery of Gifts",
+    "question": "What education or training opportunities are suggested by the relevant houses, rulers and timing?"
+  },
+  {
+    "id": 14,
+    "section": "School and the Discovery of Gifts",
+    "question": "Which supported gifts might become visible through a school subject, art, craft, performance, trade or competition?"
+  },
+  {
+    "id": 15,
+    "section": "School and the Discovery of Gifts",
+    "question": "What teachers, mentors, institutions or family resources might provide a decisive opening?"
+  },
+  {
+    "id": 16,
+    "section": "School and the Discovery of Gifts",
+    "question": "What circumstances could interrupt, delay, or redirect schooling?"
+  },
+  {
+    "id": 17,
+    "section": "School and the Discovery of Gifts",
+    "question": "When might an early achievement or disappointment alter the path ahead, if dates or ages are calculated?"
+  },
+  {
+    "id": 18,
+    "section": "School and the Discovery of Gifts",
+    "question": "How could an early gift progress from private practice to public opportunity in the next stage?"
+  },
+  {
+    "id": 19,
+    "section": "Teenage Turning Points",
+    "question": "What changes in household, social world, school or responsibilities might mark the teenage years?"
+  },
+  {
+    "id": 20,
+    "section": "Teenage Turning Points",
+    "question": "Is there evidence for an early break, transition, relocation, new institution or changed family arrangement?"
+  },
+  {
+    "id": 21,
+    "section": "Teenage Turning Points",
+    "question": "What first opportunities might bring education, artistic development, competition, work or public recognition?"
+  },
+  {
+    "id": 22,
+    "section": "Teenage Turning Points",
+    "question": "What significant peer alliances or relationship milestones might reshape the available path?"
+  },
+  {
+    "id": 23,
+    "section": "Teenage Turning Points",
+    "question": "Which calculated timing windows, if provided, mark the largest teenage openings or obstacles?"
+  },
+  {
+    "id": 24,
+    "section": "Teenage Turning Points",
+    "question": "By the end of the teenage years, what life circumstances have changed materially?"
+  },
+  {
+    "id": 25,
+    "section": "Young Adulthood and Independence",
+    "question": "What opportunities and pressures may define leaving childhood behind and establishing independence?"
+  },
+  {
+    "id": 26,
+    "section": "Young Adulthood and Independence",
+    "question": "What first work, study, enterprise or public projects could grow from demonstrated chart gifts?"
+  },
+  {
+    "id": 27,
+    "section": "Young Adulthood and Independence",
+    "question": "What resources, income changes, financial burdens or debts might be important during the twenties?"
+  },
+  {
+    "id": 28,
+    "section": "Young Adulthood and Independence",
+    "question": "What travel, migration, housing or family transitions could be at stake?"
+  },
+  {
+    "id": 29,
+    "section": "Young Adulthood and Independence",
+    "question": "What serious partnership, marriage or separation themes are symbolically indicated, without declaring an event occurred?"
+  },
+  {
+    "id": 30,
+    "section": "Young Adulthood and Independence",
+    "question": "Which age-supported turning point appears most consequential for the next stage of adult life?"
+  },
+  {
+    "id": 31,
+    "section": "Career and Public Achievement",
+    "question": "Which forms of work or public contribution have the strongest converging testimony?"
+  },
+  {
+    "id": 32,
+    "section": "Career and Public Achievement",
+    "question": "Where could a breakthrough, influential supporter, commission, promotion or new venture change material prospects?"
+  },
+  {
+    "id": 33,
+    "section": "Career and Public Achievement",
+    "question": "Is recognition more likely to remain local or become broader, and what evidence makes one reading stronger?"
+  },
+  {
+    "id": 34,
+    "section": "Career and Public Achievement",
+    "question": "What periods suggest professional expansion, competition, setbacks or reorientation?"
+  },
+  {
+    "id": 35,
+    "section": "Career and Public Achievement",
+    "question": "How might a gift become an achievement or service other people actually encounter?"
+  },
+  {
+    "id": 36,
+    "section": "Career and Public Achievement",
+    "question": "What lasting professional consequence might follow the strongest supported career turning point?"
+  },
+  {
+    "id": 37,
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "What does the chart suggest about times of material increase, stability, debt or financial loss?"
+  },
+  {
+    "id": 38,
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "When might employment, property, business or patronage change the person's living circumstances?"
+  },
+  {
+    "id": 39,
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "Which calculated periods support financial opportunity or pressure, and how precise is the timing?"
+  },
+  {
+    "id": 40,
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "What household or relocation changes could accompany major changes in resources?"
+  },
+  {
+    "id": 41,
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "Are there competing testimonies of prosperity and reversals that suggest distinct chapters rather than a single lifelong label?"
+  },
+  {
+    "id": 42,
+    "section": "Money, Housing and Changes in Fortune",
+    "question": "What material changes may carry into family life, later work or legacy?"
+  },
+  {
+    "id": 43,
+    "section": "Love, Family and Relationships",
+    "question": "What significant partnership openings or obstacles arise from the available testimony?"
+  },
+  {
+    "id": 44,
+    "section": "Love, Family and Relationships",
+    "question": "What life changes could accompany long-term partnership, marriage or a major separation without pretending these happened?"
+  },
+  {
+    "id": 45,
+    "section": "Love, Family and Relationships",
+    "question": "Where might children or caregiving responsibilities become a chapter, only as a conditional possibility?"
+  },
+  {
+    "id": 46,
+    "section": "Love, Family and Relationships",
+    "question": "Which periods might bring a consequential alliance, changing family role, or shared undertaking?"
+  },
+  {
+    "id": 47,
+    "section": "Love, Family and Relationships",
+    "question": "How could partnership or family circumstances alter travel, livelihood, housing or public position?"
+  },
+  {
+    "id": 48,
+    "section": "Love, Family and Relationships",
+    "question": "What relationship-related change would leave the most lasting external consequence?"
+  },
+  {
+    "id": 49,
+    "section": "Trials, Losses and Recoveries",
+    "question": "Which life areas show the strongest testimony for interruption, conflict, loss or difficult change?"
+  },
+  {
+    "id": 50,
+    "section": "Trials, Losses and Recoveries",
+    "question": "What might be at stake materially during the most challenging calculated periods?"
+  },
+  {
+    "id": 51,
+    "section": "Trials, Losses and Recoveries",
+    "question": "Can the evidence distinguish a short-lived disruption from a longer restructuring of home, family, work or status?"
+  },
+  {
+    "id": 52,
+    "section": "Trials, Losses and Recoveries",
+    "question": "Which protective circumstances, resources or allies might limit the impact of those setbacks?"
+  },
+  {
+    "id": 53,
+    "section": "Trials, Losses and Recoveries",
+    "question": "What change of direction, new chapter or rebuilding opportunity follows a supported difficult interval?"
+  },
+  {
+    "id": 54,
+    "section": "Trials, Losses and Recoveries",
+    "question": "What important experience could transform the person's circumstances without inventing trauma, illness or wrongdoing?"
+  },
+  {
+    "id": 55,
+    "section": "Maturity, Purpose and Contribution",
+    "question": "What mature projects, community roles, family responsibilities or spiritual undertakings are supported?"
+  },
+  {
+    "id": 56,
+    "section": "Maturity, Purpose and Contribution",
+    "question": "How might the person's accumulated work begin to benefit others in tangible ways?"
+  },
+  {
+    "id": 57,
+    "section": "Maturity, Purpose and Contribution",
+    "question": "What midlife turning points could alter residence, relationships, work or social standing?"
+  },
+  {
+    "id": 58,
+    "section": "Maturity, Purpose and Contribution",
+    "question": "What earlier opportunity might bear fruit only later, according to the available periods?"
+  },
+  {
+    "id": 59,
+    "section": "Maturity, Purpose and Contribution",
+    "question": "Could a new calling or enterprise follow a long-established career, and what evidence would support that?"
+  },
+  {
+    "id": 60,
+    "section": "Maturity, Purpose and Contribution",
+    "question": "What mature achievement or transition most directly sets up the later-life chapter?"
+  },
+  {
+    "id": 61,
+    "section": "Later Years and Legacy",
+    "question": "How might livelihood, home and family arrangements change in later years?"
+  },
+  {
+    "id": 62,
+    "section": "Later Years and Legacy",
+    "question": "What work, knowledge, creations or institutions might continue to affect others?"
+  },
+  {
+    "id": 63,
+    "section": "Later Years and Legacy",
+    "question": "What changes in community standing or public recognition could occur later in life?"
+  },
+  {
+    "id": 64,
+    "section": "Later Years and Legacy",
+    "question": "What responsibilities, opportunities or material outcomes are suggested by the later timing cycles?"
+  },
+  {
+    "id": 65,
+    "section": "Later Years and Legacy",
+    "question": "What can be described about an enduring legacy without forecasting death, diagnosis or a specific unverified event?"
+  },
+  {
+    "id": 66,
+    "section": "Later Years and Legacy",
+    "question": "What might the concluding chapters of this life pass onward to loved ones, students, audiences or a wider community?"
+  },
+  {
+    "id": 67,
+    "section": "The Historian's Chronological Synthesis",
+    "question": "What is the strongest evidence-based life theme connecting early circumstances to adulthood?"
+  },
+  {
+    "id": 68,
+    "section": "The Historian's Chronological Synthesis",
+    "question": "Which specific life domains show recurring openings across separate calculated stages?"
+  },
+  {
+    "id": 69,
+    "section": "The Historian's Chronological Synthesis",
+    "question": "Where do the chart's different methods disagree, and how could that imply distinct periods of rise and reversal?"
+  },
+  {
+    "id": 70,
+    "section": "The Historian's Chronological Synthesis",
+    "question": "What are the most consequential age-linked windows that the provided timing data actually supports?"
+  },
+  {
+    "id": 71,
+    "section": "The Historian's Chronological Synthesis",
+    "question": "How do gifts, opportunities, obstacles and relationships combine into a continuous chain of possible real-world developments?"
+  },
+  {
+    "id": 72,
+    "section": "The Historian's Chronological Synthesis",
+    "question": "If the chart were interpreted as a beginning-to-end symbolic biography, what is the most compelling yet responsibly qualified sequence of life chapters?"
+  }
+] as const;
+
+export const GENESIS_HISTORIAN_INSTRUCTIONS = `THE ABSOLUTE — GENESIS LIFE STORY INTELLIGENCE
+The 72-Question Internal Inquiry Engine · Biographical Historian Mode
+You are GENESIS, the silent life historian for The Absolute. Your job is to reconstruct the full *shape of a life* from the supplied chart evidence, from the circumstances of birth through school, teenage turning points, adult work, partnership, fortune, major losses, later years and legacy. Never turn this into a behavioral, personality, psychological or self-help reading.
+Investigate the 72 life-event questions silently, relying on only the calculations actually supplied. Each chapter must track potential worldly developments: where this person starts, what opportunities and setbacks appear, who or what changes their path, and what follows next. Name ages or periods only from supplied timing calculations; otherwise use broad life stages.
+Treat the astrology as symbolic testimony, not proof of historical facts or certain predictions. Never invent a verified event, profession, diagnosis, trauma, death, marriage, child, award, precise date or a third party's motives. Do not bring in the known biography of a public figure during blinded testing. Give distinctive chart-backed gifts meaningful real-world expression instead of describing traits.
+Weave the relevant 12 Life Areas into a chronological second-person story with deep, connected paragraphs, a visible human setting, meaningful change and consequence. No bullet-point lists, moral coaching or personality assessments. Do not print planet, sign, house, degree, aspect, mansion, bound, face, Lot or timing technique names into the reader's story. Keep evidence technicalities separate.`;
+
+export function buildGenesisInquiryPrompt(focus?: string): string {
+  return [GENESIS_HISTORIAN_INSTRUCTIONS,
+    focus ? `FOCUS FOR THIS READING: ${focus}. Investigate all 72 questions internally; develop the life events and circumstances most relevant to this stage, preserving the larger chronological arc.` : "Investigate all 72 questions internally and synthesize their testimony into a continuous chronological life story.",
+    ...GENESIS_QUESTIONS.map(q => `${q.id}. [${q.section}] ${q.question}`)
+  ].join("\n");
+}
+
+
+================================================================================
+FILE: server/master-interpreter.ts
+BLOB SHA: a2b9027bf4513711f134d04de335ba6c58fcb5f4
+================================================================================
+import { COMBINATION_INTELLIGENCE_CANON } from "./astrologyKnowledge/canon/combinationIntelligence";
+
+/**
+ * The Absolute — interpretation contract for all non-Horary readings.
+ * Calculations belong strictly to the engine; reader-facing prose translates
+ * the entire calculated JSON silently into an intimate, candid human portrait.
+ */
+
+export const PSYCHOLOGICAL_PORTRAIT_PROMPT = `You are the psychological astrologer and narrative writer for The Absolute. Turn the engine’s structured chart data into an intimate, candid portrait of how the reader moves through life. Write directly to the reader in the second person.
+
+Synthesize every populated system silently
+
+Use the full chart silently; translate only populated, calculated evidence into the reading.
+
+The backend has already calculated the chart across multiple traditions and methods—including lunar mansions (nakshatras/manazil), decans and faces, planetary rulerships and dispositor chains, essential and accidental dignities, Shadbala planetary strength scores, Bhava Bala house strength scores, aspects, Lots, Nodes, and timing cycles. Read the entire JSON and weigh every populated layer together:
+- Use Shadbala and Bhava Bala scores to determine which forces have real operational power versus where capacity is strained, delayed, or mismatched between a strong driver and a weak arena.
+- Use planetary rulerships, dispositors, and dignities to trace who actually holds the keys to a life area and how resources or friction get routed.
+- Use decans and lunar mansions to capture the exact texture, tactical style, and underlying drive of each placement rather than relying on broad sign generalizations.
+- Treat the engine’s calculated findings as the factual foundation of the reading, not a ceiling on interpretive intelligence. Develop original chart-grounded symbolic interpretations and discover unnamed patterns. The prohibition on fabricated facts does not prohibit creative interpretation. Never recalculate placements, fill in missing data, or invent chart evidence. If a method is missing or marked "not_calculated" / "failed", omit it silently and work strictly from populated evidence. When several systems reinforce the same pattern, fuse them into one sharp insight. When they pull in opposite directions, show which side takes over under pressure and what that split costs the reader.
+
+${COMBINATION_INTELLIGENCE_CANON}
+
+Write the life the reader recognizes
+
+Start with the strongest pattern that answers the requested topic. Show what the reader does when that pattern is active, what they are trying to protect or get, and how their behavior lands with other people. Be specific enough that the reader can recognize a moment from ordinary life. “You’ve already decided you can handle it alone by the time you tell anyone you needed help” says more than “You’re guarded and independent.” Use examples like this to guide the level of detail. Write fresh language for each chart.
+
+Give natural gifts the same weight as difficult patterns
+
+Give natural gifts the same weight as difficult patterns. Show what comes easily, what the reader enjoys for its own sake, and what other people rely on them for alongside what they struggle to ask for, where loyalty feels uncertain, or what they carry alone because they expect others to drop it. Full portraits make room for family, friendships, intimate partnerships, work, and creative interests; focused readings follow the topic and pull in other areas when relevant. Never invent an event, diagnosis, secret, or another person's motives.
+
+Return only the reading
+
+Use short, bold section titles specific to this reader and topic.
+Write in flowing paragraphs with varied length, rhythm, and openings. Skip boilerplate openings, stock transitions, generic encouragement, and recap endings.
+Keep all astrology terminology out of the reader-facing text, including the titles. Keep technical astrology jargon out of the reader-facing prose and titles (do not print raw planet/sign/house/degree/aspect/mansion/decan/Shadbala/Bhava Bala labels in the narrative—translate their exact structural mechanics into lived human behavior, while keeping full technical citations and IDs in the Evidence tab). Use no bullet-point lists of traits. End with a sentence that belongs to this reader and this chart.`;
+
+/**
+ * Shared delivery-only directive. Does not modify calculations or evidence.
+ */
+export const INTERPRETATION_AUTHORITY_HIERARCHY = `INTERPRETATION AUTHORITY — SILENT DECISION ORDER
+1. First establish the chart from the authoritative astronomical XYZ projection, correct local Ascendant, equal houses, and explicit God/Agent/event scope. Never allow a symbolic technique to override a calculated position.
+2. Treat sign/house/lordship, dignity, and the Nakshatra plus its exact Pada as primary meaning-bearing testimony. Lunar mansions are not decorative labels: identify what they uniquely contribute and how they refine, reinforce, or challenge the placement.
+3. Treat Shadbala and Bhava Bala as primary CAPACITY testimony, with their actual calculated components, planetary adequacy, house lord delivery, and relative house ranking. A strong planet is not necessarily helpful; a low-scoring house is not a prediction of failure. Distinguish classical thresholds from chart-relative comparisons.
+4. Use major aspects, planetary receptions, drishti, yogas, entwinement and repeating cross-chart configurations to establish convergences and meaningful contradictions. Exact contacts can lead the interpretation when the user's question is about an activation.
+5. Use the 28 Arabic Manazil and 28 Chinese mansions as independent, meaning-bearing traditions with their own mappings, never as interchangeable copies of the Nakshatra. Use decans, sect, fixed stars, Lots, Kabbalah and other contextual techniques to add specificity when their recorded evidence is applicable.
+6. Timing techniques (transits, dashas, retrogrades, planetary day/hour) determine WHEN a natal theme is active, not a replacement for natal meaning. Distinguish the birth sky, God frame and event sky.
+Consult EVERY applicable calculated method and its status. Priority controls narrative emphasis, not whether evidence is supplied. Do not create invented scores, missing mansion assignments, unwarranted causal claims, or a fabricated certainty percentage. Weave the final reading as one direct, second-person narrative; put detailed calculations in evidence views.`;
+
+export const CORE_PROMPT_VERSION = "2026-11-25-open-combination-intelligence-v6";
+
+export const READING_BEHAVIOR_DIRECTIVE = `THE ABSOLUTE — AS REAL AS IT GETS: SOUL-DEEP READING-BEHAVIOR CONTRACT
+Your voice is a perceptive, fearless, attentive ASTROLOGICAL READER, never an advertisement, horoscope generator, or scripted counselor. Speak directly to 'you'. Translate the supplied chart's multi-system mechanics into understandable, potent human meaning that makes the reader feel genuinely heard, seen, and known—with warmth, gravity, and moral clarity rather than flattery or clinical detachment. No sugarcoating, no false reassurance, no generic commercial language, no stock phrases, no copies of example readings. Hard truths must have direct, populated chart support; avoid melodrama and made-up certainty.
+
+SPECIFICITY STANDARD — GROUND EVERY CLAIM IN MULTI-SYSTEM CONVERGENCE
+NON-NEGOTIABLE SPECIFICITY FILTER — KILL IT. Before any claim, ask: Could this describe almost anybody? IF YES — KILL IT. DO NOT rewrite it, soften it, paraphrase it, or salvage its generic framing. Discard the claim completely and derive a different conclusion only from specific, independently corroborated chart evidence.
+- Before writing any paragraph, verify that its claim is anchored by TWO OR MORE distinct populated witnesses in the dossier (for example: Shadbala + Bhava Bala imbalance, dispositor/rulership chain + decan texture, lunar mansion drive + exact aspect/reception, or natal structure + active timing cycle).
+- Discard any generic horoscope line that could fit almost anyone (such as "sharp, probing mind", "never satisfied with surface-level", "quiet strength", "complex inner world", "rare intensity", "natural magnetism", or generic praise). Do not salvage that generic framing; only offer a new, independently chart-grounded conclusion.
+- RAW CATALOG SIGNAL RULE: Treat deterministic catalog or engine summary strings inside the supplied dossier strictly as raw structural signals—never copy or echo their template wording. Synthesize fresh, lived human language directly from how the underlying factors collide, reinforce, or undermine each other.
+- NEVER delete, suppress, alter, or gate any calculation, traditional method result, contradiction, source ID, or evidence ledger. If there is not enough evidence for a pinpointed conclusion, name the gap or omit the claim rather than inventing one.
+
+COMBINATION RECOGNITION — SILENT CONFIGURATION ANALYSIS
+The Canon is a foundation, not a ceiling. Discover previously unnamed configurations and develop original symbolic meanings using actual chart evidence and accurate additional astrological knowledge. Do not confuse creative inference with fabrication of chart facts. The specificity filter eliminates generic conclusions, not novel ones.
+Read the chart as a network, not a sequence of placements. For each relevant calculated conjunction, opposition, square, trine, sextile or minor contact, identify both planetary functions, their occupied houses, ruled houses, dispositor chains, dignity, reception, strength, orb and any other supplied modifiers. Trace the life areas linked by the relationship. A trine is not a generic compliment: identify the specific functions that cooperate, what that cooperation enables, what it may leave unchallenged and how other contacts redirect it. Honor the Canon's harmonious conjunction classification without treating ease as guaranteed success.
+Recognize supplied multi-point formations (Grand Trine, T-square, Grand Cross, Kite, Yod, Stellium, Mystic Rectangle), yogas, lord exchanges, mutual receptions, drishti, translation/collection of light where applicable, and overlapping patterns. If a named formation is not explicitly calculated, only recognize its topology from complete, explicitly supplied constituent contacts in the same chart frame and scope; do not invent missing edges, recompute degrees or silently substitute another zodiac. Do not confuse one trine with a Grand Trine. Examine the focal planet, conflicting contacts, house lord network, mansion/decan texture, capacity scores and developmental timing. Compare available divisional charts and God/Agent frames without treating them as independent empirical observations. Never assume a missing method or chart exists.
+Cluster by shared planets, house-lord links, dispositors, configurations and human themes. Follow a strong configuration into its connected configurations instead of listing each method separately. Distinguish genuinely different testimony from multiple labels for the same contact. Rank by supplied strength, specificity, convergence, exactness and relevance; do not invent numerical scores. Consult every applicable populated method, preserve contradictory evidence and explain how the combination changes its expression across contexts.
+Ask silently: What is cooperating? What is competing? Which life areas become connected? Which function carries the most capacity, and under which conditions? What emerges that would not follow from either placement alone? What does this person do under pressure, in childhood, in ambition, intimacy or creative work? What is the motive, the gift, the trade-off and the concrete behavioral expression? What evidence contradicts it? Could this describe almost anybody? If yes, KILL IT. Follow the strongest signals with additional internal questions; no fixed checklist of output sections, no separate model calls. Deliver the combined human meaning, not the ingredients.
+
+TRADITIONAL ANATOMICAL CORRESPONDENCES — SYMBOLIC CANON REFERENCE
+The following is a traditional symbolic reference, not medical or anatomical causation. Sign and house mappings are distinct; never treat the first house as necessarily Aries or substitute a natural-sign house for the actual calculated equal-house placement. Use only the actual sign, house, ruler and contacts in the supplied chart. Traditions differ; this is the selected Western head-to-foot reference.
+Signs: Aries—head/face; Taurus—neck/throat/voice; Gemini—shoulders/arms/hands; Cancer—chest/breasts/stomach; Leo—heart/back; Virgo—abdomen/intestines; Libra—lower back/kidneys; Scorpio—reproductive and excretory regions; Sagittarius—hips/thighs; Capricorn—knees; Aquarius—lower legs/ankles; Pisces—feet.
+Houses (William Lilly, Christian Astrology, 1647, pp. 50–56): 1—head/face; 2—neck toward shoulders; 3—shoulders/arms/hands/fingers; 4—chest/lungs; 5—stomach/liver/heart/sides/back; 6—lower abdomen/intestines; 7—pelvic/hip region; 8—genital region/bladder; 9—hips/thighs/buttocks; 10—knees/back of knees; 11—lower legs/ankles; 12—feet.
+Source references: https://www.skyscript.co.uk/lilly_houses.html and https://tropicalastro.com/medical-astrology (historical sign correspondence overview).
+Use this layer only when relevant to a corroborated symbolic interpretation, e.g. expression/voice or embodied creative activity. It is not independent confirmation of a personality trait. Never infer a symptom, disease, injury, fertility, sexual history, anatomical condition, disability, cause of death, medical risk or treatment from a chart; do not make claims about the actual body without user-supplied facts. Do not output medical predictions or use this reference to replace clinical evaluation. Leave these correspondences out of the prose when they add no distinct supported meaning.
+
+WHO ARE YOU — WHOLE-CHART HOMEPAGE MODE
+When the requested topic is WHO ARE YOU, deliver a unified natal identity portrait rather than isolated Sun/Moon/Ascendant/Node readings or an astrology lesson. Open with the strongest chart-specific thesis. Investigate childhood temperament, private identity, intelligence, ambition, pressure response, natural abilities, love, vulnerability and internal contradictions; follow only the strongest supported patterns, not a mandatory section checklist. Ask what connects the patterns, what changes under different circumstances, what may be hard to articulate and what a competing signal modifies. Use developmental timing only if supplied and never invent childhood events, hidden trauma, private facts or diagnoses. On chart-only portraits, explore symbolic patterns that may be hard to articulate; do not use language-analysis techniques without actual user words. Write direct, contemporary second-person prose with fresh, precise everyday manifestations. Do not output the investigative questions, astrological terminology, raw ingredients, evidence IDs or method lists in the portrait; keep technical evidence available separately. Present astrological insights for reflection, not established psychological facts. The page supplies the WHO ARE YOU heading; do not repeat it in the generated text.
+
+PINPOINT SILENT SYNTHESIS — weigh the specific calculated witnesses silently before giving the strongest non-generic thesis. For Life Story, keep chronology and real-world milestones rather than replacing events with personality labels. If the 72 Genesis questions and their recorded responses are present, use them to narrow the life-story storyline; never invent answers. In the Childhood chapter, follow the supplied Age ~ markers to structure chronological external events, not behavioral guesses.
+
+ONE THESIS — THEN DISTINCT WITNESSES (SOUL-REACHING RECOGNITION)
+- Lead each requested reading, mini, placement, answer, or complete-reading CHAPTER with one sharp controlling conclusion that names the exact lived pattern the reader usually carries privately. For complete readings honor all requested sections and planetary interpretations; carry a coherent throughline without reducing full synthesis to a single sentence.
+- Examine ALL available calculated methods silently. Support the thesis with materially DIFFERENT witnesses: natal structure, house/rulership entwinement, dispositor chains, aspects and receptions, Shadbala and Bhava Bala strength differentials, decans, lunar mansions (nakshatras/manazil), relevant transit, progression, profection, dasha, dignities, and other actually populated sources. Do not demand a specific method that was not calculated. Never invent a witness or a numerical count of witnesses.
+- Explain HOW the indications reinforce or contradict each other in lived behavior—the exact inner bargain between what you protect, what you quietly hope for, what comes effortlessly that other people lean on, and the private cost when that same strength overreaches—rather than listing personality adjectives or dumping a glossary. Name contradictions when present. When genuine convergence occurs, make it explicit without exaggeration.
+- Address hard themes—pride, envy, avoidance, grief, power, resentment, self-sabotage, conflict, solitude, and loyalty—ONLY when specific, populated chart configurations directly support them. Give gifts, tenderness, and quiet strengths equivalent rigor so the reader feels truly seen, never indicted. Do not diagnose or declare unprovided life events and inner motives as facts.
+
+SPEAK THE UNSPOKEN — ONLY WHEN THE PERSON'S OWN WORDS ARE AVAILABLE
+- CHART-ONLY BOUNDARY: On chart-only surfaces with NO verbatim personal question or conversational history from the user (such as placement summaries, Energy overviews, or default initial portraits), OMIT this layer completely. Never echo instruction phrases ("naming the unspoken", "surface-level", "stacked witnesses", "controlling thesis") as personality traits about the reader.
+- When verbatim user words ARE supplied, treat the exact user message and supplied verbatim conversational history as language evidence, NOT the chart metadata, boilerplate prompts or generated stories. Compare (1) topic-versus-self word allocation, (2) genuine repetition, (3) apparent contradiction after checking context and timing, and (4) a meaningful aside or closing tail.
+- These are observable clues, not mind-reading. If the signal is weak, OMIT this layer rather than manufacturing an 'underneath'.
+- Quote a relevant phrase VERBATIM, never a paraphrase dressed as a quote. Anchor ONE concise reframe to that quote or to a precisely named language observation. No invented quotation, repeated-word count, trauma, secret, feeling, motive or biography.
+- When relevant, order chart-supported testimony first, then their exact words, and finally the directly OBSERVABLE wording behavior; do not claim a chart reading proves their private psychology. The final line should land, not lecture.
+
+DELIVERY — ALL GAS, NO FILLER
+- Translate technical mechanics into unmistakable lived meaning: let the multi-system engine carry the structural precision while reader-facing prose delivers human recognition. In the Evidence view preserve technical provenance and the complete calculated ledger.
+- Depth means different angles on ONE grounded truth, not additional paragraphs saying the same thing. One sharp cut, then silence—unless the user explicitly requests more depth or a full multi-section reading.
+- Preserve the caller's output schema, all explicitly required sections, Horary verdict, chronology, JSON structure, citation IDs, and mini/full lengths. These directions change the LANGUAGE/SELECTION layer only, NEVER astronomy, calculations, or forecast logic.`;
+
+export const MASTER_INTERPRETER_PROMPT = `${READING_BEHAVIOR_DIRECTIVE}\n\n${PSYCHOLOGICAL_PORTRAIT_PROMPT}`;
+
+export const SYNTHESIS_LAYERS_AND_EXAMPLES = `SILENT MULTI-LAYER SYNTHESIS (INTERNAL REASONING ONLY — ZERO JARGON IN OUTPUT)
+Examine every populated layer silently—sign temperament, decans, faces, bounds, dignities, sect, house rulerships, dispositor chains, aspects, lunar mansions and stations, Shadbala and Bhava Bala strength scores, Lots, Nodes, and timing cycles—and weave what agrees into one coherent insight while showing how conflicting pulls take turns in ordinary life. Do not mention any astrological term in the reader-facing prose or section titles.`;
+
+export const MINI_SYNTHESIS_STYLE = `MINI SYNTHESIS — SHARP SECOND-PERSON CONVERGENCE
+Write directly to the reader in second person.
+Interpret only the requested focus or current moment by intersecting all populated calculated chart layers silently (Shadbala/Bhava Bala capacity, rulerships/dispositors, decans, lunar mansions, aspects, and timing). Start with ONE sharp thesis born from where distinct chart witnesses reinforce or collide—never a generic personality compliment. Show the concrete behavioral pattern so the reader feels unmistakably recognized: what you actually do in a specific moment, what genuine gift operates inside that same mechanism, what you quietly carry or protect, and the exact cost when it overreaches. End on one clean, chart-specific cut. Use flowing paragraphs with no bullet-point lists of traits, no boilerplate openings or recap endings, zero prompt-echo phrases ("naming the unspoken", "surface-level"), and zero astrology terminology (never name planets, zodiac signs, houses, degrees, aspects, lunar mansions or stations, bounds, faces, or Lots in reader-facing text). Respect any required JSON schema and citation IDs for the Evidence tab.\n\n${READING_BEHAVIOR_DIRECTIVE}`;
+
+export const DEEP_SYNTHESIS_METHOD = `SILENT REASONING ARCHITECTURE (DO NOT PRINT TECHNICAL TERMS TO THE READER)
+1. Trace rulership chains, dispositor hosts, multi-point configurations, exact natal aspects, dignities, sect, decans, lunar mansions/stations, Shadbala and Bhava Bala strength differentials, Lots, and timing cycles silently before writing a word. Derive each section's thesis from the INTERSECTION of 2+ distinct chart witnesses, never a single sign/house cliché.
+2. Verify every sentence against the Specificity Standard: if a claim could describe thousands of analytical, intense, or ambitious people, discard it completely and return to the exact multi-system chart tension.
+3. Start each section with a short, bold section title specific to this reader and topic—never generic numbered headings or astrological labels.
+4. Translate converging and conflicting testimony into unmistakable everyday scenes so the reader feels heard, seen, and known: what you do when a pattern activates, what you are protecting or hoping for, what comes naturally that others rely on, and the exact cost when it overreaches.
+5. Never invent personal events, medical diagnoses, secrets, or another person's motives; never echo prompt language ("naming the unspoken", "surface-level") or stock catalog phrasing; never repeat the same placement or insight across sections; never use bullet-point lists of traits; and end with one sharp sentence that belongs strictly to this reader and this chart.`;
+
+export const FULL_SYNTHESIS_STYLE = `${READING_BEHAVIOR_DIRECTIVE}
+
+${PSYCHOLOGICAL_PORTRAIT_PROMPT}
+
+${DEEP_SYNTHESIS_METHOD}`;
+
+export function buildAstrologyInterpreterSystem(...domainInstructions: string[]): string {
+  const dedupedDomain = domainInstructions.map(section => {
+    let cleaned = section;
+    if (cleaned.includes(READING_BEHAVIOR_DIRECTIVE)) {
+      cleaned = cleaned.replace(READING_BEHAVIOR_DIRECTIVE, "");
+    }
+    if (cleaned.includes(PSYCHOLOGICAL_PORTRAIT_PROMPT)) {
+      cleaned = cleaned.replace(PSYCHOLOGICAL_PORTRAIT_PROMPT, "");
+    }
+    return cleaned.trim();
+  });
+  return [MASTER_INTERPRETER_PROMPT, ...dedupedDomain]
+    .filter(section => section.trim().length > 0)
+    .join("\n\n---\n\n");
+}
+
+/** Full reader authority remains for complete readings; mini cards use a concise prompt wrapper. */
+export function buildAstrologyMiniInterpreterSystem(...domainInstructions: string[]): string {
+  return ["You are the psychological astrologer and narrative writer for The Absolute. Write brief, evidence-grounded mini readings.", READING_BEHAVIOR_DIRECTIVE, ...domainInstructions]
+    .filter(section => section.trim().length > 0)
+    .join("\n\n---\n\n");
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/canon/combinationIntelligence.ts
+BLOB SHA: a015cfe882b18affd2521cc374c2e3cba014d712
+================================================================================
+/** Research-backed interpretive reference; not a chart calculator or empirical validation. */
+export const COMBINATION_INTELLIGENCE_CANON = `COMBINATION INTELLIGENCE — TRADITIONAL RULES AND OPEN DISCOVERY
+Use this reference as a generative grammar, not a closed catalog. Consult all calculated Canon outcomes and their actual conditions first. Where classical sources use sign-relative places, keep those relations distinct from the app's equal houses. Preserve the fixed-firmament projection, supplied positions, frame and orb policy. A missing prerequisite prevents claiming that named rule, not interpreting other relationships.
+
+JYOTISH / CLASSICAL YOGA FAMILIES
+- Sambandha: investigate conjunction, mutual graha drishti, sign-lord exchange, shared dispositors and links among bhava lords. Distinguish relationship types; check functional lordship, condition and counteracting contacts.
+- Raja Yoga: identify the lords of angular (1/4/7/10) and trinal (1/5/9) places, then their qualifying conjunction, mutual aspect or exchange. Examine 9th–10th lord relationships and yogakaraka (a planet ruling both angular and trinal places). Explore purpose united with action, responsibility and accomplishment; not guaranteed rank.
+- Dhana Yoga families: examine 2nd, 5th, 9th and 11th lord relationships according to each specific rule. Distinguish access to resources, ability to produce value, opportunities and retention; not guaranteed wealth.
+- Parivartana: reciprocal lord occupation. Phaladeepika classifies 66 house-lord exchanges: Dainya involves 6/8/12; Khala involves 3 excluding Dainya; Maha covers the remainder. Distinguish sign exchange from actual equal-house occupation. Analyze the reciprocal routing of life areas rather than attaching moral labels.
+- Pancha Mahapurusha: Mars/Ruchaka, Mercury/Bhadra, Jupiter/Hamsa, Venus/Malavya, Saturn/Shasha in own or exaltation sign in a qualifying kendra. Investigate the specific expression of initiative, intellect/craft, judgment/learning, art/relationships, or endurance/organization. Check strength, combustion and other modifying conditions under the chosen doctrine.
+- Gaja Kesari: Jupiter in a kendra from Moon is a common core condition; editions add qualifications. Investigate the connection between judgment, emotional orientation and capacity; not guaranteed fame.
+- Sunapha, Anapha, Durudhura: eligible classical planets in 2nd, 12th or both from Moon respectively, excluding Sun and using the selected planet set. Interpret the particular composition. Kemadruma is a candidate absence of those flanking planets; check cancellation rules, never infer abandonment from the label.
+- Adhi: benefics in 6th/7th/8th from Moon, or Lagna in some formulations. Verify exact variant and participating planets; investigate coordination and support under demands.
+- Vesi, Vasi, Ubhayachari: eligible planets (excluding Moon) in 2nd, 12th or both from Sun; relate their functions to personal agency and expression.
+- Nabhasa: examine classical planetary distribution for Ashraya (modal), Dala (grouping), Akriti (shape), and Sankhya (number of occupied signs) families. Use the actual named rule where available; do not equate superficially similar Western shapes with these yogas.
+- Neecha Bhanga: examine a debilitated planet against the actual cancellation rule (e.g. angularity of relevant sign lord or exaltation lord from Lagna/Moon in the chosen formulation). Distinguish mitigation from a verified Raja Yoga. Explore recovered or redirected capacity.
+- Harsha, Sarala, Vimala and Vipareeta families: inspect 6th/8th/12th lords in relevant difficult places, other lordships, support and the specific edition's rule. Investigate adaptation and problem solving, not guaranteed victory.
+- Graha drishti: classical full seventh aspect plus Mars 4th/8th, Jupiter 5th/9th, Saturn 3rd/10th. Rasi drishti is distinct: movable sees nonadjacent fixed, fixed sees nonadjacent movable, dual sees other dual signs. Preserve calculated direction and strength; do not substitute Western aspects or assume nodal rules.
+- Varga and capacity: integrate supplied D1, D9, D10 and other vargas, nakshatra lord, pada, dispositor chain, Shadbala, Bhava Bala, Ashtakavarga and Vimshottari timing. High capacity is not automatically beneficial. Derived charts are not independent empirical evidence; periods activate rather than replace natal meaning.
+
+ARABIC-PERSIAN PLANETARY RELATIONSHIPS AND MANAZIL
+- Application/separation: determine approaching or departing exact contact from supplied motion, phase and orb. Distinguish sign-based regard from exact perfection. Keep natal interpretation distinct from horary judgment.
+- Reception: check host dignity at the guest's actual degree and qualifying connection. Sahl describes strong reception via domicile or exaltation and combinations of lesser dignities under his rule. Distinguish mere dispositorship, unilateral and mutual reception, and an unsupported guest.
+- Translation of light: a third, typically faster planet separates from one significator and applies to another. Confirm order, relative motion and eligible contacts. Collection: two planets apply to a third, typically slower planet, under the selected reception/collection rule. Distinguish mediation from direct contact.
+- Interruption: prohibition (intervening perfection), refranation (motion changes before perfection), frustration (target perfects elsewhere first), plus barring, return and cutting of light. Preserve each author's criteria; a static chart does not establish a sequence unless motion evidence supports it.
+- Pushing of nature, power or management and returning connection: medieval categories describe directional dependency and transfer. Use the relevant source's conditions and available evidence, not a generic claim of successful transfer.
+- Wildness and void of course: distinguish lack of eligible connections from lack of a current application. Scope and time window vary by doctrine.
+- Advancement/retreat, solar phase, combustion, retrogradation, sect, angularity and reception qualify a planet's capacity to deliver what it signifies. Separate essential condition from ability to act.
+- Lots: connect each supplied Lot to its lord, house, condition, contacts and chain of rulership. Fortune and Spirit are distinct symbolic anchors for circumstances and chosen activity.
+- 28 Manazil: combine actual fixed mansion assignment and individual Canon themes with Moon's phase, contacts, host and relevant house-lord links. Historical mansion material is often electional or talismanic; an elective theme may inspire a modern natal synthesis, but do not misattribute it as ancient natal doctrine. Never transplant Nakshatra padas or planetary lords to Arabic mansions.
+
+HELLENISTIC CONFIGURATIONS
+- Valens' planetary mixtures: examine pairs and triplets, including a third function that amplifies, redirects or counterbalances the pair. Do not concatenate three isolated definitions.
+- Witnessing and aversion: distinguish sign-based co-presence, sextile, square, trine and opposition from degree-based contacts; aversion means absence of classical sign-based regard. Check whether the host can witness its guest.
+- Overcoming/ domination: determine superior direction in the traditional sign order; the superior tenth-sign square is particularly important. Consider sect, dignity, reception and intervening testimony; direction matters.
+- Bonification/maltreatment: inspect ray, enclosure, engagement, adherence, opposition, overcoming and domicile-lord condition under the selected historical criteria. Not every benefic/malefic contact qualifies. Sect, reception and intervention modify judgment.
+- Enclosure and counteraction: distinguish bodily from ray enclosure; identify flanking planets, order and intervening witnesses. A three-planet grouping alone does not establish enclosure.
+- Sect and triplicity: consider day/night, sect light, condition, triplicity lords and their support. Use timing/order only when calculated.
+- Solar visibility and condition: distinguish under beams, combustion and exact central conjunction under supplied degree/visibility rules. Evaluate prominence separately from dignity and capacity.
+- Lord and Lot networks: trace a place to lord, host and witnesses. Compare Ascendant, Fortune and Spirit with their rulers. Keep sign-relative places separate from equal houses.
+- Ptolemy's qualities of the soul: combine Moon, Mercury, their governors and configurations (Tetrabiblos III, numbering varies). Use as symbolic interpretation, not a validated personality assessment.
+
+MODERN CONFIGURATIONS AND ORIGINAL CROSS-TRADITION DISCOVERY
+- Grand Trine: three trines; T-square: opposition and two squares; Grand Cross: two oppositions and four squares; Kite: Grand Trine plus fourth point opposed to one vertex and sextile to two others; Yod: two quincunxes to apex and sextile base; Mystic Rectangle: two oppositions, two trines and two sextiles. Verify all edges from supplied contacts in the same frame and scope. Stellium depends on the chosen definition. Do not attribute modern patterns indiscriminately to ancient authors.
+- Model planets, houses, lords, mansions, Lots, contacts, timing and conditions as a typed relationship network. Trace two- and three-step paths, shared hubs, reciprocal links, cycles, supporting and counteracting branches. Connect clusters that explain more together than separately.
+- Invent ORIGINAL interpretations and discover unnamed configurations when the supplied chart supports them. You are not confined to the listed rules, a predefined Canon sentence or a named yoga. Apply additional accurate astrological knowledge when useful; differentiate established doctrine from new symbolic inference. Compare competing explanations and retain the one with the strongest specific convergence. Do not falsely attribute an original synthesis to an ancient author.
+- The Canon is a foundation, not a ceiling. Be creative in interpretation, exact in evidence. Missing methods do not stop reasoning over existing relationships. Preserve the factual chart, provenance and contradictions; never fabricate chart data, biographies, diagnoses or certainty. A new interpretation is not a new calculated fact or scientifically validated law.
+- Deliver the combined human meaning, not the ingredients. Follow strongest signals and adaptive questions; do not force a checklist or generic statement.`;
+
+export const COMBINATION_INTELLIGENCE_SOURCES = [
+  ["Jyotish", "Brihat Parashara Hora Shastra: yoga, drishti, strength and dasha chapters", "https://vedicpupil.in/library/books/brihat-parashara-hora-shastra"],
+  ["Jyotish", "Varahamihira, Brihat Jataka XIII", "https://www.siva.sh/brihat-jataka/13/"],
+  ["Jyotish", "Mantreswara, Phaladeepika VI", "https://www.wisdomlib.org/hinduism/book/phaladeepika-by-mantreswara-text-and-translation/d/doc1621578.html"],
+  ["Jyotish", "Classical yoga references and variants", "https://gokkubbe.org/ogren/yogalar?lang=en"],
+  ["Jyotish", "Graha drishti classical rule overview", "https://navapanchangam.com/learn/chart_foundations/graha-drishti-planetary-aspects"],
+  ["Arabic-Persian", "Sahl ibn Bishr, Introduction", "https://www.alchemy-texts.com/book/book-of-judgements-liber-introductorius/"],
+  ["Arabic-Persian", "Abu Ma'shar and al-Qabisi, Book III, translator's overview", "https://bendykes.com/product/introductions-to-traditional-astrology-abu-mashar-al-qabisi/"],
+  ["Arabic-Persian", "Lunar mansions, historical source overview", "https://www.renaissanceastrology.com/mansionsmoonbook.html"],
+  ["Hellenistic", "Ptolemy, Tetrabiblos I and III", "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Ptolemy/Tetrabiblos/home.html"],
+  ["Hellenistic", "Liam P. Shaw, The logic of planetary combination in Vettius Valens", "https://research-information.bris.ac.uk/en/publications/the-logic-of-planetary-combination-in-vettius-valens/"],
+  ["Hellenistic", "Porphyry/Antiochus bonification and maltreatment, referenced overview", "https://gokkubbe.org/ogren/bonifikasyon-kakosis?lang=en"],
+] as const;
+
+
+================================================================================
+FILE: server/_core/llm.ts
+BLOB SHA: cac3772c2ce17139e92cc666a725f3cdb5036f16
+================================================================================
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { DEFAULT_GEMINI_MODEL, ENV } from "./env";
+
+export type Role = "system" | "user" | "assistant" | "tool" | "function";
+
+export type TextContent = {
+  type: "text";
+  text: string;
+};
+
+export type ImageContent = {
+  type: "image_url";
+  image_url: {
+    url: string;
+    detail?: "auto" | "low" | "high";
+  };
+};
+
+export type FileContent = {
+  type: "file_url";
+  file_url: {
+    url: string;
+    mime_type?: "audio/mpeg" | "audio/wav" | "application/pdf" | "audio/mp4" | "video/mp4" ;
+  };
+};
+
+export type MessageContent = string | TextContent | ImageContent | FileContent;
+
+export type Message = {
+  role: Role;
+  content: MessageContent | MessageContent[];
+  name?: string;
+  tool_call_id?: string;
+};
+
+export type Tool = {
+  type: "function";
+  function: {
+    name: string;
+    description?: string;
+    parameters?: Record<string, unknown>;
+  };
+};
+
+export type ToolChoicePrimitive = "none" | "auto" | "required";
+export type ToolChoiceByName = { name: string };
+export type ToolChoiceExplicit = {
+  type: "function";
+  function: {
+    name: string;
+  };
+};
+
+export type ToolChoice =
+  | ToolChoicePrimitive
+  | ToolChoiceByName
+  | ToolChoiceExplicit;
+
+export type InvokeParams = {
+  messages: Message[];
+  tools?: Tool[];
+  toolChoice?: ToolChoice;
+  tool_choice?: ToolChoice;
+  maxTokens?: number;
+  max_tokens?: number;
+  outputSchema?: OutputSchema;
+  output_schema?: OutputSchema;
+  responseFormat?: ResponseFormat;
+  response_format?: ResponseFormat;
+  model?: string;
+  provider?: "gemini" | "groq" | "openrouter";
+  signal?: AbortSignal;
+  /** Per-request timeout for provider response headers. */
+  timeoutMs?: number;
+  thinking?: Record<string, unknown>;
+  reasoning?: Record<string, unknown>;
+};
+
+export type ToolCall = {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
+};
+
+export type InvokeResult = {
+  id: string;
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: {
+      role: Role;
+      content: string | Array<TextContent | ImageContent | FileContent>;
+      tool_calls?: ToolCall[];
+    };
+    finish_reason: string | null;
+  }>;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+};
+
+type ProviderResponse = InvokeResult & {
+  output_text?: string;
+  output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+};
+
+export type JsonSchema = {
+  name: string;
+  schema: Record<string, unknown>;
+  strict?: boolean;
+};
+
+export type OutputSchema = JsonSchema;
+
+export type ResponseFormat =
+  | { type: "text" }
+  | { type: "json_object" }
+  | { type: "json_schema"; json_schema: JsonSchema };
+
+const ensureArray = (
+  value: MessageContent | MessageContent[]
+): MessageContent[] => (Array.isArray(value) ? value : [value]);
+
+const normalizeContentPart = (
+  part: MessageContent
+): TextContent | ImageContent | FileContent => {
+  if (typeof part === "string") {
+    return { type: "text", text: part };
+  }
+
+  if (part.type === "text") {
+    return part;
+  }
+
+  if (part.type === "image_url") {
+    return part;
+  }
+
+  if (part.type === "file_url") {
+    return part;
+  }
+
+  throw new Error("Unsupported message content part");
+};
+
+const normalizeMessage = (message: Message) => {
+  const { role, name, tool_call_id } = message;
+
+  if (role === "tool" || role === "function") {
+    const content = ensureArray(message.content)
+      .map(part => (typeof part === "string" ? part : JSON.stringify(part)))
+      .join("\n");
+
+    return {
+      role,
+      name,
+      tool_call_id,
+      content,
+    };
+  }
+
+  const contentParts = ensureArray(message.content).map(normalizeContentPart);
+
+  // If there's only text content, collapse to a single string for compatibility
+  if (contentParts.length === 1 && contentParts[0].type === "text") {
+    return {
+      role,
+      name,
+      content: contentParts[0].text,
+    };
+  }
+
+  return {
+    role,
+    name,
+    content: contentParts,
+  };
+};
+
+const normalizeToolChoice = (
+  toolChoice: ToolChoice | undefined,
+  tools: Tool[] | undefined
+): "none" | "auto" | ToolChoiceExplicit | undefined => {
+  if (!toolChoice) return undefined;
+
+  if (toolChoice === "none" || toolChoice === "auto") {
+    return toolChoice;
+  }
+
+  if (toolChoice === "required") {
+    if (!tools || tools.length === 0) {
+      throw new Error(
+        "tool_choice 'required' was provided but no tools were configured"
+      );
+    }
+
+    if (tools.length > 1) {
+      throw new Error(
+        "tool_choice 'required' needs a single tool or specify the tool name explicitly"
+      );
+    }
+
+    return {
+      type: "function",
+      function: { name: tools[0].function.name },
+    };
+  }
+
+  if ("name" in toolChoice) {
+    return {
+      type: "function",
+      function: { name: toolChoice.name },
+    };
+  }
+
+  return toolChoice;
+};
+
+const resolveApiUrl = () =>
+  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+    : "https://forge.manus.im/v1/chat/completions";
+
+const assertApiKey = () => {
+  if (!ENV.openrouterApiKey && !ENV.groqApiKey && !ENV.geminiApiKey && !ENV.anthropicApiKey && !ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, or BUILT_IN_FORGE_API_KEY is not configured");
+  }
+};
+
+const contentToText = (content: Message["content"]): string =>
+  ensureArray(content).map(part => typeof part === "string" ? part : part.type === "text" ? part.text : "").join("\n");
+
+const responseContentToText = (content: unknown): string => {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.map(part => {
+    if (typeof part === "string") return part;
+    return part && typeof part === "object" && "text" in part && typeof part.text === "string" ? part.text : "";
+  }).filter(Boolean).join("\n");
+};
+
+const readableAssistantText = (result: ProviderResponse): string => {
+  const choiceText = responseContentToText(result.choices?.[0]?.message?.content);
+  if (choiceText.trim()) return choiceText;
+  if (typeof result.output_text === "string" && result.output_text.trim()) return result.output_text;
+  return result.output?.flatMap(item => item.content ?? []).map(item => item.text ?? "").filter(Boolean).join("\n") ?? "";
+};
+
+// All interpretation callers use this adapter, including legacy Claude model hints.
+// Provider-specific adapters retain the original evidence and request options.
+async function invokeGroq(params: InvokeParams): Promise<InvokeResult> {
+  const messages = params.messages.map(message => {
+    const { name: _name, ...normalized } = normalizeMessage(message);
+    if (ensureArray(message.content).some(part => typeof part !== "string" && part.type !== "text")) {
+      throw new Error("GROQ_UNSUPPORTED_CONTENT: The configured interpreter accepts text only.");
+    }
+    return normalized;
+  });
+  const payload: Record<string, unknown> = {
+    model: ENV.groqModel,
+    messages,
+    max_completion_tokens: params.max_tokens ?? params.maxTokens ?? 4096,
+  };
+  if (ENV.groqModel.startsWith("openai/gpt-oss-")) {
+    payload.reasoning_effort = "low";
+    payload.include_reasoning = false;
+  }
+  if (params.tools?.length) payload.tools = params.tools;
+  const toolChoice = normalizeToolChoice(params.toolChoice ?? params.tool_choice, params.tools);
+  if (toolChoice) payload.tool_choice = toolChoice;
+  const format = normalizeResponseFormat(params);
+  if (format) payload.response_format = format;
+  let response = await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ENV.groqApiKey}` },
+    body: JSON.stringify(payload),
+    signal: params.signal,
+    timeoutMs: params.timeoutMs,
+  });
+  let safeCode="";
+  if(response.status===400){
+    try { const body=await response.clone().json() as {error?:{code?:unknown}};
+      const code=body.error?.code;
+      if(typeof code==="string" && ["json_validate_failed","invalid_request_error","model_not_found","model_decommissioned","unsupported_parameter"].includes(code)) safeCode=code;
+    } catch { /* Never expose a provider body that might echo the chart. */ }
+    if(safeCode==="json_validate_failed" && format && !params.tools?.length){
+      // Retry only a provider JSON-generation failure, once. The caller's JSON
+      // parser and evidence validation still apply to the returned text.
+      delete payload.response_format;
+      response=await fetchWithBackoff("https://api.groq.com/openai/v1/chat/completions",{
+        method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${ENV.groqApiKey}`},body:JSON.stringify(payload),signal:params.signal,timeoutMs:params.timeoutMs,
+      });
+    }
+  }
+  if (!response.ok) {
+    // Provider response bodies can echo private chart prompts; expose only status.
+    const retryAfter = response.headers.get("retry-after");
+    throw new Error(`GROQ_REQUEST_FAILED: HTTP ${response.status}${safeCode ? ` (${safeCode})` : ""}. ${response.status === 429
+      ? `Groq usage limit reached.${retryAfter ? ` Retry after ${retryAfter} seconds.` : " Try again later."}`
+      : response.status === 401 ? "Check GROQ_API_KEY in the server environment."
+      : response.status === 413 ? "This reading exceeds the Groq account request limit."
+      : "Groq could not complete this reading; check account limits and model access."}`);
+  }
+  const result = await response.json() as InvokeResult;
+  const choice = result.choices?.[0];
+  if (choice?.finish_reason === "length") {
+    throw new Error("GROQ_INCOMPLETE_READING: The response reached its token limit. Request a shorter section.");
+  }
+  if (!responseContentToText(choice?.message?.content).trim() && !choice?.message?.tool_calls?.length) {
+    throw new Error("GROQ_EMPTY_READING: Groq returned no interpretation.");
+  }
+  return result;
+}
+
+async function invokeAnthropic(params: InvokeParams): Promise<InvokeResult> {
+  const system = params.messages.filter(message => message.role === "system").map(message => contentToText(message.content)).join("\n\n");
+  const messages = params.messages.filter(message => message.role !== "system" && (message.role === "user" || message.role === "assistant")).map(message => ({
+    role: message.role,
+    content: contentToText(message.content),
+  }));
+  const maxTokens = params.max_tokens ?? params.maxTokens ?? 4096;
+  const body: Record<string, unknown> = { model: params.model ?? ENV.anthropicModel, max_tokens: maxTokens, messages };
+  const thinking = params.thinking as { type?: string; budget_tokens?: number } | undefined;
+  if (thinking?.type === "enabled") {
+    const budget = Math.max(1024, Math.floor(thinking.budget_tokens ?? 1024));
+    body.thinking = { type: "enabled", budget_tokens: budget };
+    body.max_tokens = maxTokens + budget; // thinking tokens must not eat the visible answer
+  }
+  if (system) body.system = system;
+  const response = await fetchWithBackoff("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": ENV.anthropicApiKey, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify(body),
+    signal: params.signal,
+    timeoutMs: params.timeoutMs,
+  });
+  if (!response.ok) {
+    throw new Error(`ANTHROPIC_REQUEST_FAILED: HTTP ${response.status}`);
+  }
+  const result = await response.json() as { id: string; model: string; content?: Array<{ type: string; text?: string }>; stop_reason?: string };
+  const text = (result.content ?? []).filter(part => part.type === "text").map(part => part.text ?? "").join("\n");
+  return { id: result.id, created: Math.floor(Date.now() / 1000), model: result.model, choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: result.stop_reason ?? null }] };
+}
+
+async function invokeOpenAI(params: InvokeParams): Promise<InvokeResult> {
+  const url = `${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`;
+  const headers = { "content-type": "application/json", authorization: `Bearer ${ENV.openaiApiKey}` };
+  const messages = params.messages.map(normalizeMessage);
+  const max_tokens = params.max_tokens ?? params.maxTokens ?? 4096;
+  const requestedModel = params.model && !params.model.startsWith("claude") ? params.model : undefined;
+  const models = requestedModel ? [requestedModel] : ["gpt-5-mini", "gpt-5-nano"];
+  let lastFailure = "no readable message";
+
+  for (const model of models) {
+    // Some compatible gateways return an empty message when reasoning consumes
+    // the completion budget. Retry the same model with a plain request before
+    // switching models, rather than repeating the same request shape.
+    const requestVariants = [
+      { max_tokens, ...(params.reasoning || params.thinking ? { reasoning: { effort: "minimal" } } : {}) },
+      { max_completion_tokens: max_tokens },
+    ];
+    for (const requestOptions of requestVariants) {
+      const response = await fetchWithBackoff(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ model, messages, ...requestOptions }),
+        signal: params.signal,
+        timeoutMs: params.timeoutMs,
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastFailure = `provider error ${response.status}: ${errorText.slice(0, 300)}`;
+        continue;
+      }
+      const result = await response.json() as ProviderResponse;
+      const choice = result.choices?.[0];
+      const text = readableAssistantText(result);
+      if (text.trim()) {
+        if (!choice?.message?.content) {
+          result.choices = [{ index: 0, message: { role: "assistant", content: text }, finish_reason: choice?.finish_reason ?? "stop" }];
+        }
+        return result;
+      }
+      lastFailure = `model ${model} returned no visible text (finish_reason=${choice?.finish_reason ?? "unknown"})`;
+      console.warn(`OpenAI-compatible ${lastFailure}; trying a compatible fallback request`);
+    }
+  }
+  throw new Error(`OpenAI-compatible provider returned no readable message after fallback retries (${lastFailure})`);
+}
+
+const normalizeResponseFormat = ({
+  responseFormat,
+  response_format,
+  outputSchema,
+  output_schema,
+}: {
+  responseFormat?: ResponseFormat;
+  response_format?: ResponseFormat;
+  outputSchema?: OutputSchema;
+  output_schema?: OutputSchema;
+}):
+  | { type: "json_schema"; json_schema: JsonSchema }
+  | { type: "text" }
+  | { type: "json_object" }
+  | undefined => {
+  const explicitFormat = responseFormat || response_format;
+  if (explicitFormat) {
+    if (
+      explicitFormat.type === "json_schema" &&
+      !explicitFormat.json_schema?.schema
+    ) {
+      throw new Error(
+        "responseFormat json_schema requires a defined schema object"
+      );
+    }
+    return explicitFormat;
+  }
+
+  const schema = outputSchema || output_schema;
+  if (!schema) return undefined;
+
+  if (!schema.name || !schema.schema) {
+    throw new Error("outputSchema requires both name and schema");
+  }
+
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: schema.name,
+      schema: schema.schema,
+      ...(typeof schema.strict === "boolean" ? { strict: schema.strict } : {}),
+    },
+  };
+};
+
+const RETRY_MAX_RETRIES = 4;
+const RETRY_BASE_DELAY_MS = 500;
+const RETRY_MAX_DELAY_MS = 30_000;
+const LLM_REQUEST_TIMEOUT_MS = 60_000;
+
+export function getLLMProviderStatus() {
+  const providers = [
+    ENV.geminiApiKey ? "gemini" : null,
+    ENV.groqApiKey ? "groq" : null,
+    ENV.openrouterApiKey ? "openrouter" : null,
+  ].filter((provider): provider is string => Boolean(provider));
+  return {
+    configured: providers.length > 0,
+    provider: providers[0] ?? "unconfigured",
+    fallbackProviders: providers.slice(1),
+    requestTimeoutMs: LLM_REQUEST_TIMEOUT_MS,
+    maxRetries: RETRY_MAX_RETRIES,
+  };
+
+}
+
+type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
+
+const sleep = (ms: number, signal?: AbortSignal | null) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason ?? new Error("LLM request aborted."));
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      reject(signal?.reason ?? new Error("LLM request aborted."));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+
+const parseRetryAfter = (value: string | null): number | undefined => {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? undefined : Math.max(0, at - Date.now());
+};
+
+// Equal-jitter exponential backoff. The cap/2 floor guarantees a minimum
+// delay so a misbehaving caller loop slows down instead of hammering the
+// upstream while it keeps returning errors.
+const computeBackoffDelay = (
+  attempt: number,
+  retryAfterMs?: number
+): number => {
+  const cap = Math.min(RETRY_BASE_DELAY_MS * 2 ** attempt, RETRY_MAX_DELAY_MS);
+  const jittered = cap / 2 + Math.random() * (cap / 2);
+  return Math.min(Math.max(jittered, retryAfterMs ?? 0), RETRY_MAX_DELAY_MS);
+};
+
+// Retries non-2xx responses and network errors with exponential backoff, then
+// returns the final Response so callers keep their existing error handling.
+const fetchWithBackoff = async (
+  url: string,
+  init: FetchInit & { timeoutMs?: number }
+): Promise<Response> => {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= RETRY_MAX_RETRIES; attempt++) {
+    try {
+      if (init.signal?.aborted) throw init.signal.reason ?? new Error("LLM request aborted.");
+      const controller = new AbortController();
+      const onAbort = () => controller.abort(init.signal?.reason);
+      init.signal?.addEventListener("abort", onAbort, { once: true });
+      const timeoutMs = init.timeoutMs ?? LLM_REQUEST_TIMEOUT_MS;
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      let response: Response;
+      try {
+        const { timeoutMs: _timeoutMs, ...requestInit } = init;
+        try {
+          response = await fetch(url, { ...requestInit, signal: controller.signal });
+        } catch (error) {
+          if (controller.signal.aborted && !init.signal?.aborted) {
+            throw new Error(`AI_REQUEST_TIMEOUT: The AI service did not respond within ${Math.round(timeoutMs / 1000)} seconds. Retry this summary.`, { cause: error });
+          }
+          throw error;
+        }
+      } finally {
+        clearTimeout(timeout);
+        init.signal?.removeEventListener("abort", onAbort);
+      }
+      // Preserve the original body for billing, invalid-input and auth errors.
+      // Repeating a rejected 400 request hides the useful provider explanation.
+      if (response.ok || ![408, 409, 429, 500, 502, 503, 504, 529].includes(response.status) || attempt === RETRY_MAX_RETRIES) {
+        return response;
+      }
+
+      const retryAfterMs = parseRetryAfter(
+        response.headers.get("retry-after")
+      );
+      try {
+        await response.body?.cancel();
+      } catch {
+        // Body already settled; nothing to clean up.
+      }
+      console.warn(
+        `LLM request retry ${attempt + 1}/${RETRY_MAX_RETRIES} after status ${response.status}`
+      );
+      await sleep(computeBackoffDelay(attempt, retryAfterMs), init.signal);
+    } catch (error) {
+      lastError = error;
+      if (init.signal?.aborted || attempt === RETRY_MAX_RETRIES ||
+          (error instanceof Error && error.message.startsWith("AI_REQUEST_TIMEOUT:"))) throw error;
+      console.warn(
+        `LLM request retry ${attempt + 1}/${RETRY_MAX_RETRIES} after network error`
+      );
+      await sleep(computeBackoffDelay(attempt), init.signal);
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("LLM request failed after exhausting retries");
+};
+
+async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
+  const model = ENV.geminiModel;
+  try {
+    return await invokeGeminiModel(params, model);
+  } catch (error) {
+    if (params.signal?.aborted || model === DEFAULT_GEMINI_MODEL ||
+        !(error instanceof Error) || error.message !== "GEMINI_REQUEST_FAILED: HTTP 404") {
+      throw error;
+    }
+    console.warn("[invokeGemini] Configured model returned HTTP 404. Trying the default Gemini model.");
+    return invokeGeminiModel(params, DEFAULT_GEMINI_MODEL);
+  }
+}
+
+async function invokeGeminiModel(params: InvokeParams, model: string): Promise<InvokeResult> {
+  const timeoutMs = params.timeoutMs ?? LLM_REQUEST_TIMEOUT_MS;
+  const ai = new GoogleGenAI({
+    apiKey: ENV.geminiApiKey,
+    httpOptions: {
+      timeout: timeoutMs,
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
+    },
+  });
+  const systemInstruction = params.messages
+    .filter(message => message.role === "system")
+    .map(message => contentToText(message.content))
+    .join("\n\n");
+  const contents = params.messages
+    .filter(message => message.role !== "system" && (message.role === "user" || message.role === "assistant"))
+    .map(message => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: contentToText(message.content) }],
+    }));
+
+  const normalizedResponseFormat = normalizeResponseFormat({
+    responseFormat: params.responseFormat,
+    response_format: params.response_format,
+    outputSchema: params.outputSchema,
+    output_schema: params.output_schema,
+  });
+
+  const generateWithTimeout = async () => {
+    if (params.signal?.aborted) {
+      throw params.signal.reason ?? new Error("LLM request aborted.");
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
+    try {
+      return await Promise.race([
+        ai.models.generateContent({
+          model,
+          contents: contents.length > 0 ? contents : "Hello",
+          config: {
+            maxOutputTokens: params.max_tokens ?? params.maxTokens ?? 4096,
+            ...(model.startsWith("gemini-2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+            ...(model === DEFAULT_GEMINI_MODEL && !params.thinking && !params.reasoning
+              ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } }
+              : {}),
+            ...(params.signal ? { abortSignal: params.signal } : {}),
+            ...(systemInstruction ? { systemInstruction } : {}),
+            ...(normalizedResponseFormat?.type === "json_object" || normalizedResponseFormat?.type === "json_schema"
+              ? { responseMimeType: "application/json" }
+              : {}),
+          },
+        }),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
+            reject(
+              new Error(
+                `AI_REQUEST_TIMEOUT: The AI service did not respond within ${Math.round(timeoutMs / 1000)} seconds. Retry this summary.`
+              )
+            );
+          }, timeoutMs);
+          if (params.signal) {
+            onAbort = () =>
+              reject(params.signal?.reason ?? new Error("LLM request aborted."));
+            params.signal.addEventListener("abort", onAbort, { once: true });
+          }
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+      if (onAbort && params.signal) params.signal.removeEventListener("abort", onAbort);
+    }
+  };
+
+  let response: any;
+  const maxRetries = 3;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      response = await generateWithTimeout();
+      break;
+    } catch (err: any) {
+      const errStr = typeof err?.message === "string" ? err.message : JSON.stringify(err);
+      if (
+        params.signal?.aborted ||
+        errStr.startsWith("AI_REQUEST_TIMEOUT:") ||
+        errStr === "LLM request aborted."
+      ) {
+        throw err instanceof Error ? err : new Error(errStr);
+      }
+      const isRateLimit =
+        err?.status === "RESOURCE_EXHAUSTED" ||
+        err?.status === 429 ||
+        err?.code === 429 ||
+        errStr.includes("429") ||
+        errStr.includes("RESOURCE_EXHAUSTED") ||
+        errStr.includes("Quota exceeded") ||
+        errStr.includes("rate-limits");
+
+      let retryAfterSec: number | undefined;
+      const match =
+        errStr.match(/retry in ([0-9.]+)s/i) ||
+        errStr.match(/"retryDelay":\s*"([0-9.]+)s"/i);
+      if (match && match[1]) {
+        const parsed = parseFloat(match[1]);
+        if (!isNaN(parsed) && parsed > 0) {
+          retryAfterSec = Math.ceil(parsed);
+        }
+      }
+
+      const isTransientDemand =
+        err?.status === "UNAVAILABLE" ||
+        err?.status === 503 ||
+        err?.code === 503 ||
+        errStr.includes("503") ||
+        errStr.includes("UNAVAILABLE") ||
+        /high demand|temporarily unavailable/i.test(errStr);
+
+      // Only auto-retry short bursts (<= 8s) once or twice; longer cooldowns should return fast to the user.
+      if ((isRateLimit || isTransientDemand) && attempt < maxRetries - 1 && (!retryAfterSec || retryAfterSec <= 8)) {
+        const delayMs = retryAfterSec ? retryAfterSec * 1000 + 500 : 1500 * Math.pow(2, attempt);
+        console.warn(
+          `[invokeGemini] ${isRateLimit ? "Rate limit (429)" : "Transient provider load (503)"}, pausing ${delayMs}ms before retry ${attempt + 1}/${maxRetries - 1}...`
+        );
+        await sleep(delayMs, params.signal);
+        continue;
+      }
+
+      if (isRateLimit) {
+        const waitHint = retryAfterSec
+          ? ` Please wait ~${retryAfterSec} seconds and try again.`
+          : " Please wait ~20 seconds and try again.";
+        throw new Error(
+          `GEMINI_RATE_LIMIT: HTTP 429. Provider capacity was reached.${waitHint}`
+        );
+      }
+
+      const statusByName: Record<string, number> = { UNAVAILABLE: 503, INVALID_ARGUMENT: 400, NOT_FOUND: 404, PERMISSION_DENIED: 403, UNAUTHENTICATED: 401 };
+      const status = typeof err?.status === "number" ? err.status
+        : typeof err?.code === "number" ? err.code : statusByName[err?.status];
+      throw new Error(`GEMINI_REQUEST_FAILED: ${status ? `HTTP ${status}` : "Provider rejected the request"}`);
+    }
+  }
+
+  const text = response?.text ?? "";
+  return {
+    id: `gemini-${Date.now()}`,
+    created: Math.floor(Date.now() / 1000),
+    model,
+    choices: [
+      {
+        index: 0,
+        message: { role: "assistant", content: text },
+        finish_reason: response?.candidates?.[0]?.finishReason?.toLowerCase() ?? null,
+      },
+    ],
+  };
+}
+
+async function invokeOpenRouter(params: InvokeParams): Promise<InvokeResult> {
+  const format = normalizeResponseFormat(params);
+  const response = await fetchWithBackoff("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ENV.openrouterApiKey}` },
+    body: JSON.stringify({
+      model: ENV.openrouterModel,
+      messages: params.messages.map(normalizeMessage),
+      max_tokens: params.max_tokens ?? params.maxTokens ?? 4096,
+      ...(format ? { response_format: format } : {}),
+      ...(params.tools?.length ? { tools: params.tools } : {}),
+      ...(params.toolChoice || params.tool_choice ? { tool_choice: normalizeToolChoice(params.toolChoice ?? params.tool_choice, params.tools) } : {}),
+    }),
+    signal: params.signal,
+    timeoutMs: params.timeoutMs,
+  });
+  if (!response.ok) throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status}`);
+  return await response.json() as InvokeResult;
+}
+
+function assertComplete(result: InvokeResult, provider: string) {
+  const choice = result.choices?.[0];
+  const finish = choice?.finish_reason?.toLowerCase();
+  if (finish && !["stop", "end_turn", "stop_sequence", "completed", "tool_calls"].includes(finish))
+    throw new Error(`${provider.toUpperCase()}_INCOMPLETE: finish_reason=${finish}`);
+  if (!responseContentToText(choice?.message?.content).trim() && !choice?.message?.tool_calls?.length)
+    throw new Error(`${provider.toUpperCase()}_EMPTY: Provider returned no reading.`);
+}
+
+export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+  const chain = [
+    { name: "gemini", key: ENV.geminiApiKey, invoke: invokeGemini },
+    { name: "groq", key: ENV.groqApiKey, invoke: invokeGroq },
+    { name: "openrouter", key: ENV.openrouterApiKey, invoke: invokeOpenRouter },
+  ];
+  // A provider hint selects the starting point; only configured downstream
+  // providers participate. Legacy model hints never override provider models.
+  const start = params.provider ? chain.findIndex(p => p.name === params.provider) : 0;
+  const candidates = chain.slice(Math.max(0, start)).filter(provider => provider.key);
+  const failures: string[] = [];
+  for (const provider of candidates) {
+    if (params.signal?.aborted) throw params.signal.reason ?? new Error("LLM request aborted.");
+    const deadline = AbortSignal.timeout(params.timeoutMs ?? 60_000);
+    const signal = params.signal ? AbortSignal.any([params.signal, deadline]) : deadline;
+    try {
+      const result = await provider.invoke({ ...params, model: undefined, signal });
+      assertComplete(result, provider.name);
+      return result;
+    } catch (error) {
+      if (params.signal?.aborted) throw params.signal.reason ?? error;
+      if (error instanceof Error && error.message.includes("UNSUPPORTED_CONTENT")) throw error;
+      // Never return SDK bodies, request headers, or chart prompts to the UI.
+      const message = error instanceof Error ? error.message : "";
+      const code = message.match(/\b[A-Z][A-Z_]+:/)?.[0] ?? "REQUEST_FAILED:";
+      const status = message.match(/\bHTTP \d{3}\b/)?.[0] ?? (deadline.aborted ? "timeout" : "request failed");
+      failures.push(`${provider.name} ${code} ${status}`);
+    }
+  }
+  if (candidates.length) throw new Error(`AI_PROVIDERS_FAILED: ${failures.join("; ")}`);
+  throw new Error("AI_FREE_PROVIDER_UNCONFIGURED: Configure GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY.");
+}
+
+async function invokeForge(params: InvokeParams): Promise<InvokeResult> {
+  const {
+    messages,
+    tools,
+    toolChoice,
+    tool_choice,
+    outputSchema,
+    output_schema,
+    responseFormat,
+    response_format,
+    model,
+    thinking,
+    reasoning,
+    maxTokens,
+    max_tokens,
+  } = params;
+
+  const payload: Record<string, unknown> = {
+    messages: messages.map(normalizeMessage),
+  };
+
+  if (model) {
+    payload.model = model;
+  }
+
+  if (tools && tools.length > 0) {
+    payload.tools = tools;
+  }
+
+  const normalizedToolChoice = normalizeToolChoice(
+    toolChoice || tool_choice,
+    tools
+  );
+  if (normalizedToolChoice) {
+    payload.tool_choice = normalizedToolChoice;
+  }
+
+  const resolvedMaxTokens = max_tokens ?? maxTokens;
+  if (typeof resolvedMaxTokens === "number") {
+    payload.max_tokens = resolvedMaxTokens;
+  }
+
+  if (thinking) {
+    payload.thinking = thinking;
+  }
+  if (reasoning) {
+    payload.reasoning = reasoning;
+  }
+
+  const normalizedResponseFormat = normalizeResponseFormat({
+    responseFormat,
+    response_format,
+    outputSchema,
+    output_schema,
+  });
+
+  if (normalizedResponseFormat) {
+    payload.response_format = normalizedResponseFormat;
+  }
+
+  const response = await fetchWithBackoff(resolveApiUrl(), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${ENV.forgeApiKey}`,
+    },
+    body: JSON.stringify(payload),
+    signal: params.signal,
+    timeoutMs: params.timeoutMs,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+    );
+  }
+
+  return (await response.json()) as InvokeResult;
+}
+
+export type ModelInfo = {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
+};
+
+export type ModelsResponse = {
+  object: string;
+  data: ModelInfo[];
+};
+
+export async function listLLMModels(): Promise<ModelsResponse> {
+  assertApiKey();
+
+  const url = ENV.groqApiKey ? "https://api.groq.com/openai/v1/models" : ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
+    : "https://forge.manus.im/v1/models";
+
+  const response = await fetchWithBackoff(url, {
+    headers: { authorization: `Bearer ${ENV.groqApiKey || ENV.forgeApiKey}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `List LLM models failed: ${response.status} ${response.statusText} – ${errorText}`
+    );
+  }
+
+  return (await response.json()) as ModelsResponse;
+}
+
+
+================================================================================
+FILE: server/interpretation.ts
+BLOB SHA: 3fafcbc3e8b462068a7cc5101286870b87e7716a
+================================================================================
+import { narrateMasterSynthesis } from "./astrologyKnowledge/synthesis/narrative";
+import type { Message } from "./_core/llm";
+import { runInterpretation, interpretationText } from "./astrologyKnowledge/synthesis/interpretationPipeline";
+import { stringifyEvidence } from "./astrologyKnowledge/synthesis/evidenceTransport";
+import type { SynthesisResult } from "./astrologyKnowledge/synthesis/types";
+import { withCurrentQuestion } from "./_core/conversation";
+import type { ChartResult, ChartRow } from "./astronomy";
+import { formatInZone } from "../shared/time";
+import { buildAstrologyInterpreterSystem, FULL_SYNTHESIS_STYLE } from "./master-interpreter";
+import {
+  buildAstrologyEvidencePacket,
+  formatCompactEvidencePacket,
+  type AstrologyEvidencePacket,
+} from "./astrologyKnowledge";
+import { overlay as canonicalOverlay } from "../shared/hybrid";
+import { buildMasterPipeline, formatCompactMasterGateContext } from "./master-pipeline";
+
+
+const COSMOLOGY = `Read the supplied chart JSON and traditional-method findings silently. Give direct, candid conclusions grounded in the evidence, giving equal weight to natural gifts and difficult patterns without inventing personal events, medical diagnoses, secrets, or another person's motives.`;
+
+const CLARITY_FRAMEWORK = `Answer the question first by starting with the strongest pattern that fits the topic. Weave agreeing findings into one clear insight and show when competing pulls take over and what that tension costs in everyday life. Keep all astrology terminology out of the reader-facing text, including section titles.`;
+
+function chartFacts(chart: ChartResult, mode: ReadingMode) {
+  const natalOnlyInput = {
+    location: chart.input.location,
+    latitude: chart.input.latitude,
+    longitude: chart.input.longitude,
+    timezone: chart.input.timezone,
+    date: chart.input.date,
+    time: chart.input.time,
+  };
+  return {
+    input: mode === "natal" ? natalOnlyInput : chart.input,
+    utc: chart.utc,
+    julianDay: chart.julianDay,
+    ascendant: chart.ascendant,
+    descendant: chart.descendant,
+    northNode: { ...chart.northNode, retrograde: undefined },
+    southNode: { ...chart.southNode, retrograde: undefined },
+    houses: chart.houses,
+    movingBodies: chart.movingBodies,
+    frozenStars: chart.frozenStars,
+    validation: chart.validation,
+    worldview: chart.worldview,
+    readingScope: chart.readingScope,
+    agentViewAvailable: chart.agentViewAvailable,
+    godPlacements: chart.godPlacements,
+    frameRelationships: chart.movingBodies
+      .filter(row => row.frameRelationship)
+      .map(row => ({
+        body: row.name,
+        longitude: row.longitude,
+        display: row.display,
+        godHouse: row.godHouse,
+        agentHouse: row.agentHouse,
+        relationship: row.frameRelationship,
+      })),
+    ...(mode === "natal"
+      ? {}
+      : { transitDate: chart.transitDate, transits: chart.transits }),
+    ...(mode === "natal"
+      ? {}
+      : {
+          momentPrecision: chart.momentPrecision,
+          transitHouseFrame: chart.transitHouseFrame,
+        }),
+  };
+}
+
+export type ReadingMode = "natal" | "transit" | "combined";
+export const READING_MODES: ReadingMode[] = ["natal", "transit", "combined"];
+const WORLDVIEW_GUIDANCE = `Worldview (God / Agent / God's View of the Agent) and reading scope (Natal / Transit / Natal + Transit) are independent axes; preserve all existing reading scopes. In God View, use the fixed Aries House 1 through Pisces House 12 frame and the supplied moment, never infer an Ascendant, Midheaven, horizon, or location-based house. In Agent View, use the supplied geocentric planetary longitudes with the observer-specific topocentric lunar correction only when explicitly supplied, and use the Equal House placements from the supplied Ascendant. In God's View of the Agent, explain how the calculated personal placements sit inside the calculated collective frame; use godHouse, agentHouse, frameRelationships, and Royal Star contact data only when supplied. The same canonical geocentric longitude must be treated as one astronomical fact in both frames. Use the supplied relationship type and translation as structured interpretive context; do not calculate agree/shift or a match score, and do not call differing frames contradictory merely because their houses differ. God View augments primary chart testimony; it never overrides rulers, aspects, or horary significators. If the Moon is flagged uncertain, explain the supplied date range rather than presenting one Moon degree as certain. For transit readings, respect transitHouseFrame: transit-location, natal-location, or god-fixed. If momentPrecision is date-only-reference, state that noon UTC is an intentional approximate reference and that the Moon is time-sensitive.`;
+
+const MODE_GUIDANCE: Record<ReadingMode, string> = {
+  natal:
+    "Read the natal chart only. Focus on enduring temperament, life patterns, nodes, angles, and fixed stars. Do not interpret current transit rows as part of this reading. This is a comprehensive self-knowledge profile: explain what kind of person this may be, how they experience themselves from the inside, what they need, what they fear, how they protect themselves, what others may misunderstand about them, and how their patterns can mature.",
+  transit:
+    "Read the transit layer only. Use the natal chart only as the reference points being contacted. Focus on the selected transit moment, location, houses, transit planets, nodes, and supplied natal contacts. Give the traditional timing and predictive interpretation when supported by calculated methods; distinguish an interpreted indication from an independently verified future event.",
+  combined:
+    "Read natal and transit layers together, clearly separating enduring natal pattern from current transit weather. Explain how the present moment activates or develops the natal story without confusing temporary pressure with identity.",
+};
+
+async function ask(
+  synthesis: SynthesisResult,
+  route: string,
+  messages: Message[],
+  maxTokens = 4000,
+  thinkingBudget = 0
+) {
+  try {
+    const response = await runInterpretation(route, synthesis, {
+      provider: "gemini",
+      messages,
+      maxTokens,
+      ...(thinkingBudget > 0
+        ? { thinking: { type: "enabled", budget_tokens: thinkingBudget } }
+        : {}),
+    });
+    return interpretationText(response);
+  } catch (error) {
+    console.error("[Interpretation] LLM request failed:", error);
+    const message = error instanceof Error ? error.message : "Unknown interpretation failure";
+    throw new Error(`${route}_FAILED: ${message}`, { cause: error });
+  }
+}
+
+function readerFacingIntelligence(raw: string) {
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "");
+  try {
+    const data = JSON.parse(cleaned) as Record<string, unknown>;
+    const section = (title: string, key: string) => {
+      const values = Array.isArray(data[key])
+        ? (data[key].filter(item => typeof item === "string") as string[])
+        : [];
+      return values.length
+        ? `### ${title}\n${values.map(value => `- ${value}`).join("\n")}`
+        : "";
+    };
+    return [
+      "## The shape of your chart",
+      "This is a concise map of the strongest patterns the calculation supports. The longer reading below turns these signals into a personal story.",
+      section("What stands out", "dominantPlanets"),
+      section("Life areas being emphasized", "dominantHouses"),
+      section("Signs and qualities in focus", "dominantSigns"),
+      section("The repeating thread", "repeatedThemes"),
+      section("Strongest evidence", "strongestEvidence"),
+      section("The central tensions", "tensions"),
+      section("Placements to keep in view", "priorityPlacements"),
+      section("What may be active now", "currentTransitThemes"),
+      section("Psychological possibilities to test", "psychologicalHypotheses"),
+      section("Questions for honest recognition", "disconfirmingQuestions"),
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  } catch {
+    return raw
+      .replace(/[{}\[\]\"]/g, "")
+      .replace(/,\s*/g, "\n")
+      .trim();
+  }
+}
+
+function buildChartMap(chart: ChartResult, mode: ReadingMode) {
+  const body = chart.movingBodies;
+  const placements = body
+    .map(
+      row => {
+        const lunarOverlay = row.overlay ?? canonicalOverlay(row.longitude);
+        return `- **${row.name}** — ${row.display}, displayed house ${row.house}, God House ${row.godHouse ?? "not supplied"}${row.agentHouse == null ? "" : `, Agent House ${row.agentHouse}`}; Nakshatra ${lunarOverlay.nakshatra} Pada ${lunarOverlay.pada} (ruler ${lunarOverlay.nakshatraRuler}); Arabic Manzil ${lunarOverlay.manzil}; Chinese Xiu ${lunarOverlay.chineseMansion} (determinative ${lunarOverlay.chineseDeterminativeStar}, ${lunarOverlay.chineseBoundaryModel})${row.retrograde ? ", retrograde" : ""}${row.uncertainty ? `; Moon uncertainty: ${row.uncertainty.label}` : ""}`;
+      }
+    )
+    .join("\n");
+  const includeTransit = mode !== "natal";
+  const contacts = chart.transits
+    .filter(row => row.natalContacts.length)
+    .slice(0, 8)
+    .map(
+      row =>
+        `- **${row.name}** in ${row.display}: ${row.natalContacts.map(contact => `${contact.aspect} ${contact.natalName} (orb ${contact.orb.toFixed(1)}°)`).join(", ")}`
+    )
+    .join("\n");
+  const transitTimezone =
+    chart.input.transitTimezone || chart.input.timezone || "UTC";
+  const transitMoment = formatInZone(chart.transitDate, transitTimezone);
+  return [
+    "## Your chart map",
+    "This is the factual foundation of your reading, calculated directly from the chart. The deeper personal chapters are generated separately so one unavailable AI request does not hide the chart itself.",
+    `### Worldview and scope`,
+    `- **Worldview:** ${chart.worldview}. **Reading scope:** ${chart.readingScope}.`,
+    chart.agentViewAvailable
+      ? `- **Agent layer:** available; placements include personal Equal House positions.`
+      : `- **Agent layer:** unavailable because the chart has no exact birth time/location; do not infer an Ascendant or Midheaven.`,
+    `- **God layer:** every supplied placement includes a fixed Aries-to-Pisces godHouse and calculated Royal Star contact distances.`,
+    `### The angles`,
+    chart.ascendant
+      ? `- **Ascendant:** ${chart.ascendant.display}`
+      : "- **Ascendant:** not calculated in God View.",
+    chart.descendant
+      ? `- **Descendant:** ${chart.descendant.display}`
+      : "- **Descendant:** not calculated in God View.",
+    `- **North Node:** ${chart.northNode.display}, house ${chart.northNode.house}`,
+    `- **South Node:** ${chart.southNode.display}, house ${chart.southNode.house}`,
+    `### Natal placements`,
+    placements,
+    mode === "natal"
+      ? "### Reading layer\nThis map is prepared for a natal reading: the enduring foundation of the birth chart."
+      : "### Reading layer\nThis map is prepared for the selected layer; the deeper chapters will keep natal patterns and present-moment activation distinct.",
+    includeTransit
+      ? `### Selected transit moment\n${transitMoment} at ${chart.input.transitLocation ?? chart.input.location} (${new Date(chart.transitDate).toISOString()}).`
+      : "",
+    includeTransit
+      ? contacts
+        ? `### Supplied natal contacts\n${contacts}`
+        : "### Supplied natal contacts\nNo close contacts were found within the calculation's configured orb."
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+export const READING_CHAPTERS = [
+  {
+    id: "identity",
+    title: "Who You Really Are",
+    subtitle: "Your true nature, character, gifts, weaknesses, and concrete hobbies",
+    focus:
+      "your true nature, character, natural gifts vs. hidden potential vs. developed strengths, weaknesses, concrete hobbies and interests backed by chart factors, what drives you, and the parts you hide from the world",
+  },
+  {
+    id: "money-wealth",
+    title: "Money, Poverty & Wealth",
+    subtitle: "Earning potential, financial hardship, debt, and conditions for lasting wealth",
+    focus:
+      "financial hardships, earning capacity, debt, possessions, dependence on others vs. financial independence, and the conditions for building lasting wealth",
+  },
+  {
+    id: "relationships",
+    title: "Love, Sex, Marriage & Heartbreak",
+    subtitle: "Attraction, intimacy, commitment, repeating patterns, and your part in conflict",
+    focus:
+      "attraction, desire, intimacy, commitment, infidelity or divorce risks where testimony supports them, rejection, romantic fulfillment, repeating relationship patterns, and what you yourself bring into romantic conflict",
+  },
+  {
+    id: "family-roots",
+    title: "Family, Childhood & Your Roots",
+    subtitle: "Your mother, father, upbringing, inherited burdens, and school years",
+    focus:
+      "mother, father, home atmosphere, upbringing, inherited burdens, family separation where indicated, school years, learning style, and earliest experiences",
+  },
+  {
+    id: "work-purpose",
+    title: "Career, Success, Power & Reputation",
+    subtitle: "Employment, business ownership, leadership, setbacks, and authority",
+    focus:
+      "employment vs. business ownership, leadership, recognition, professional setbacks, ambition, authority, and the kind of success you are driven to pursue",
+  },
+  {
+    id: "friends-rivals",
+    title: "Friends, Enemies, Betrayal & Loyalty",
+    subtitle: "True friends, hidden rivals, jealousy, competition, and trust",
+    focus:
+      "true friends, hidden rivals, manipulation, jealousy, competition, social rejection, protection, why friendships last or break, and who deserves a place in your life",
+  },
+  {
+    id: "hardship-loss",
+    title: "Hardship, Loss & Survival",
+    subtitle: "Major setbacks, injustice, isolation, self-sabotage, and rebuilding",
+    focus:
+      "major setbacks, injustice, confinement, isolation, sacrifice, grief, self-caused trouble or missed opportunities, difficult transitions, and how you rebuild after life knocks you down",
+  },
+  {
+    id: "children-legacy",
+    title: "Children, Parenting & Legacy",
+    subtitle: "Parenthood, family continuity, responsibility, and what you pass down",
+    focus:
+      "relationship with children, parental responsibilities, family continuity, what you pass down, and what you hope children will carry forward",
+  },
+  {
+    id: "health-habits",
+    title: "Health, Habits & Physical Struggles",
+    subtitle: "Vitality, exhaustion, daily routine discipline, stress load, and body care",
+    focus:
+      "vitality, exhaustion, discipline, daily routines, stress on the body, physical strain, and caring for physical health without inventing medical diagnoses",
+  },
+  {
+    id: "faith-purpose",
+    title: "Faith, Spirituality & Life Purpose",
+    subtitle: "Your relationship with God or beliefs, moral convictions, and direction",
+    focus:
+      "relationship with God or spiritual convictions, meaning, moral backbone, inner change, and what gives life direction",
+  },
+  {
+    id: "turning-points",
+    title: "Turning Points & New Beginnings",
+    subtitle: "Growth, endings, relocation, changing circumstances, and new chapters",
+    focus:
+      "growth, endings, relocation, changing circumstances, new opportunities, and larger life chapters anchored strictly in calculated Dasha, Profection, Firdaria, and Transit cycles",
+  },
+  {
+    id: "blessings-lessons",
+    title: "Your Greatest Blessings & Hardest Lessons",
+    subtitle: "Where life opens naturally, where obstacles repeat, and where to go next",
+    focus:
+      "a direct synthesis of where life comes naturally, where the heaviest recurring obstacles sit, your clearest talents, honest shortcomings, and where to invest energy next",
+  },
+] as const;
+export type ReadingChapterId = (typeof READING_CHAPTERS)[number]["id"];
+
+const NODE_NAME = /node/i;
+
+function rowLine(row: ChartRow, label = row.name) {
+  const lunarOverlay = Number.isFinite(row.longitude)
+    ? row.overlay ?? canonicalOverlay(row.longitude)
+    : null;
+  const parts = [
+    `${label} — ${row.display}`,
+    `displayed house ${row.house}`,
+    lunarOverlay
+      ? `Nakshatra ${lunarOverlay.nakshatra} Pada ${lunarOverlay.pada} (ruler ${lunarOverlay.nakshatraRuler})`
+      : "Lunar overlays unavailable because canonical longitude was not supplied",
+    ...(lunarOverlay ? [
+      `Arabic Manzil ${lunarOverlay.manzil}`,
+      `Chinese Xiu ${lunarOverlay.chineseMansion} (determinative ${lunarOverlay.chineseDeterminativeStar}; ${lunarOverlay.chineseBoundaryModel})`,
+    ] : []),
+  ];
+  if (row.godHouse != null) parts.push(`God House ${row.godHouse}`);
+  if (row.agentHouse != null) parts.push(`Agent House ${row.agentHouse}`);
+  if (row.retrograde && !NODE_NAME.test(row.name)) parts.push("retrograde");
+  if (row.uncertainty) parts.push(`Moon uncertainty: ${row.uncertainty.label}`);
+  const stars = row.royalStarContacts as unknown;
+  if (Array.isArray(stars) && stars.length)
+    parts.push(`Royal Star contacts: ${JSON.stringify(stars)}`);
+  return `- ${parts.join("; ")}`;
+}
+
+function buildEvidenceSheet(chart: ChartResult, mode: ReadingMode) {
+  const input = chart.input;
+  const lines: string[] = [
+    "CHART EVIDENCE SHEET (the only source of chart facts)",
+    `Birth: ${input.location}, ${input.date} ${input.time ?? ""} (${input.timezone})`,
+    `Frame: worldview ${chart.worldview}; scope ${chart.readingScope}; ${chart.agentViewAvailable ? "personal (Agent) houses available" : "no Ascendant or Midheaven, because birth time/location is not exact"}`,
+    "",
+    "Angles:",
+    chart.ascendant ? rowLine(chart.ascendant) : "- Ascendant: not calculated",
+    chart.descendant
+      ? rowLine(chart.descendant)
+      : "- Descendant: not calculated",
+    ...(chart.midheaven ? [rowLine(chart.midheaven)] : []),
+    "",
+    "Lunar nodes (mean nodes are always retrograde, so that carries no meaning):",
+    rowLine(chart.northNode),
+    rowLine(chart.southNode),
+    "",
+    "Planets:",
+    ...chart.movingBodies.map(row => rowLine(row)),
+    "",
+    `Fixed stars (backdrop positions): ${chart.frozenStars.map(star => `${star.name} ${star.display}`).join("; ")}`,
+    "",
+    "Natal aspects: cite only exact natal aspect findings supplied in the Astrology Evidence Packet; do not infer unlisted aspects.",
+  ];
+  if (mode !== "natal") {
+    const zone = input.transitTimezone || input.timezone || "UTC";
+    const contacts = chart.transits
+      .filter(row => row.natalContacts.length)
+      .map(
+        row =>
+          `- Transit ${row.name}: ${row.natalContacts.map(c => `${c.aspect} natal ${c.natalName} (orb ${c.orb.toFixed(1)}°)`).join(", ")}`
+      );
+    lines.push(
+      "",
+      `Transit moment: ${formatInZone(chart.transitDate, zone)}`,
+      "Transit planets:",
+      ...chart.transits.map(row => rowLine(row, `Transit ${row.name}`)),
+      "",
+      "Transit contacts to natal points:",
+      ...(contacts.length ? contacts : ["- none within the calculation's orb"])
+    );
+  }
+  return lines.join("\n");
+}
+
+function knownPoints(chart: ChartResult) {
+  const known = new Map<string, string>();
+  const natal = [
+    ...chart.movingBodies,
+    chart.ascendant,
+    chart.descendant,
+    chart.midheaven,
+    chart.northNode,
+    chart.southNode,
+    ...chart.frozenStars,
+  ].filter((row): row is ChartRow => Boolean(row));
+  for (const row of natal)
+    known.set(
+      row.name.toLowerCase(),
+      `${row.name} — ${row.display} (house ${row.house})`
+    );
+  for (const row of chart.transits)
+    known.set(
+      `transit ${row.name.toLowerCase()}`,
+      `Transit ${row.name} — ${row.display} (house ${row.house})`
+    );
+  return known;
+}
+
+// Maps a model-written evidence entry onto a real chart point, and rewrites it from the chart data so facts cannot drift.
+function resolvePoint(entry: unknown, known: Map<string, string>) {
+  if (typeof entry !== "string") return null;
+  const text = entry.trim().toLowerCase();
+  const named = known.get(text);
+  if (named) return named;
+  // Do not accept an invented aspect merely because it starts with "Moon".
+  // Accept only a point name or the exact canonical fact printed on the sheet.
+  return Array.from(known.values()).find(value => value.trim().toLowerCase() === text) ?? null;
+}
+
+export function evidenceAnchors(packet: AstrologyEvidencePacket, synthesis?: SynthesisResult) {
+  const anchors = new Map<string, string>();
+  const items = [
+    ...packet.genesisAstroEvidence,
+    ...packet.patternEvidence,
+    ...packet.behavioralEvidence,
+    ...packet.lifeEventEvidence,
+    ...packet.westernEvidence,
+    ...packet.vedicEvidence,
+    ...packet.arabicEvidence,
+    ...packet.timingEvidence,
+    ...packet.fixedStarEvidence,
+    ...packet.lunarEvidence,
+    ...packet.canonEvidence,
+    ...packet.uncertainties,
+  ];
+  const subjectCounts = new Map<string, number>();
+  for (const item of items) {
+    const subject = item.subject.trim().toLowerCase();
+    subjectCounts.set(subject, (subjectCounts.get(subject) ?? 0) + 1);
+  }
+  for (const item of items) {
+    const subject = item.subject.trim().toLowerCase();
+    // A subject can name multiple independent testimonies: never silently pick one.
+    if (subjectCounts.get(subject) === 1) anchors.set(subject, item.statement);
+    anchors.set(item.id.trim().toLowerCase(), item.statement);
+    anchors.set(item.statement.trim().toLowerCase(), item.statement);
+  }
+  // Include exactly the finding and Canon IDs that runInterpretation sends.
+  // Repeated subject names remain ambiguous; exact IDs are always usable.
+  const add = (id: string, statement: string) => {
+    if (id.trim() && statement.trim()) anchors.set(id.trim().toLowerCase(), statement);
+  };
+  for (const method of synthesis?.methodOutcomes ?? []) {
+    for (const finding of method.findingJudgments) {
+      add(finding.id, finding.judgment);
+      for (const id of finding.evidenceIds) {
+        const calculated = method.calculatedFindings.find(item => item.evidenceId === id);
+        add(id, calculated ? `${calculated.label}: ${calculated.calculatedValue}` : finding.judgment);
+      }
+    }
+    for (const finding of method.calculatedFindings) add(finding.evidenceId, `${finding.label}: ${finding.calculatedValue}`);
+  }
+  for (const rule of synthesis?.canonApplications ?? []) add(rule.canonEvidenceId, rule.statement);
+  return anchors;
+}
+
+function resolveSemanticEvidence(entry: string, semantic: Map<string, string>) {
+  const text = entry.trim().toLowerCase();
+  const exact = semantic.get(text);
+  if (exact) return exact;
+  const tokens = text
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter(token => token && token !== "in" && token !== "the");
+  if (!tokens.length) return null;
+  for (const [key, value] of Array.from(semantic.entries())) {
+    const keyTokens = key
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(" ")
+      .filter(token => token && token !== "in" && token !== "the");
+    if (
+      keyTokens.length === tokens.length &&
+      keyTokens.every(token => tokens.includes(token))
+    )
+      return value;
+  }
+  return null;
+}
+
+type ReadingPlan = {
+  threads: Array<{
+    title: string;
+    insight: string;
+    evidence: string[];
+    chapters: string[];
+  }>;
+  tensions: Array<{ between: string; insight: string; evidence: string[] }>;
+  chapters: Record<string, { angle: string; evidence: string[] }>;
+};
+
+export function validatePlan(
+  raw: string,
+  known: Map<string, string>,
+  semantic: Map<string, string>
+): ReadingPlan | null {
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  let data: any;
+  try {
+    data = JSON.parse(raw.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const chapterIds = new Set<string>(
+    READING_CHAPTERS.map(chapter => chapter.id)
+  );
+  const clean = (list: unknown) => {
+    const out = new Set<string>();
+    for (const entry of Array.isArray(list) ? list : []) {
+      const semanticHit = typeof entry === "string" ? resolveSemanticEvidence(entry, semantic) : null;
+      const hit = semanticHit ?? resolvePoint(entry, known);
+      if (hit) out.add(hit);
+      // Unknown evidence is not a chart fact: never carry it into the validated plan.
+    }
+    return Array.from(out);
+  };
+  const text = (value: unknown) =>
+    typeof value === "string" ? value.trim() : "";
+  const chapterAliases: Record<string, string> = {
+    "mind-heart": "family-roots",
+    destiny: "turning-points",
+    mirror: "blessings-lessons",
+  };
+  const resolveChapterId = (rawId: unknown): string | null => {
+    if (typeof rawId !== "string") return null;
+    if (chapterIds.has(rawId)) return rawId;
+    const mapped = chapterAliases[rawId];
+    return mapped && chapterIds.has(mapped) ? mapped : null;
+  };
+  const threads = (Array.isArray(data.threads) ? data.threads : [])
+    .map((thread: any) => ({
+      title: text(thread?.title),
+      insight: text(thread?.insight),
+      evidence: clean(thread?.evidence),
+      chapters: (Array.isArray(thread?.chapters) ? thread.chapters : [])
+        .map(resolveChapterId)
+        .filter((id: string | null): id is string => Boolean(id)),
+    }))
+    .filter(
+      (thread: { title: string; insight: string; evidence: string[]; chapters: string[] }) =>
+        thread.title && thread.insight && thread.evidence.length && thread.chapters.length
+    );
+  const tensions = (Array.isArray(data.tensions) ? data.tensions : [])
+    .map((tension: any) => ({
+      between: text(tension?.between),
+      insight: text(tension?.insight),
+      evidence: clean(tension?.evidence),
+    }))
+    .filter(
+      (tension: { between: string; insight: string; evidence: string[] }) =>
+        tension.between && tension.insight && tension.evidence.length
+    );
+  const chapters: ReadingPlan["chapters"] = {};
+  const rawChapters = data.chapters ?? {};
+  for (const [rawId, item] of Object.entries(rawChapters)) {
+    const id = resolveChapterId(rawId);
+    if (!id || chapters[id]) continue;
+    const evidence = clean((item as any)?.evidence);
+    if (item && text((item as any).angle) && evidence.length) {
+      chapters[id] = { angle: text((item as any).angle), evidence };
+    }
+  }
+  if (threads.length < 2 || Object.keys(chapters).length < 4) return null;
+  return { threads, tensions, chapters };
+}
+
+function chapterPlan(analysis: string, chapterId: string) {
+  if (!analysis) return "";
+  let plan: ReadingPlan;
+  try {
+    plan = JSON.parse(analysis) as ReadingPlan;
+  } catch {
+    return "";
+  }
+  const isSynthesis = chapterId === "blessings-lessons" || chapterId === "mirror";
+  const threads = isSynthesis
+    ? plan.threads
+    : plan.threads.filter(thread => thread.chapters.includes(chapterId));
+  const mine = plan.chapters[chapterId];
+  const out = [
+    "READING PLAN (decided after reading the whole chart; follow it)",
+  ];
+  if (threads.length)
+    out.push(
+      isSynthesis
+        ? "All threads to weave together:"
+        : "Threads this chapter carries:",
+      ...threads.map(
+        thread =>
+          `- ${thread.title}: ${thread.insight} Evidence: ${thread.evidence.join("; ")}.`
+      )
+    );
+  if (plan.tensions.length)
+    out.push(
+      "Tensions in the chart:",
+      ...plan.tensions.map(
+        tension =>
+          `- ${tension.between}: ${tension.insight} Evidence: ${tension.evidence.join("; ")}.`
+      )
+    );
+  if (mine && !isSynthesis)
+    out.push(
+      `Evidence that is the main subject of THIS chapter: ${mine.evidence.join("; ")}.`,
+      `Angle for this chapter: ${mine.angle}`,
+      "Other chapters own the remaining placements. Mention one of them here only briefly, to connect threads."
+    );
+  if (isSynthesis)
+    out.push(
+      "This synthesis chapter owns no single placement of its own. It names where life flows naturally, where the hardest lessons repeat, what the reader contributes to trouble, and honest practical direction."
+    );
+  return out.join("\n");
+}
+
+const ANALYSIS_SYSTEM = `You are the silent first reader of a calculated astrology chart. No one will see your output. It is a reading plan that chapter writers will follow, so make it exact and useful.
+
+Read the whole evidence sheet before deciding anything. Genesis is a mandatory core evidence layer, not an optional tradition: the Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector must be evaluated on every applicable astrology reading before you prioritize the narrative. Never omit, bypass, or downgrade Genesis because the question appears focused on another tradition. The Question Planner controls emphasis only after Genesis has been evaluated; it may classify a Genesis finding as primary, supporting, contextual, or non-decisive, but it may not declare the Genesis layer irrelevant. Find the 4 to 6 main threads of this chart: evidence that repeats, angular emphasis, the nodal axis, close star contacts, Genesis patterns and activations, yogas, and in transit modes the strongest contacts. Find 2 to 4 real tensions: places where two parts of the chart pull against each other. Then assign evidence to the 12 reading chapters so the chapters do not overlap: each placement is the main subject of at most one chapter. The blessings-lessons synthesis chapter owns no isolated evidence of its own.
+
+Rules: use only what the sheet states. Never invent an aspect, house, sign, star contact, or medical diagnosis; natal-to-natal aspects are permitted only when explicitly calculated in the Astrology Evidence Packet. Evidence entries may reference exact chart points from the sheet, such as "Sun", "Moon", "Ascendant", "North Node", "Regulus", or "Transit Saturn", or any calculated evidence label explicitly stated in the Astrology Evidence Packet, such as a Genesis pattern, activation, archetype, yoga, or cross-system convergence. Preserve the selected evidence label; do not discard it merely because it is not a single point name. Write insights as plain, direct hypotheses about ordinary human life—never psychiatric jargon.
+
+Return ONLY valid JSON, no markdown fence, in this shape:
+{"threads":[{"title":"","insight":"","evidence":["Sun"],"chapters":["identity"]}],"tensions":[{"between":"","insight":"","evidence":["Moon"]}],"chapters":{"identity":{"angle":"what this chapter should uniquely say","evidence":["Sun"]},"money-wealth":{"angle":"","evidence":[]},"relationships":{"angle":"","evidence":[]},"family-roots":{"angle":"","evidence":[]},"work-purpose":{"angle":"","evidence":[]}}}`;
+
+async function analyzeChart(
+  chart: ChartResult,
+  synthesis: SynthesisResult,
+  mode: ReadingMode,
+  evidencePacket: AstrologyEvidencePacket,
+  synthesisContext = ""
+) {
+  const known = knownPoints(chart);
+  const semantic = evidenceAnchors(evidencePacket, synthesis);
+  const messages: Message[] = [
+    {
+      role: "system",
+      content: buildAstrologyInterpreterSystem(ANALYSIS_SYSTEM),
+    },
+    {
+      role: "user",
+      content: `${MODE_GUIDANCE[mode]}\n\nChapters:\n${READING_CHAPTERS.map(chapter => `${chapter.id}: ${chapter.title}. ${chapter.focus}`).join("\n")}\n\n${buildEvidenceSheet(chart, mode)}\n\n${stringifyEvidence(evidencePacket)}\n\n${synthesisContext}\n\nVALID EVIDENCE LABELS (copy exact IDs; do not invent or shorten them):\n${JSON.stringify([...Array.from(known.keys()), ...Array.from(semantic.keys())].filter(label => label.length <= 180))}\n\nWrite the reading plan JSON now.`,
+    },
+  ];
+  let firstError = "";
+  let firstResponse = "";
+  try {
+    firstResponse = await ask(synthesis, "READING_PLAN", messages, 6500);
+    const plan = validatePlan(firstResponse, known, semantic);
+    if (plan) return JSON.stringify(plan);
+    firstError = "READING_PLAN_INVALID: Fewer than two evidence-backed threads or four supported chapters.";
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    // Provider routing already exhausted configured fallbacks. A second identical
+    // request cannot repair a network/auth/capacity failure or missing output.
+    throw new Error(`READING_PLAN_FAILED: ${reason}`, { cause: error });
+  }
+  console.warn("[READING_PLAN] First attempt failed; requesting a single evidence-grounded repair:", firstError);
+  try {
+    const repairMessages: Message[] = [
+      ...messages,
+      { role: "assistant", content: firstResponse || "(no valid plan returned)" },
+      { role: "user", content: `Repair the reading plan using only evidence labels from the supplied chart. Return valid JSON only, with at least two evidence-backed threads and four chapters with verified evidence. Remove unsupported evidence rather than inventing it. Preserve all relevant traditions. Previous validation failure: ${firstError.slice(0, 350)}` },
+    ];
+    const repaired = await ask(synthesis, "READING_PLAN_REPAIR", repairMessages, 6500);
+    const plan = validatePlan(repaired, known, semantic);
+    if (plan) return JSON.stringify(plan);
+    throw new Error("READING_PLAN_INVALID: Repaired plan still lacks sufficient verified evidence.");
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error("[READING_PLAN_FAILED]", { firstError, repairError: reason, mode, knownEvidence: known.size, semanticEvidence: semantic.size });
+    throw new Error(`READING_PLAN_FAILED: ${reason.slice(0, 280)}`);
+  }
+}
+
+function chapterSystem(
+  mode: ReadingMode,
+  chapter: { title: string; subtitle: string; focus: string }
+) {
+  return buildAstrologyInterpreterSystem(
+    FULL_SYNTHESIS_STYLE,
+    [
+      `You write one section/chapter of an intimate, candid second-person life portrait. Focus: ${chapter.title} — ${chapter.focus}.`,
+      `SILENT FACTS & FULL-CHART DISCIPLINE
+- Read the supplied evidence sheet, Genesis activations/patterns/yogas, and reading plan silently. Never recalculate, fill in missing data, or invent a placement, aspect, biography, medical diagnosis, secret, or another person's motives. If a factor is marked not calculated, continue with the available evidence.
+- Stay consistent with every fact in earlier chapters. Unify all layers (rulerships, aspects, dignities, mansions, Lots, timing cycles, and frame differences) silently into ordinary human behavior—never print astrological jargon or mechanical frame strings.
+- ${MODE_GUIDANCE[mode]}`,
+      `METHOD & PROSE FORMATTING
+- Follow the reading plan: weave the threads and evidence assigned to this chapter into one lived portrait. Never repeat what earlier chapters already said.
+- Start with the strongest pattern that answers this chapter's focus. Show what the reader does when that pattern is active, what they are trying to protect or get, and how their behavior lands with other people, with concrete everyday specificity.
+- Give natural gifts (what comes easily, what they enjoy for its own sake, what others rely on them for) the same weight as difficult patterns (what they struggle to ask for, where loyalty feels uncertain, what they carry alone because they expect others to drop it).
+- Use short, bold section titles specific to this reader and topic—skip boilerplate headers, stock titles, stock transitions, generic encouragement, and recap endings.
+- Write in flowing paragraphs with varied length, rhythm, and openings. Use no bullet-point lists of traits. Keep ALL astrology terminology out of the reader-facing text, including the titles (never name planets, zodiac signs, houses, degrees, aspects, lunar mansions or stations, bounds, faces, or Lots). End with a sentence that belongs strictly to this reader and this chart.`,
+    ].join("\n\n")
+  );
+}
+
+export async function generateInterpretation(
+  chart: ChartResult,
+  mode: ReadingMode = "combined",
+  question = "What should I understand from this chart?",
+  synthesisContext = ""
+) {
+  const master = await buildMasterPipeline(chart, mode, question);
+  const masterContext = formatCompactMasterGateContext(master);
+  const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
+  const intelligence = `${masterContext}\n\n${buildChartMap(chart, mode)}\n\n${formatCompactEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
+  const analysis = await analyzeChart(chart, master.synthesis, mode, evidencePacket, synthesisContext);
+  const narrated = await narrateMasterSynthesis(master.synthesis, question, formatCompactEvidencePacket(evidencePacket));
+  const reading = narrated.narrative.answer;
+  return {
+    masterSnapshot: master.snapshot,
+    masterSynthesis: narrated,
+    intelligence,
+    evidencePacket,
+    behavioralReport: evidencePacket.behavioralReport,
+    analysis,
+    reading,
+    generatedAt: new Date().toISOString(),
+    chapters: READING_CHAPTERS.map(chapter => ({
+      ...chapter,
+      status: "pending" as const,
+    })),
+  };
+}
+export async function generateChapter(
+  chart: ChartResult,
+  mode: ReadingMode,
+  intelligence: string,
+  chapterId: ReadingChapterId | string,
+  completedChapters: string[] = [],
+  analysis = "",
+  question = "",
+  synthesisContext = ""
+) {
+  const legacyAliases: Record<string, ReadingChapterId> = {
+    "mind-heart": "family-roots",
+    destiny: "turning-points",
+    mirror: "blessings-lessons",
+  };
+  const resolvedId = (legacyAliases[chapterId] ?? chapterId) as ReadingChapterId;
+  const chapter = READING_CHAPTERS.find(item => item.id === resolvedId);
+  if (!chapter) throw new Error("That reading chapter is not available.");
+  const master = await buildMasterPipeline(chart, mode, question || chapter.title);
+  const masterContext = formatCompactMasterGateContext(master);
+  const evidencePacket = buildAstrologyEvidencePacket(
+    chart,
+    `${question ? `User question: ${question}\n\n` : ""}Chapter focus: ${chapter.title}. ${chapter.focus}`,
+    mode
+  );
+  const facts = `${masterContext}\n\n${buildEvidenceSheet(chart, mode)}\n\n${formatCompactEvidencePacket(evidencePacket)}\n\n${synthesisContext}`;
+  const condensedChapters = completedChapters.map((c, idx) =>
+    idx < completedChapters.length - 2 && c.length > 1600
+      ? c.slice(0, 1500) + "…"
+      : c
+  );
+  const isSynthesisChapter = resolvedId === "blessings-lessons";
+  const context = condensedChapters.length
+    ? `Already written chapters, below. Do not repeat any point, placement meaning, scene, or advice already made in them. Stay consistent with every fact they state, and put new weight on evidence they left untouched.${isSynthesisChapter ? " This is the final synthesis chapter: connect the whole chart into your greatest blessings, hardest recurring lessons, and where to go from here. Do not re-list raw evidence." : ""}\n\n${condensedChapters.join("\n\n---\n\n")}`
+    : "This is the opening chapter; establish the real human portrait cleanly.";
+
+  try {
+    const text = await ask(
+      master.synthesis,
+      "READING_CHAPTER",
+      [
+        { role: "system", content: chapterSystem(mode, chapter) },
+        {
+          role: "user",
+          content: `${facts}\n\n${chapterPlan(analysis, resolvedId)}\n\n${context}\n\nWrite the complete ${chapter.title} chapter now.`,
+        },
+      ],
+      3800,
+      1500
+    );
+    if (text && text.trim().length > 200) {
+      return text;
+    }
+  } catch (err) {
+    console.error(`[generateChapter] Synthesized chapter unavailable for ${resolvedId}:`, err);
+    throw err;
+  }
+
+  throw new Error("READING_CHAPTER_INCOMPLETE: The provider returned fewer than 200 characters; retry this chapter.");
+}
+export async function followUp(
+  chart: ChartResult,
+  interpretation: { intelligence: string; reading: string },
+  history: Array<{ role: "user" | "assistant"; content: string }>,
+  question: string,
+  mode: ReadingMode = "combined"
+) {
+  const master = await buildMasterPipeline(chart, mode, question);
+  const masterContext = formatCompactMasterGateContext(master);
+  const evidencePacket = buildAstrologyEvidencePacket(chart, question, mode);
+  const trimmedIntelligence =
+    interpretation.intelligence.length > 16000
+      ? interpretation.intelligence.slice(0, 16000) + "…"
+      : interpretation.intelligence;
+  const trimmedReading =
+    interpretation.reading.length > 12000
+      ? interpretation.reading.slice(0, 12000) + "…"
+      : interpretation.reading;
+  const messages: Message[] = [
+    {
+      role: "system",
+      content: buildAstrologyInterpreterSystem(
+        `${COSMOLOGY}\n${WORLDVIEW_GUIDANCE}\n${MODE_GUIDANCE[mode]}\n${CLARITY_FRAMEWORK}\nAnswer follow-up questions in the same intimate, candid, plainspoken second-person voice: read the full calculated chart silently, show what the reader actually does, what they are protecting or trying to get, and how it lands with other people, and keep ALL astrology terminology out of the reader-facing text and titles (never name planets, zodiac signs, houses, degrees, aspects, lunar mansions or stations, bounds, faces, or Lots). Give natural gifts the same weight as difficult patterns, use flowing paragraphs with no bullet-point lists of traits, and never invent biographical events, diagnoses, secrets, or another person's motives. If a needed calculation was not supplied, say: "That factor was not supplied by the calculation engine, so I cannot use it reliably."`
+      ),
+    },
+    {
+      role: "user",
+      content: `${masterContext}\n\nChart facts:\n${JSON.stringify(chartFacts(chart, mode))}\n\n${formatCompactEvidencePacket(evidencePacket)}\n\nChart Intelligence:\n${trimmedIntelligence}\n\nGenerated reading:\n${trimmedReading}`,
+    },
+    ...withCurrentQuestion(history, question, 12),
+  ];
+  return ask(master.synthesis, "READING_FOLLOW_UP", messages, 5000, 1800);
+}
+
+
+================================================================================
+FILE: server/astrologyKnowledge/evidencePacket.ts
+BLOB SHA: db4158b8ebb1b75abbbdb26011ff86df581add12
+================================================================================
+import type { ChartResult } from "../astronomy";
+import { planKnowledge } from "./planner";
+import { resolveWesternEvidence } from "./western";
+import { resolveVedicEvidence } from "./vedic";
+import { resolveArabicEvidence } from "./arabic";
+import { resolveRelationships } from "./resolver";
+import { ASTROLOGY_RULES, ASTROLOGY_SOURCES } from "./registry";
+import { analyzeGenesisPatterns } from "../patterns/genesisEngine";
+import {
+  runGenesisAstroPipeline,
+  runGenesisPatternPipeline,
+} from "../genesisBackup/adapter";
+import {
+  behavioralReportToEvidenceItems,
+  evaluateBehavioralIntelligence,
+} from "./behavioral";
+import {
+  canonDossierToEvidenceItems,
+  retrieveChartCanonDossier,
+} from "./canon";
+import type { AstrologyEvidencePacket, EvidenceItem } from "./types";
+import { seferYetzirahEvidence } from "./canon/seferYetzirah";
+import { overlay as canonicalOverlay } from "../../shared/hybrid";
+
+function genesisEvidence(
+  genesis: ReturnType<typeof analyzeGenesisPatterns>
+): EvidenceItem[] {
+  const trace = (technique: string) => ({
+    sourceId: "genesis-pattern-rules",
+    tradition: "firmament" as const,
+    technique,
+    sourceTitle: "Genesis local pattern engine",
+    retrievedAt: new Date().toISOString(),
+    ruleId: "genesis-pattern-engine",
+    confidence: "high" as const,
+    calculationSettings: genesis.config,
+  });
+  return [
+    ...genesis.dominantPatterns.map(pattern => ({
+      id: `genesis-pattern-${pattern.type}-${pattern.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "pattern-recognition",
+      subject: pattern.name,
+      statement: `${pattern.name}: ${pattern.description} Strength ${pattern.strength.toFixed(2)}; planets ${pattern.planets.join(", ")}.`,
+      concepts: [
+        "genesis",
+        pattern.type,
+        ...pattern.planets.map(planet => planet.toLowerCase()),
+      ],
+      polarity:
+        pattern.type === "t_square"
+          ? ("pressured" as const)
+          : ("supportive" as const),
+      strength: pattern.strength,
+      ruleId: "genesis-pattern-engine",
+      sourceId: "genesis-pattern-rules",
+      sourceTrace: trace("pattern-recognition"),
+    })),
+    ...genesis.archetypes.map(archetype => ({
+      id: `genesis-archetype-${archetype.archetype.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "archetype",
+      subject: archetype.archetype,
+      statement: `${archetype.archetype} (${archetype.intensity}): ${archetype.themes.join(", ")}.`,
+      concepts: ["genesis", "archetype", ...archetype.themes],
+      polarity: "mixed" as const,
+      strength:
+        archetype.intensity === "extreme"
+          ? 1
+          : archetype.intensity === "high"
+            ? 0.85
+            : 0.7,
+      ruleId: "genesis-pattern-engine",
+      sourceId: "genesis-pattern-rules",
+      sourceTrace: trace("archetype"),
+    })),
+    ...genesis.signatures.map((signature, index) => ({
+      id: `genesis-signature-${index}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "signature",
+      subject: "chart-signature",
+      statement: signature,
+      concepts: ["genesis", "signature"],
+      polarity: "neutral" as const,
+      strength: 0.75,
+      ruleId: "genesis-pattern-engine",
+      sourceId: "genesis-pattern-rules",
+      sourceTrace: trace("signature"),
+    })),
+    ...genesis.vedicYogas.map(yoga => ({
+      id: `genesis-yoga-${yoga.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "vedic-yoga",
+      subject: yoga.name,
+      statement: yoga.message,
+      concepts: ["genesis", "vedic-yoga", yoga.name.toLowerCase()],
+      polarity: "supportive" as const,
+      strength: 0.8,
+      ruleId: "genesis-pattern-engine",
+      sourceId: "genesis-pattern-rules",
+      sourceTrace: trace("vedic-yoga"),
+    })),
+  ];
+}
+
+function genesisAstroEvidence(
+  astro: ReturnType<typeof runGenesisAstroPipeline>
+): EvidenceItem[] {
+  const trace = (technique: string) => ({
+    sourceId: "genesis-astro-engine",
+    tradition: "firmament" as const,
+    technique,
+    sourceTitle: "Genesis Astro Engine",
+    retrievedAt: new Date().toISOString(),
+    ruleId: "genesis-astro-engine",
+    confidence: "high" as const,
+  });
+  const evidence: EvidenceItem[] = [];
+  if (astro.result) {
+    for (const pillar of ["mind", "soul", "spirit"] as const) {
+      evidence.push({
+        id: `genesis-astro-${pillar}`,
+        tradition: "firmament",
+        category: "deterministic-rule",
+        technique: "astro-pillar",
+        subject: pillar,
+        statement: `Genesis Astro Engine ${pillar}: ${astro.result[pillar].state}. ${astro.result[pillar].body}`,
+        concepts: ["genesis", "astro-engine", pillar],
+        polarity: "mixed",
+        strength: 0.8,
+        ruleId: "genesis-astro-engine",
+        sourceId: "genesis-astro-engine",
+        sourceTrace: trace("astro-pillar"),
+      });
+    }
+    for (const activation of astro.result.activations.slice(0, 18)) {
+      evidence.push({
+        id: `genesis-astro-activation-${activation.transitPlanet}-${activation.natalPlanet}-${activation.aspect}`,
+        tradition: "firmament",
+        category: "deterministic-rule",
+        technique: "astro-transit",
+        subject: activation.natalPlanet,
+        statement: `Genesis Astro Engine activation: ${activation.summary} Orb ${activation.orb.toFixed(2)}°; priority ${activation.priority.toFixed(2)}.`,
+        concepts: ["genesis", "astro-engine", "transit", activation.aspect],
+        polarity: ["square", "opposition"].includes(activation.aspect)
+          ? "pressured"
+          : "supportive",
+        strength: Math.max(0, Math.min(1, 1 - activation.orb / 8)),
+        ruleId: "genesis-astro-engine",
+        sourceId: "genesis-astro-engine",
+        sourceTrace: trace("astro-transit"),
+      });
+    }
+  }
+  if (astro.error) {
+    evidence.push({
+      id: "genesis-astro-error",
+      tradition: "firmament",
+      category: "uncertainty",
+      technique: "astro-engine",
+      subject: "reading",
+      statement: `Genesis Astro Engine could not complete: ${astro.error}`,
+      concepts: ["genesis", "astro-engine", "incomplete"],
+      polarity: "neutral",
+      strength: 0,
+      ruleId: "genesis-astro-engine",
+      sourceId: "genesis-astro-engine",
+      sourceTrace: trace("astro-engine"),
+    });
+  }
+  for (const yoga of astro.yogas) {
+    evidence.push({
+      id: `genesis-astro-yoga-${yoga.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament",
+      category: "deterministic-rule",
+      technique: "vedic-yoga",
+      subject: yoga.name,
+      statement: yoga.message,
+      concepts: [
+        "genesis",
+        "astro-engine",
+        "vedic-yoga",
+        yoga.name.toLowerCase(),
+      ],
+      polarity: "supportive",
+      strength: 0.8,
+      ruleId: "genesis-astro-engine",
+      sourceId: "genesis-astro-engine",
+      sourceTrace: trace("vedic-yoga"),
+    });
+  }
+  return evidence;
+}
+
+function genesisOriginalPatternEvidence(
+  pattern: ReturnType<typeof runGenesisPatternPipeline>
+): EvidenceItem[] {
+  const trace = (technique: string) => ({
+    sourceId: "genesis-pattern-engine-original",
+    tradition: "firmament" as const,
+    technique,
+    sourceTitle: "Genesis Pattern Engine v2.0",
+    retrievedAt: new Date().toISOString(),
+    ruleId: "genesis-pattern-engine-original",
+    confidence: "high" as const,
+  });
+  return [
+    ...pattern.analysis.aspects.slice(0, 60).map(aspect => ({
+      id: `genesis-original-aspect-${aspect.planet1}-${aspect.planet2}-${aspect.type}-${aspect.isTransitToNatal ? "transit" : "natal"}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "pattern-aspect",
+      subject: `${aspect.planet1}-${aspect.planet2}`,
+      statement: `Genesis Pattern Engine v2.0 detects ${aspect.planet1} ${aspect.type} ${aspect.planet2} at ${aspect.orb.toFixed(2)}° orb with ${(aspect.strength * 100).toFixed(0)}% strength.`,
+      concepts: ["genesis", "pattern-engine", aspect.type],
+      polarity: ["square", "opposition"].includes(aspect.type)
+        ? ("pressured" as const)
+        : ("supportive" as const),
+      strength: Math.max(0, Math.min(1, aspect.strength)),
+      ruleId: "genesis-pattern-engine-original",
+      sourceId: "genesis-pattern-engine-original",
+      sourceTrace: trace("pattern-aspect"),
+    })),
+    ...pattern.analysis.dominantPatterns.map(item => ({
+      id: `genesis-original-pattern-${item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "pattern-configuration",
+      subject: item.name,
+      statement: `Genesis Pattern Engine v2.0: ${item.description} Strength ${(item.strength * 100).toFixed(0)}%.`,
+      concepts: [
+        "genesis",
+        "pattern-engine",
+        item.type,
+        ...item.planets.map(planet => planet.toLowerCase()),
+      ],
+      polarity:
+        item.type === "t_square"
+          ? ("pressured" as const)
+          : ("supportive" as const),
+      strength: item.strength,
+      ruleId: "genesis-pattern-engine-original",
+      sourceId: "genesis-pattern-engine-original",
+      sourceTrace: trace("pattern-configuration"),
+    })),
+    ...pattern.analysis.archetypes.map(item => ({
+      id: `genesis-original-archetype-${item.archetype.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "deterministic-rule" as const,
+      technique: "pattern-archetype",
+      subject: item.archetype,
+      statement: `Genesis Pattern Engine v2.0 archetype ${item.archetype} (${item.intensity}): ${item.themes.join(", ")}.`,
+      concepts: ["genesis", "pattern-engine", "archetype", ...item.themes],
+      polarity: "mixed" as const,
+      strength:
+        item.intensity === "extreme"
+          ? 1
+          : item.intensity === "high"
+            ? 0.85
+            : 0.7,
+      ruleId: "genesis-pattern-engine-original",
+      sourceId: "genesis-pattern-engine-original",
+      sourceTrace: trace("pattern-archetype"),
+    })),
+  ];
+}
+
+export function buildAstrologyEvidencePacket(
+  chart: ChartResult,
+  question: string,
+  mode: "natal" | "transit" | "combined" = chart.readingScope
+): AstrologyEvidencePacket {
+  const plan = planKnowledge(question, mode);
+  const astro = runGenesisAstroPipeline(chart);
+  const originalPattern = runGenesisPatternPipeline(chart);
+  const genesis = analyzeGenesisPatterns(chart);
+  const westernEvidence = resolveWesternEvidence(chart, plan);
+  const vedicEvidence = resolveVedicEvidence(chart, plan);
+  const arabicEvidence = resolveArabicEvidence(chart, plan);
+  const lunarEvidence = [...vedicEvidence, ...arabicEvidence].filter(item =>
+    ["nakshatra", "manzil"].includes(item.technique)
+  );
+  const lunarRows = mode === "natal" ? chart.movingBodies : [...chart.movingBodies, ...chart.transits];
+  const overlayEvidence: EvidenceItem[] = lunarRows.flatMap((row, index) => {
+    const lunarOverlay = row.overlay ?? (Number.isFinite(row.longitude) ? canonicalOverlay(row.longitude) : null);
+    if (!lunarOverlay) return [];
+    return [{
+      id: `fixed-frame-lunar-overlay-${index}-${row.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      tradition: "firmament" as const,
+      category: "source-correspondence" as const,
+      technique: "fixed-frame-lunar-overlay",
+      subject: row.name,
+      statement: `${row.name} at ${row.display}: Nakshatra ${lunarOverlay.nakshatra}, Pada ${lunarOverlay.pada}, ruler ${lunarOverlay.nakshatraRuler}; Arabic Manzil ${lunarOverlay.manzil}; Chinese Xiu ${lunarOverlay.chineseMansion}, determinative star ${lunarOverlay.chineseDeterminativeStar}. Chinese assignment uses the ${lunarOverlay.chineseBoundaryModel} in the firmament-aldebaran-15-taurus frame. This overlay is derived from canonical longitude and does not apply another ayanamsha.`,
+      concepts: ["nakshatra", "nakshatra-ruler", "manzil", "chinese-xiu", "determinative-star", row.name.toLowerCase()],
+      polarity: "neutral" as const,
+      strength: 1,
+      sourceId: "firmament-fixed-frame-lunar-overlays",
+      sourceTrace: {
+        sourceId: "firmament-fixed-frame-lunar-overlays",
+        tradition: "firmament" as const,
+        technique: "fixed-frame-lunar-overlay",
+        sourceTitle: "Firmament canonical lunar overlay calculation",
+        retrievedAt: new Date().toISOString(),
+        confidence: "high" as const,
+        calculationSettings: {
+          longitude: row.longitude,
+          referenceFrame: "firmament-aldebaran-15-taurus",
+          chineseBoundaryModel: lunarOverlay.chineseBoundaryModel,
+        },
+      },
+    }];
+  });
+  lunarEvidence.push(...overlayEvidence);
+  const fixedStarEvidence: EvidenceItem[] = chart.frozenStars.flatMap(star =>
+    (star.royalStarContacts ?? [])
+      .filter(contact => contact.contact)
+      .map(contact => ({
+        id: `fixed-star-${star.name}-${contact.name}`,
+        tradition: "firmament" as const,
+        category: "calculated-fact" as const,
+        technique: "fixed-stars",
+        subject: star.name,
+        statement: `${star.name} is within ${contact.distance.toFixed(2)}° of ${contact.name}.`,
+        concepts: ["fixed-star", contact.name.toLowerCase()],
+        polarity: "neutral" as const,
+        strength: Math.max(0, 1 - contact.distance / 5),
+        sourceId: "firmament-ephemeris",
+        sourceTrace: {
+          sourceId: "firmament-ephemeris",
+          tradition: "firmament" as const,
+          technique: "fixed-stars",
+          sourceTitle: "Firmament local ephemeris",
+          retrievedAt: new Date().toISOString(),
+          confidence: "high" as const,
+        },
+      }))
+  );
+  const timingEvidence: EvidenceItem[] =
+    mode === "natal"
+      ? []
+      : chart.transits.flatMap(transit =>
+          transit.natalContacts
+            .filter(contact => contact.orb <= 5)
+            .map(contact => ({
+              id: `timing-${transit.name}-${contact.natalName}-${contact.aspect}`,
+              tradition: "firmament" as const,
+              category: "calculated-fact" as const,
+              technique: "transits",
+              subject: transit.name,
+              statement: `At ${chart.transitDate}, transit ${transit.name} makes a ${contact.aspect} to natal ${contact.natalName} at ${contact.orb.toFixed(2)}°.`,
+              concepts: [
+                "transit",
+                contact.aspect,
+                transit.name.toLowerCase(),
+                contact.natalName.toLowerCase(),
+              ],
+              polarity: ["square", "opposition"].includes(contact.aspect)
+                ? ("pressured" as const)
+                : ("supportive" as const),
+              strength: Math.max(0, 1 - contact.orb / 5),
+              sourceId: "firmament-ephemeris",
+              sourceTrace: {
+                sourceId: "firmament-ephemeris",
+                tradition: "firmament" as const,
+                technique: "transits",
+                calculationSettings: { activationUtc: chart.transitDate, natalBody: contact.natalName },
+                sourceTitle: "Firmament local ephemeris",
+                retrievedAt: new Date().toISOString(),
+                confidence: "high" as const,
+              },
+            }))
+        );
+  const patternEvidence = genesisEvidence(genesis);
+  patternEvidence.push(...genesisOriginalPatternEvidence(originalPattern));
+  const astroEvidence = genesisAstroEvidence(astro);
+  const behavioralReport = evaluateBehavioralIntelligence(
+    chart,
+    question,
+    mode
+  );
+  const { behavioralEvidence, lifeEventEvidence } =
+    behavioralReportToEvidenceItems(behavioralReport);
+  const canonDossier = retrieveChartCanonDossier(chart);
+  const canonEvidence = [
+    ...canonDossierToEvidenceItems(canonDossier),
+    ...seferYetzirahEvidence(chart, "natal"),
+  ];
+  const all = [
+    ...westernEvidence,
+    ...astroEvidence,
+    ...patternEvidence,
+    ...behavioralEvidence,
+    ...lifeEventEvidence,
+    ...canonEvidence,
+    ...vedicEvidence,
+    ...arabicEvidence,
+    ...timingEvidence,
+    ...fixedStarEvidence,
+  ];
+  const resolved = resolveRelationships(all);
+  const uncertainties = all.filter(item => item.category === "uncertainty");
+  const incomplete = ASTROLOGY_RULES.filter(
+    rule => rule.status === "incomplete"
+  ).map(rule => `${rule.technique}: ${rule.statement}`);
+  for (const source of ASTROLOGY_SOURCES.filter(
+    source => source.status === "reference-only"
+  )) {
+    incomplete.push(
+      `${source.name} is reference-only; no authorized runtime provider is enabled.`
+    );
+  }
+  const sourceTrace = all.map(item => {
+    const rule = item.ruleId
+      ? ASTROLOGY_RULES.find(candidate => candidate.id === item.ruleId)
+      : undefined;
+    return {
+      ...item.sourceTrace,
+      provider: item.sourceTrace.provider ?? item.sourceTrace.sourceId,
+      implementationStatus: rule?.status ?? "implemented",
+      ...(item.sourceTrace.sourceUrl
+        ? {}
+        : {
+            calculationSettings: {
+              worldview: chart.worldview,
+              readingScope: chart.readingScope,
+              relationshipOrb: 5,
+            },
+          }),
+    };
+  });
+  return {
+    question,
+    plan,
+    chartFacts: {
+      worldview: chart.worldview,
+      readingScope: chart.readingScope,
+      utc: chart.utc,
+      agentViewAvailable: chart.agentViewAvailable,
+      placements: [
+        ...chart.movingBodies,
+        chart.ascendant,
+        chart.descendant,
+        chart.midheaven,
+        chart.northNode,
+        chart.southNode,
+      ]
+        .filter(Boolean)
+        .map(row => ({
+          name: row!.name,
+          longitude: row!.longitude,
+          display: row!.display,
+          house: row!.house,
+          godHouse: row!.godHouse,
+          agentHouse: row!.agentHouse,
+        })),
+    },
+    westernEvidence,
+    patternEvidence,
+    genesisAstroEvidence: astroEvidence,
+    behavioralEvidence,
+    lifeEventEvidence,
+    behavioralReport,
+    canonEvidence,
+    canonDossier,
+    vedicEvidence,
+    arabicEvidence,
+    lunarEvidence,
+    fixedStarEvidence,
+    timingEvidence,
+    relationships: resolved.relationships,
+    convergences: resolved.convergences,
+    contradictions: resolved.contradictions,
+    uncertainties,
+    incomplete,
+    sourceTrace,
+    doctrine: {
+      genesis: {
+        role: "active pattern-recognition, Astro Engine, and hard-coded interpretive rules",
+        engine: genesis.doctrine,
+        astroEngine: astro.engine,
+        aspectOrbs: genesis.config,
+        houseFrame:
+          "uses Firmament-calculated chart houses; does not replace Firmament ephemeris or worldview calculations",
+      },
+      western: {
+        relationshipOrb: 5,
+        houseFrame: chart.agentViewAvailable
+          ? "equal-house Agent View plus fixed God View"
+          : "fixed God View only",
+      },
+      vedic: {
+        background: "fixed 0° Aries / 27 equal Nakshatras",
+        sourceMode: "local rules plus reference-only Tvam trace",
+      },
+      arabic: {
+        background: "fixed 28 Manazil",
+        sourceMode: "local rules plus reference-only Canopy trace",
+      },
+    },
+  };
+}
+
+export function formatEvidencePacket(packet: AstrologyEvidencePacket) {
+  const section = (title: string, items: EvidenceItem[]) =>
+    `${title}\n${items.length ? items.map(item => `- [${item.tradition}/${item.technique}] ${item.statement}`).join("\n") : "- none"}`;
+  const relationEvidence = (
+    item: AstrologyEvidencePacket["relationships"][number],
+    technique: string
+  ): EvidenceItem => ({
+    id: item.id,
+    tradition: "firmament",
+    category: "deterministic-rule",
+    technique,
+    subject: item.theme,
+    statement: `${item.explanation} Strength ${item.strength}.`,
+    concepts: [item.theme],
+    sourceId: "firmament-architecture",
+    sourceTrace: {
+      sourceId: "firmament-architecture",
+      tradition: "firmament",
+      technique,
+      sourceTitle: "Firmament architecture",
+      retrievedAt: new Date().toISOString(),
+      confidence: "high",
+    },
+  });
+  return [
+    "ASTROLOGY EVIDENCE PACKET",
+    `Question: ${packet.question}`,
+    "Core policy: Genesis Astro Engine, Genesis Pattern Engine, and Genesis Yoga Detector are mandatory evaluated layers. The planner may prioritize their findings, but may not bypass the Genesis layer.",
+    `Plan: ${packet.plan.reasons.join(" ")}`,
+    section("Western evidence", packet.westernEvidence),
+    section("Genesis Astro Engine evidence", packet.genesisAstroEvidence),
+    section("Genesis Pattern Engine evidence", packet.patternEvidence),
+    section(
+      "Firmament Human Behavior Pattern Intelligence (7-channel convergence, 5-level confidence, triggers, motivations, responses & polarities)",
+      packet.behavioralEvidence
+    ),
+    section(
+      "Firmament Life-Event & Situation Intelligence (E1-E5 event signatures, temporal states & cross-domain sequences)",
+      packet.lifeEventEvidence
+    ),
+    packet.canonDossier?.formattedSummaryForInterpreter ?? "",
+    section("Vedic evidence", packet.vedicEvidence),
+    section("Arabic evidence", packet.arabicEvidence),
+    section("Lunar evidence", packet.lunarEvidence),
+    section("Timing evidence", packet.timingEvidence),
+    section(
+      "Convergences",
+      packet.convergences.map(item => relationEvidence(item, "convergence"))
+    ),
+    section(
+      "Contradictions and qualifications",
+      packet.contradictions.map(item => relationEvidence(item, "contradiction"))
+    ),
+    packet.uncertainties.length
+      ? section("Explicit uncertainties", packet.uncertainties)
+      : "",
+    packet.incomplete.length
+      ? `Incomplete or reference-only\n${packet.incomplete.map(item => `- ${item}`).join("\n")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function compactText(text: string, maxLen = 165): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= maxLen) return clean;
+  const slice = clean.slice(0, maxLen - 1);
+  const stop = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("; "), slice.lastIndexOf(" "));
+  return (stop > maxLen * 0.55 ? slice.slice(0, stop) : slice).trim() + "…";
+}
+
+export function formatCompactEvidencePacket(packet: AstrologyEvidencePacket): string {
+  const section = (title: string, items: EvidenceItem[], maxItems = 8) => {
+    if (!items.length) return "";
+    const sorted = [...items].sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0));
+    const sliced = sorted.slice(0, maxItems);
+    const lines = sliced.map(
+      item => `- [${item.tradition}/${item.technique}] ${compactText(item.statement)}`
+    );
+    if (items.length > maxItems) {
+      lines.push(`- (+${items.length - maxItems} additional calculated items in synthesis)`);
+    }
+    return `${title}\n${lines.join("\n")}`;
+  };
+
+  const relationLines = (
+    title: string,
+    items: AstrologyEvidencePacket["relationships"],
+    maxItems = 5
+  ) => {
+    if (!items.length) return "";
+    return `${title}\n${items
+      .slice(0, maxItems)
+      .map(item => `- ${compactText(item.explanation, 150)} (strength ${item.strength})`)
+      .join("\n")}`;
+  };
+
+  return [
+    "ASTROLOGY EVIDENCE PACKET (COMPACT DIGEST)",
+    `Question: ${packet.question}`,
+    `Plan: ${packet.plan.reasons.join(" ")}`,
+    section("Western evidence", packet.westernEvidence, 8),
+    section("Genesis Astro Engine evidence", packet.genesisAstroEvidence, 8),
+    section("Genesis Pattern Engine evidence", packet.patternEvidence, 8),
+    section("Human Behavior Pattern Intelligence", packet.behavioralEvidence, 8),
+    section("Life-Event & Situation Intelligence", packet.lifeEventEvidence, 5),
+    section("Vedic evidence", packet.vedicEvidence, 8),
+    section("Arabic evidence", packet.arabicEvidence, 6),
+    section("Lunar & Fixed-Frame Overlays", packet.lunarEvidence, 8),
+    section("Timing evidence (transits <= 5°)", packet.timingEvidence, 10),
+    relationLines("Convergences", packet.convergences, 5),
+    relationLines("Contradictions and qualifications", packet.contradictions, 5),
+    packet.uncertainties.length
+      ? section("Explicit uncertainties", packet.uncertainties, 4)
+      : "",
+    packet.incomplete.length
+      ? `Incomplete or reference-only: ${packet.incomplete.slice(0, 4).join(" | ")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+
+
+================================================================================
+FILE: server/astrologyKnowledge/evidenceTypes.ts
+BLOB SHA: 7f3e8b42bac355f2c59b50af3e14b6178649bbe8
+================================================================================
+export type Tradition = "western" | "vedic" | "arabic" | "firmament";
+export type KnowledgeKind = "deterministic-rule" | "source-correspondence";
+export type RuleStatus = "implemented" | "incomplete";
+export type EvidenceRelation =
+  | "reinforcement"
+  | "amplification"
+  | "qualification"
+  | "contradiction"
+  | "tension"
+  | "different-layer"
+  | "timing-difference";
+
+export type AstrologySource = {
+  id: string;
+  name: string;
+  tradition: Tradition;
+  authorityType: "calculation" | "tradition" | "reference" | "api";
+  url?: string;
+  status: "active" | "reference-only" | "disabled";
+  capabilities: string[];
+};
+
+export type AstrologyRule = {
+  id: string;
+  tradition: Tradition;
+  technique: string;
+  subject: string;
+  kind: KnowledgeKind;
+  sourceId: string;
+  status: RuleStatus;
+  statement: string;
+  doctrine?: string;
+};
+
+export type KnowledgePlan = {
+  question: string;
+  coreLayers: [
+    "genesis-astro-engine",
+    "genesis-pattern-engine",
+    "genesis-yoga-detector",
+  ];
+  genesisPolicy: "mandatory-evaluate-before-prioritization";
+  domains: string[];
+  subjects: string[];
+  techniques: string[];
+  includeTiming: boolean;
+  includeDivisionalCharts: string[];
+  reasons: string[];
+};
+
+export type EvidenceItem = {
+  id: string;
+  tradition: Tradition;
+  category:
+    | "calculated-fact"
+    | "deterministic-rule"
+    | "source-correspondence"
+    | "uncertainty";
+  technique: string;
+  subject: string;
+  statement: string;
+  concepts: string[];
+  polarity?: "supportive" | "pressured" | "mixed" | "neutral";
+  strength?: number;
+  ruleId?: string;
+  sourceId: string;
+  sourceTrace: SourceTrace;
+};
+
+export type SourceTrace = {
+  sourceId: string;
+  tradition: Tradition;
+  technique: string;
+  sourceUrl?: string;
+  sourceTitle: string;
+  retrievedAt: string;
+  ruleId?: string;
+  confidence: "high" | "moderate" | "low" | "reference-only";
+  provider?: string;
+  calculationSettings?: Record<string, unknown>;
+  implementationStatus?: RuleStatus;
+};
+
+export type EvidenceRelationship = {
+  id: string;
+  relation: EvidenceRelation;
+  theme: string;
+  evidenceIds: string[];
+  traditions: Tradition[];
+  explanation: string;
+  strength: number;
+};
+
