@@ -1,5 +1,6 @@
 import { invokeLLM } from "../../_core/llm";
 import { READING_BEHAVIOR_DIRECTIVE } from "../../master-interpreter";
+import { COMBINATION_INTELLIGENCE_CANON } from "../canon/combinationIntelligence";
 import { stringifyEvidence } from "./evidenceTransport";
 import type { SynthesisResult } from "./types";
 
@@ -435,15 +436,33 @@ export async function runInterpretation(
       typeof message.content === "string" &&
       message.content.includes("THE ABSOLUTE — AS REAL AS IT GETS: SOUL-DEEP READING-BEHAVIOR CONTRACT")
   );
-  if (!alreadyUsesReadingBehavior) {
+  // Life Story is a distinct chronological biography, not the Who Are You
+  // identity portrait. Share knowledge, not conflicting reading instructions.
+  const isLifeStory = route === "LIFE_STORY";
+  if (isLifeStory || !alreadyUsesReadingBehavior) {
     const firstNonSystem = messages.findIndex(m => m.role !== "system");
     const insertAt = firstNonSystem < 0 ? messages.length : firstNonSystem;
     messages.splice(insertAt, 0, {
       role: "system",
-      content: READING_BEHAVIOR_DIRECTIVE,
+      content: isLifeStory
+        ? [
+            COMBINATION_INTELLIGENCE_CANON,
+            "LIFE STORY — CHRONOLOGICAL BIOGRAPHY AND DEPTH CONTRACT",
+            "The dedicated Life Historian instructions control this route. Use the Genesis inquiry, complete supplied chart testimony and stage-specific timing to construct a distinct life chapter, not a psychological portrait. The Canon is shared with Who Are You, but its application here is to changing worldly circumstances across time.",
+            "Aim for 6–9 substantial, connected paragraphs (roughly 600–1000 words where the evidence supports that depth). Establish the stage's opening circumstances, develop the strongest connected life domains, show turning points and their consequences, and close on the transition to the next era. Do not stretch weak evidence or repeat a central personality label just to meet length.",
+            "Give supported achievements, opportunities, relationships, family responsibilities, education, work, material conditions, setbacks, recoveries and contribution their rightful place. Select the domains from the chart rather than forcing a fixed life script. Use distinct configurations and cross-method testimony to explain each development; do not manufacture dates, events, diagnoses or actual biographical knowledge.",
+            "Write in direct second person with profound, accessible, literary human language. Avoid clinical terminology, generic motivational advice, repetitive abstractions, and canned moral endings. Keep technical evidence in the evidence view. Preserve uncertainty for unverified past events and future possibilities, and distinguish supplied timing from symbolic inference.",
+          ].join("\n\n")
+        : READING_BEHAVIOR_DIRECTIVE,
     });
   }
-  const response = await invokeLLM({ ...request, messages });
+  const response = await invokeLLM({
+    ...request,
+    ...(isLifeStory && request.max_tokens == null && request.maxTokens == null
+      ? { max_tokens: 6000 }
+      : {}),
+    messages,
+  });
   const finish = response.choices?.[0]?.finish_reason;
   if (
     finish &&
