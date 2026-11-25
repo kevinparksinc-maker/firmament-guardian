@@ -78,6 +78,7 @@ export function ProfileHomeScreen({
 }: Props) {
   const energy = useMemo(() => calculateEnergyRead(chart), [chart]);
   const numbers = useMemo(() => numerology(profile.name, profile.date), [profile.name, profile.date]);
+  const [showPlacementMinis, setShowPlacementMinis] = useState(false);
   const bodies = [
     { label: "Sun", body: chart?.movingBodies.find(body => body.name === "Sun") },
     { label: "Moon", body: chart?.movingBodies.find(body => body.name === "Moon") },
@@ -133,6 +134,18 @@ export function ProfileHomeScreen({
         </div>
       </header>
       </div>
+      {chart ? (
+        <section aria-label="Who Are You?" className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="font-serif text-3xl text-amber-100">Who Are You?</h2>
+            <p className="text-sm leading-6 text-slate-300">Your whole natal chart, brought together into one personal portrait.</p>
+          </div>
+          <MasterSynthesizerPanel chart={chart} presentation="summary" mode="natal" initialQuestion="WHO ARE YOU? Give me a whole-chart core identity synthesis. Investigate the strongest interconnected configurations across every available natal method, not just individual placements. Explore my formative temperament, private nature, intelligence, gifts, ambition, response to pressure, emotional needs and contradictions only where the chart supports them. Follow the strongest signals, not a fixed checklist. Deliver the finished human portrait in direct second-person prose, not the ingredients. Keep calculations and evidence in the separate evidence view." />
+          <Link href="/reading/depth" className="block text-sm text-amber-200">Explore your full integrated interpretation →</Link>
+        </section>
+      ) : calculating ? (
+        <p role="status" className="text-sm text-amber-200">Preparing your whole-chart identity reading…</p>
+      ) : null}
       <section aria-label="Your core numerology" className="space-y-4">
         <h2 className="font-serif text-xl text-amber-100">Your core numbers</h2>
         <p className="text-sm leading-6 text-slate-300">Know thyself. Love thyself. Master thyself. Be thyself. Explore your own path without measuring your worth against somebody else's.</p>
@@ -146,9 +159,11 @@ export function ProfileHomeScreen({
         </div>
         <p className="text-xs text-slate-400">Pythagorean numerology: letters repeat 1–9, vowels A/E/I/O/U, and master numbers 11/22/33 are retained. Name-based values use the name entered in your profile.</p>
       </section>
+      <details className="space-y-4 rounded-2xl border border-white/10 p-4">
+        <summary className="cursor-pointer text-sm text-amber-200">Explore individual chart placements</summary>
       <section aria-label="Your main chart signals" className="space-y-4">
         <h2 className="font-serif text-xl text-amber-100">Your main signals</h2>
-        <p className="text-sm leading-6 text-slate-300">Identity, inner nature, relationships, and the karmic axis. The full synthesis below connects these placements with your chart's methods and evidence.</p>
+        <p className="text-sm leading-6 text-slate-300">Individual placement references. Your whole-chart portrait above is the primary reading.</p>
         <div className="grid gap-4 sm:grid-cols-2">
           {bodies.map(({ label, body }) => (
             <Link href="/chart" key={label} className="block space-y-3 rounded-2xl border border-white/10 bg-slate-950/60 p-5">
@@ -162,17 +177,9 @@ export function ProfileHomeScreen({
           ))}
         </div>
       </section>
-      {chart && <HomepagePlacementSynthesis chart={chart} />}
-      {chart && (
-        <section aria-label="Your integrated personal synthesis" className="space-y-4">
-          <div className="space-y-2">
-            <h2 className="font-serif text-2xl text-amber-100">Your integrated self-discovery reading</h2>
-            <p className="text-sm leading-6 text-slate-300">One connected interpretation of your identity, emotions, relationship axis, karmic direction, and the traditional methods calculated for your chart. Explore the full narrative and method evidence in Readings.</p>
-          </div>
-          <MasterSynthesizerPanel chart={chart} presentation="summary" mode="natal" initialQuestion="Synthesize my Sun, Moon, Ascendant, Descendant, North Node and South Node together. Explain their sign and house placements, aspects, decans, lunar mansions where applicable, dignity and house-strength evidence, God and Agent views, and how these factors interact. Discuss strengths, shadows, familiar patterns, growth goals and practical self-mastery. Use all available calculated methods, cite their evidence, and explicitly identify missing methods rather than inventing data." />
-          <Link href="/reading/depth" className="block text-sm text-amber-200">Read the full integrated interpretation →</Link>
-        </section>
-      )}
+      {chart && <button type="button" className="text-sm text-amber-200 underline" onClick={() => setShowPlacementMinis(value => !value)}>{showPlacementMinis ? "Hide mini readings" : "Open mini readings"}</button>}
+      {chart && showPlacementMinis && <HomepagePlacementSynthesis chart={chart} />}
+      </details>
       <section
         aria-label="Your next step"
         className="grid gap-5 md:grid-cols-3"

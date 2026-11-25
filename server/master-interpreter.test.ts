@@ -37,6 +37,13 @@ describe("Master Interpreter prompt coverage", () => {
     expect(MASTER_INTERPRETER_PROMPT).toContain("psychological astrologer and narrative writer for The Absolute");
     expect(MASTER_INTERPRETER_PROMPT).toContain("Use the full chart silently");
     expect(MASTER_INTERPRETER_PROMPT).toContain(READING_BEHAVIOR_DIRECTIVE);
+    expect(MASTER_INTERPRETER_PROMPT).toContain("COMBINATION RECOGNITION");
+    expect(FULL_SYNTHESIS_STYLE).toContain("Do not confuse one trine with a Grand Trine");
+    expect(FULL_SYNTHESIS_STYLE).toContain("WHO ARE YOU — WHOLE-CHART HOMEPAGE MODE");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Taurus—neck/throat/voice");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Scorpio—reproductive and excretory regions");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("8—genital region/bladder");
+    expect(MASTER_INTERPRETER_PROMPT).toContain("Never infer a symptom, disease");
     expect(READING_BEHAVIOR_DIRECTIVE).toContain("IF YES — KILL IT");
     expect(READING_BEHAVIOR_DIRECTIVE).toContain("DO NOT rewrite it");
     expect(READING_BEHAVIOR_DIRECTIVE).toContain("Could this describe almost anybody?");
