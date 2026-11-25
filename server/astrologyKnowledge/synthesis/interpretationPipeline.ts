@@ -58,7 +58,7 @@ function findingPriorityScore(finding: { subject?: string; strength?: string | n
   return primaryMatch + strScore;
 }
 
-export function interpretationEvidence(synthesis: SynthesisResult, includePlacementIndex = false) {
+export function interpretationEvidence(synthesis: SynthesisResult) {
   const canon = Array.from(
     new Map(
       [
@@ -75,11 +75,6 @@ export function interpretationEvidence(synthesis: SynthesisResult, includePlacem
   return {
     snapshotId: synthesis.snapshotId,
     scope: synthesis.mode,
-    ...(includePlacementIndex ? {
-      placementIndex: synthesis.sourceSnapshot.natal
-        ? buildWholeChartPlacementIndex(synthesis.sourceSnapshot.natal, synthesis)
-        : { status: "not_calculated", reason: "Canonical natal chart unavailable" },
-    } : {}),
     coverage: {
       methodsTotal: synthesis.methodOutcomes.length,
       methodsIncluded: synthesis.methodOutcomes.length,
@@ -415,7 +410,14 @@ export async function runInterpretation(
         ? stringifyEvidence(ledgers.map(ledger => focusedPlacementEvidence(ledger, layout.focusedPlacement)))
         : layout === "horary-compact"
           ? stringifyEvidence(ledgers.map(horaryInterpretationEvidence))
-          : stringifyEvidence(ledgers.map(ledger => interpretationEvidence(ledger, wholeChart)));
+          : stringifyEvidence(ledgers.map(ledger => ({
+              ...interpretationEvidence(ledger),
+              ...(wholeChart ? {
+                placementIndex: ledger.sourceSnapshot.natal
+                  ? buildWholeChartPlacementIndex(ledger.sourceSnapshot.natal, ledger)
+                  : { status: "not_calculated", reason: "Canonical natal chart unavailable" },
+              } : {}),
+            })));
     const dossier = {
       role: "user" as const,
       content:
