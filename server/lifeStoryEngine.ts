@@ -933,9 +933,9 @@ export function parseLifeStoryPlan(
   for (const value of Array.isArray(source.beats) ? source.beats : []) {
     const item = asRecord(value);
     const requestedIds = asStrings(item.findingIds);
-    const findingIds = [...new Set(requestedIds.filter(id => validIds.has(id)))];
+    const findingIds = Array.from(new Set(requestedIds.filter(id => validIds.has(id))));
     const requestedCounterIds = asStrings(item.counterEvidenceIds);
-    const counterEvidenceIds = [...new Set(requestedCounterIds.filter(id => validIds.has(id)))];
+    const counterEvidenceIds = Array.from(new Set(requestedCounterIds.filter(id => validIds.has(id))));
     if (requestedIds.some(id => !validIds.has(id)) || requestedCounterIds.some(id => !validIds.has(id)))
       gaps.push("A generated evidence reference was not present in the delivered chart dossier.");
     const beat: LifeStoryBeat = {
@@ -952,7 +952,7 @@ export function parseLifeStoryPlan(
   }
   if (!beats.length) throw new Error("LIFE_STORY_PLAN_EMPTY: No evidence-linked life developments were returned. Retry this chapter.");
   // Exact IDs establish traceability, not empirical proof or semantic entailment.
-  return { beats, gaps: [...new Set(gaps)] };
+  return { beats, gaps: Array.from(new Set(gaps)) };
 }
 
 export const LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS = `You are THE ABSOLUTE LIFE HISTORIAN, an immersive biographical storyteller. Tell the person's *life story* from the birth chart and calculated timing evidence, not their behavior profile. Write directly to the reader in second person ("you") in deep, human, clear language.
