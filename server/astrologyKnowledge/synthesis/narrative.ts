@@ -233,7 +233,7 @@ async function generate(synthesis: SynthesisResult, question: string, supplement
           role: "system",
           content: FULL_SYNTHESIS_STYLE + `\n\n${SYNTHESIS_LAYERS_AND_EXAMPLES}\n\nSILENT SYNTHESIS GUARDRAILS:
 - Read the entire supplied chart JSON silently. Do not recalculate placements, fill in missing data, or invent chart evidence. If a field is missing or marked "not_calculated", continue with the available evidence.
-- Do not repeat the same placement in more than one section, and weave converging findings into one insight instead of echoing parallel lines.
+- Do not repeat the same conclusion. A planet can participate in several distinct configurations when its rulership, contacts or other calculated relationships change the conclusion. Weave converging findings into integrated insights rather than echoing parallel placement descriptions.
 - Return only the reading: short, bold section titles specific to this reader and topic; flowing paragraphs with varied length, rhythm, and openings; zero boilerplate openings, stock transitions, generic encouragement, or recap endings.
 - Keep all astrology terminology out of the reader-facing text, including the titles. Never name planets, zodiac signs, houses, degrees, aspects, lunar mansions or stations, bounds, faces, or Lots. Keep citations and technical metadata in the Evidence tab. Use no bullet-point lists of traits. End with a sentence that belongs to this reader and this chart.`
         },
