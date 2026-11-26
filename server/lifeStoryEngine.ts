@@ -987,7 +987,8 @@ export function parseLifeStoryPlan(
   ];
   const timingIds = new Set(chapterDasha?.windows.map(window => window.id) ?? []);
   const vedicIds = new Set(methods.filter(method => /vedic|jyotish|parashar/i.test(method.tradition)).flatMap(methodIds));
-  const validIds = new Set([...methods.flatMap(methodIds), ...timingIds]);
+  const chartIds = new Set(methods.flatMap(methodIds));
+  const validIds = new Set([...chartIds, ...timingIds]);
   const asRecord = (value: unknown): Record<string, unknown> =>
     value !== null && typeof value === "object" && !Array.isArray(value)
       ? value as Record<string, unknown> : {};
@@ -1021,7 +1022,7 @@ export function parseLifeStoryPlan(
       prose: scrubNonHoraryAstrologyJargon(asText(item.prose)),
     };
     if (!beat.period || !beat.lifeDomain || !beat.configuration || !beat.manifestation ||
-        !beat.consequence || !beat.timingBasis || !beat.prose || !beat.findingIds.length)
+        !beat.consequence || !beat.timingBasis || !beat.prose || !beat.findingIds.some(id => chartIds.has(id)))
       throw new Error("LIFE_STORY_PLAN_INCOMPLETE: A proposed life development lacked its required chart reference or narrative. Retry this chapter.");
     beats.push(beat);
   }
@@ -1115,7 +1116,10 @@ export async function generateLifeStoryChapter(
   }
 
   const { synthesis, canonicalChart } = await synthesizeChartForReading(chart, "natal", targetChapter.title);
-  const chapterDasha = collectChapterDashaEvidence(canonicalChart, targetChapter.ageRange);
+  const timingChart = chart.input.birthTimeKnown === false
+    ? { ...canonicalChart, input: { ...canonicalChart.input, birthTimeKnown: false } }
+    : canonicalChart;
+  const chapterDasha = collectChapterDashaEvidence(timingChart, targetChapter.ageRange);
 
   const prompt = [
     `# SILENT ENGINE BRIEF FOR THIS CHAPTER (DO NOT PRINT TECHNICAL TERMS TO THE READER)`,
@@ -1132,7 +1136,7 @@ export async function generateLifeStoryChapter(
     `- Profection Themes: ${profection.traditionalThemes.join(", ")}`,
     ``,
     `## VEDIC TIMING THROUGHOUT THE REQUESTED STAGE (PRIMARY)`,
-    `Chapter interval is half-open at UTC calendar-day precision. Each window retains its original dates and the portion overlapping this chapter. Use exact supplied window IDs. A time window alone cannot establish an event; connect its lord to independent natal findings. Do not use any current-period summary for past stages. If unavailable, record the gap and keep timing stage-level.`,
+    `Chapter interval is half-open at UTC calendar-day precision. Each window retains its original dates and the portion overlapping this chapter. Use exact supplied window IDs. A time window alone cannot establish an event; every beat must cite at least one natal dossier finding in findingIds and connect its lord to independent natal findings. Do not use any current-period summary for past stages. If unavailable, record the gap and keep timing stage-level.`,
     JSON.stringify(chapterDasha),
     ``,
     `## ANNUAL PROFECTIONS THROUGHOUT THE REQUESTED STAGE`,
