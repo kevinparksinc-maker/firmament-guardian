@@ -9,9 +9,13 @@ vi.mock("./_core/llm", () => ({
 }));
 
 import { calculateChart, type ChartResult } from "./astronomy";
+import { synthesizeChartForReading } from "./astrologyKnowledge/synthesis/readingBridge";
+import { buildVimshottariTimeline } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
 import {
   LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS,
   compileLifeStoryChapters,
+  collectChapterDashaEvidence,
+  parseLifeStoryPlan,
   generateLifeStoryChapter,
   generatePlanetaryCycles,
 } from "./lifeStoryEngine";
@@ -38,14 +42,26 @@ describe("Life Story — chronology and Genesis 72-question evidence synthesis",
 
   beforeEach(() => {
     mockInvokeLLM.mockReset();
-    mockInvokeLLM.mockResolvedValue({
-      choices: [{
-        message: {
-          content: "You enter your school years as family circumstances begin to change. " +
-            "An early opportunity for study could open a path beyond your first home, " +
-            "though the same years may require material sacrifices that delay that opening.",
-        },
-      }],
+    mockInvokeLLM.mockImplementation(async (request) => {
+      const message = request.messages.find((m: {role: string; content: string}) =>
+        m.role === "user" && m.content.includes("## VEDIC TIMING THROUGHOUT THE REQUESTED STAGE"));
+      const line = message.content.split("\n").find((value: string) => value.startsWith('{"start":') && value.includes('"windows":'));
+      const packet = JSON.parse(line);
+      const window = packet.windows.find((value: {level: string}) => value.level === "Antardasha");
+      const { synthesis } = await synthesizeChartForReading(SAMPLE_CHART, "natal", "2. Childhood: Home, School & First Discoveries");
+      const method = synthesis.methodOutcomes.find(m => /vedic|jyotish|parashar/i.test(m.tradition) && m.calculatedFindings.length);
+      if (!method) throw new Error("Fixture has no Vedic calculation evidence");
+      const id = method.calculatedFindings[0].evidenceId;
+      return { choices: [{ finish_reason: "stop", message: { content: JSON.stringify({
+        beats: [{
+          period: "Childhood", lifeDomain: "Education", configuration: "Fixture chart evidence",
+          manifestation: "Potential educational opening", consequence: "Possible change in available schooling",
+          timingBasis: "Calculated chapter window", findingIds: [id, window.id],
+          counterEvidenceIds: [], vedicEvidenceIds: [id], timingWindowIds: [window.id],
+          soulDevelopment: "Cultivation of a skill", behavioralResponse: "Practice",
+          prose: "You enter your school years as family circumstances begin to change. An early opportunity for study could open a path beyond your first home."
+        }], gaps: []
+      }) } }] };
     });
   });
 
@@ -102,13 +118,51 @@ describe("Life Story — chronology and Genesis 72-question evidence synthesis",
     expect(mockInvokeLLM).toHaveBeenCalledTimes(1);
     const callArg = mockInvokeLLM.mock.calls[0][0];
     expect(callArg.messages[0].role).toBe("system");
-    expect(callArg.messages[0].content).toBe(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS);
-    expect(callArg.messages[1].content).toContain("PINPOINT SILENT SYNTHESIS");
-    expect(callArg.messages[1].content).toContain("72 Genesis questions");
-    expect(callArg.messages[1].content).toContain("Childhood");
-    expect(callArg.messages[1].content).toContain("Age ~");
-    expect(callArg.messages[1].content).not.toContain("how their behavior lands");
+    expect(callArg.messages[0].content).toContain(LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS);
+    expect(callArg.messages[0].content).toContain("70/30 EDITORIAL TARGET");
+    const prompt = callArg.messages.find((m: {role: string; content: string}) => m.role === "user" && m.content.includes("PINPOINT SILENT SYNTHESIS")).content;
+    expect(prompt).toContain("PINPOINT SILENT SYNTHESIS");
+    expect(prompt).toContain("72 Genesis questions");
+    expect(prompt).toContain("Childhood");
+    expect(prompt).toContain("Age ~");
+    expect(prompt).not.toContain("how their behavior lands");
     expect(result.title).toContain("Childhood");
     expect(result.content).toContain("family circumstances");
+    const beat = result.genesisPlan.beats[0];
+    expect(beat.vedicEvidenceIds?.length).toBeGreaterThan(0);
+    expect(beat.timingWindowIds?.[0]).toBe(result.genesisPlan.chapterDasha?.windows.find(w => w.level === "Antardasha")?.id);
+    expect(result.genesisPlan.gaps).toEqual([]);
+  });
+  it("includes every overlapping major/subperiod and clips windows at both chapter boundaries", () => {
+    const chapter = collectChapterDashaEvidence(SAMPLE_CHART, [1, 13]);
+    const source = buildVimshottariTimeline(SAMPLE_CHART);
+    expect(source.available).toBe(true);
+    if (!source.available) throw new Error(source.reason);
+    const expected = source.periods.flatMap(maha => [
+      { level: "Mahadasha", ...maha },
+      ...maha.antardashas.map(ad => ({ level: "Antardasha", ...ad })),
+    ]).filter(w => w.start < chapter.end && w.end > chapter.start);
+    expect(chapter.windows).toHaveLength(expected.length);
+    expect(chapter.windows.every(w => w.chapterStart >= chapter.start && w.chapterEnd <= chapter.end)).toBe(true);
+    const major = chapter.windows.filter(w => w.level === "Mahadasha");
+    expect(major[0].chapterStart).toBe(chapter.start);
+    expect(major.at(-1)?.chapterEnd).toBe(chapter.end);
+    expect(new Set(chapter.windows.map(w => w.id)).size).toBe(chapter.windows.length);
+    expect(chapter.gaps).toEqual([]);
+    const next = collectChapterDashaEvidence(SAMPLE_CHART, [13, 20]);
+    for (const w of chapter.windows.filter(w => w.end > chapter.end))
+      expect(next.windows.some(n => n.id === w.id)).toBe(true);
+  });
+
+  it("withholds exact Dasha timing for unknown birth time and retains the gap in parsed plans", () => {
+    const unknown = { ...SAMPLE_CHART, input: { ...SAMPLE_CHART.input, birthTimeKnown: false } };
+    const timing = collectChapterDashaEvidence(unknown, [1, 13]);
+    expect(timing.windows).toEqual([]);
+    expect(timing.gaps[0]).toMatch(/birth time/i);
+    expect(() => parseLifeStoryPlan({ beats: [{
+      period: "Childhood", lifeDomain: "School", configuration: "Invented",
+      manifestation: "Opening", consequence: "Change", timingBasis: "Invented date",
+      findingIds: ["invented-id"], timingWindowIds: ["invented-id"], prose: "An opening."
+    }] }, [], timing)).toThrow(/PLAN_INCOMPLETE/);
   });
 });

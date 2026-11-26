@@ -3,7 +3,7 @@ import { BookOpen, Compass, Clock, Sparkles, ChevronDown, ShieldCheck, Sliders, 
 import { Streamdown } from "streamdown";
 import { trpc } from "@/lib/trpc";
 import type { ChartResult } from "../../../server/astronomy";
-import type { LifeStageKey } from "../../../server/lifeStoryEngine";
+import type { LifeStageKey, LifeStoryPlan } from "../../../server/lifeStoryEngine";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -27,6 +27,7 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
     early_adulthood: true,
   });
   const [generatedChapters, setGeneratedChapters] = useState<Record<string, string>>({});
+  const [chapterPlans, setChapterPlans] = useState<Record<string, LifeStoryPlan>>({});
   const [chapterErrors, setChapterErrors] = useState<Record<string, string>>({});
   const [generatingKey, setGeneratingKey] = useState<LifeStageKey | null>(null);
   const generationLock = useRef(false);
@@ -94,6 +95,7 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
       if (typeof res.content !== "string" || !res.content.trim()) {
         throw new Error("The interpretation service returned an empty chapter. Retry this chapter.");
       }
+      setChapterPlans(prev => ({ ...prev, [chapterKey]: res.genesisPlan }));
       setGeneratedChapters(prev => ({
         ...prev,
         [chapterKey]: res.content,
@@ -150,6 +152,7 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
           activeAge,
           profection,
           generatedChapters,
+          chapterPlans,
         },
       },
       {
@@ -609,6 +612,28 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
                       <div className="prose prose-invert prose-fuchsia max-w-none text-sm leading-8 text-slate-200">
                         <Streamdown>{narrative}</Streamdown>
                       </div>
+                      {chapterPlans[chapter.key] && (
+                        <details className="rounded-xl border border-white/10 p-3 text-xs text-slate-300 space-y-3">
+                          <summary className="cursor-pointer font-semibold text-amber-200">Vedic timing and chart witnesses</summary>
+                          {chapterPlans[chapter.key].beats.map((beat, index) => (
+                            <div key={index} className="space-y-1 border-t border-white/10 pt-3 break-words">
+                              <p className="font-semibold">{beat.period} · {beat.lifeDomain}</p>
+                              <p>{beat.configuration}</p>
+                              {beat.soulDevelopment && <p>Soul development: {beat.soulDevelopment}</p>}
+                              {beat.behavioralResponse && <p>Response: {beat.behavioralResponse}</p>}
+                              <p>Timing: {beat.timingBasis}</p>
+                              {(beat.timingWindowIds ?? []).map(id => {
+                                const timing = chapterPlans[chapter.key].chapterDasha?.windows.find(w => w.id === id);
+                                return timing ? <p key={id}>{timing.level}: {timing.mahaLord}{timing.level === "Antardasha" ? ` / ${timing.lord}` : ""} · {timing.chapterStart} – {timing.chapterEnd} (end exclusive)</p> : null;
+                              })}
+                              <p>Vedic witnesses: {(beat.vedicEvidenceIds ?? []).join(", ") || "No specific Vedic IDs returned"}</p>
+                              <p>All cited findings: {beat.findingIds.join(", ")}</p>
+                              {beat.counterEvidenceIds.length > 0 && <p>Counterevidence: {beat.counterEvidenceIds.join(", ")}</p>}
+                            </div>
+                          ))}
+                          {chapterPlans[chapter.key].gaps.map(gap => <p key={gap} className="text-amber-200">{gap}</p>)}
+                        </details>
+                      )}
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 p-8 text-center space-y-3">
@@ -619,7 +644,7 @@ export function LifeStoryDashboard({ chart, onSaveReading }: LifeStoryDashboardP
                         </h4>
                         <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
                           Click below to have the Master Interpreter synthesize this chapter using
-                          your exact natal chart, profections, and active planetary returns.
+                          your natal chart, chapter-specific Vimshottari periods, profections, and planetary cycles.
                         </p>
                       </div>
                       <button

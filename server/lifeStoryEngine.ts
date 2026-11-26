@@ -1,4 +1,5 @@
 import { buildGenesisInquiryPrompt } from "./genesisLifeStoryInquiry";
+import { buildVimshottariTimeline } from "./astrologyKnowledge/vedic/timingAndAshtakavarga";
 import { noaaSunriseUtc, type ChartResult } from "./astronomy";
 import { normalizeLongitude, formatLongitude, ZODIAC_SIGNS } from "../shared/hybrid";
 import { calculateArabicLots, type Sect } from "./utils/arabicLots";
@@ -896,6 +897,63 @@ export function runAstrologyEngineAudit(chart: ChartResult): MethodAuditStatus[]
   ];
 }
 
+export interface ChapterDashaWindow {
+  id: string;
+  level: "Mahadasha" | "Antardasha";
+  lord: string;
+  mahaLord: string;
+  start: string;
+  end: string;
+  chapterStart: string;
+  chapterEnd: string;
+}
+
+export interface ChapterDashaEvidence {
+  start: string;
+  end: string;
+  windows: ChapterDashaWindow[];
+  gaps: string[];
+}
+
+/** Calendar-day overlap, half-open intervals. Dates inherit the canonical calculator's day precision. */
+export function collectChapterDashaEvidence(chart: ChartResult, ageRange: [number, number]): ChapterDashaEvidence {
+  const birth = new Date(chart.utc);
+  if (!Number.isFinite(birth.getTime()) || !ageRange.every(Number.isFinite) || ageRange[0] < 0 || ageRange[1] <= ageRange[0])
+    return { start: "", end: "", windows: [], gaps: ["Chapter Dasha timing unavailable: invalid birth epoch or stage interval."] };
+  const boundary = (age: number) => {
+    const date = new Date(birth);
+    if (Number.isInteger(age)) {
+      const month = date.getUTCMonth();
+      date.setUTCFullYear(date.getUTCFullYear() + age);
+      if (date.getUTCMonth() !== month) date.setUTCDate(0);
+    } else {
+      date.setTime(date.getTime() + age * 365.25 * 86400000);
+    }
+    return date.toISOString().slice(0, 10);
+  };
+  const start = boundary(ageRange[0]), end = boundary(ageRange[1]);
+  const timeline = buildVimshottariTimeline(chart, new Date(start + "T00:00:00Z"));
+  if (!timeline.available) return { start, end, windows: [], gaps: [timeline.reason] };
+  const windows: ChapterDashaWindow[] = [];
+  const add = (level: ChapterDashaWindow["level"], lord: string, mahaLord: string, from: string, to: string) => {
+    if (from >= end || to <= start) return;
+    windows.push({
+      id: ["genesis-dasha", level.toLowerCase(), mahaLord.toLowerCase(), lord.toLowerCase(), from].join(":"),
+      level, lord, mahaLord, start: from, end: to,
+      chapterStart: from > start ? from : start, chapterEnd: to < end ? to : end,
+    });
+  };
+  for (const maha of timeline.periods) {
+    add("Mahadasha", maha.lord, maha.lord, maha.start, maha.end);
+    for (const antar of maha.antardashas) add("Antardasha", antar.lord, maha.lord, antar.start, antar.end);
+  }
+  const gaps: string[] = [];
+  const major = windows.filter(w => w.level === "Mahadasha");
+  if (!major.length || major[0].chapterStart > start || major[major.length - 1].chapterEnd < end)
+    gaps.push("Calculated Vimshottari windows do not cover the entire requested chapter; do not infer missing dates.");
+  return { start, end, windows, gaps };
+}
+
 export interface LifeStoryBeat {
   period: string;
   lifeDomain: string;
@@ -905,22 +963,32 @@ export interface LifeStoryBeat {
   timingBasis: string;
   findingIds: string[];
   counterEvidenceIds: string[];
+  vedicEvidenceIds?: string[];
+  timingWindowIds?: string[];
+  soulDevelopment?: string;
+  behavioralResponse?: string;
   prose: string;
 }
 
 export interface LifeStoryPlan {
   beats: LifeStoryBeat[];
   gaps: string[];
+  chapterDasha?: ChapterDashaEvidence;
 }
 
 export function parseLifeStoryPlan(
   raw: unknown,
-  methods: readonly import("./astrologyKnowledge/synthesis/types").MethodOutcome[]
+  methods: readonly import("./astrologyKnowledge/synthesis/types").MethodOutcome[],
+  chapterDasha?: ChapterDashaEvidence
 ): LifeStoryPlan {
-  const validIds = new Set(methods.flatMap(method => [
+  const methodIds = (method: (typeof methods)[number]) => [
     ...method.calculatedFindings.map(finding => finding.evidenceId),
     ...method.findingJudgments.flatMap(finding => [finding.id, ...finding.evidenceIds]),
-  ]));
+  ];
+  const timingIds = new Set(chapterDasha?.windows.map(window => window.id) ?? []);
+  const vedicIds = new Set(methods.filter(method => /vedic|jyotish|parashar/i.test(method.tradition)).flatMap(methodIds));
+  const chartIds = new Set(methods.flatMap(methodIds));
+  const validIds = new Set([...chartIds, ...timingIds]);
   const asRecord = (value: unknown): Record<string, unknown> =>
     value !== null && typeof value === "object" && !Array.isArray(value)
       ? value as Record<string, unknown> : {};
@@ -928,7 +996,7 @@ export function parseLifeStoryPlan(
   const asStrings = (value: unknown): string[] =>
     Array.isArray(value) ? value.filter((v): v is string => typeof v === "string").map(v => v.trim()).filter(Boolean) : [];
   const source = asRecord(raw);
-  const gaps = asStrings(source.gaps);
+  const gaps = [...asStrings(source.gaps), ...(chapterDasha?.gaps ?? [])];
   const beats: LifeStoryBeat[] = [];
   for (const value of Array.isArray(source.beats) ? source.beats : []) {
     const item = asRecord(value);
@@ -938,21 +1006,29 @@ export function parseLifeStoryPlan(
     const counterEvidenceIds = [...new Set(requestedCounterIds.filter(id => validIds.has(id)))];
     if (requestedIds.some(id => !validIds.has(id)) || requestedCounterIds.some(id => !validIds.has(id)))
       gaps.push("A generated evidence reference was not present in the delivered chart dossier.");
+    const requestedVedic = asStrings(item.vedicEvidenceIds);
+    const requestedTiming = asStrings(item.timingWindowIds);
+    if (requestedVedic.some(id => !vedicIds.has(id)) || requestedTiming.some(id => !timingIds.has(id)))
+      gaps.push("A generated Vedic or timing reference did not match the calculated chapter evidence.");
     const beat: LifeStoryBeat = {
       period: asText(item.period), lifeDomain: asText(item.lifeDomain),
       configuration: asText(item.configuration), manifestation: asText(item.manifestation),
       consequence: asText(item.consequence), timingBasis: asText(item.timingBasis),
       findingIds, counterEvidenceIds,
+      vedicEvidenceIds: [...new Set(requestedVedic.filter(id => vedicIds.has(id)))],
+      timingWindowIds: [...new Set(requestedTiming.filter(id => timingIds.has(id)))],
+      soulDevelopment: asText(item.soulDevelopment),
+      behavioralResponse: asText(item.behavioralResponse),
       prose: scrubNonHoraryAstrologyJargon(asText(item.prose)),
     };
     if (!beat.period || !beat.lifeDomain || !beat.configuration || !beat.manifestation ||
-        !beat.consequence || !beat.timingBasis || !beat.prose || !beat.findingIds.length)
+        !beat.consequence || !beat.timingBasis || !beat.prose || !beat.findingIds.some(id => chartIds.has(id)))
       throw new Error("LIFE_STORY_PLAN_INCOMPLETE: A proposed life development lacked its required chart reference or narrative. Retry this chapter.");
     beats.push(beat);
   }
   if (!beats.length) throw new Error("LIFE_STORY_PLAN_EMPTY: No evidence-linked life developments were returned. Retry this chapter.");
   // Exact IDs establish traceability, not empirical proof or semantic entailment.
-  return { beats, gaps: [...new Set(gaps)] };
+  return { beats, gaps: [...new Set(gaps)], ...(chapterDasha ? { chapterDasha } : {}) };
 }
 
 export const LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS = `You are THE ABSOLUTE LIFE HISTORIAN, an immersive biographical storyteller. Tell the person's *life story* from the birth chart and calculated timing evidence, not their behavior profile. Write directly to the reader in second person ("you") in deep, human, clear language.
@@ -960,6 +1036,9 @@ export const LIFE_STORY_ENGINE_SYSTEM_INSTRUCTIONS = `You are THE ABSOLUTE LIFE 
 ## 1. A LIFE, NOT A PERSONALITY REPORT
 Your subject is what HAPPENS in a life: the family and material world into which someone is born; the childhood they may experience; school and discovery of gifts; teenage turning points; first opportunities; the transition to adult work, relationships and independence; achievement or disappointment; family, money, recognition, major reversals, later years and legacy. The reading must have the forward movement of a biography, with people, settings, circumstances, stakes and consequences—not an inventory of traits, defense mechanisms, emotional responses, daily habits, psychological patterns, or behavioral advice. The reader should feel they are following a life unfolding, not visiting a therapist. Talents and karma matter because of the opportunities and challenges they may bring into the life, not as abstract descriptions of character.
 
+## 1A. VEDIC-LED SOUL JOURNEY — 70/30 EDITORIAL TARGET
+Approximately 70% of substantive chapter meaning should concern karmic development, destiny direction, worldly consequences and soul evolution; approximately 30% may explain behavior or choices only when they affect those developments. This is not a word quota or a forced conclusion. Lead with the actual stage-overlapping Vimshottari Mahadashas and Antardashas, their natal lords' occupied, ruled and aspected houses, applicable yogas, drishti, nakshatras/padas, strengths, Ashtakavarga and the Rahu/Ketu axis where supplied. Distinguish Dharma, Artha, Kama and Moksha where relevant. Identify what may need to be released, cultivated or redirected and why this particular life stage activates it. Western, Hellenistic, Arabic and other methods corroborate, qualify or contradict; retain every method and never invent missing findings. Treat soul and karma as symbolic interpretations, not proof of past lives, moral blame or inevitable fate. Never use current-age Dasha as a substitute for the requested chapter's timing.
+ 
 ## 2. FOLLOW THE CHRONOLOGY OF THE REQUESTED CHAPTER
 For each requested stage, begin with the life circumstances at the start of its age range, then narrate the likely progression within that range. Move from one meaningful development to the next and explain what materially changes. Make the years feel connected: an opening or restriction in one stage lays the foundation for the next. Mention years or approximate ages ONLY when supported by the supplied calculated timings; otherwise use stage-level timing ("during your teens", "as adulthood begins"). Include at least one concrete life-domain development for each supported major testimony: education, performance or creativity, trade or employment, money, housing or relocation, important alliances, family, public role, disruption or recovery, legacy. Choose domains according to the actual chart evidence, not a universal checklist. Do not repeat childhood or "core identity" in every stage.
 
@@ -975,7 +1054,7 @@ The story must give a reader at least one distinctive concrete development and i
 This is a symbolic, chart-based life narrative, not factual access to the reader's past or certain knowledge of their future. Speak with vivid specificity about *possible* developments and their life domains while using natural calibrated language ("may", "could", "a likely turning point") for uncertain events. Never assert an unprovided specific marriage, death, diagnosis, crime, abuse, divorce, child, award, profession, or date as a fact. Never insert known biography about a named public figure unless the caller supplies that history explicitly as evidence; for blinded testing, do not use the person's name or outside knowledge.
 
 ## 5. WRITE ONLY THE BIOGRAPHICAL STORY
-Produce substantial connected paragraphs, with short distinctive chapter titles if useful. Tell the chapter like a serious literary biography in second person: a beginning, evolving circumstances, at least one meaningful pivot where supported, and an ending that naturally leads to the next era. Show the outer life first. Do not discuss behavior, personal habits, psychological tendencies, inner motives, advice, "how you respond", or lists of personality traits. Do not write a diagnostic report, horoscope tips or encouragement. Keep all astrology jargon (planets, zodiac signs, houses, aspects, degrees, mansions, Lots, profections and Dashas) out of the visible story; place calculation details in the Evidence tab. End with a concrete narrative consequence, not a moral or summary.`;
+Produce substantial connected paragraphs, with short distinctive chapter titles if useful. Tell the chapter like a serious literary biography in second person: a beginning, evolving circumstances, at least one meaningful pivot where supported, and an ending that naturally leads to the next era. Show the outer life first. Do not write isolated behavior profiles, lists of personality traits or generic advice. A specific behavioral response belongs only where it explains the consequence of an evidence-linked life development, as the secondary 30% strand. Do not write a diagnostic report, horoscope tips or encouragement. Keep all astrology jargon (planets, zodiac signs, houses, aspects, degrees, mansions, Lots, profections and Dashas) out of the visible story; place calculation details in the Evidence tab. End with a concrete narrative consequence, not a moral or summary.`;
 
 /**
  * Generates an in-depth, storytelling Life Story Chapter using the Master Interpreter.
@@ -1036,6 +1115,12 @@ export async function generateLifeStoryChapter(
       .join(", ");
   }
 
+  const { synthesis, canonicalChart } = await synthesizeChartForReading(chart, "natal", targetChapter.title);
+  const timingChart = chart.input.birthTimeKnown === false
+    ? { ...canonicalChart, input: { ...canonicalChart.input, birthTimeKnown: false } }
+    : canonicalChart;
+  const chapterDasha = collectChapterDashaEvidence(timingChart, targetChapter.ageRange);
+
   const prompt = [
     `# SILENT ENGINE BRIEF FOR THIS CHAPTER (DO NOT PRINT TECHNICAL TERMS TO THE READER)`,
     `Write the actual chronological life chapter for the period below: surrounding circumstances, life opportunities, achievements, losses, relationships, work, family, and transitions. Do not produce a personality or behavior profile.`,
@@ -1049,6 +1134,10 @@ export async function generateLifeStoryChapter(
     `- Lord of the Year (Agent View): ${profection.lordOfTheYearAgent} (activating ${profection.profectedSignAgent}, House ${profection.profectedHouseAgent})`,
     `- Lord of the Year (God View): ${profection.lordOfTheYearGod} (activating ${profection.profectedSignGod}, House ${profection.profectedHouseGod})`,
     `- Profection Themes: ${profection.traditionalThemes.join(", ")}`,
+    ``,
+    `## VEDIC TIMING THROUGHOUT THE REQUESTED STAGE (PRIMARY)`,
+    `Chapter interval is half-open at UTC calendar-day precision. Each window retains its original dates and the portion overlapping this chapter. Use exact supplied window IDs. A time window alone cannot establish an event; every beat must cite at least one natal dossier finding in findingIds and connect its lord to independent natal findings. Do not use any current-period summary for past stages. If unavailable, record the gap and keep timing stage-level.`,
+    JSON.stringify(chapterDasha),
     ``,
     `## ANNUAL PROFECTIONS THROUGHOUT THE REQUESTED STAGE`,
     `Each row: age, Agent [house, sign, lord], God [house, sign, lord]. These are symbolic activation windows, not evidence of actual events.`,
@@ -1077,13 +1166,12 @@ export async function generateLifeStoryChapter(
     `1. Begin inside this chapter's age range and tell a coherent, biographical sequence of life circumstances and turning points. Move through time rather than listing traits.`,
     `2. Describe what could happen to this person in the world—home and school, opportunity, livelihood, meaningful relationships, success or reversals—and the external consequences of the developments supported by evidence.`,
     `3. Show how supported gifts might become work or public impact and how supported challenges might alter the course of life. Anchor precise time windows only in calculated cycles; no invented biography, medical facts or inevitable outcomes.`,
-    `4. Write deep, immersive, chronological prose in second person with no psychological analysis, behavior advice, personality checklist or visible astrology vocabulary. Give the chapter a beginning, developmental arc and human consequence.`,
+    `4. Write deep, immersive, chronological prose in second person with Vedic-led karmic developments and specific secondary behavioral responses tied to consequences, no personality checklist or visible astrology vocabulary. Give the chapter a beginning, developmental arc and human consequence.`,
     `5. Before writing the story, investigate genuinely different chart combinations, including occupied and ruled houses, configurations, strength, yogas, mansions, Lots, and timing. A gift is not its outcome: determine what the gift could produce in the world, the people or institutions that provide the opening, what changes materially, and the potential scale of recognition. Compare private/local, professional and wider public expression where the chart supplies testimony. Do not default to greatness or hardship. For infancy, restrict outward circumstances to infancy and distinguish later potential from events in that stage.`,
     `6. Apply the specificity test: discard interchangeable conclusions and any second beat that merely restates a first beat in other language. Do not use sensitivity, emotional vigilance, control, or another personality trait as a substitute for a life development. Work through the actual configurations even when they point to different domains. No advice or generic moral ending.`,
-    `7. Return ONE JSON object, not Markdown outside the object: {"beats":[{"period":"stage-relative period or supplied age window","lifeDomain":"specific external life domain","configuration":"specific combination and how it links domains","manifestation":"possible concrete development","consequence":"what changes as a result","timingBasis":"supplied timing or stage-level only","findingIds":["exact supplied finding or evidence ID"],"counterEvidenceIds":["exact supplied counter-testimony ID if any"],"prose":"substantial connected second-person biographical paragraphs for this beat"}],"gaps":["important unsupported or uncertain claims"]}. Put the technical reasoning in the beat fields; write only reader-facing biographical prose in each prose field. Order beats chronologically. Aim for 3–5 distinct developments where supported (fewer for infancy or sparse evidence), about 600–1000 words total where warranted. Never manufacture a beat to meet length. The narrative must be complete, end on a real-world consequence, and use calibrated wording for unverified events.`,
+    `7. Return ONE JSON object, not Markdown outside the object: {"beats":[{"period":"stage-relative period or supplied age window","lifeDomain":"specific external life domain","configuration":"specific combination and how it links domains","manifestation":"possible concrete development","consequence":"what changes as a result","timingBasis":"supplied timing or stage-level only","findingIds":["exact supplied finding or evidence ID"],"counterEvidenceIds":["exact supplied counter-testimony ID if any"],"vedicEvidenceIds":["exact Vedic dossier finding ID"],"timingWindowIds":["exact chapter Dasha window ID if used"],"soulDevelopment":"what is symbolically released or cultivated through the development","behavioralResponse":"specific response affecting the outcome, or empty if unsupported","prose":"substantial connected second-person biographical paragraphs for this beat"}],"gaps":["important unsupported or uncertain claims"]}. Put the technical reasoning in the beat fields; write only reader-facing biographical prose in each prose field. Order beats chronologically. Aim for 3–5 distinct developments where supported (fewer for infancy or sparse evidence), about 600–1000 words total where warranted. Never manufacture a beat to meet length. The narrative must be complete, end on a real-world consequence, and use calibrated wording for unverified events.`,
   ].join("\n");
 
-  const { synthesis } = await synthesizeChartForReading(chart, "natal", targetChapter.title);
   const response = await runInterpretation("LIFE_STORY", synthesis, {
     messages: [
       {
@@ -1101,7 +1189,7 @@ export async function generateLifeStoryChapter(
 
   // Validate the response structure and evidence references, never filter the input dossier.
   const parsed = parseLlmJsonObject(interpretationText(response), "LIFE_STORY_INVALID_JSON");
-  const plan = parseLifeStoryPlan(parsed, synthesis.methodOutcomes);
+  const plan = parseLifeStoryPlan(parsed, synthesis.methodOutcomes, chapterDasha);
   const content = plan.beats.map(beat => beat.prose).join("\n\n");
   if (!content.trim()) throw new Error("LIFE_STORY_EMPTY: The provider returned no chapter.");
 
